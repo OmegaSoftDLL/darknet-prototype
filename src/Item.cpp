@@ -3,6 +3,8 @@
 #include <raymath.h>
 #include <cmath>
 
+extern bool g_renderPass3D;
+
 Item Item::createRandom(Vector2 pos) {
     int roll = GetRandomValue(0, 5);
     Item item;
@@ -380,7 +382,9 @@ void Item::render() const {
     int iy             = (int)pos.y;
 
     // ---- Ground shadow ------------------------------------------------
-    DrawCircleV({pos.x, pos.y + 2.0f}, radius * 1.1f, ColorAlpha({0,0,0,255}, 0.35f * alpha));
+    if (!g_renderPass3D) {
+        DrawCircleV({pos.x, pos.y + 2.0f}, radius * 1.1f, ColorAlpha({0,0,0,255}, 0.35f * alpha));
+    }
 
     // ---- Rarity outer glow ring ---------------------------------------
     float glowR = radius;

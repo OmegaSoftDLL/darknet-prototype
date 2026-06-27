@@ -1,4 +1,4 @@
-﻿#include "Background.h"
+#include "Background.h"
 #include <cmath>
 #include <cstring>
 
@@ -138,7 +138,7 @@ void Background::placeObjects(ZoneID zone, int mapW, int mapH, int tileSize) {
     }
 }
 
-void Background::update(float dt, Camera2D cam) {
+void Background::update(float dt) {
     time += dt;
     // Update data stream drops
     for (auto& d : dataDrops) {
@@ -149,7 +149,6 @@ void Background::update(float dt, Camera2D cam) {
             d.speed = GetRandomValue(80, 220) * 1.0f;
         }
     }
-    (void)cam; // suppress unused warning from original signature
     int N = (int)ashParticles.size();
     for (int i = 0; i < N; ++i) {
         ashParticles[i].x += ashVelocities[i].x * dt;
@@ -265,11 +264,11 @@ void Background::drawSky(int screenW, int screenH, ZoneID zone) const {
 
 // â”€â”€â”€ Skyline silhouette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-void Background::drawSkyline(Camera2D cam, int screenW, int screenH, ZoneID zone) const {
+void Background::drawSkyline(Vector2 camTarget, int screenW, int screenH, ZoneID zone) const {
     // Horizon Y in screen coordinates
     float horizonY = screenH * 0.62f;
     // Parallax factor (buildings scroll slower than world)
-    float parallaxX = cam.target.x * 0.08f;
+    float parallaxX = camTarget.x * 0.08f;
 
     Color bldColor = {12, 12, 18, 255};  // default seguro
     switch (zone) {
@@ -455,11 +454,11 @@ void Background::drawAsh() const {
 
 // ─── Parallax stars (screen-space) ──────────────────────────────────────────
 
-void Background::drawParallaxStars(Camera2D cam, int screenW, int screenH) const {
+void Background::drawParallaxStars(Vector2 camTarget, int screenW, int screenH) const {
     for (const auto& s : stars) {
         // Parallax: far stars (layer=0) move very little, near stars (layer=1) more
         float parallaxFactor = 0.02f + s.layer * 0.06f;
-        float sx = fmodf(s.pos.x - cam.target.x * parallaxFactor + screenW * 4, (float)screenW);
+        float sx = fmodf(s.pos.x - camTarget.x * parallaxFactor + screenW * 4, (float)screenW);
         float sy = s.pos.y;
 
         // Twinkle

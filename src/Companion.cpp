@@ -4,6 +4,7 @@
 #include <raymath.h>
 #include <cmath>
 #include <algorithm>
+extern bool g_renderPass3D;
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -355,7 +356,9 @@ void Companion::render() const {
     if (!active) return;
     if (isDead()) {
         Color deadCol = {80,80,80,180};
-        DrawEllipse((int)position.x, (int)position.y + 6, radius*1.8f, radius*0.6f, deadCol);
+        if (!g_renderPass3D) {
+            DrawEllipse((int)position.x, (int)position.y + 6, radius*1.8f, radius*0.6f, deadCol);
+        }
         float pct = deadTimer / deadDuration; int bw = 36;
         DrawRectangle((int)position.x - bw/2, (int)position.y - 28, bw, 5, {50,50,50,200});
         DrawRectangle((int)position.x - bw/2, (int)position.y - 28, (int)(bw*pct), 5, {200,200,0,220});
@@ -472,7 +475,9 @@ void Companion::renderDrone(Color tint) const {
     float hover = std::sin(walkTimer*6.f)*3.f;        // flutua
     int cy = py - 6 + (int)hover;
     // sombra (flutuando -> sombra menor embaixo)
-    DrawEllipse(px, py+10, 8.0f, 3.0f, ColorAlpha(BLACK,0.3f));
+    if (!g_renderPass3D) {
+        DrawEllipse(px, py+10, 8.0f, 3.0f, ColorAlpha(BLACK,0.3f));
+    }
     // rotores
     float rot = walkTimer * 30.f;
     for (int i=0;i<2;i++){

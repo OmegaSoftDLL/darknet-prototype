@@ -1216,6 +1216,42 @@ void Tilemap::clearSolidFlags() {
             t.solid = false;
 }
 
+// ─── Render 2.5D isométrico — chão (DrawPlane) + paredes (DrawCube) ───────────
+// Mapeamento: X3D = X2D, Z3D = Y2D, altura no eixo Y. Culling em janela ao redor
+// do alvo da câmera (camTarget em coordenadas de mundo 2D).
+void Tilemap::render3D(Vector2 camTarget) const {
+    const float TS = (float)tileSize;
+    const int   R  = 26; // raio da janela visível em tiles
+    int ctx = (int)(camTarget.x / TS);
+    int cty = (int)(camTarget.y / TS);
+    int x0 = std::max(0, ctx - R), x1 = std::min(width  - 1, ctx + R);
+    int y0 = std::max(0, cty - R), y1 = std::min(height - 1, cty + R);
+
+    for (int y = y0; y <= y1; ++y) {
+        for (int x = x0; x <= x1; ++x) {
+            const Tile& t = tiles[y][x];
+            float rx = x * TS, ry = y * TS;
+            Vector3 floorCtr = { rx + TS * 0.5f, 0.0f, ry + TS * 0.5f };
+
+            // Cor do chão por tipo (xadrez leve para leitura do grid)
+            bool chk = ((x + y) & 1) != 0;
+            Color floorColor = (t.type == TileType::BrokenFloor)
+                ? Color{30, 30, 40, 255}
+                : (chk ? Color{44, 50, 66, 255} : Color{38, 44, 58, 255});
+            if (t.type == TileType::Portal) floorColor = Color{0, 120, 180, 255};
+            DrawPlane(floorCtr, { TS, TS }, floorColor);
+
+            // Paredes (tipo Wall ou cenário sólido) = cubos com volume
+            if (t.type == TileType::Wall || t.solid) {
+                Vector3 c = { rx + TS * 0.5f, TS * 0.5f, ry + TS * 0.5f };
+                Color wc = t.solid ? Color{60, 66, 84, 255} : Color{74, 80, 98, 255};
+                DrawCube(c, TS, TS, TS, wc);
+                DrawCubeWires(c, TS, TS, TS, ColorAlpha(Color{0, 210, 255, 255}, 0.25f));
+            }
+        }
+    }
+}
+
 bool Tilemap::isWallAtPosition(Vector2 pos) const {
     int x = (int)(pos.x / tileSize);
     int y = (int)(pos.y / tileSize);

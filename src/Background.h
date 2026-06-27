@@ -42,16 +42,16 @@ public:
     ZoneID lastZone = ZoneID::LARuins;
 
     void generate(ZoneID zone, int mapW, int mapH, int tileSize);
-    void update(float dt, Camera2D cam);
+    void update(float dt);
 
     // Desenha o ceu (antes do BeginMode2D) — agora inclui parallax stars
     void drawSky(int screenW, int screenH, ZoneID zone) const;
 
     // Desenha silhueta de predio ao fundo
-    void drawSkyline(Camera2D cam, int screenW, int screenH, ZoneID zone) const;
+    void drawSkyline(Vector2 camTarget, int screenW, int screenH, ZoneID zone) const;
 
     // Parallax stars (screen-space, call after drawSky)
-    void drawParallaxStars(Camera2D cam, int screenW, int screenH) const;
+    void drawParallaxStars(Vector2 camTarget, int screenW, int screenH) const;
 
     // Data stream / Matrix rain (screen-space, for tech zones)
     void drawDataStream(int screenW, int screenH, ZoneID zone) const;
