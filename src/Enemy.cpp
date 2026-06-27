@@ -5,6 +5,8 @@
 #include <cmath>
 #include <algorithm>
 
+extern bool g_renderPass3D;
+
 Enemy::Enemy(Vector2 startPos, EnemyType t, bool minion)
     : position(startPos), type(t), isMinion(minion) {
     orbitAngle = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
@@ -1037,9 +1039,11 @@ void Enemy::render() const {
         // Sombra no chao — só fantasmas/wraiths flutuam; zumbis andam no chao
         bool floaty = isFloating();
         float bobF  = floaty ? std::sin(gt * 2.0f + position.x * 0.05f) * 4.0f : 0.0f;
-        DrawEllipse((int)position.x, (int)(position.y + radius * 0.9f),
-                    radius * (floaty ? 0.7f : 0.95f), radius * 0.3f,
-                    ColorAlpha(BLACK, floaty ? 0.25f : 0.4f));
+        if (!g_renderPass3D) {
+            DrawEllipse((int)position.x, (int)(position.y + radius * 0.9f),
+                        radius * (floaty ? 0.7f : 0.95f), radius * 0.3f,
+                        ColorAlpha(BLACK, floaty ? 0.25f : 0.4f));
+        }
 
         // Desenha o sprite (feet ancorados no chao do inimigo)
         float scale = (radius * 3.0f) / (float)tx.height;
@@ -1056,35 +1060,37 @@ void Enemy::render() const {
         DrawTexturePro(tx, {0,0,(float)tx.width,(float)tx.height},
                        {position.x - w/2, feetY - h, w, h}, {0,0}, 0.0f, tint);
 
-        // Aura/tag de elite
-        if (isElite) {
-            float puls = 0.5f + 0.5f * std::sin(elitePulse);
-            Color eliteCol;
-            switch (eliteMod) {
-                case 0:  eliteCol = {255, 60,  0,   255}; break;
-                case 1:  eliteCol = {180, 180, 255, 255}; break;
-                default: eliteCol = {255, 0,   200, 255}; break;
+        if (!g_renderPass3D) {
+            // Aura/tag de elite
+            if (isElite) {
+                float puls = 0.5f + 0.5f * std::sin(elitePulse);
+                Color eliteCol;
+                switch (eliteMod) {
+                    case 0:  eliteCol = {255, 60,  0,   255}; break;
+                    case 1:  eliteCol = {180, 180, 255, 255}; break;
+                    default: eliteCol = {255, 0,   200, 255}; break;
+                }
+                DrawCircleLines((int)position.x, (int)position.y, radius + 10 + puls * 4,
+                                ColorAlpha(eliteCol, 0.6f));
+                const char* tag = (eliteMod == 0) ? "BERSERK" : (eliteMod == 1) ? "BLINDADO" : "VOLATIL";
+                DrawText(tag, (int)(position.x - MeasureText(tag, 10)/2),
+                         (int)(position.y - radius - 32), 10, ColorAlpha(eliteCol, 0.9f));
             }
-            DrawCircleLines((int)position.x, (int)position.y, radius + 10 + puls * 4,
-                            ColorAlpha(eliteCol, 0.6f));
-            const char* tag = (eliteMod == 0) ? "BERSERK" : (eliteMod == 1) ? "BLINDADO" : "VOLATIL";
-            DrawText(tag, (int)(position.x - MeasureText(tag, 10)/2),
-                     (int)(position.y - radius - 32), 10, ColorAlpha(eliteCol, 0.9f));
-        }
 
-        // Barra de HP
-        float barW  = isBoss() ? 70.0f : (type == EnemyType::Tank ? 48.0f : 36.0f);
-        float hpPct = health / maxHealth;
-        Color hpCol = hpPct > 0.5f ? Color{0,220,80,255} : hpPct > 0.25f ? YELLOW : RED;
-        DrawHealthBar({position.x, position.y - radius - 16}, hpPct, barW, 5, hpCol);
+            // Barra de HP
+            float barW  = isBoss() ? 70.0f : (type == EnemyType::Tank ? 48.0f : 36.0f);
+            float hpPct = health / maxHealth;
+            Color hpCol = hpPct > 0.5f ? Color{0,220,80,255} : hpPct > 0.25f ? YELLOW : RED;
+            DrawHealthBar({position.x, position.y - radius - 16}, hpPct, barW, 5, hpCol);
 
-        // Label de tier
-        if (evolTier > 0) {
-            const char* tierLabel = evolTier == 1 ? "[VET]" : evolTier == 2 ? "[ELT]" : "[LND]";
-            Color tierCol = evolTier == 1 ? Color{0,220,100,255} :
-                            evolTier == 2 ? Color{100,180,255,255} : Color{255,160,0,255};
-            int tw = MeasureText(tierLabel, 9);
-            DrawText(tierLabel, (int)(position.x - tw/2), (int)(position.y - radius - 27), 9, tierCol);
+            // Label de tier
+            if (evolTier > 0) {
+                const char* tierLabel = evolTier == 1 ? "[VET]" : evolTier == 2 ? "[ELT]" : "[LND]";
+                Color tierCol = evolTier == 1 ? Color{0,220,100,255} :
+                                evolTier == 2 ? Color{100,180,255,255} : Color{255,160,0,255};
+                int tw = MeasureText(tierLabel, 9);
+                DrawText(tierLabel, (int)(position.x - tw/2), (int)(position.y - radius - 27), 9, tierCol);
+            }
         }
         return;
     }

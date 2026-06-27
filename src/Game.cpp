@@ -1418,6 +1418,7 @@ void Game::runAutoTest(bool autoTest) {
         else { tilemap.generate(currentZone); }
         setupZoneNPCs(currentZone);
         inMainMenu = false;
+        render3D   = true;
         botController.active   = true;
         botController.autoTest = true;
         botController.testDuration = 7200.0f; // 2 horas max
@@ -4631,59 +4632,192 @@ Vector2 Game::mouseGround3D() const {
              ray.position.z + ray.direction.z * t };
 }
 
+void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function<void()> drawFunc) {
+    g_renderPass3D = true;
+    BeginTextureMode(tempEntityTarget);
+    ClearBackground(BLANK);
+
+    Camera2D entityCam = { 0 };
+    entityCam.target = pos;
+    entityCam.offset = { 64.0f, 64.0f };
+    entityCam.rotation = 0.0f;
+    entityCam.zoom = 1.0f;
+
+    BeginMode2D(entityCam);
+    drawFunc();
+    EndMode2D();
+    EndTextureMode();
+    g_renderPass3D = false;
+
+    // OpenGL textures are Y-flipped, flip the source rectangle vertically
+    Rectangle source = { 0.0f, 0.0f, (float)tempEntityTarget.texture.width, -(float)tempEntityTarget.texture.height };
+    Vector3 pos3D = { pos.x, heightOffset, pos.y };
+    Vector2 size = { 128.0f, 128.0f };
+    DrawBillboardRec(camera3D, tempEntityTarget.texture, source, pos3D, size, WHITE);
+}
+
 void Game::renderWorld3D() {
     BeginTextureMode(gameTarget);
     ClearBackground(Color{10, 12, 20, 255});
 
-    // ── Mundo em 3D: chão (planos) + paredes/cenário sólido (cubos) ───────────
+    // ── 1. Modo 3D: Chão, Paredes, Sombras e Entidades (Billboards) ───────────
     BeginMode3D(camera3D);
+        // Render do mapa 3D
         tilemap.render3D(camera.target);
+
+        // Sombras 3D projetadas no plano Y=0.1
+        // Sombra do player
+        DrawPlane({ player.position.x, 0.1f, player.position.y }, { 24.0f, 12.0f }, ColorAlpha(BLACK, 0.45f));
+
+        // Sombras dos companheiros
+        for (auto& c : companions) {
+            if (!c.active) continue;
+            DrawPlane({ c.position.x, 0.1f, c.position.y }, { 16.0f, 8.0f }, ColorAlpha(BLACK, 0.35f));
+        }
+
+        // Sombras dos NPCs
+        for (auto& n : npcs) {
+            DrawPlane({ n.position.x, 0.1f, n.position.y }, { 18.0f, 9.0f }, ColorAlpha(BLACK, 0.4f));
+        }
+
+        // Sombras dos inimigos
+        for (auto& e : enemies) {
+            float sSize = e.radius * 2.0f;
+            DrawPlane({ e.position.x, 0.1f, e.position.y }, { sSize, sSize * 0.5f }, ColorAlpha(BLACK, 0.35f));
+        }
+
+        // Sombras dos itens
+        for (auto& it : items) {
+            DrawPlane({ it.position.x, 0.1f, it.position.y }, { 12.0f, 6.0f }, ColorAlpha(BLACK, 0.3f));
+        }
+
+        // Desenhar entidades procedurais como Billboards 3D
+        // Itens
+        for (auto& it : items) {
+            drawProceduralEntity3D(it.position, 8.0f, [&]() { it.render(); });
+        }
+
+        // Companheiros
+        for (auto& c : companions) {
+            if (!c.active) continue;
+            float h = c.isDead() ? 4.0f : 16.0f;
+            drawProceduralEntity3D(c.position, h, [&]() { c.render(); });
+        }
+
+        // NPCs
+        for (auto& n : npcs) {
+            drawProceduralEntity3D(n.position, 22.0f, [&]() { n.render(); });
+        }
+
+        // Inimigos
+        for (auto& e : enemies) {
+            drawProceduralEntity3D(e.position, e.radius * 0.9f, [&]() { e.render(); });
+        }
+
+        // Player
+        drawProceduralEntity3D(player.position, 51.0f, [&]() { player.render(); });
     EndMode3D();
 
-    // ── Entidades projetadas (Inc.1: marcadores; Inc.2 = DrawProceduralBillboard)
+    // ── 2. Overlay 2D Projetado: Projéteis, Partículas, Nomes e UI ────────────
     auto proj = [&](Vector2 w, float h) {
         return GetWorldToScreenEx({ w.x, h, w.y }, camera3D, screenWidth, screenHeight);
     };
-    // itens
-    for (auto& it : items) {
-        Vector2 s = proj(it.position, 8.0f);
-        DrawCircleV(s, 4.0f, ColorAlpha(it.color, 0.9f));
-    }
-    // inimigos (cor por tipo, como no minimapa)
-    for (auto& e : enemies) {
-        Vector2 s = proj(e.position, 16.0f);
-        Color col = (e.type == EnemyType::Boss) ? ORANGE : (e.isElite ? YELLOW : RED);
-        Vector2 sh = proj(e.position, 0.2f);
-        DrawEllipse((int)sh.x, (int)sh.y, 12, 6, ColorAlpha(BLACK, 0.4f));
-        DrawRectangle((int)s.x - 7, (int)s.y - 18, 14, 22, col);
-        DrawCircleV({ s.x, s.y - 22 }, 7, col);
-    }
-    // companions
-    for (auto& c : companions) {
-        if (!c.active) continue;
-        Vector2 s = proj(c.position, 16.0f);
-        DrawRectangle((int)s.x - 6, (int)s.y - 16, 12, 20, Color{120,255,160,255});
-    }
-    // NPCs
-    for (auto& n : npcs) {
-        Vector2 s = proj(n.position, 16.0f);
-        DrawRectangle((int)s.x - 6, (int)s.y - 16, 12, 20, Color{80,160,255,255});
-    }
-    // player
-    {
-        Vector2 sh = proj(player.position, 0.2f);
-        DrawEllipse((int)sh.x, (int)sh.y, 16, 7, ColorAlpha(BLACK, 0.45f));
-        Vector2 s = proj(player.position, 18.0f);
-        Color pc = player.hasCosmeticTint ? player.cosmeticTint : Color{0,210,255,255};
-        DrawRectangle((int)s.x - 8, (int)s.y - 22, 16, 26, pc);
-        DrawCircleV({ s.x, s.y - 28 }, 8, pc);
-        if (player.skinNeon) DrawCircleLines((int)s.x, (int)(s.y-12), 22,
-                                             ColorAlpha(Color{0,255,200,255}, 0.6f));
+
+    // Feixes de luz vertical e partículas de itens (estilo Diablo)
+    for (auto& item : items) {
+        if (item.dropBeamTimer > 0.0f && item.rarity >= ItemRarity::Uncommon) {
+            float beamH = 200.0f + (int)item.rarity * 80.0f;
+            Vector2 botS = proj(item.position, 0.0f);
+            Vector2 topS = proj(item.position, beamH);
+
+            DrawLineEx(botS, topS, 4.0f + (int)item.rarity * 2.0f, ColorAlpha(item.rarityColor, 0.35f));
+
+            // Partículas subindo no feixe
+            float t = (float)GetTime();
+            for (int p = 0; p < 3 + (int)item.rarity * 2; ++p) {
+                float py = botS.y - std::fmod(t * 55.0f + p * 38.0f, botS.y - topS.y);
+                float px = botS.x + std::sin(t * 2.0f + p * 1.2f) * (6.0f + (int)item.rarity * 4.0f);
+                DrawCircleV({ px, py }, 2.0f, ColorAlpha(item.rarityColor, 0.6f));
+            }
+        }
     }
 
-    // HUD 2D por cima (mesmo do 2D)
+    // Partículas
+    for (const auto& p : particles.particles) {
+        if (!p.active) continue;
+        Vector2 s = proj(p.position, 8.0f);
+        Particle tempP = p;
+        tempP.position = s;
+        tempP.render();
+    }
+
+    // Projéteis do player
+    for (auto& p : projectiles) {
+        Vector2 s = proj(p.position, 12.0f);
+        Vector2 originalPos = p.position;
+        p.position = s;
+        p.render();
+        p.position = originalPos;
+    }
+
+    // Projéteis dos inimigos
+    for (auto& p : enemyProjectiles) {
+        Vector2 s = proj(p.position, 12.0f);
+        Vector2 originalPos = p.position;
+        p.position = s;
+        p.render();
+        p.position = originalPos;
+    }
+
+    // NPCs (Nomes e Tags de Quest)
+    for (auto& n : npcs) {
+        Vector2 feetS = proj(n.position, 0.0f);
+        DrawText(n.name.c_str(), (int)feetS.x - (int)n.name.size() * 4, (int)feetS.y + 12, 14, WHITE);
+
+        if (n.hasQuest) {
+            Vector2 headS = proj(n.position, 48.0f);
+            DrawText("!", (int)headS.x - 4, (int)headS.y - 12, 28, GOLD);
+        } else if (n.hasNewDialogue && n.dialogues.size() > 0) {
+            Vector2 headS = proj(n.position, 50.0f);
+            DrawText("!", (int)headS.x + 6, (int)headS.y - 14, 20, Color{255, 220, 0, 255});
+        }
+    }
+
+    // Inimigos (Barras de Vida e Nomes de Elite)
+    for (auto& e : enemies) {
+        Vector2 barPos = proj(e.position, e.radius + 16.0f);
+
+        // Barra de HP
+        float barW  = e.isBoss() ? 70.0f : (e.type == EnemyType::Tank ? 48.0f : 36.0f);
+        float hpPct = e.health / e.maxHealth;
+        Color hpCol = hpPct > 0.5f ? Color{0,220,80,255} : hpPct > 0.25f ? YELLOW : RED;
+        DrawHealthBar(barPos, hpPct, barW, 5, hpCol);
+
+        // Label de Tier
+        if (e.evolTier > 0) {
+            const char* tierLabel = e.evolTier == 1 ? "[VET]" : e.evolTier == 2 ? "[ELT]" : "[LND]";
+            Color tierCol = e.evolTier == 1 ? Color{0,220,100,255} :
+                            e.evolTier == 2 ? Color{100,180,255,255} : Color{255,160,0,255};
+            int tw = MeasureText(tierLabel, 9);
+            DrawText(tierLabel, (int)(barPos.x - tw/2), (int)(barPos.y - 11), 9, tierCol);
+        }
+
+        // Nome de Elite Mod
+        if (e.isElite) {
+            Color eliteCol;
+            switch (e.eliteMod) {
+                case 0:  eliteCol = {255, 60,  0,   255}; break;
+                case 1:  eliteCol = {180, 180, 255, 255}; break;
+                default: eliteCol = {255, 0,   200, 255}; break;
+            }
+            const char* tag = (e.eliteMod == 0) ? "BERSERK" : (e.eliteMod == 1) ? "BLINDADO" : "VOLATIL";
+            DrawText(tag, (int)(barPos.x - MeasureText(tag, 10)/2), (int)(barPos.y - 21), 10, ColorAlpha(eliteCol, 0.9f));
+        }
+    }
+
+    // ── 3. Interface e HUD Final ─────────────────────────────────────────────
     drawUI();
-    DrawText("MODO 2.5D (F10) - Incremento 1: mundo 3D + entidades projetadas",
+    DrawText("MODO 2.5D (F10) - Incremento 2: depth sorting, billboards e sombras 3D",
              12, screenHeight - 18, 11, ColorAlpha(Color{0,210,255,255}, 0.6f));
 
     EndTextureMode();

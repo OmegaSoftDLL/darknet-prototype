@@ -198,6 +198,48 @@ std::string NetClient::currentRoom() const {
     return room_;
 }
 
+// ── Chat ─────────────────────────────────────────────────────────────────────
+static std::string jsonEscape(const std::string& s) {
+    std::string o;
+    for (char c : s) {
+        if (c == '"' || c == '\\') { o.push_back('\\'); o.push_back(c); }
+        else if (c == '\n' || c == '\r' || c == '\t') o.push_back(' ');
+        else o.push_back(c);
+    }
+    return o;
+}
+
+void NetClient::sendChat(const std::string& text) {
+    if (!enabled || text.empty()) return;
+    char buf[320];
+    std::snprintf(buf, sizeof(buf), "{\"t\":\"chat\",\"id\":%u,\"text\":\"%s\"}",
+                  myId_, jsonEscape(text).substr(0, 200).c_str());
+    std::lock_guard<std::mutex> lk(mtx_);
+    if (outQueue_.size() < 32) outQueue_.push_back(buf);
+}
+
+std::vector<std::pair<uint32_t,std::string>> NetClient::drainChats() {
+    std::lock_guard<std::mutex> lk(mtx_);
+    std::vector<std::pair<uint32_t,std::string>> out(chatIn_.begin(), chatIn_.end());
+    chatIn_.clear();
+    return out;
+}
+
+void NetClient::sendEnemyDeath(uint32_t enemyId) {
+    if (!enabled) return;
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "{\"t\":\"edeath\",\"id\":%u}", enemyId);
+    std::lock_guard<std::mutex> lk(mtx_);
+    if (outQueue_.size() < 64) outQueue_.push_back(buf);
+}
+
+std::vector<uint32_t> NetClient::drainEnemyDeaths() {
+    std::lock_guard<std::mutex> lk(mtx_);
+    std::vector<uint32_t> out(enemyDeathIn_.begin(), enemyDeathIn_.end());
+    enemyDeathIn_.clear();
+    return out;
+}
+
 void NetClient::poll(float dt) {
     std::lock_guard<std::mutex> lk(mtx_);
     // envelhece e expira peers
