@@ -408,6 +408,20 @@ void NetClient::netThreadMain() {
                             peer->lastSeen = 0.0f;
                         }
                     }
+                    else if (tt == "chat" && jsonNumber(payload, "id", idd)) {
+                        uint32_t pid = (uint32_t)idd;
+                        std::string txt; jsonString(payload, "text", txt);
+                        if (pid != myId_ && !txt.empty()) {
+                            std::lock_guard<std::mutex> lk(mtx_);
+                            chatIn_.push_back({ pid, txt });
+                            if (chatIn_.size() > 32) chatIn_.pop_front();
+                        }
+                    }
+                    else if (tt == "edeath" && jsonNumber(payload, "id", idd)) {
+                        std::lock_guard<std::mutex> lk(mtx_);
+                        enemyDeathIn_.push_back((uint32_t)idd);
+                        if (enemyDeathIn_.size() > 256) enemyDeathIn_.pop_front();
+                    }
                 }
             }
         }
