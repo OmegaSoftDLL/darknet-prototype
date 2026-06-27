@@ -1,4 +1,4 @@
-﻿#include "Enemy.h"
+#include "Enemy.h"
 #include "Effects.h"
 #include "SpriteGen.h"
 #include <raymath.h>
@@ -426,6 +426,9 @@ void Enemy::updateBossPatterns(float dt, Vector2 norm) {
             shootDirection = { std::cos(burstAngle), std::sin(burstAngle) };
             burstAngle    += burstStep;
             burstShots--;
+            if (burstShots == 0) {
+                bossPattern = 0; // Volta para cooldown
+            }
         }
         return; // ocupado disparando o padrão
     }
@@ -435,16 +438,28 @@ void Enemy::updateBossPatterns(float dt, Vector2 norm) {
 
     bossAtkTimer -= dt;
     // Telegrafa nos últimos 0.5s antes do grande ataque (pisca/recolhe)
-    if (bossAtkTimer <= 0.5f && bossAtkTimer > 0.0f) telegraphTimer = telegraphMax;
+    if (bossAtkTimer <= 0.5f && bossAtkTimer > 0.0f) {
+        telegraphTimer = telegraphMax;
+        if (bossPattern == 0) {
+            // Seleciona o padrão que vai usar logo no início do telegraph
+            int phase = bossPhase;
+            int maxPat = (phase >= 3) ? 4 : (phase == 2) ? 3 : 2;
+            bossPattern = GetRandomValue(1, maxPat);
+        }
+    }
     if (bossAtkTimer > 0.0f) return;
 
-    // ── Lança um padrão de ataque conforme a fase ────────────────────────────
+    // Se chegou aqui (bossAtkTimer <= 0.0f) e bossPattern ainda é 0 (cooldown acabou sem passar por telegraph), seleciona
+    if (bossPattern == 0) {
+        int phase = bossPhase;
+        int maxPat = (phase >= 3) ? 4 : (phase == 2) ? 3 : 2;
+        bossPattern = GetRandomValue(1, maxPat);
+    }
+
+    // Inicializa os parâmetros de disparos para o padrão selecionado
     int phase = bossPhase;
-    int maxPat = (phase >= 3) ? 4 : (phase == 2) ? 3 : 2;
-    int pat = GetRandomValue(1, maxPat);
-    bossPattern = pat;
     int n; float spread;
-    switch (pat) {
+    switch (bossPattern) {
         case 1: // LEQUE à frente
             n = 5 + phase * 2; spread = 0.85f;
             burstAngle = baseAngle - spread * 0.5f;
@@ -898,6 +913,29 @@ void Enemy::updateKronosSentry(float dt, Vector2 target) {
     }
 }
 
+static void DrawRotatedRectangle(Vector2 center, float width, float length, float angleRad, Color color, bool wire) {
+    Vector2 dir = { std::cos(angleRad), std::sin(angleRad) };
+    Vector2 right = { -dir.y, dir.x };
+
+    Vector2 halfDir = { dir.x * length * 0.5f, dir.y * length * 0.5f };
+    Vector2 halfRight = { right.x * width * 0.5f, right.y * width * 0.5f };
+
+    Vector2 tl = { center.x - halfDir.x - halfRight.x, center.y - halfDir.y - halfRight.y };
+    Vector2 tr = { center.x + halfDir.x - halfRight.x, center.y + halfDir.y - halfRight.y };
+    Vector2 br = { center.x + halfDir.x + halfRight.x, center.y + halfDir.y + halfRight.y };
+    Vector2 bl = { center.x - halfDir.x + halfRight.x, center.y - halfDir.y + halfRight.y };
+
+    if (wire) {
+        DrawLineV(tl, tr, color);
+        DrawLineV(tr, br, color);
+        DrawLineV(br, bl, color);
+        DrawLineV(bl, tl, color);
+    } else {
+        DrawTriangle(tl, bl, tr, color);
+        DrawTriangle(tr, bl, br, color);
+    }
+}
+
 void Enemy::render() const {
     // ── SPRITE PIXEL-ART (substitui o desenho por formas) ────────────────────
     SpriteBank& sb = SpriteBank::get();
@@ -931,13 +969,69 @@ void Enemy::render() const {
         // Boss: aura épica de fase + coroa de pips + partículas de carregamento
         if (isBoss()) renderBossAura();
 
-        // ── TELEGRAPH de ataque — anel de aviso piscando antes de atacar ─────
-        if (telegraphTimer > 0.0f) {
-            float tp = 0.5f + 0.5f * std::sin(gt * 30.0f);   // pisca rápido
-            float tr = radius * (1.5f + (1.0f - telegraphTimer/telegraphMax) * 0.6f);
-            Color warn = (lungeTimer > 0.0f) ? Color{255,60,0,255} : Color{255,210,0,255};
-            DrawCircleLines((int)position.x, (int)position.y, tr, ColorAlpha(warn, 0.5f + tp*0.5f));
-            DrawCircleLines((int)position.x, (int)position.y, tr*0.7f, ColorAlpha(warn, 0.3f + tp*0.4f));
+        // ── DANGER ZONE (Hades/FFXIV style) ──────────────────────────────────
+        if (telegraphTimer > 0.0f || (isBoss() && bossAtkTimer > 0.0f && bossAtkTimer <= 0.5f)) {
+            float pct = isBoss() ? (1.0f - (bossAtkTimer / 0.5f)) : (1.0f - (telegraphTimer / telegraphMax));
+            if (pct < 0.0f) pct = 0.0f;
+            if (pct > 1.0f) pct = 1.0f;
+
+            Color warnColor = { 220, 20, 20, 255 }; // Hades Red
+            Color fillColor = ColorAlpha(warnColor, 0.12f);
+            Color activeFillColor = ColorAlpha(warnColor, 0.28f);
+            float tp = 0.5f + 0.5f * std::sin(gt * 24.0f); // pulsating outline
+            Color borderCol = ColorAlpha(warnColor, 0.6f + tp * 0.3f);
+            float baseAngle = (shootDirection.x == 0.0f && shootDirection.y == 0.0f) ? 0.0f : std::atan2(shootDirection.y, shootDirection.x);
+
+            // Determine shape based on bossPattern or role
+            if (isBoss()) {
+                // Boss attack shapes
+                if (bossPattern == 1) { // LEQUE (Sector)
+                    float spread = 0.85f;
+                    float startAngle = (baseAngle - spread * 0.5f) * RAD2DEG;
+                    float endAngle = (baseAngle + spread * 0.5f) * RAD2DEG;
+                    DrawCircleSectorLines(position, shootRange, startAngle, endAngle, 24, borderCol);
+                    DrawCircleSector(position, shootRange, startAngle, endAngle, 24, fillColor);
+                    DrawCircleSector(position, shootRange * pct, startAngle, endAngle, 24, activeFillColor);
+                }
+                else if (bossPattern == 2) { // VARREDURA (Sweep)
+                    float startAngle = (baseAngle - 0.8f) * RAD2DEG;
+                    float endAngle = (baseAngle + 0.8f) * RAD2DEG;
+                    DrawCircleSectorLines(position, shootRange, startAngle, endAngle, 24, borderCol);
+                    DrawCircleSector(position, shootRange, startAngle, endAngle, 24, fillColor);
+                    DrawCircleSector(position, shootRange * pct, startAngle, endAngle, 24, activeFillColor);
+                }
+                else if (bossPattern == 3) { // METRALHAR (Rectangle)
+                    float width = radius * 3.5f;
+                    float length = shootRange;
+                    DrawRotatedRectangle(position, width, length, baseAngle, borderCol, true);
+                    DrawRotatedRectangle(position, width, length, baseAngle, fillColor, false);
+                    DrawRotatedRectangle(position, width, length * pct, baseAngle, activeFillColor, false);
+                }
+                else { // ANEL 360 (Circle)
+                    float maxR = shootRange * 0.8f;
+                    DrawCircleLines((int)position.x, (int)position.y, maxR, borderCol);
+                    DrawCircleV(position, maxR, fillColor);
+                    DrawCircleV(position, maxR * pct, activeFillColor);
+                }
+            }
+            else {
+                // Non-boss: Brutamonte lunge or regular shooter
+                int role = combatRole();
+                if (role == 3) { // Brutamonte lunge (Rectangle)
+                    float width = radius * 2.8f;
+                    float length = speed * 3.0f * 0.32f; // dash distance
+                    if (length < 150.0f) length = 150.0f; // min length
+                    DrawRotatedRectangle(position, width, length, baseAngle, borderCol, true);
+                    DrawRotatedRectangle(position, width, length, baseAngle, fillColor, false);
+                    DrawRotatedRectangle(position, width, length * pct, baseAngle, activeFillColor, false);
+                }
+                else { // Normal circle around enemy
+                    float maxR = radius * 1.8f;
+                    DrawCircleLines((int)position.x, (int)position.y, maxR, borderCol);
+                    DrawCircleV(position, maxR, fillColor);
+                    DrawCircleV(position, maxR * pct, activeFillColor);
+                }
+            }
         }
 
         // Sombra no chao — só fantasmas/wraiths flutuam; zumbis andam no chao
