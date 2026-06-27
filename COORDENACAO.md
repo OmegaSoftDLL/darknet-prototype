@@ -38,7 +38,8 @@ PROCEDURALMENTE (dezenas de DrawRectangle/Circle), NÃO são Texture2D — entã
 5. LightSystem: manter máscara 2D, blendar sobre a cena após `EndMode3D`.
 
 Incrementos (cada um compila + commit + push):
-- [ ] Inc.1: Camera3D + tilemap 3D (chão/paredes) + raycast do mouse.  ← CLAUDE em andamento
+- [x] Inc.1: Camera3D + tilemap 3D (chão/paredes) + raycast do mouse. CONCLUÍDO (commit 57a2a4c,
+      raylib 5.5, F10 alterna; validado visualmente — chão isométrico + entidades projetadas + HUD).
 - [ ] Inc.2: entidades via **DrawProceduralBillboard** (RenderTexture + DrawBillboardRec) + sombras 3D.
 - [ ] Inc.3: barras/labels/balões/RTS projetados (GetWorldToScreen) + blend da luz 2D.
 
