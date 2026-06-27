@@ -2328,7 +2328,7 @@ void Game::update(float dt) {
         }
         if (darkZoneActive) {
             if (render3D) {
-                lightSystem.ambientDark = 0.35f;
+                lightSystem.ambientDark = 0.50f;
                 lightSystem.clear();
                 lightSystem.addPlayerLight(player.position);
                 for (int i = 0; i < 5; ++i) { float a = i * 1.25664f;
@@ -2382,9 +2382,9 @@ void Game::update(float dt) {
     camera.target.y += (player.position.y - camera.target.y) * camT;
     if (render3D && !buildingSystem.buildModeActive && !shopSystem.open && !craftingSystem.open && !showInventory) {
         float wh = GetMouseWheelMove();
-        if (wh != 0.0f) { cameraZoom -= wh * 0.10f;
-            if (cameraZoom < 0.45f) cameraZoom = 0.45f;
-            if (cameraZoom > 4.50f) cameraZoom = 4.50f; }
+        if (wh != 0.0f) { cameraZoom -= wh * 0.06f;
+            if (cameraZoom < 0.85f) cameraZoom = 0.85f;
+            if (cameraZoom > 1.50f) cameraZoom = 1.50f; }
     }
 
     // Câmera 3D (2.5D) acompanha o jogador — usada quando render3D está ativo (F10).
@@ -3729,7 +3729,7 @@ void Game::handleInput(float dt) {
         if (wlen > 0.0f) {
             Vector2 old = player.position;
             player.move(wasd, dt);
-            if (!airborne && tilemap.isWallAtPosition(player.position)) player.position = old;
+            if (!airborne && tilemap.isWallAtPosition(player.position) && !tilemap.isWallAtPosition(old)) player.position = old;
             hasTarget = false; // WASD cancels click target
         }
     }
@@ -3742,7 +3742,7 @@ void Game::handleInput(float dt) {
         if (dist > 10.0f) {
             Vector2 old = player.position;
             player.move({toTarget.x / dist, toTarget.y / dist}, dt);
-            if (!airborne && tilemap.isWallAtPosition(player.position)) {
+            if (!airborne && tilemap.isWallAtPosition(player.position) && !tilemap.isWallAtPosition(old)) {
                 player.position = old;
                 hasTarget = false;
             }
@@ -4901,10 +4901,10 @@ void Game::drawStoryBanner() const {
 
 void Game::updateCamera3D() {
     float z = cameraZoom;
-    camera3D.position   = { player.position.x, cameraHeight * z, player.position.y + cameraDistY * z };
-    camera3D.target     = { player.position.x, 0.0f, player.position.y };
+    camera3D.position   = { camera.target.x, cameraHeight * z, camera.target.y + cameraDistY * z };
+    camera3D.target     = { camera.target.x, 0.0f, camera.target.y };
     camera3D.up         = { 0.0f, 1.0f, 0.0f };
-    camera3D.fovy       = 45.0f;
+    camera3D.fovy       = 30.0f;
     camera3D.projection = CAMERA_PERSPECTIVE;
 }
 
@@ -4942,6 +4942,7 @@ void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function
 
     // 3. Re-enter gameTarget FBO and 3D mode
     BeginTextureMode(gameTarget);
+    rlSetClipPlanes(10.0, 4000.0);
     BeginMode3D(camera3D);
 
     // 4. Draw billboard in 3D space
@@ -4959,6 +4960,7 @@ void Game::renderWorld3D() {
     ClearBackground(Color{10, 12, 20, 255});
 
     // ── 1. Modo 3D: Chão, Paredes, Sombras e Entidades (Billboards) ───────────
+    rlSetClipPlanes(10.0, 4000.0);
     BeginMode3D(camera3D);
         // Render do mapa 3D
         tilemap.render3D(camera.target);
@@ -5246,17 +5248,17 @@ void Game::renderWorld3D() {
         for (const auto& b : buildingSystem.buildings) {
             if (m_modelsLoaded && b.built) {
                 if (b.type == BuildingType::Ark && m_castleModel.meshCount > 0) {
-                    DrawModelEx(m_castleModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
+                    DrawModelEx(m_castleModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_castleScale, m_castleScale, m_castleScale }, WHITE);
                 } else if (b.type == BuildingType::House && m_houseModel.meshCount > 0) {
-                    DrawModelEx(m_houseModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
+                    DrawModelEx(m_houseModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_houseScale, m_houseScale, m_houseScale }, WHITE);
                 } else if (b.type == BuildingType::Barracks && m_barracksModel.meshCount > 0) {
-                    DrawModelEx(m_barracksModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
+                    DrawModelEx(m_barracksModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_barracksScale, m_barracksScale, m_barracksScale }, WHITE);
                 } else if (b.type == BuildingType::Turret && m_turretModel.meshCount > 0) {
-                    DrawModelEx(m_turretModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 35.0f, 35.0f, 35.0f }, WHITE);
+                    DrawModelEx(m_turretModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_turretScale, m_turretScale, m_turretScale }, WHITE);
                 } else if (b.type == BuildingType::TankFactory && m_marketModel.meshCount > 0) {
-                    DrawModelEx(m_marketModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
+                    DrawModelEx(m_marketModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_marketScale, m_marketScale, m_marketScale }, WHITE);
                 } else if (b.type == BuildingType::MedBay && m_wellModel.meshCount > 0) {
-                    DrawModelEx(m_wellModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 35.0f, 35.0f, 35.0f }, WHITE);
+                    DrawModelEx(m_wellModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_wellScale, m_wellScale, m_wellScale }, WHITE);
                 } else if (b.type == BuildingType::Wall) {
                     SpriteBank& sb = SpriteBank::get();
                     if (sb.ready) {
@@ -5532,6 +5534,9 @@ void Game::renderWorld3D() {
 
     // Apply light mask overlay (darkens world except around light sources)
     lightSystem.applyMask();
+
+    // Atmosfera Diablo: vignette nos cantos (escurece bordas)
+    DrawVignette(screenWidth, screenHeight);
 
     // ── 3. Interface e HUD Final ─────────────────────────────────────────────
     drawUI();
