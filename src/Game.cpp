@@ -145,6 +145,21 @@ Game::Game() {
     if (FileExists("resources/models/old_car_new.glb")) {
         m_carModel = LoadModel("resources/models/old_car_new.glb");
     }
+    {
+        auto _fit = [](Model m, float target)->float {
+            if (m.meshCount <= 0) return 1.0f;
+            BoundingBox bb = GetModelBoundingBox(m);
+            float d = fmaxf(bb.max.y - bb.min.y, fmaxf(bb.max.x - bb.min.x, bb.max.z - bb.min.z));
+            return (d > 0.001f) ? target / d : 1.0f;
+        };
+        m_houseScale    = _fit(m_houseModel, 95.0f);
+        m_barracksScale = _fit(m_barracksModel, 90.0f);
+        m_castleScale   = _fit(m_castleModel, 120.0f);
+        m_turretScale   = _fit(m_turretModel, 75.0f);
+        m_marketScale   = _fit(m_marketModel, 100.0f);
+        m_wellScale     = _fit(m_wellModel, 55.0f);
+        m_carScale      = _fit(m_carModel, 40.0f);
+    }
     m_modelsLoaded = true;
 
     audio.init();
@@ -2369,7 +2384,7 @@ void Game::update(float dt) {
         float wh = GetMouseWheelMove();
         if (wh != 0.0f) { cameraZoom -= wh * 0.10f;
             if (cameraZoom < 0.45f) cameraZoom = 0.45f;
-            if (cameraZoom > 2.20f) cameraZoom = 2.20f; }
+            if (cameraZoom > 4.50f) cameraZoom = 4.50f; }
     }
 
     // Câmera 3D (2.5D) acompanha o jogador — usada quando render3D está ativo (F10).
@@ -4977,11 +4992,11 @@ void Game::renderWorld3D() {
                 // Estruturas grandes = MODELOS 3D REAIS (não billboard 2.5D).
                 Model* mdl = nullptr; float mscale = 40.0f;
                 switch (obj.type) {
-                    case 0: mdl = &m_houseModel;    mscale = 40.0f; break; // casa
-                    case 1: mdl = &m_barracksModel; mscale = 38.0f; break; // celeiro
-                    case 7: mdl = &m_castleModel;   mscale = 46.0f; break; // predio alto
-                    case 8: mdl = &m_wellModel;     mscale = 30.0f; break; // silo
-                    case 6: mdl = &m_carModel;      mscale = 7.0f;  break; // carro (glb)
+                    case 0: mdl = &m_houseModel;    mscale = m_houseScale; break; // casa
+                    case 1: mdl = &m_barracksModel; mscale = m_barracksScale; break; // celeiro
+                    case 7: mdl = &m_castleModel;   mscale = m_castleScale; break; // predio
+                    case 8: mdl = &m_wellModel;     mscale = m_wellScale; break; // silo
+                    case 6: mdl = &m_carModel;      mscale = m_carScale; break; // carro
                     default: break;
                 }
                 if (mdl && m_modelsLoaded && mdl->meshCount > 0) {
