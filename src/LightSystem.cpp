@@ -1,4 +1,4 @@
-#include "LightSystem.h"
+﻿#include "LightSystem.h"
 #include <cmath>
 #include <algorithm>
 #include <raymath.h>
@@ -115,7 +115,7 @@ void LightSystem::prepareMask(Camera2D camera) {
         for (int s = steps; s >= 0; s--) {
             float t      = (float)s / (float)steps;     // 1.0 = inner, 0.0 = outer
             float r      = l.radius * (float)(steps - s + 1) / (float)(steps + 1);
-            float bright = l.intensity * t * t;         // quadratic falloff
+            float bright = l.intensity * t;         // quadratic falloff
             Color c = {
                 (unsigned char)((float)l.color.r * bright),
                 (unsigned char)((float)l.color.g * bright),
@@ -158,7 +158,7 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
         for (int s = steps; s >= 0; s--) {
             float t      = (float)s / (float)steps;     // 1.0 = inner, 0.0 = outer
             float r      = projRadius * (float)(steps - s + 1) / (float)(steps + 1);
-            float bright = l.intensity * t * t;         // quadratic falloff
+            float bright = l.intensity * t;         // quadratic falloff
             Color c = {
                 (unsigned char)((float)l.color.r * bright),
                 (unsigned char)((float)l.color.g * bright),
