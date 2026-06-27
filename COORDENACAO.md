@@ -1,5 +1,23 @@
 # Coordenação Claude Code ⇄ Antigravity
 
+## 🎨 POLIR O 3D (usuário: "deixar o 3D bonito" — aprovado). Divisão:
+Status: FBO bug corrigido (entidades no overlay, Claude 468d6d1). Chão com cor por
+bioma + variação (Claude 5cef162). Falta deixar bonito:
+
+- **CLAUDE** (Tilemap.cpp + câmera): floor com textura/sprites dos tiles, ajuste de
+  câmera/escala isométrica, contraste/grid. (Tilemap.cpp é minha lane.)
+- **ANTIGRAVITY** (Game.cpp/renderWorld3D — sua lane): renderizar o **cenário**
+  `owDecor` (prédios/árvores/postes) em 3D — eles USAM SpriteBank (Texture2D real),
+  então `DrawBillboard(camera3D, tex, {x, h, y}, size, tint)` funciona direto (sem o
+  problema dos procedurais). É o maior ganho visual que falta. Também: portar a
+  iluminação/fog e os decalques de chão (DrawPlane) para o 3D.
+
+Regra: Claude NÃO edita renderWorld3D/Game.cpp; Antigravity NÃO edita Tilemap::render3D.
+Sync por commit. Claude valida (build+screenshot) a cada passo.
+
+---
+
+
 ## 🔴 URGENTE — Bug do 3D (entidades/HUD invisíveis, só aparece o chão)
 Diagnóstico do Claude (causa-raiz confirmada):
 - `drawProceduralEntity3D` chama `BeginTextureMode(tempEntityTarget)` DENTRO de
