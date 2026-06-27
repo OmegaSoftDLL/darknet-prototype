@@ -1,4 +1,4 @@
-#include "Enemy.h"
+﻿#include "Enemy.h"
 #include "Effects.h"
 #include "SpriteGen.h"
 #include <raymath.h>
@@ -3281,7 +3281,7 @@ void Enemy::renderBansheeHowler() const {
 void Enemy::render3D() const {
     const float x   = position.x;
     const float z   = position.y;
-    const float r   = radius;
+    const float r   = fmaxf(radius, 15.0f); // piso de tamanho (nao achatar de cima)
     const float t   = aliveTimer;          // anima discretamente (bob/orbita/passada)
     const float TAU = 6.28318530718f;
     const float fx  = (float)facing;       // lado esquerdo/direito (eixo X)
