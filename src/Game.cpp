@@ -897,6 +897,9 @@ void Game::buildOpenWorldScenery() {
                 place(b, 2, 10, 0.8f, 1.4f, 150);
                 break;
         }
+        // Vegetação rasteira densa em TODA zona — vida no chão (grama + detritos)
+        place(b, 11, 130, 0.6f, 1.7f, 20);  // grama
+        place(b, 12,  36, 0.6f, 1.2f, 40);  // pedras/detritos
     }
 
     // ── Colisao de cenario: estruturas grandes bloqueiam passagem (nao andar em
@@ -5083,6 +5086,23 @@ void Game::renderWorld3D() {
                             DrawCapsule({x, H*0.25f, zz}, {x, H*0.74f, zz}, rr*0.45f, 8, 8, {150,150,158,255});
                             DrawSphereEx({x, H*0.84f, zz}, rr*0.42f, 8, 8, {150,150,158,255});
                         } break;
+                        case 11: { // grama: lâminas finas verdes com balanço de vento
+                            float gh = 20.0f * sc, gr = 11.0f * sc;
+                            float sway = sinf((float)GetTime() * 1.8f + x * 0.06f) * gh * 0.35f;
+                            Color gc = { 70, 150, 60, 255 };
+                            for (int bld = 0; bld < 5; ++bld) {
+                                float a = bld * 1.2566f;
+                                float ox = cosf(a) * gr * 0.4f, oz = sinf(a) * gr * 0.4f;
+                                DrawCylinderEx({ x+ox, 0, zz+oz }, { x+ox+sway, gh, zz+oz }, gr*0.10f, gr*0.02f, 4, gc);
+                            }
+                            w = gr; h = gh;
+                        } break;
+                        case 12: { // pedras/detritos: cluster baixo de esferas cinza
+                            float pr = 9.0f * sc;
+                            DrawSphereEx({ x, pr*0.5f, zz }, pr*0.6f, 6, 6, { 110,108,104,255 });
+                            DrawSphereEx({ x+pr*0.5f, pr*0.35f, zz+pr*0.3f }, pr*0.4f, 6, 6, { 95,93,90,255 });
+                            w = pr; h = pr;
+                        } break;
                         default: if (hasSprite) { // fallback billboard so p/ tipos sem 3D
                             int variant = ((int)(obj.position.x*0.13f+obj.position.y*0.07f)) % SpriteBank::SCENERY_VARIANTS;
                             if (variant<0) variant+=SpriteBank::SCENERY_VARIANTS;
@@ -5379,6 +5399,32 @@ void Game::renderWorld3D() {
                 DrawRectangleLinesEx({mouseWorld.x - 32, mouseWorld.y - 32, 64, 64},
                                      2.f, canPlace ? Color{0, 255, 100, 200} : Color{255, 50, 50, 200});
             });
+        }
+
+        // ── VIDA AMBIENTE: partículas flutuando (poeira/brasas/pólen) por TEMA ──
+        {
+            float t = (float)GetTime();
+            Color mc;
+            switch (currentZone) {
+                case ZoneID::InfernoZone: case ZoneID::KronosForge:
+                    mc = {255,150,60,255}; break;                                  // brasas
+                case ZoneID::Cemetery: case ZoneID::GhostCity: case ZoneID::AbandonedManor:
+                    mc = {180,200,235,255}; break;                                 // névoa fria
+                case ZoneID::DarkForest: case ZoneID::CursedFarm:
+                    mc = {170,235,150,255}; break;                                 // pólen/vaga-lumes
+                default:
+                    mc = {255,215,160,255}; break;                                 // poeira dourada
+            }
+            const float RANGE = 720.0f;
+            for (int i = 0; i < 120; ++i) {
+                float hx = sinf(i * 12.9898f) * 43758.5453f; hx -= floorf(hx);
+                float hz = sinf(i * 78.233f)  * 43758.5453f; hz -= floorf(hz);
+                float hy = sinf(i * 37.719f)  * 43758.5453f; hy -= floorf(hy);
+                float px = player.position.x + (hx - 0.5f) * 2.0f * RANGE + sinf(t * 0.25f + i) * 28.0f;
+                float pz = player.position.y + (hz - 0.5f) * 2.0f * RANGE + cosf(t * 0.22f + i * 1.7f) * 28.0f;
+                float py = 14.0f + hy * 160.0f + sinf(t * 0.6f + i * 1.3f) * 14.0f;
+                DrawSphereEx({ px, py, pz }, 1.1f + hy * 1.3f, 4, 4, mc);
+            }
         }
 
     EndMode3D();
