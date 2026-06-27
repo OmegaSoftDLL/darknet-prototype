@@ -12,6 +12,7 @@ server/game-server/server.log.err
 
 # Relatorios do bot (gerados em runtime)
 bot_report*.txt
+test_report.txt
 
 # Saves
 *.sav
