@@ -515,7 +515,7 @@ void Tilemap::generateOpenWorld() {
             int centerX = offX + OW_ZONE_W / 2;
             int centerY = offY + OW_ZONE_H / 2;
 
-            int clusters = 16; // poucos blocos numa regiao de 40x40
+            int clusters = 0; // SEM blocos de parede no mundo aberto (estruturas = modelos de cenario)
             for (int c = 0; c < clusters; ++c) {
                 int cxp = offX + 5 + rnd() % (OW_ZONE_W - 10);
                 int cyp = offY + 5 + rnd() % (OW_ZONE_H - 10);
@@ -1341,7 +1341,7 @@ void Tilemap::render3D(Vector2 camTarget) const {
 
             // Paredes (tipo Wall ou cenário sólido) = cubos com volume texturizados
             if (t.type == TileType::Wall) { // NAO desenhar cubo p/ t.solid (colisao invisivel do cenario)
-                const float WALL_H = TS * 1.5f;
+                const float WALL_H = openWorld ? TS * 0.8f : TS * 1.6f;
                 Vector3 c = { rx + TS * 0.5f, WALL_H * 0.5f, ry + TS * 0.5f };
                 if (sb.ready) {
                     DrawCubeTexture(sb.tileWall[(int)z], c, TS, WALL_H, TS, WHITE);
