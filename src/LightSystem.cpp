@@ -36,9 +36,9 @@ void LightSystem::addPlayerLight(Vector2 pos) {
     // scenery (houses, trees, etc.) even in the darkest zones.
     LightSource l;
     l.position  = pos;
-    l.radius    = 360.0f;
-    l.intensity = 0.78f;
-    l.color     = {180, 200, 255, 255};
+    l.radius    = 340.0f;
+    l.intensity = 0.82f;
+    l.color     = {255, 226, 180, 255};   // tom quente (clima Diablo)
     l.flicker   = false;
     lights.insert(lights.begin(), l); // always index 0
 }
