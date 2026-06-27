@@ -1,0 +1,63 @@
+DARKNET_SAVE_V4
+slot 0
+saveDate 2026-06-27 13:32:14
+posX 6157.753906
+posY 3669.446045
+health 721.440002
+maxHealth 743.000000
+attackDamage 179.000000
+attackRange 232.500000
+speed 356.000000
+defense 23.000000
+level 14
+xp 2908
+xpToNext 32981
+credits 5370
+zone 6
+evolutionPath 0
+evolutionTier 0
+totalKills 0
+totalDeaths 0
+bossesKilled 0
+portalsSealed 0
+difficultyLevel 0
+playMinutes 0.000000
+weaponName Rifle de Energia
+armorName Armadura Avancada
+implantName Neural Link
+questCount 25
+quest q_limpar 5 1 1
+quest q_suprimentos 3 1 1
+quest q_executor 1 1 1
+quest q_morphx 3 1 1
+quest q_drones 5 1 1
+quest q_zergling 15 1 1
+quest q_hydra 8 1 1
+quest q_brood 1 1 1
+quest q_fantasmas 10 1 1
+quest q_zumbis 20 1 1
+quest q_portais 3 1 1
+quest q_orc 5 1 1
+quest q_paladin 5 1 1
+quest q_omega_boss 1 1 1
+quest q_cemiterio 4 1 1
+quest q_inferno 0 0 0
+quest q_loot 10 1 1
+quest q_kamikaze 8 1 1
+quest q_sniper 6 1 1
+quest q_alien_boss 1 1 1
+quest q_sombra 8 1 1
+quest q_banshee 5 1 1
+quest q_zombie_lord 1 1 1
+quest q_coleta_raro 5 1 1
+quest q_nocturna 30 1 1
+inventory 9
+8
+8
+12
+8
+8
+8
+8
+9
+8
