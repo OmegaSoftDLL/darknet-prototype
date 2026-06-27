@@ -25,6 +25,7 @@ FetchContent_MakeAvailable(raylib)
 add_executable(darknet
     src/main.cpp
     src/Game.cpp
+    src/SpriteExtrude.cpp
     src/Player.cpp
     src/Enemy.cpp
     src/Item.cpp

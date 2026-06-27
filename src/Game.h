@@ -146,6 +146,10 @@ private:
     Vector2  mouseGround3D() const;   // raycast do mouse no plano Y=0 -> mundo 2D
     void     renderWorld3D();         // caminho de render 2.5D completo (mundo 3D + outdoors procedurais)
     void     drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function<void()> drawFunc);
+    // Modelos VOXEL 3D reais (malha extrudada do sprite 2D) — cache por tipo.
+    std::unordered_map<int, Model> m_voxModels;
+    void     ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn);
+    void     drawVoxel(int key, Vector2 pos, float rotDeg);
 
     struct ChatBubble {
         std::string text;
