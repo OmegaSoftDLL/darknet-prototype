@@ -3787,8 +3787,19 @@ void Game::handleInput(float dt) {
     // ── Clicar num NPC para conversar (selecao por clique) ────────────────────
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !dialogOpen &&
         !buildingSystem.buildModeActive && !producedThisClick) {
+        // Em 3D, testa o clique contra o NPC PROJETADO NA TELA (o modelo voxel é
+        // alto e aparece acima dos "pés"; o chão sob o cursor cai atrás do NPC).
+        Vector2 cs = virtualizeMousePos(GetMousePosition());
         for (int i = 0; i < (int)npcs.size(); ++i) {
-            if (Vector2Distance(mouseWorld, npcs[i].position) <= npcs[i].radius + 18.0f) {
+            bool hit;
+            if (render3D) {
+                Vector2 ns = GetWorldToScreenEx({ npcs[i].position.x, 28.0f, npcs[i].position.y },
+                                                camera3D, screenWidth, screenHeight);
+                hit = Vector2Distance(cs, ns) <= 44.0f;   // tolerância em pixels (corpo)
+            } else {
+                hit = Vector2Distance(mouseWorld, npcs[i].position) <= npcs[i].radius + 18.0f;
+            }
+            if (hit) {
                 if (Vector2Distance(player.position, npcs[i].position) <= 160.0f) {
                     nearNpcIndex = i;
                     dialogOpen   = true;
