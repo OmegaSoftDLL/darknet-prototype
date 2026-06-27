@@ -972,12 +972,29 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                     owDecor.scenery.push_back(o);
                 }
             };
-            add(11, 70, 0.6f, 1.7f);    // grama
-            add(2,  10, 0.8f, 1.7f);    // árvores
-            add(12, 16, 0.6f, 1.2f);    // pedras/detritos
-            add(5,   4, 1.0f, 1.0f);    // postes
-            if (rnd() > 0.55f) add(7, 1, 1.0f, 1.7f);   // prédio ocasional
-            if (rnd() > 0.70f) add(3, 6, 0.7f, 1.1f);   // lápides ocasionais
+            // Bioma do chunk (mesmo layout 3x3 do render, repetido por módulo).
+            int tcx = (int)floorf((ox + CH * 0.5f) / (float)Tilemap::tileSize);
+            int tcy = (int)floorf((oy + CH * 0.5f) / (float)Tilemap::tileSize);
+            int cgx = (int)floorf((float)tcx / Tilemap::OW_ZONE_W);
+            int cgy = (int)floorf((float)tcy / Tilemap::OW_ZONE_H);
+            int bcol = ((cgx % Tilemap::OW_COLS) + Tilemap::OW_COLS) % Tilemap::OW_COLS;
+            int brow = ((cgy % Tilemap::OW_ROWS) + Tilemap::OW_ROWS) % Tilemap::OW_ROWS;
+            ZoneID z = tilemap.owLayout[brow][bcol];
+
+            add(11, 80, 0.6f, 1.7f);   // grama base em todo lugar
+            switch (z) {
+                case ZoneID::DarkForest:     add(2, 42, 0.9f, 1.9f); add(12, 10, 0.6f, 1.1f); break;                 // floresta densa
+                case ZoneID::Cemetery:       add(3, 30, 0.7f, 1.2f); add(2, 8, 0.9f, 1.4f); add(10, 3, 1.0f, 1.4f); break; // cemitério
+                case ZoneID::GhostCity:      add(7, 7, 1.0f, 2.1f); add(5, 9, 1.0f, 1.0f); add(6, 4, 1.0f, 1.0f); break;   // cidade fantasma
+                case ZoneID::KronosForge:
+                case ZoneID::InfernoZone:    add(12, 26, 0.7f, 1.4f); add(8, 3, 1.0f, 1.6f); add(2, 4, 0.6f, 1.0f); break; // lava/forja
+                case ZoneID::CursedFarm:     add(0, 3, 1.0f, 1.6f); add(4, 18, 1.0f, 1.4f); add(2, 8, 0.8f, 1.3f); break;  // fazenda
+                case ZoneID::Bunker:         add(8, 5, 1.0f, 1.6f); add(7, 5, 0.8f, 1.4f); add(4, 10, 1.0f, 1.3f); break;  // bunker
+                case ZoneID::AbandonedManor: add(10, 6, 1.0f, 1.5f); add(3, 10, 0.7f, 1.1f); add(2, 10, 0.9f, 1.5f); break;// mansão
+                case ZoneID::KronosNexus:    add(10, 8, 1.2f, 2.0f); add(7, 5, 1.0f, 1.8f); break;                        // núcleo
+                default:                     add(2, 10, 0.8f, 1.7f); add(12, 14, 0.6f, 1.2f); add(5, 4, 1.0f, 1.0f);
+                                             if (rnd() > 0.6f) add(7, 1, 1.0f, 1.7f); break;                              // ruínas
+            }
         }
 }
 
