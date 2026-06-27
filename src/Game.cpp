@@ -134,6 +134,9 @@ Game::Game() {
         m_wellTex = LoadTexture("resources/models/well_diffuse.png");
         m_wellModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_wellTex;
     }
+    if (FileExists("resources/models/old_car_new.glb")) {
+        m_carModel = LoadModel("resources/models/old_car_new.glb");
+    }
     m_modelsLoaded = true;
 
     audio.init();
@@ -2302,7 +2305,7 @@ void Game::update(float dt) {
         }
         if (darkZoneActive) {
             if (render3D) {
-                lightSystem.ambientDark = 0.66f;
+                lightSystem.ambientDark = 0.35f;
                 lightSystem.clear();
                 lightSystem.addPlayerLight(player.position);
                 for (int i = 0; i < 5; ++i) { float a = i * 1.25664f;
@@ -4962,15 +4965,30 @@ void Game::renderWorld3D() {
 
                 float w = 64.0f, h = 64.0f;
                 bool hasSprite = (sb.ready && obj.type >= 0 && obj.type < SpriteBank::NUM_SCENERY);
-                if (hasSprite) {
+
+                // Estruturas grandes = MODELOS 3D REAIS (não billboard 2.5D).
+                Model* mdl = nullptr; float mscale = 40.0f;
+                switch (obj.type) {
+                    case 0: mdl = &m_houseModel;    mscale = 40.0f; break; // casa
+                    case 1: mdl = &m_barracksModel; mscale = 38.0f; break; // celeiro
+                    case 7: mdl = &m_castleModel;   mscale = 46.0f; break; // predio alto
+                    case 8: mdl = &m_wellModel;     mscale = 30.0f; break; // silo
+                    case 6: mdl = &m_carModel;      mscale = 7.0f;  break; // carro (glb)
+                    default: break;
+                }
+                if (mdl && m_modelsLoaded && mdl->meshCount > 0) {
+                    float s = mscale * (obj.scale > 0.01f ? obj.scale : 1.0f);
+                    DrawModelEx(*mdl, { obj.position.x, 0.0f, obj.position.y }, { 0.0f, 1.0f, 0.0f },
+                                obj.rotation * RAD2DEG, { s, s, s }, WHITE);
+                    w = s; h = s;
+                } else if (hasSprite) {
                     int variant = ((int)(obj.position.x * 0.13f + obj.position.y * 0.07f)) % SpriteBank::SCENERY_VARIANTS;
                     if (variant < 0) variant += SpriteBank::SCENERY_VARIANTS;
                     Texture2D tx = sb.scenery[obj.type][variant];
                     float K = 1.7f * (obj.scale > 0.01f ? obj.scale : 1.0f);
                     w = tx.width * K;
                     h = tx.height * K;
-
-                    // Desenha o billboard 3D da estrutura
+                    // props pequenos (arvore/poste/cerca/lapide/estatua) seguem billboard
                     Rectangle source = { 0.0f, 0.0f, (float)tx.width, -(float)tx.height };
                     Vector3 pos3D = { obj.position.x, h * 0.5f, obj.position.y };
                     Vector2 size = { w, h };

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Player.h"
 #include "Enemy.h"
@@ -137,8 +137,8 @@ private:
     // Câmera 3D para o mundo (chão/paredes). 2D continua sendo a base estável; o
     // modo 3D é alternável por F10 enquanto a migração avança incremento a incremento.
     Camera3D camera3D{};
-    float    cameraHeight = 380.0f;   // altura da câmera acima do plano
-    float    cameraDistY  = 280.0f;   // recuo no eixo Z (profundidade isométrica)
+    float    cameraHeight = 480.0f;   // altura da câmera acima do plano
+    float    cameraDistY  = 250.0f;   // recuo no eixo Z (profundidade isométrica)
     float    cameraZoom   = 1.0f;     // roda do mouse: <1 aproxima, >1 afasta (olhar de cima)
     bool     render3D     = true;     // JOGO É 3D (2.5D isométrico) por padrão em todo gameplay
     RenderTexture2D tempEntityTarget{}; // alvo temporário p/ desenhar entidades procedurais
@@ -505,6 +505,7 @@ private:
     Model m_castleModel; // used for Town Hall / Arca
     Model m_marketModel; // used for Tank Factory
     Model m_wellModel;   // used for MedBay
+    Model m_carModel;    // old_car_new.glb — carros do cenário 3D
     Texture2D m_houseTex;
     Texture2D m_turretTex;
     Texture2D m_barracksTex;
