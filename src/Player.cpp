@@ -1,7 +1,8 @@
-﻿#include "Player.h"
+#include "Player.h"
 #include "Effects.h"
 #include <cmath>
 #include <string>
+extern bool g_renderPass3D;
 
 Player::Player() {
     // Habilidades balanceadas: basico rapido/baixo dano, controle medio, burst alto/cd longo
@@ -215,7 +216,9 @@ void Player::render() const {
     DrawCircleLines((int)px, (int)py, attackRange, ColorAlpha(C_neon, 0.07f));
 
     // Ground shadow â€" fixed at feet level (not affected by body dip), com squash
-    DrawEllipse((int)position.x, (int)(position.y + 51.0f), shadowW, shadowH, ColorAlpha(BLACK, shadowA));
+    if (!g_renderPass3D) {
+        DrawEllipse((int)position.x, (int)(position.y + 51.0f), shadowW, shadowH, ColorAlpha(BLACK, shadowA));
+    }
 
     // Corpo distinto por classe (Soldado usa a arte cyborg detalhada abaixo)
     switch (charClass) {

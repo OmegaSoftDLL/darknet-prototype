@@ -49,6 +49,7 @@ public:
     void   generateOpenWorld();
     ZoneID tileZone(int tx, int ty) const;
     void   render(Vector2 camTarget = {0,0}, float zoom = 1.0f) const; // frustum culling
+    void   render3D(Vector2 camTarget) const;  // 2.5D: chão (DrawPlane) + paredes (DrawCube)
     bool   isWall(int x, int y) const;
     bool   isWallAtPosition(Vector2 pos) const;
     bool   isPortalAtPosition(Vector2 pos, ZoneID& outDest) const;

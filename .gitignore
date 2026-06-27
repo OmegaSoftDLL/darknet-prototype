@@ -14,9 +14,10 @@ server/game-server/server.log.err
 bot_report*.txt
 test_report.txt
 
-# Saves
+# Saves (dados de runtime)
 *.sav
 darknet_save.txt
+saves/
 
 # Editor
 .vs/

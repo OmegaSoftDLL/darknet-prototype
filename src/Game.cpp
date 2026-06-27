@@ -1,5 +1,6 @@
-﻿#include "Game.h"
+#include "Game.h"
 #include "SpriteGen.h"
+bool g_renderPass3D = false;
 #include <raylib.h>
 #include <raymath.h>
 #include <cmath>
@@ -38,6 +39,8 @@ Game::Game() {
     gameTarget = LoadRenderTexture(screenWidth, screenHeight);
     // POINT (nearest) deixa o texto NITIDO ao escalar para tela cheia (BILINEAR borrava).
     SetTextureFilter(gameTarget.texture, TEXTURE_FILTER_POINT);
+    tempEntityTarget = LoadRenderTexture(128, 128);
+    SetTextureFilter(tempEntityTarget.texture, TEXTURE_FILTER_POINT);
     lightSystem.init(screenWidth, screenHeight);
 
     SpriteBank::get().init();   // gera os sprites pixel-art (precisa de contexto GL)
@@ -65,12 +68,16 @@ Game::Game() {
     camera.rotation = 0.0f;
     camera.zoom     = 1.0f;
 
+    // Câmera 3D (2.5D) — valores iniciais válidos antes do primeiro update.
+    updateCamera3D();
+
     spawnInterval = getZoneInfo(currentZone).spawnInterval;
     background.generate(currentZone, tilemap.width, tilemap.height, Tilemap::tileSize);
 }
 
 Game::~Game() {
     UnloadRenderTexture(gameTarget);
+    UnloadRenderTexture(tempEntityTarget);
     lightSystem.shutdown();
     SpriteBank::get().shutdown();
     audio.shutdown();
@@ -2115,6 +2122,12 @@ void Game::update(float dt) {
     // F12 toggles the bot
     if (IsKeyPressed(KEY_F12)) botController.toggle();
 
+    // F10 alterna o modo de renderização 2.5D isométrico (migração em andamento)
+    if (IsKeyPressed(KEY_F10)) {
+        render3D = !render3D;
+        triggerPlayerSpeech(render3D ? "Modo 2.5D ativado (F10)" : "Modo 2D", 2.0f);
+    }
+
     // F9 = jump to Inferno Zone (test shortcut)
     if (IsKeyPressed(KEY_F9)) {
         transitionToZone(ZoneID::InfernoZone);
@@ -2142,7 +2155,7 @@ void Game::update(float dt) {
     player.update(dt);
     updateCompanions(dt);
     particles.update(dt);
-    background.update(dt, camera);
+    background.update(dt);
     audio.updateMusic();
 
     // Light system — dark zone detection and flicker
@@ -2200,6 +2213,9 @@ void Game::update(float dt) {
     float camT = 1.0f - std::exp(-8.0f * dt);
     camera.target.x += (player.position.x - camera.target.x) * camT;
     camera.target.y += (player.position.y - camera.target.y) * camT;
+
+    // Câmera 3D (2.5D) acompanha o jogador — usada quando render3D está ativo (F10).
+    updateCamera3D();
 
     // Open World region detection and camera clamp
     if (openWorldMode) {
@@ -3075,8 +3091,9 @@ void Game::handleInput(float dt) {
         return;
     }
 
-    // Mouse VIRTUALIZADO (corrige o offset em tela cheia / letterbox)
-    Vector2 mouseWorld = GetScreenToWorld2D(virtualizeMousePos(GetMousePosition()), camera);
+    // Mouse no mundo: em 2.5D usa raycast no plano do chão; em 2D, transform da câmera.
+    Vector2 mouseWorld = render3D ? mouseGround3D()
+                                  : GetScreenToWorld2D(virtualizeMousePos(GetMousePosition()), camera);
 
     // ── Bot controller decisions ──────────────────────────────────────────────
     botMeleeRequest = false;
@@ -4594,7 +4611,89 @@ void Game::drawStoryBanner() const {
 
 // ─── Render ──────────────────────────────────────────────────────────────────
 
+// ─── 2.5D isométrico (Incremento 1: câmera + tilemap 3D + raycast) ───────────
+
+void Game::updateCamera3D() {
+    camera3D.position   = { player.position.x, cameraHeight, player.position.y + cameraDistY };
+    camera3D.target     = { player.position.x, 0.0f, player.position.y };
+    camera3D.up         = { 0.0f, 1.0f, 0.0f };
+    camera3D.fovy       = 45.0f;
+    camera3D.projection = CAMERA_PERSPECTIVE;
+}
+
+// Lança um raio do mouse (virtualizado p/ a render-texture 1280x720) e intersecta
+// o plano do chão Y=0, devolvendo a posição em coordenadas de mundo 2D (x, z).
+Vector2 Game::mouseGround3D() const {
+    Ray ray = GetScreenToWorldRayEx(virtualizeMousePos(GetMousePosition()),
+                                    camera3D, screenWidth, screenHeight);
+    float t = (std::fabs(ray.direction.y) > 1e-5f) ? (-ray.position.y / ray.direction.y) : 0.0f;
+    return { ray.position.x + ray.direction.x * t,
+             ray.position.z + ray.direction.z * t };
+}
+
+void Game::renderWorld3D() {
+    BeginTextureMode(gameTarget);
+    ClearBackground(Color{10, 12, 20, 255});
+
+    // ── Mundo em 3D: chão (planos) + paredes/cenário sólido (cubos) ───────────
+    BeginMode3D(camera3D);
+        tilemap.render3D(camera.target);
+    EndMode3D();
+
+    // ── Entidades projetadas (Inc.1: marcadores; Inc.2 = DrawProceduralBillboard)
+    auto proj = [&](Vector2 w, float h) {
+        return GetWorldToScreenEx({ w.x, h, w.y }, camera3D, screenWidth, screenHeight);
+    };
+    // itens
+    for (auto& it : items) {
+        Vector2 s = proj(it.position, 8.0f);
+        DrawCircleV(s, 4.0f, ColorAlpha(it.color, 0.9f));
+    }
+    // inimigos (cor por tipo, como no minimapa)
+    for (auto& e : enemies) {
+        Vector2 s = proj(e.position, 16.0f);
+        Color col = (e.type == EnemyType::Boss) ? ORANGE : (e.isElite ? YELLOW : RED);
+        Vector2 sh = proj(e.position, 0.2f);
+        DrawEllipse((int)sh.x, (int)sh.y, 12, 6, ColorAlpha(BLACK, 0.4f));
+        DrawRectangle((int)s.x - 7, (int)s.y - 18, 14, 22, col);
+        DrawCircleV({ s.x, s.y - 22 }, 7, col);
+    }
+    // companions
+    for (auto& c : companions) {
+        if (!c.active) continue;
+        Vector2 s = proj(c.position, 16.0f);
+        DrawRectangle((int)s.x - 6, (int)s.y - 16, 12, 20, Color{120,255,160,255});
+    }
+    // NPCs
+    for (auto& n : npcs) {
+        Vector2 s = proj(n.position, 16.0f);
+        DrawRectangle((int)s.x - 6, (int)s.y - 16, 12, 20, Color{80,160,255,255});
+    }
+    // player
+    {
+        Vector2 sh = proj(player.position, 0.2f);
+        DrawEllipse((int)sh.x, (int)sh.y, 16, 7, ColorAlpha(BLACK, 0.45f));
+        Vector2 s = proj(player.position, 18.0f);
+        Color pc = player.hasCosmeticTint ? player.cosmeticTint : Color{0,210,255,255};
+        DrawRectangle((int)s.x - 8, (int)s.y - 22, 16, 26, pc);
+        DrawCircleV({ s.x, s.y - 28 }, 8, pc);
+        if (player.skinNeon) DrawCircleLines((int)s.x, (int)(s.y-12), 22,
+                                             ColorAlpha(Color{0,255,200,255}, 0.6f));
+    }
+
+    // HUD 2D por cima (mesmo do 2D)
+    drawUI();
+    DrawText("MODO 2.5D (F10) - Incremento 1: mundo 3D + entidades projetadas",
+             12, screenHeight - 18, 11, ColorAlpha(Color{0,210,255,255}, 0.6f));
+
+    EndTextureMode();
+}
+
 void Game::render() {
+    // Caminho 2.5D isométrico (Incremento 1) — alternável por F10. Mantém o 2D
+    // intacto como padrão até a migração amadurecer.
+    if (render3D && !inMainMenu) { renderWorld3D(); return; }
+
     // Prepare light mask before drawing (uses own RenderTexture pass)
     lightSystem.prepareMask(camera);
 
@@ -4610,7 +4709,7 @@ void Game::render() {
     BeginMode2D(camera);
 
     // Parallax skyline buildings
-    background.drawSkyline(camera, screenWidth, screenHeight, currentZone);
+    background.drawSkyline(camera.target, screenWidth, screenHeight, currentZone);
 
     tilemap.render(camera.target, camera.zoom);   // frustum culling (so tiles visiveis)
 
@@ -4723,7 +4822,8 @@ void Game::render() {
 
     // Building system (world-space)
     {
-        Vector2 mouseWorld = GetScreenToWorld2D(virtualizeMousePos(GetMousePosition()), camera);
+        Vector2 mouseWorld = render3D ? mouseGround3D()
+                                      : GetScreenToWorld2D(virtualizeMousePos(GetMousePosition()), camera);
         buildingSystem.render(player.position, mouseWorld);
         buildingSystem.renderUnitPrompts();  // "[CLIQUE] Produzir Tanque ..."
         buildingSystem.renderBuildingInfo(player.position); // nivel + descricao + [U] evoluir

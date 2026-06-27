@@ -31,6 +31,7 @@
 #include <vector>
 #include <string>
 #include <raylib.h>
+#include <functional>
 
 // Equipment piece lying on the ground — requires E to pick up
 struct GroundEquipment {
@@ -130,6 +131,19 @@ private:
     Background                    background;
 
     Camera2D camera;
+
+    // ── Migração 2.5D isométrico (Incremento 1 & 2) ───────────────────────────
+    // Câmera 3D para o mundo (chão/paredes). 2D continua sendo a base estável; o
+    // modo 3D é alternável por F10 enquanto a migração avança incremento a incremento.
+    Camera3D camera3D{};
+    float    cameraHeight = 380.0f;   // altura da câmera acima do plano
+    float    cameraDistY  = 280.0f;   // recuo no eixo Z (profundidade isométrica)
+    bool     render3D     = false;    // F10 alterna; default 2D (não quebra nada)
+    RenderTexture2D tempEntityTarget{}; // alvo temporário p/ desenhar entidades procedurais
+    void     updateCamera3D();
+    Vector2  mouseGround3D() const;   // raycast do mouse no plano Y=0 -> mundo 2D
+    void     renderWorld3D();         // caminho de render 2.5D completo (mundo 3D + outdoors procedurais)
+    void     drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function<void()> drawFunc);
 
     ZoneID  currentZone       = ZoneID::LARuins;
     float   zoneNameTimer     = 0.0f;  // show zone name on transition
