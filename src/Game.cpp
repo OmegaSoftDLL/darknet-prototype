@@ -5106,6 +5106,8 @@ void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function
 
 void Game::ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn) {
     if (m_voxModels.count(key)) return;
+    if (m_voxGenBudget <= 0) return;   // amortiza: poucas geracoes por frame (anti-engasgo)
+    m_voxGenBudget--;
     g_renderPass3D = true;
     Image img = SpriteExtrude::CaptureToImage(96, capPos, drawFn);
     g_renderPass3D = false;
@@ -5139,6 +5141,8 @@ void Game::drawVoxel(int key, Vector2 pos, float rotDeg) {
 
 void Game::renderWorld3D() {
     // PRE-PASS (sem FBO ativo): captura/voxeliza o sprite 2D em MODELO 3D real, por tipo.
+    // Amortizado: no máx. m_voxGenBudget gerações por frame (evita engasgo ao entrar/explorar).
+    m_voxGenBudget = 3;
     ensureVoxel((int)player.charClass, player.position, [this](){ player.render(); });
     for (auto& e : enemies)    ensureVoxel(100 + (int)e.type, e.position, [&e](){ e.render(); });
     for (auto& n : npcs)       ensureVoxel(300 + (int)n.role, n.position, [&n](){ n.render(); });

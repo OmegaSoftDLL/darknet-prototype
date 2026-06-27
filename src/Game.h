@@ -149,6 +149,7 @@ private:
     void     drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function<void()> drawFunc);
     // Modelos VOXEL 3D reais (malha extrudada do sprite 2D) — cache por tipo.
     std::unordered_map<int, Model> m_voxModels;
+    int      m_voxGenBudget = 0;   // limite de geracoes de voxel por frame (anti-engasgo)
     void     ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn);
     void     drawVoxel(int key, Vector2 pos, float rotDeg);
 

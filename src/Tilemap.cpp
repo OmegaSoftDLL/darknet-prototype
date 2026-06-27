@@ -1334,10 +1334,24 @@ void Tilemap::render3D(Vector2 camTarget) const {
             if (tt == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
             SpriteBank& sb = SpriteBank::get();
             if (sb.ready) {
-                // Piso texturizado
-                Color ft = shade(WHITE, n * fog);
-                if (tt == TileType::BrokenFloor) ft = shade(WHITE, 0.55f);
-                DrawCubeTexture(sb.tileFloor[(int)z], { floorCtr.x, 0.01f, floorCtr.z }, TS, 0.02f, TS, ft);
+                // Piso: UV por POSIÇÃO DO MUNDO → textura contínua/seamless entre tiles
+                // (sem grade artificial). Textura é tileável (wrap REPEAT).
+                Color ft = shade(WHITE, fog);
+                if (tt == TileType::BrokenFloor) ft = shade(WHITE, 0.55f * fog);
+                Texture2D ftex = sb.tileFloor[(int)z];
+                const float SPAN = 192.0f;   // 1 repetição = 3 tiles
+                float u0 = rx / SPAN, u1 = (rx + TS) / SPAN;
+                float v0 = ry / SPAN, v1 = (ry + TS) / SPAN;
+                rlSetTexture(ftex.id);
+                rlBegin(RL_QUADS);
+                rlColor4ub(ft.r, ft.g, ft.b, 255);
+                rlNormal3f(0.0f, 1.0f, 0.0f);
+                rlTexCoord2f(u0, v0); rlVertex3f(rx,      0.02f, ry);
+                rlTexCoord2f(u0, v1); rlVertex3f(rx,      0.02f, ry + TS);
+                rlTexCoord2f(u1, v1); rlVertex3f(rx + TS, 0.02f, ry + TS);
+                rlTexCoord2f(u1, v0); rlVertex3f(rx + TS, 0.02f, ry);
+                rlEnd();
+                rlSetTexture(0);
             } else {
                 // Fallback para piso sólido
                 DrawPlane(floorCtr, { TS, TS }, shade(base, 0.45f));
