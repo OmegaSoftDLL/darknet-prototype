@@ -1,5 +1,6 @@
-﻿#include "Tilemap.h"
+#include "Tilemap.h"
 #include "SpriteGen.h"
+#include "rlgl.h"
 #include <cmath>
 #include <algorithm>
 
@@ -1216,6 +1217,63 @@ void Tilemap::clearSolidFlags() {
             t.solid = false;
 }
 
+static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, float height, float length, Color color)
+{
+    float x = position.x;
+    float y = position.y;
+    float z = position.z;
+
+    rlSetTexture(texture.id);
+
+    rlBegin(RL_QUADS);
+        rlColor4ub(color.r, color.g, color.b, color.a);
+
+        // Front Face
+        rlNormal3f(0.0f, 0.0f, 1.0f);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z + length/2);  // Bottom Left
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z + length/2);  // Bottom Right
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z + length/2);  // Top Right
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z + length/2);  // Top Left
+
+        // Back Face
+        rlNormal3f(0.0f, 0.0f, -1.0f);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z - length/2);  // Bottom Right
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);  // Top Right
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z - length/2);  // Top Left
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z - length/2);  // Bottom Left
+
+        // Top Face
+        rlNormal3f(0.0f, 1.0f, 0.0f);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);  // Top Left
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z + length/2);  // Bottom Left
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z + length/2);  // Bottom Right
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + width/2, y + height/2, z - length/2);  // Top Right
+
+        // Bottom Face
+        rlNormal3f(0.0f, -1.0f, 0.0f);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z - length/2);  // Top Right
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z - length/2);  // Top Left
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + width/2, y - height/2, z + length/2);  // Bottom Left
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - width/2, y - height/2, z + length/2);  // Bottom Right
+
+        // Right face
+        rlNormal3f(1.0f, 0.0f, 0.0f);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z - length/2);  // Bottom Right
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z - length/2);  // Top Right
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z + length/2);  // Top Left
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z + length/2);  // Bottom Left
+
+        // Left Face
+        rlNormal3f(-1.0f, 0.0f, 0.0f);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z - length/2);  // Bottom Left
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z + length/2);  // Bottom Right
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z + length/2);  // Top Right
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);  // Top Left
+    rlEnd();
+
+    rlSetTexture(0);
+}
+
 // ─── Render 2.5D isométrico — chão (DrawPlane) + paredes (DrawCube) ───────────
 // Mapeamento: X3D = X2D, Z3D = Y2D, altura no eixo Y. Culling em janela ao redor
 // do alvo da câmera (camTarget em coordenadas de mundo 2D).
@@ -1268,18 +1326,27 @@ void Tilemap::render3D(Vector2 camTarget) const {
             Color floorColor = shade(base, n);
             if (t.type == TileType::BrokenFloor) floorColor = shade(base, 0.55f);
             if (t.type == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
-            // Rejunte: base escura no tamanho do tile + ladrilho colorido menor por
-            // cima -> dá leitura de piso ladrilhado em vez de um lençol liso.
-            DrawPlane(floorCtr, { TS, TS }, shade(base, 0.45f));
-            Vector3 tileTop = { floorCtr.x, 0.02f, floorCtr.z };
-            DrawPlane(tileTop, { TS - 5.0f, TS - 5.0f }, floorColor);
+            SpriteBank& sb = SpriteBank::get();
+            if (sb.ready) {
+                // Piso texturizado
+                DrawCubeTexture(sb.tileFloor[(int)z], { floorCtr.x, 0.01f, floorCtr.z }, TS, 0.02f, TS, WHITE);
+            } else {
+                // Fallback para piso sólido
+                DrawPlane(floorCtr, { TS, TS }, shade(base, 0.45f));
+                Vector3 tileTop = { floorCtr.x, 0.02f, floorCtr.z };
+                DrawPlane(tileTop, { TS - 5.0f, TS - 5.0f }, floorColor);
+            }
 
-            // Paredes (tipo Wall ou cenário sólido) = cubos com volume, cor do bioma
+            // Paredes (tipo Wall ou cenário sólido) = cubos com volume texturizados
             if (t.type == TileType::Wall || t.solid) {
                 Vector3 c = { rx + TS * 0.5f, TS * 0.5f, ry + TS * 0.5f };
-                Color wc = shade(base, t.solid ? 1.35f : 1.6f);
-                DrawCube(c, TS, TS, TS, wc);
-                DrawCubeWires(c, TS, TS, TS, shade(base, 2.0f));
+                if (sb.ready) {
+                    DrawCubeTexture(sb.tileWall[(int)z], c, TS, TS, TS, WHITE);
+                } else {
+                    Color wc = shade(base, t.solid ? 1.35f : 1.6f);
+                    DrawCube(c, TS, TS, TS, wc);
+                    DrawCubeWires(c, TS, TS, TS, shade(base, 2.0f));
+                }
             }
         }
     }

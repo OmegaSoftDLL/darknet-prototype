@@ -107,6 +107,7 @@ struct Item {
     static Item createEliteDrop(Vector2 pos);
     static Item createWeaponDrop(Vector2 pos);
     void render() const;
+    void render3D() const;              // draws a low-poly 3D model floating over the ground
     void drawDropEffect() const;        // call from world render, in camera space
     void update(float dt);
 

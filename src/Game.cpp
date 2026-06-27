@@ -45,6 +45,35 @@ Game::Game() {
 
     SpriteBank::get().init();   // gera os sprites pixel-art (precisa de contexto GL)
 
+    // Carrega modelos 3D para graficos reais
+    if (FileExists("resources/models/greenman.glb")) {
+        m_playerModel = LoadModel("resources/models/greenman.glb");
+    }
+    if (FileExists("resources/models/robot.glb")) {
+        m_enemyModel = LoadModel("resources/models/robot.glb");
+    }
+    if (FileExists("resources/models/house.obj")) {
+        m_houseModel = LoadModel("resources/models/house.obj");
+        m_houseTex = LoadTexture("resources/models/house_diffuse.png");
+        m_houseModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_houseTex;
+    }
+    if (FileExists("resources/models/turret.obj")) {
+        m_turretModel = LoadModel("resources/models/turret.obj");
+        m_turretTex = LoadTexture("resources/models/turret_diffuse.png");
+        m_turretModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_turretTex;
+    }
+    if (FileExists("resources/models/barracks.obj")) {
+        m_barracksModel = LoadModel("resources/models/barracks.obj");
+        m_barracksTex = LoadTexture("resources/models/barracks_diffuse.png");
+        m_barracksModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_barracksTex;
+    }
+    if (FileExists("resources/models/castle.obj")) {
+        m_castleModel = LoadModel("resources/models/castle.obj");
+        m_castleTex = LoadTexture("resources/models/castle_diffuse.png");
+        m_castleModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_castleTex;
+    }
+    m_modelsLoaded = true;
+
     audio.init();
     buildQuests();
     buildNPCs();
@@ -81,6 +110,29 @@ Game::~Game() {
     lightSystem.shutdown();
     SpriteBank::get().shutdown();
     audio.shutdown();
+
+    // Desaloca modelos 3D e texturas correspondentes
+    if (m_modelsLoaded) {
+        if (m_playerModel.meshCount > 0) UnloadModel(m_playerModel);
+        if (m_enemyModel.meshCount > 0)  UnloadModel(m_enemyModel);
+        if (m_houseModel.meshCount > 0) {
+            UnloadModel(m_houseModel);
+            UnloadTexture(m_houseTex);
+        }
+        if (m_turretModel.meshCount > 0) {
+            UnloadModel(m_turretModel);
+            UnloadTexture(m_turretTex);
+        }
+        if (m_barracksModel.meshCount > 0) {
+            UnloadModel(m_barracksModel);
+            UnloadTexture(m_barracksTex);
+        }
+        if (m_castleModel.meshCount > 0) {
+            UnloadModel(m_castleModel);
+            UnloadTexture(m_castleTex);
+        }
+    }
+
     CloseWindow();
 }
 
@@ -4757,6 +4809,11 @@ Vector2 Game::mouseGround3D() const {
 }
 
 void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function<void()> drawFunc) {
+    // 1. Temporarily exit 3D mode and gameTarget FBO
+    EndMode3D();
+    EndTextureMode();
+
+    // 2. Render entity to temp target
     g_renderPass3D = true;
     BeginTextureMode(tempEntityTarget);
     ClearBackground(BLANK);
@@ -4770,10 +4827,14 @@ void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function
     BeginMode2D(entityCam);
     drawFunc();
     EndMode2D();
-    EndTextureMode();
+    EndTextureMode(); // resets FBO to screen
     g_renderPass3D = false;
 
-    // OpenGL textures are Y-flipped, flip the source rectangle vertically
+    // 3. Re-enter gameTarget FBO and 3D mode
+    BeginTextureMode(gameTarget);
+    BeginMode3D(camera3D);
+
+    // 4. Draw billboard in 3D space
     Rectangle source = { 0.0f, 0.0f, (float)tempEntityTarget.texture.width, -(float)tempEntityTarget.texture.height };
     Vector3 pos3D = { pos.x, heightOffset, pos.y };
     Vector2 size = { 128.0f, 128.0f };
@@ -4792,7 +4853,61 @@ void Game::renderWorld3D() {
         // Render do mapa 3D
         tilemap.render3D(camera.target);
 
-        // Sombras 3D projetadas no plano Y=0.1
+        // Decalques de chão em 3D (sangue/queimado)
+        for (const auto& d : decals) {
+            if (std::fabs(d.pos.x - camera.target.x) > 1000 || std::fabs(d.pos.y - camera.target.y) > 650) continue;
+            float a = (d.life / d.maxLife);
+            if (d.type == 0) { // sangue
+                DrawPlane({ d.pos.x, 0.12f, d.pos.y }, { d.size * 2.0f, d.size * 1.2f }, ColorAlpha(d.color, 0.45f * a));
+                DrawPlane({ d.pos.x - d.size * 0.8f, 0.12f, d.pos.y + 4.0f }, { d.size * 0.7f, d.size * 0.7f }, ColorAlpha(d.color, 0.40f * a));
+                DrawPlane({ d.pos.x + d.size * 1.0f, 0.12f, d.pos.y - 2.0f }, { d.size * 0.6f, d.size * 0.6f }, ColorAlpha(d.color, 0.35f * a));
+            } else { // queimado
+                DrawPlane({ d.pos.x, 0.12f, d.pos.y }, { d.size * 1.4f, d.size * 1.4f }, ColorAlpha(Color{20,18,16,255}, 0.5f * a));
+                DrawPlane({ d.pos.x, 0.13f, d.pos.y }, { d.size * 1.5f, d.size * 1.5f }, ColorAlpha(Color{255,120,30,255}, 0.2f * a));
+            }
+        }
+
+        // Sombras e luzes de poste do cenário (owDecor) + billboards 3D reais
+        if (openWorldMode && owDecorBuilt) {
+            SpriteBank& sb = SpriteBank::get();
+            float time = (float)GetTime();
+            for (const auto& obj : owDecor.scenery) {
+                float dx = obj.position.x - camera.target.x;
+                float dy = obj.position.y - camera.target.y;
+                if (dx < -1400 || dx > 1400 || dy < -1400 || dy > 1400) continue;
+
+                float w = 64.0f, h = 64.0f;
+                bool hasSprite = (sb.ready && obj.type >= 0 && obj.type < SpriteBank::NUM_SCENERY);
+                if (hasSprite) {
+                    int variant = ((int)(obj.position.x * 0.13f + obj.position.y * 0.07f)) % SpriteBank::SCENERY_VARIANTS;
+                    if (variant < 0) variant += SpriteBank::SCENERY_VARIANTS;
+                    Texture2D tx = sb.scenery[obj.type][variant];
+                    float K = 1.7f * (obj.scale > 0.01f ? obj.scale : 1.0f);
+                    w = tx.width * K;
+                    h = tx.height * K;
+
+                    // Desenha o billboard 3D da estrutura
+                    Rectangle source = { 0.0f, 0.0f, (float)tx.width, -(float)tx.height };
+                    Vector3 pos3D = { obj.position.x, h * 0.5f, obj.position.y };
+                    Vector2 size = { w, h };
+                    DrawBillboardRec(camera3D, tx, source, pos3D, size, WHITE);
+                }
+
+                // Desenha plano horizontal de sombra
+                DrawPlane({ obj.position.x, 0.11f, obj.position.y }, { w * 0.88f, h * 0.17f }, ColorAlpha(BLACK, 0.40f));
+
+                // Poste de luz: cone/poça de luz amarela no chão
+                bool lights = (obj.tint.r > 128);
+                if (lights && obj.type == 5) {
+                    float fl = std::sin(time * 7.3f + obj.position.x) * 0.5f + std::sin(time * 2.1f + obj.position.y) * 0.5f;
+                    float pulse = 0.55f + 0.30f * fl;
+                    if (pulse < 0.2f) pulse = 0.2f;
+                    DrawPlane({ obj.position.x, 0.14f, obj.position.y }, { w * 1.0f, h * 0.20f }, ColorAlpha(Color{255,210,130,255}, 0.07f * pulse));
+                }
+            }
+        }
+
+        // ── Sombras 3D projetadas no plano Y=0.1 ──
         // Sombra do player
         DrawPlane({ player.position.x, 0.1f, player.position.y }, { 24.0f, 12.0f }, ColorAlpha(BLACK, 0.45f));
 
@@ -4825,12 +4940,289 @@ void Game::renderWorld3D() {
             DrawPlane({ it.position.x, 0.1f, it.position.y }, { 12.0f, 6.0f }, ColorAlpha(BLACK, 0.3f));
         }
 
-        // NOTA: as entidades NÃO são desenhadas aqui dentro do BeginMode3D.
-        // O billboard-via-RenderTexture (drawProceduralEntity3D) chamava
-        // BeginTextureMode aninhado, o que reseta o FBO para a tela e fazia tudo
-        // depois da 1ª entidade sumir. Elas agora são desenhadas no overlay 2D
-        // projetado após o EndMode3D (mesmo padrão dos projéteis). Só as sombras
-        // (DrawPlane) ficam no passo 3D.
+        // Sombras dos animais
+        for (const auto& a : animals) {
+            if (std::fabs(a.position.x - camera.target.x) > 1100 || std::fabs(a.position.y - camera.target.y) > 700) continue;
+            DrawPlane({ a.position.x, 0.1f, a.position.y }, { 12.0f, 6.0f }, ColorAlpha(BLACK, 0.3f));
+        }
+
+        // Sombras dos nós de recursos
+        for (const auto& n : resourceNodes) {
+            if (n.depleted) continue;
+            if (std::fabs(n.position.x - camera.target.x) > 1100 || std::fabs(n.position.y - camera.target.y) > 700) continue;
+            DrawPlane({ n.position.x, 0.1f, n.position.y }, { 24.0f, 12.0f }, ColorAlpha(BLACK, 0.35f));
+        }
+
+        // Sombras dos equipamentos no chão
+        for (const auto& ge : groundEquips) {
+            if (ge.collected) continue;
+            if (std::fabs(ge.position.x - camera.target.x) > 1100 || std::fabs(ge.position.y - camera.target.y) > 700) continue;
+            DrawPlane({ ge.position.x, 0.1f, ge.position.y }, { 16.0f, 8.0f }, ColorAlpha(BLACK, 0.3f));
+        }
+
+        // Sombras das construções
+        for (const auto& b : buildingSystem.buildings) {
+            if (!b.built) continue;
+            DrawPlane({ b.position.x, 0.1f, b.position.y }, { 80.0f, 40.0f }, ColorAlpha(BLACK, 0.35f));
+        }
+
+
+        // ── Desenho dos Billboards 3D Reais (com oclusão e depth buffer) ──
+
+        // Player
+        if (m_modelsLoaded && m_playerModel.meshCount > 0) {
+            float rotAngle = 0.0f;
+            if (player.velocity.x != 0.0f || player.velocity.y != 0.0f) {
+                rotAngle = atan2f(-player.velocity.x, player.velocity.y) * RAD2DEG;
+            } else {
+                rotAngle = (player.facing == 1) ? -90.0f : 90.0f;
+            }
+            DrawModelEx(m_playerModel, { player.position.x, 0.0f, player.position.y }, { 0.0f, 1.0f, 0.0f }, rotAngle, { 28.0f, 28.0f, 28.0f }, WHITE);
+        } else {
+            drawProceduralEntity3D(player.position, 18.0f, [&]() {
+                player.render();
+            });
+        }
+
+        // NPCs
+        for (auto& n : npcs) {
+            if (m_modelsLoaded && m_playerModel.meshCount > 0) {
+                DrawModelEx(m_playerModel, { n.position.x, 0.0f, n.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 25.0f, 25.0f, 25.0f }, GREEN);
+            } else {
+                drawProceduralEntity3D(n.position, 16.0f, [&]() {
+                    n.render();
+                });
+            }
+        }
+
+        // Companheiros
+        for (auto& c : companions) {
+            if (c.active) {
+                if (m_modelsLoaded && m_playerModel.meshCount > 0) {
+                    DrawModelEx(m_playerModel, { c.position.x, 0.0f, c.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 20.0f, 20.0f, 20.0f }, SKYBLUE);
+                } else {
+                    drawProceduralEntity3D(c.position, 14.0f, [&]() {
+                        c.render();
+                    });
+                }
+            }
+        }
+
+        // Inimigos
+        for (auto& e : enemies) {
+            if (m_modelsLoaded && m_enemyModel.meshCount > 0) {
+                float rotAngle = 0.0f;
+                Vector2 diff = Vector2Subtract(player.position, e.position);
+                if (diff.x != 0.0f || diff.y != 0.0f) {
+                    rotAngle = atan2f(-diff.x, diff.y) * RAD2DEG;
+                }
+                float esc = e.isElite ? 24.0f : 16.0f;
+                Color tc = e.isElite ? Color{255, 100, 100, 255} : WHITE;
+                DrawModelEx(m_enemyModel, { e.position.x, 0.0f, e.position.y }, { 0.0f, 1.0f, 0.0f }, rotAngle, { esc, esc, esc }, tc);
+            } else {
+                drawProceduralEntity3D(e.position, 14.0f, [&]() {
+                    e.render();
+                });
+            }
+        }
+
+        // Itens
+        for (auto& it : items) {
+            drawProceduralEntity3D(it.position, 6.0f, [&]() {
+                it.render();
+            });
+        }
+
+        // Outros jogadores (Peers)
+        if (netActive) {
+            static const Color cols[6] = {
+                {60,120,220,255},{220,80,140,255},{150,160,175,255},
+                {120,80,220,255},{180,120,255,255},{200,130,60,255}
+            };
+            for (const auto& p : net.peers()) {
+                if (m_modelsLoaded && m_playerModel.meshCount > 0) {
+                    Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
+                    DrawModelEx(m_playerModel, { p.x, 0.0f, p.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 28.0f, 28.0f, 28.0f }, c);
+                } else {
+                    drawProceduralEntity3D({ p.x, p.y }, 18.0f, [&, p]() {
+                        Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
+                        DrawRectangle((int)p.x - 9, (int)p.y - 14, 18, 28, c);
+                        DrawCircle((int)p.x, (int)(p.y - 20), 9.0f, c);
+                        DrawCircleLines((int)p.x, (int)(p.y - 20), 9.0f, ColorAlpha(WHITE, 0.4f));
+                    });
+                }
+            }
+        }
+
+        // Animais / Vida Selvagem
+        for (const auto& a : animals) {
+            if (std::fabs(a.position.x - camera.target.x) > 1100 || std::fabs(a.position.y - camera.target.y) > 700) continue;
+            drawProceduralEntity3D(a.position, 10.0f, [&, a]() {
+                float x = a.position.x, y = a.position.y;
+                float bob = std::sin(a.animTimer * 8.0f) * 1.5f;
+                switch (a.type) {
+                    case AnimalType::Deer: {
+                        Color body={150,110,70,255};
+                        DrawEllipse((int)x,(int)(y+bob),12.0f,8.0f,body);
+                        DrawCircleV({x+9,y-6+bob},5.0f,body);
+                        DrawLine((int)x+9,(int)(y-10+bob),(int)x+6,(int)(y-16+bob),Color{90,60,30,255});
+                        DrawLine((int)x+11,(int)(y-10+bob),(int)x+14,(int)(y-16+bob),Color{90,60,30,255});
+                        DrawRectangle((int)x-8,(int)(y+6),2,8,body); DrawRectangle((int)x+6,(int)(y+6),2,8,body);
+                        break;
+                    }
+                    case AnimalType::Rabbit: {
+                        Color body={210,200,190,255};
+                        DrawCircleV({x,y+bob},6.0f,body);
+                        DrawEllipse((int)(x-2),(int)(y-8+bob),2.0f,5.0f,body);
+                        DrawEllipse((int)(x+2),(int)(y-8+bob),2.0f,5.0f,body);
+                        break;
+                    }
+                    case AnimalType::Boar: {
+                        Color body={90,70,60,255};
+                        DrawEllipse((int)x,(int)(y+bob),13.0f,8.0f,body);
+                        DrawCircleV({x+10,y+bob},5.0f,body);
+                        DrawCircleV({x+13,y+bob},2.0f,Color{40,30,25,255});
+                        break;
+                    }
+                    case AnimalType::Wolf: {
+                        Color body=a.fleeing?Color{120,120,130,255}:Color{90,95,105,255};
+                        DrawEllipse((int)x,(int)(y+bob),12.0f,7.0f,body);
+                        DrawCircleV({x+9,y-3+bob},5.0f,body);
+                        DrawLine((int)x+7,(int)(y-7+bob),(int)x+6,(int)(y-11+bob),body);
+                        DrawLine((int)x+11,(int)(y-7+bob),(int)x+12,(int)(y-11+bob),body);
+                        DrawCircleV({x+11,y-3+bob},1.5f,Color{255,200,0,255});
+                        break;
+                    }
+                    default: { // Bird
+                        float fl = std::sin(a.animTimer*12.0f)*4.0f;
+                        Color body={60,60,70,255};
+                        DrawCircleV({x,y-20+bob*2},3.0f,body);
+                        DrawLine((int)x,(int)(y-20+bob*2),(int)(x-6),(int)(y-20-fl+bob*2),body);
+                        DrawLine((int)x,(int)(y-20+bob*2),(int)(x+6),(int)(y-20-fl+bob*2),body);
+                        break;
+                    }
+                }
+            });
+        }
+
+        // Nós de Recursos Naturais
+        for (int i = 0; i < (int)resourceNodes.size(); ++i) {
+            const auto& n = resourceNodes[i];
+            if (n.depleted) continue;
+            if (std::fabs(n.position.x - camera.target.x) > 1100 || std::fabs(n.position.y - camera.target.y) > 700) continue;
+
+            drawProceduralEntity3D(n.position, 14.0f, [&, i, n]() {
+                float sx = (n.shake > 0.0f) ? std::sin(n.shake * 30.0f) * 2.0f : 0.0f;
+                float x = n.position.x + sx, y = n.position.y;
+                Color c = resourceColor(n.type);
+                switch (n.type) {
+                    case ResourceType::Wood: {
+                        DrawRectangle((int)(x-4), (int)(y-6), 8, 22, Color{90,60,30,255});
+                        DrawCircleV({x, y-22}, 18.0f, Color{30,90,40,255});
+                        DrawCircleV({x-10, y-14}, 12.0f, Color{36,100,46,255});
+                        DrawCircleV({x+10, y-14}, 12.0f, Color{28,84,38,255});
+                        break;
+                    }
+                    case ResourceType::Stone: {
+                        DrawCircleV({x, y}, 15.0f, Color{120,120,128,255});
+                        DrawCircleV({x-6, y+2}, 9.0f, Color{145,145,155,255});
+                        DrawCircleV({x+7, y-1}, 8.0f, Color{100,100,110,255});
+                        break;
+                    }
+                    default: {
+                        DrawCircleV({x, y}, 15.0f, Color{80,72,66,255});
+                        DrawCircleV({x-5, y+2}, 8.0f, Color{96,88,80,255});
+                        for (int v = 0; v < 5; ++v) {
+                            float a = v * 1.2f + i;
+                            DrawCircleV({x + std::cos(a)*7.0f, y + std::sin(a)*7.0f}, 2.6f, c);
+                        }
+                        break;
+                    }
+                }
+            });
+        }
+
+        // Equipamentos no chão
+        for (const auto& ge : groundEquips) {
+            if (ge.collected) continue;
+            if (std::fabs(ge.position.x - camera.target.x) > 1100 || std::fabs(ge.position.y - camera.target.y) > 700) continue;
+
+            drawProceduralEntity3D(ge.position, 8.0f, [&, ge]() {
+                float pulse = 0.5f + 0.5f * std::sin(ge.pulseTimer * 4.0f);
+                Color ec = ge.equip.color;
+                float fade = (ge.lifetime < 5.0f) ? ge.lifetime / 5.0f : 1.0f;
+                DrawCircleV(ge.position, 22.0f + pulse * 6.0f, ColorAlpha(ec, 0.18f * fade));
+                DrawCircleV(ge.position, 16.0f + pulse * 4.0f, ColorAlpha(ec, 0.28f * fade));
+                DrawCircleLines((int)ge.position.x, (int)ge.position.y, 18.0f + pulse * 4.0f, ColorAlpha(ec, 0.65f * fade));
+                for (int s = 0; s < 2; ++s) {
+                    float a = ge.pulseTimer * 3.5f + s * 3.14159f;
+                    DrawCircleV({ge.position.x + std::cos(a) * 16.0f, ge.position.y + std::sin(a) * 16.0f}, 3.0f, ColorAlpha(WHITE, 0.85f * fade));
+                }
+                DrawCircleV(ge.position, 10.0f, ColorAlpha(ec, fade));
+                DrawCircleV(ge.position, 5.0f, ColorAlpha(WHITE, 0.7f * fade));
+            });
+        }
+
+        // Construções, Tanques e Soldados (Building System / RTS)
+        for (const auto& b : buildingSystem.buildings) {
+            if (m_modelsLoaded && b.built) {
+                if (b.type == BuildingType::Ark && m_castleModel.meshCount > 0) {
+                    DrawModelEx(m_castleModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
+                } else if (b.type == BuildingType::House && m_houseModel.meshCount > 0) {
+                    DrawModelEx(m_houseModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
+                } else if (b.type == BuildingType::Barracks && m_barracksModel.meshCount > 0) {
+                    DrawModelEx(m_barracksModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
+                } else if (b.type == BuildingType::Turret && m_turretModel.meshCount > 0) {
+                    DrawModelEx(m_turretModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 35.0f, 35.0f, 35.0f }, WHITE);
+                } else {
+                    drawProceduralEntity3D(b.position, 24.0f, [&, b]() {
+                        buildingSystem.renderBuilding(b);
+                    });
+                }
+            } else {
+                drawProceduralEntity3D(b.position, 24.0f, [&, b]() {
+                    buildingSystem.renderBuilding(b);
+                });
+            }
+        }
+        for (const auto& t : buildingSystem.tanks) {
+            if (t.isDead()) continue;
+            if (m_modelsLoaded && m_enemyModel.meshCount > 0) {
+                DrawModelEx(m_enemyModel, { t.position.x, 0.0f, t.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 24.0f, 14.0f, 24.0f }, ORANGE);
+            } else {
+                drawProceduralEntity3D(t.position, 12.0f, [&, t]() {
+                    t.render();
+                });
+            }
+        }
+        for (const auto& s : buildingSystem.soldiers) {
+            if (s.isDead()) continue;
+            if (m_modelsLoaded && m_playerModel.meshCount > 0) {
+                DrawModelEx(m_playerModel, { s.position.x, 0.0f, s.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 18.0f, 18.0f, 18.0f }, GOLD);
+            } else {
+                drawProceduralEntity3D(s.position, 12.0f, [&, s]() {
+                    s.render();
+                });
+            }
+        }
+
+        // RTS Building Preview Ghost
+        if (buildingSystem.buildModeActive) {
+            Vector2 mouseWorld = mouseGround3D();
+            drawProceduralEntity3D(mouseWorld, 16.0f, [&]() {
+                BuildingType preview = static_cast<BuildingType>(buildingSystem.selectedType);
+                Color previewCol = {0, 255, 180, 100};
+                bool canPlace = true;
+                for (const auto& b : buildingSystem.buildings) {
+                    if (Vector2Distance(b.position, mouseWorld) < 80.f) { canPlace = false; break; }
+                }
+                previewCol = canPlace ? Color{0, 255, 100, 80} : Color{255, 50, 50, 80};
+                DrawRectangle((int)(mouseWorld.x - 32), (int)(mouseWorld.y - 32), 64, 64, previewCol);
+                DrawRectangleLinesEx({mouseWorld.x - 32, mouseWorld.y - 32, 64, 64},
+                                     2.f, canPlace ? Color{0, 255, 100, 200} : Color{255, 50, 50, 200});
+            });
+        }
+
     EndMode3D();
 
     // ── 2. Overlay 2D Projetado: Projéteis, Partículas, Nomes e UI ────────────
@@ -4838,34 +5230,118 @@ void Game::renderWorld3D() {
         return GetWorldToScreenEx({ w.x, h, w.y }, camera3D, screenWidth, screenHeight);
     };
 
-    // ── Entidades: arte procedural projetada na tela (FIX do bug "só o chão") ──
-    // Desenha a render() existente na posição projetada (troca temporária de
-    // position, como os projéteis). g_renderPass3D=true faz a entidade pular a
-    // própria sombra 2D (as sombras já saem em 3D no passo acima).
-    auto drawEnt = [&](auto& e, float h) {
-        Vector2 s = proj(e.position, h);
-        Vector2 op = e.position; e.position = s;
-        g_renderPass3D = true; e.render(); g_renderPass3D = false;
-        e.position = op;
-    };
-    for (auto& it : items)     drawEnt(it, 6.0f);
-    for (auto& n  : npcs)      drawEnt(n, 16.0f);
-    for (auto& c  : companions){ if (c.active) drawEnt(c, 14.0f); }
-    for (auto& e  : enemies)   drawEnt(e, 14.0f);
-    drawEnt(player, 18.0f);
+    // ── RTS Unit Selection Indicators in 2D projected space ──
+    for (const auto& t : buildingSystem.tanks) {
+        if (!t.selected || t.isDead()) continue;
+        Vector2 s = proj(t.position, 0.0f);
+        DrawEllipseLines((int)s.x, (int)s.y, 22, 10, Color{0,255,80,255});
+        if (t.hasMoveOrder) {
+            Vector2 mS = proj(t.moveOrder, 0.0f);
+            DrawLineEx(s, mS, 1.0f, ColorAlpha(Color{0,255,80,255}, 0.35f));
+        }
+    }
+    for (const auto& s : buildingSystem.soldiers) {
+        if (!s.selected || s.isDead()) continue;
+        Vector2 feetS = proj(s.position, 0.0f);
+        DrawEllipseLines((int)feetS.x, (int)feetS.y, 14, 7, Color{0,255,80,255});
+        if (s.hasMoveOrder) {
+            Vector2 mS = proj(s.moveOrder, 0.0f);
+            DrawLineEx(feetS, mS, 1.0f, ColorAlpha(Color{0,255,80,255}, 0.35f));
+        }
+    }
 
-    // Remote Players (Peers) on 2D projected overlay
-    if (netActive) {
-        static const Color cols[6] = {
-            {60,120,220,255},{220,80,140,255},{150,160,175,255},
-            {120,80,220,255},{180,120,255,255},{200,130,60,255}
-        };
-        for (const auto& p : net.peers()) {
-            Vector2 s = proj({ p.x, p.y }, 18.0f);
-            Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
-            DrawRectangle((int)s.x - 9, (int)s.y - 14, 18, 28, c);
-            DrawCircle((int)s.x, (int)(s.y - 20), 9.0f, c);
-            DrawCircleLines((int)s.x, (int)(s.y - 20), 9.0f, ColorAlpha(WHITE, 0.4f));
+    // ── Prompts de Produção dos Prédios RTS ──
+    for (const auto& b : buildingSystem.buildings) {
+        if (!b.built) continue;
+        bool isFactory  = (b.type == BuildingType::TankFactory);
+        bool isBarracks = (b.type == BuildingType::Barracks);
+        if (!isFactory && !isBarracks) continue;
+
+        int n   = isFactory ? (int)buildingSystem.tanks.size()    : (int)buildingSystem.soldiers.size();
+        int cap = isFactory ? 8                      : 12;
+        int cost= isFactory ? 40                     : 20;
+        const char* unit = isFactory ? "Tanque" : "Soldado";
+
+        Vector2 s = proj(b.position, 56.0f); // altura 56
+        const char* lbl = TextFormat("[CLIQUE] %s  $%d   %d/%d", unit, cost, n, cap);
+        int tw = MeasureText(lbl, 11);
+        DrawRectangle((int)(s.x - tw/2 - 4), (int)(s.y - 2), tw + 8, 16, ColorAlpha(BLACK, 0.7f));
+        DrawRectangleLines((int)(s.x - tw/2 - 4), (int)(s.y - 2), tw + 8, 16, ColorAlpha(Color{120,200,255,255}, 0.7f));
+        DrawText(lbl, (int)(s.x - tw/2), (int)s.y, 11, Color{180,220,255,255});
+
+        // Barra de producao automatica
+        float pct = b.productionTimer / b.productionRate;
+        DrawRectangle((int)(s.x - 24), (int)(s.y + 16), 48, 4, ColorAlpha(BLACK, 0.6f));
+        DrawRectangle((int)(s.x - 24), (int)(s.y + 16), (int)(48 * pct), 4, Color{255,200,0,255});
+    }
+
+    // ── Prédios RTS Info (Level up e evolução) ──
+    for (const auto& b : buildingSystem.buildings) {
+        if (!b.built) continue;
+        const char* name = BuildingSystem::COSTS[(int)b.type].name;
+        // Badge de nivel
+        const char* lvTxt = TextFormat("Lv%d", b.level);
+        Vector2 s = proj(b.position, 0.0f);
+        DrawText(lvTxt, (int)(s.x + 16), (int)(s.y - 38), 11,
+                 b.level >= Building::MAX_LEVEL ? Color{255,215,0,255} : Color{120,220,255,255});
+
+        // Painel completo se perto do jogador
+        if (Vector2Distance(player.position, b.position) <= 120.f) {
+            Vector2 pS = proj(b.position, 0.0f);
+            int px = (int)pS.x;
+            int py = (int)pS.y - 92;
+            int pw = 230, ph = 64;
+            DrawRectangle(px - pw/2, py, pw, ph, ColorAlpha(BLACK, 0.8f));
+            DrawRectangleLinesEx({(float)(px-pw/2),(float)py,(float)pw,(float)ph}, 1.0f,
+                                 ColorAlpha(Color{0,200,255,255}, 0.7f));
+            DrawText(TextFormat("%s  [Lv %d/%d]", name, b.level, Building::MAX_LEVEL),
+                     px - pw/2 + 6, py + 4, 12, Color{0,220,255,255});
+            DrawText(BuildingSystem::COSTS[(int)b.type].desc, px - pw/2 + 6, py + 20, 9, Color{200,200,210,255});
+            if (b.level < Building::MAX_LEVEL) {
+                DrawText(TextFormat("[U] Evoluir Lv%d->Lv%d  ($%d)",
+                         b.level, b.level+1, buildingSystem.upgradeCostFor(b)),
+                         px - pw/2 + 6, py + 44, 11, Color{255,215,0,255});
+            } else {
+                DrawText("NIVEL MAXIMO", px - pw/2 + 6, py + 44, 11, Color{255,215,0,255});
+            }
+        }
+    }
+
+    // ── HUD/Indicador do nó de recurso mais próximo ──
+    if (nearResourceIdx >= 0 && nearResourceIdx < (int)resourceNodes.size()) {
+        const auto& n = resourceNodes[nearResourceIdx];
+        if (!n.depleted) {
+            Vector2 s = proj(n.position, 0.0f);
+            Color c = resourceColor(n.type);
+            DrawCircleLines((int)s.x, (int)s.y, 22.0f, ColorAlpha(c, 0.8f));
+            const char* lbl = TextFormat("[H] Coletar %s (%d)", resourceName(n.type), n.amount);
+            int w = MeasureText(lbl, 11);
+            DrawRectangle((int)s.x - w/2 - 4, (int)s.y - 46, w + 8, 16, ColorAlpha(BLACK, 0.7f));
+            DrawText(lbl, (int)s.x - w/2, (int)s.y - 44, 11, c);
+            if (n.harvestProg > 0.0f) {
+                DrawRectangle((int)s.x - 20, (int)s.y - 28, 40, 5, ColorAlpha(BLACK, 0.6f));
+                DrawRectangle((int)s.x - 20, (int)s.y - 28, (int)(40 * n.harvestProg), 5, c);
+            }
+        }
+    }
+
+    // ── HUD de Equipamentos no chão ──
+    for (const auto& ge : groundEquips) {
+        if (ge.collected) continue;
+        if (std::fabs(ge.position.x - camera.target.x) > 1100 || std::fabs(ge.position.y - camera.target.y) > 700) continue;
+        float fade = (ge.lifetime < 5.0f) ? ge.lifetime / 5.0f : 1.0f;
+        Vector2 s = proj(ge.position, 0.0f);
+        // Name label
+        const char* eName = ge.equip.name.c_str();
+        int ew = MeasureText(eName, 11);
+        DrawText(eName, (int)(s.x - ew/2), (int)(s.y - 30), 11, ColorAlpha(ge.equip.color, fade));
+        // E-prompt when player nearby
+        float dist = Vector2Distance(player.position, ge.position);
+        if (dist < 60.0f) {
+            const char* pr = "[E] EQUIPAR";
+            int pw = MeasureText(pr, 12);
+            DrawRectangle((int)(s.x - pw/2 - 4), (int)(s.y - 50), pw + 8, 18, ColorAlpha(BLACK, 0.7f));
+            DrawText(pr, (int)(s.x - pw/2), (int)(s.y - 48), 12, ColorAlpha({255,210,0,255}, 1.0f));
         }
     }
 

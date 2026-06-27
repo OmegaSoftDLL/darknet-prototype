@@ -152,6 +152,7 @@ public:
     int  upgradeCostFor(const Building& b) const;   // custo p/ proximo nivel
     void applyLevelStats(Building& b);              // aplica stats conforme nivel
     void renderBuildingInfo(Vector2 playerPos) const; // descricao+nivel sobre predios
+    void renderBuilding(const Building& b) const;
 
     // ── Arca: respawn + aura de bonus ────────────────────────────────────────
     bool getArkPosition(Vector2& out) const;       // true se ha uma Arca construida
@@ -190,7 +191,6 @@ private:
 
     void updateBuilding(Building& b, float dt, Vector2 playerPos,
                         const std::vector<class Enemy*>& enemies);
-    void renderBuilding(const Building& b) const;
     void renderArkBuilding    (const Building& b) const;
     void renderHouseBuilding  (const Building& b) const;
     void renderBarracks       (const Building& b) const;

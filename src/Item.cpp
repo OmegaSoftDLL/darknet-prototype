@@ -2,6 +2,7 @@
 #include "Effects.h"
 #include <raymath.h>
 #include <cmath>
+#include <algorithm>
 
 extern bool g_renderPass3D;
 
@@ -792,5 +793,91 @@ void Item::render() const {
                          ColorAlpha({255,230,150,255}, alpha));
             }
         }
+    }
+}
+
+// ============================================================================
+// render3D() — low-poly 3D model floating slightly over the ground.
+// World mapping: X3D = position.x, Z3D = position.y, Y = height.
+// ONLY rounded primitives are used (no cubes).
+// ============================================================================
+void Item::render3D() const {
+    const float kPI = 3.14159265f;
+    float t      = (float)GetTime();
+    // Gentle sinusoidal bob between ~8 and ~14 of height.
+    float baseY  = 11.0f + std::sin(t * 2.0f) * 3.0f;
+    float spin   = t * 1.2f;
+    Vector3 base = { position.x, baseY, position.y };
+
+    // Whether this is a high-rarity drop (Rare and above) -> translucent halo.
+    bool isRare  = (rarity >= ItemRarity::Rare);
+
+    // ── Per-type model selection ───────────────────────────────────────────
+    switch (type) {
+
+    // HealthPack / MedKit — capsule with a bright cross.
+    case ItemType::HealthPack:
+    case ItemType::MedKit: {
+        Color shell = {230, 235, 245, 255};
+        Color cross = {235, 40, 40, 255};
+        Vector3 top = { base.x, base.y + 3.0f, base.z };
+        Vector3 bot = { base.x, base.y - 3.0f, base.z };
+        DrawCapsule(top, bot, 3.6f, 10, 10, shell);
+        // Red cross — two thin perpendicular capsules on the front face.
+        float zf = base.z;
+        DrawCapsule({base.x - 2.4f, base.y, zf}, {base.x + 2.4f, base.y, zf},
+                    0.9f, 6, 6, cross);
+        DrawCapsule({base.x, base.y - 2.4f, zf}, {base.x, base.y + 2.4f, zf},
+                    0.9f, 6, 6, cross);
+        break;
+    }
+
+    // Credits / coins — flat golden cylinder, slowly spinning.
+    case ItemType::Credits: {
+        Color gold     = {255, 205, 60, 255};
+        Color goldEdge = {200, 150, 20, 255};
+        float wob = std::sin(spin) * 0.6f;
+        Vector3 c0 = { base.x, base.y - 0.8f, base.z };
+        Vector3 c1 = { base.x, base.y + 0.8f + wob, base.z };
+        DrawCylinderEx(c0, c1, 4.2f, 4.2f, 14, gold);
+        DrawCylinderEx(c0, c1, 4.4f, 4.4f, 14, ColorAlpha(goldEdge, 0.6f));
+        // tiny center stud
+        DrawSphere(base, 1.4f, ColorAlpha({255,245,200,255}, 0.9f));
+        break;
+    }
+
+    // Crafting materials — colored spheres / capsules using the material color.
+    case ItemType::MetalScrap:
+    case ItemType::AlienCarapace:
+    case ItemType::PlasmaCore:
+    case ItemType::NanoFiber:
+    case ItemType::OmegaEssence: {
+        // Capsule core with a brighter inner sphere, tinted by item color.
+        Vector3 top = { base.x, base.y + 2.5f, base.z };
+        Vector3 bot = { base.x, base.y - 2.5f, base.z };
+        DrawCapsule(top, bot, 3.0f, 10, 10, color);
+        Color inner = { (unsigned char)std::min(255, color.r + 60),
+                        (unsigned char)std::min(255, color.g + 60),
+                        (unsigned char)std::min(255, color.b + 60), 255 };
+        DrawSphereEx(base, 2.0f, 8, 8, ColorAlpha(inner, 0.85f));
+        break;
+    }
+
+    // Default — sphere with the item's own color, plus a subtle core highlight.
+    default: {
+        DrawSphereEx(base, 3.4f, 10, 10, color);
+        Color hi = { (unsigned char)std::min(255, color.r + 70),
+                     (unsigned char)std::min(255, color.g + 70),
+                     (unsigned char)std::min(255, color.b + 70), 255 };
+        DrawSphereEx({ base.x, base.y + 0.8f, base.z }, 1.6f, 8, 8, ColorAlpha(hi, 0.8f));
+        break;
+    }
+    }
+
+    // ── Rare-drop translucent glow sphere ──────────────────────────────────
+    if (isRare) {
+        float pulse  = 0.5f + 0.5f * std::sin(t * 3.0f);
+        float glowR  = 5.5f + pulse * 1.5f;
+        DrawSphereEx(base, glowR, 10, 10, ColorAlpha(rarityColor, 0.18f + 0.10f * pulse));
     }
 }

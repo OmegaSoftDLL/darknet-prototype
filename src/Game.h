@@ -496,4 +496,17 @@ private:
     int   totalDeaths      = 0;
     float totalPlaytime    = 0.0f;
     int   zonesVisitedSet  = 0;  // bitmask of visited zone ids
+
+    // 3D Models and textures for realistic 3D graphics
+    Model m_playerModel;
+    Model m_enemyModel;
+    Model m_houseModel;
+    Model m_turretModel;
+    Model m_barracksModel;
+    Model m_castleModel; // used for Town Hall / Arca
+    Texture2D m_houseTex;
+    Texture2D m_turretTex;
+    Texture2D m_barracksTex;
+    Texture2D m_castleTex;
+    bool m_modelsLoaded = false;
 };
