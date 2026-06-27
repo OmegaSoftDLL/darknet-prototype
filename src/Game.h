@@ -33,6 +33,7 @@
 #include <raylib.h>
 #include <functional>
 #include <unordered_map>
+#include <set>
 
 // Equipment piece lying on the ground — requires E to pick up
 struct GroundEquipment {
@@ -343,6 +344,10 @@ private:
     // espalhadas por toda a area e sempre renderizadas (casas, lapides, lava, etc.)
     DarkWorld owDecor;
     bool      owDecorBuilt = false;
+    // Mundo infinito: cenário gerado por CHUNKS ao redor do player (auto-construção)
+    std::set<long long> m_sceneryChunks;
+    int  m_lastChunkX = -999999, m_lastChunkY = -999999;
+    void updateSceneryChunks(Vector2 playerPos);
     void      buildOpenWorldScenery();
 
     // Zona Segura / Base — refugio sem inimigos para preparar e construir.

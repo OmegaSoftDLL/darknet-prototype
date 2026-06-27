@@ -4,11 +4,12 @@
 #include <string>
 
 struct SceneryObject {
-    Vector2 position;
-    int     type;     // 0=house 1=barn 2=deadtree 3=gravestone 4=fence 5=streetlight 6=car 7=building 8=silo 9=arch 10=statue
-    float   rotation;
-    float   scale;
-    Color   tint;
+    Vector2   position;
+    int       type;     // 0=house 1=barn 2=deadtree 3=gravestone 4=fence 5=streetlight 6=car 7=building 8=silo 9=arch 10=statue 11=grama 12=pedras
+    float     rotation;
+    float     scale;
+    Color     tint;
+    long long chunk = -1;  // -1 = cenário fixo da região; >=0 = chunk procedural infinito
 };
 
 struct DarkWorld {
