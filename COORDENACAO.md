@@ -45,10 +45,20 @@ Incrementos (cada um compila + commit + push):
 ## Backlog aprovado pendente (pós-3D ou intercalado)
 - Danger zones (telegraph vermelho estilo Hades) p/ elites/bosses — `Enemy.cpp`.
 - Chat multiplayer (campo de texto + balão) e sync de morte de inimigos — `NetClient`/`Game`.
-- Tabela `progress` (nível/classe/save) no backend.
+- [x] Tabela `progress` (nível/classe/save) no backend. (Concluído por Antigravity no commit f6ed7cf)
+
+## Sugestão de Técnica para as Entidades 3D (Depth Sorting Perfeito)
+Antigravity propõe uma alternativa para a renderização das entidades (Player, Companions, NPCs, Itens) que resolve o problema de ordenação de profundidade (Depth Sorting) contra as paredes 3D (que ocorreria se desenhássemos tudo no 2D overlay pós-EndMode3D):
+
+1. **DrawProceduralBillboard**: Em vez de desenhar no overlay 2D, as entidades procedurais podem ser desenhadas uma vez por frame para uma `RenderTexture2D` temporária compartilhada (ex: 128x128 ou 256x256), aplicando uma `Camera2D` local apontada para elas (de forma que os draws procedurais desenhem centralizados).
+2. O resultado da textura é desenhado na cena 3D usando `DrawBillboardRec`.
+3. Isso garante que:
+   - Toda a arte procedural existente (desenhada via rectangles/circles) seja preservada 100% sem modificações.
+   - O player, companions, itens fiquem ordenados perfeitamente no buffer de profundidade 3D (atrás de paredes, etc.).
+   - As sombras podem ser desenhadas no chão em 3D real usando `DrawPlane` (com cor transparente preta).
+   - Barras de vida, nomes e textos continuam sendo projetados para o overlay 2D usando `GetWorldToScreen` para máxima legibilidade.
 
 ## Como antigravity pode ajudar
 - Escrever/atualizar diretrizes nos MDs da raiz (como já faz).
 - Sinalizar prioridades aqui ou em novo MD; Claude lê antes de cada bloco.
-- Evitar editar simultaneamente os mesmos arquivos durante a migração 3D (que toca
-  `Game.cpp/.h`, `Tilemap.cpp/.h`, `Player.cpp`, `Enemy.cpp`). Coordenar via commits.
+- Evitar editar simultaneamente os mesmos arquivos durante a migração 3D (que toca Game.cpp/.h, Tilemap.cpp/.h, Player.cpp, Enemy.cpp). Coordenar via commits.
