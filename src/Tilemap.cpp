@@ -1324,14 +1324,18 @@ void Tilemap::render3D(Vector2 camTarget) const {
 
             // Variação determinística por tile (textura de terreno, sem cinza liso)
             unsigned int h = (unsigned int)(x * 73856093) ^ (unsigned int)(y * 19349663);
-            float n = 0.86f + ((h >> 8) & 255) / 255.0f * 0.30f;
+            float n = 0.92f + ((h >> 8) & 255) / 255.0f * 0.14f;   // menos variancia (sem xadrez gritante)
+            float fdx = (float)(x - ctx), fdy = (float)(y - cty);
+            float fdist = sqrtf(fdx*fdx + fdy*fdy);
+            float fog = 1.0f - (fdist - R * 0.42f) / (R * 0.58f);   // fog de profundidade: some a borda do infinito
+            if (fog < 0.22f) fog = 0.22f; if (fog > 1.0f) fog = 1.0f;
             Color floorColor = shade(base, n);
             if (tt == TileType::BrokenFloor) floorColor = shade(base, 0.55f);
             if (tt == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
             SpriteBank& sb = SpriteBank::get();
             if (sb.ready) {
                 // Piso texturizado
-                Color ft = shade(WHITE, n);
+                Color ft = shade(WHITE, n * fog);
                 if (tt == TileType::BrokenFloor) ft = shade(WHITE, 0.55f);
                 DrawCubeTexture(sb.tileFloor[(int)z], { floorCtr.x, 0.01f, floorCtr.z }, TS, 0.02f, TS, ft);
             } else {
@@ -1346,7 +1350,7 @@ void Tilemap::render3D(Vector2 camTarget) const {
                 const float WALL_H = openWorld ? TS * 0.8f : TS * 1.6f;
                 Vector3 c = { rx + TS * 0.5f, WALL_H * 0.5f, ry + TS * 0.5f };
                 if (sb.ready) {
-                    DrawCubeTexture(sb.tileWall[(int)z], c, TS, WALL_H, TS, WHITE);
+                    DrawCubeTexture(sb.tileWall[(int)z], c, TS, WALL_H, TS, shade(WHITE, fog));
                 } else {
                     Color wc = shade(base, 1.6f);
                     DrawCube(c, TS, WALL_H, TS, wc);
