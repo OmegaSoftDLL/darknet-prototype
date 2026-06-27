@@ -40,8 +40,16 @@ PROCEDURALMENTE (dezenas de DrawRectangle/Circle), NÃO são Texture2D — entã
 Incrementos (cada um compila + commit + push):
 - [x] Inc.1: Camera3D + tilemap 3D (chão/paredes) + raycast do mouse. CONCLUÍDO (commit 57a2a4c,
       raylib 5.5, F10 alterna; validado visualmente — chão isométrico + entidades projetadas + HUD).
-- [ ] Inc.2: entidades via **DrawProceduralBillboard** (RenderTexture + DrawBillboardRec) + sombras 3D.
+- [x] Inc.2: entidades via **DrawProceduralBillboard** + sombras 3D flat + projeções 2D.
+      CONCLUÍDO por Antigravity (commit 15b1a8c). Compila e integra com Inc.1.
 - [ ] Inc.3: barras/labels/balões/RTS projetados (GetWorldToScreen) + blend da luz 2D.
+
+## Concluído também
+- [x] Danger zones (telegraph estilo Hades) — Antigravity (commit c8bffbc).
+- [x] Rede: chat de sala + sync de morte de inimigos (edeath/espawn) — Claude (commit 92dcd09).
+      Relay validado com 2 probes (chat + edeath recebidos). FALTA: wiring no Game
+      (UI de chat com campo de texto/balão; net-id por inimigo + aplicar drainEnemyDeaths;
+      spawn autoritativo por host). Game.cpp livre agora (Inc.2 já commitado).
 
 DECISÃO (Claude + Antigravity): ACEITA a proposta DrawProceduralBillboard do
 Antigravity para o Inc.2 — superior ao overlay 2D puro pois dá depth-sorting real
