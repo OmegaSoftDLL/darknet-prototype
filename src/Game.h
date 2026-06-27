@@ -140,7 +140,8 @@ private:
     Camera3D camera3D{};
     float    cameraHeight = 820.0f;   // altura da câmera acima do plano
     float    cameraDistY  = 650.0f;   // recuo no eixo Z (profundidade isométrica)
-    float    cameraZoom   = 1.0f;     // roda do mouse: <1 aproxima, >1 afasta (olhar de cima)
+    float    cameraZoom   = 1.0f;
+    float    worldClock   = 0.32f;    // ciclo dia/noite (0=meia-noite, 0.5=meio-dia)     // roda do mouse: <1 aproxima, >1 afasta (olhar de cima)
     bool     render3D     = true;     // JOGO É 3D (2.5D isométrico) por padrão em todo gameplay
     RenderTexture2D tempEntityTarget{}; // alvo temporário p/ desenhar entidades procedurais
     void     updateCamera3D();
