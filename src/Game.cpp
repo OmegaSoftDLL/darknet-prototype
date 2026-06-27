@@ -1230,6 +1230,7 @@ void Game::renderRemotePlayers() const {
 // ─── Grupo / Aliança (party multiplayer) ─────────────────────────────────────
 
 void Game::updateParty() {
+    if (chatActive) return;
     if (IsKeyPressed(KEY_O)) { partyPanel = !partyPanel; partyInput.clear(); }
     if (!partyPanel) return;
 
@@ -1418,7 +1419,7 @@ void Game::runAutoTest(bool autoTest) {
         else { tilemap.generate(currentZone); }
         setupZoneNPCs(currentZone);
         inMainMenu = false;
-        render3D   = true;
+        render3D   = true;   // autoteste no modo 3D/2.5D isométrico completo
         botController.active   = true;
         botController.autoTest = true;
         botController.testDuration = 7200.0f; // 2 horas max
@@ -2199,6 +2200,16 @@ void Game::update(float dt) {
     if (storyBannerTimer  > 0.0f) storyBannerTimer  -= dt;
     if (playerSpeechTimer > 0.0f) playerSpeechTimer -= dt;
 
+    // Tick down active chats timers and remove expired ones
+    for (auto it = activeChats.begin(); it != activeChats.end();) {
+        it->second.timer -= dt;
+        if (it->second.timer <= 0.0f) {
+            it = activeChats.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
     if (shakeTimer > 0.0f) {
         shakeTimer -= dt;
         float env = std::max(0.0f, shakeTimer / 0.3f);
@@ -2392,6 +2403,39 @@ void Game::update(float dt) {
         net.sendState(player.position.x, player.position.y,
                       (int)player.charClass, player.facing, vm > 12.0f);
         net.poll(dt);
+
+        // Process incoming enemy deaths from network
+        auto netDeaths = net.drainEnemyDeaths();
+        for (uint32_t compId : netDeaths) {
+            uint32_t cx = (compId >> 16) & 0xFFFF;
+            uint32_t cy = compId & 0xFFFF;
+            Vector2 netPos = { cx * 10.0f + 5.0f, cy * 10.0f + 5.0f };
+
+            // Find closest local active enemy within 80 pixels
+            Enemy* closest = nullptr;
+            float minDist = 80.0f;
+            for (auto& e : enemies) {
+                if (e.isDead()) continue;
+                float d = Vector2Distance(e.position, netPos);
+                if (d < minDist) {
+                    minDist = d;
+                    closest = &e;
+                }
+            }
+            if (closest) {
+                closest->health = 0.0f;
+                // Add to netKilledEnemies so we don't send edeath for it
+                netKilledEnemies.push_back(closest);
+            }
+        }
+
+        // Process incoming chat messages from network
+        auto incomingChats = net.drainChats();
+        for (const auto& ch : incomingChats) {
+            uint32_t senderId = ch.first;
+            const std::string& text = ch.second;
+            activeChats[senderId] = { text, 4.0f };
+        }
     }
 
     // Animais / vida selvagem
@@ -2700,6 +2744,20 @@ void Game::update(float dt) {
         if (it->isDead()) {
             if (it->shouldDropLoot()) {
                 it->markLootDropped();
+
+                // Check if this death was triggered by network sync
+                auto netIt = std::find(netKilledEnemies.begin(), netKilledEnemies.end(), &(*it));
+                if (netIt != netKilledEnemies.end()) {
+                    netKilledEnemies.erase(netIt);
+                } else {
+                    if (netActive) {
+                        uint32_t cx = (uint32_t)(it->position.x / 10.0f) & 0xFFFF;
+                        uint32_t cy = (uint32_t)(it->position.y / 10.0f) & 0xFFFF;
+                        uint32_t compId = (cx << 16) | cy;
+                        net.sendEnemyDeath(compId);
+                    }
+                }
+
                 playEnemyDeathSound(*it);   // som de morte por facção/tipo
                 // Decalque no chão: sangue (orgânicos) ou queimado (máquinas)
                 {
@@ -3004,6 +3062,45 @@ void Game::grantQuestRewards(Quest& q) {
 
 void Game::handleInput(float dt) {
     if (paused || inMainMenu) return;
+
+    // ── Chat absorbs all input when active ─────────────────────────────────────
+    if (chatActive) {
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            chatActive = false;
+            chatInput.clear();
+            return;
+        }
+        if (IsKeyPressed(KEY_ENTER)) {
+            if (!chatInput.empty()) {
+                if (netActive) {
+                    net.sendChat(chatInput);
+                }
+                triggerPlayerSpeech(chatInput, 4.0f);
+            }
+            chatActive = false;
+            chatInput.clear();
+            return;
+        }
+
+        int key = GetCharPressed();
+        while (key > 0) {
+            if ((key >= 32) && (key <= 125) && (chatInput.size() < 64)) {
+                chatInput.push_back((char)key);
+            }
+            key = GetCharPressed();
+        }
+
+        if (IsKeyPressed(KEY_BACKSPACE) && !chatInput.empty()) {
+            chatInput.pop_back();
+        }
+        return;
+    }
+
+    if (IsKeyPressed(KEY_ENTER) && !craftingSystem.open && !shopSystem.open && !showInventory) {
+        chatActive = true;
+        chatInput.clear();
+        return;
+    }
 
     // ── Crafting system absorbs all input when open ───────────────────────────
     if (craftingSystem.open) {
@@ -4540,43 +4637,70 @@ void Game::triggerPlayerSpeech(const std::string& text, float dur) {
 }
 
 void Game::drawPlayerSpeech() const {
-    if (playerSpeechTimer <= 0.0f) return;
-    float alpha = playerSpeechTimer < 0.8f ? playerSpeechTimer / 0.8f : 1.0f;
+    auto drawBubble = [&](Vector2 worldPos, float height3D, float offset2D, float offset3D, const std::string& text, float timer) {
+        if (timer <= 0.0f) return;
+        float alpha = timer < 0.8f ? timer / 0.8f : 1.0f;
 
-    const char* txt = playerSpeechText.c_str();
-    int fontSize = 14;
-    int tw = MeasureText(txt, fontSize);
-    int bw = tw + 24, bh = 28;
+        const char* txt = text.c_str();
+        int fontSize = 14;
+        int tw = MeasureText(txt, fontSize);
+        int bw = tw + 24, bh = 28;
 
-    // Position bubble above character's screen-space head
-    Vector2 sp = GetWorldToScreen2D(player.position, camera);
-    int bx = (int)(sp.x) - bw / 2;
-    int by = (int)(sp.y) - 100;
+        Vector2 sp;
+        int by = 0;
+        if (render3D) {
+            sp = GetWorldToScreenEx({ worldPos.x, height3D, worldPos.y }, camera3D, screenWidth, screenHeight);
+            by = (int)(sp.y) - (int)offset3D;
+        } else {
+            sp = GetWorldToScreen2D(worldPos, camera);
+            by = (int)(sp.y) - (int)offset2D;
+        }
+        int bx = (int)(sp.x) - bw / 2;
 
-    // Clamp to screen
-    if (bx < 5) bx = 5;
-    if (bx + bw > screenWidth - 5) bx = screenWidth - bw - 5;
-    if (by < 5) by = 5;
+        // Clamp to screen bounds
+        if (bx < 5) bx = 5;
+        if (bx + bw > screenWidth - 5) bx = screenWidth - bw - 5;
+        if (by < 5) by = 5;
 
-    // Bubble
-    DrawRectangleRounded({(float)bx,(float)by,(float)bw,(float)bh}, 0.35f, 6,
-                         ColorAlpha(BLACK, 0.88f * alpha));
-    DrawRectangleLinesEx({(float)bx,(float)by,(float)bw,(float)bh}, 1.5f,
-                         ColorAlpha({0,200,255,255}, 0.9f * alpha));
+        // Bubble Panel
+        DrawRectangleRounded({(float)bx,(float)by,(float)bw,(float)bh}, 0.35f, 6,
+                             ColorAlpha(BLACK, 0.88f * alpha));
+        DrawRectangleLinesEx({(float)bx,(float)by,(float)bw,(float)bh}, 1.5f,
+                             ColorAlpha({0,200,255,255}, 0.9f * alpha));
 
-    // Tail pointing down to character
-    int tx = (int)sp.x;
-    if (tx < bx + 8) tx = bx + 8;
-    if (tx > bx + bw - 8) tx = bx + bw - 8;
-    int tailY = by + bh;
-    DrawTriangle({(float)(tx-7),(float)tailY},{(float)(tx+7),(float)tailY},
-                 {(float)tx,(float)(tailY+12)}, ColorAlpha(BLACK, 0.88f * alpha));
-    DrawLineEx({(float)(tx-6),(float)tailY},{(float)tx,(float)(tailY+11)},
-               1.5f, ColorAlpha({0,200,255,255}, 0.8f * alpha));
-    DrawLineEx({(float)(tx+6),(float)tailY},{(float)tx,(float)(tailY+11)},
-               1.5f, ColorAlpha({0,200,255,255}, 0.8f * alpha));
+        // Tail pointing down to character
+        int tx = (int)sp.x;
+        if (tx < bx + 8) tx = bx + 8;
+        if (tx > bx + bw - 8) tx = bx + bw - 8;
+        int tailY = by + bh;
+        DrawTriangle({(float)(tx-7),(float)tailY},{(float)(tx+7),(float)tailY},
+                     {(float)tx,(float)(tailY+12)}, ColorAlpha(BLACK, 0.88f * alpha));
+        DrawLineEx({(float)(tx-6),(float)tailY},{(float)tx,(float)(tailY+11)},
+                   1.5f, ColorAlpha({0,200,255,255}, 0.8f * alpha));
+        DrawLineEx({(float)(tx+6),(float)tailY},{(float)tx,(float)(tailY+11)},
+                   1.5f, ColorAlpha({0,200,255,255}, 0.8f * alpha));
 
-    DrawText(txt, bx + 12, by + 7, fontSize, ColorAlpha({0,240,255,255}, alpha));
+        DrawText(txt, bx + 12, by + 7, fontSize, ColorAlpha({0,240,255,255}, alpha));
+    };
+
+    // 1. Local Player
+    drawBubble(player.position, 60.0f, 100.0f, 40.0f, playerSpeechText, playerSpeechTimer);
+
+    // 2. Remote Players (activeChats)
+    if (netActive) {
+        for (const auto& pair : activeChats) {
+            uint32_t peerId = pair.first;
+            const ChatBubble& cb = pair.second;
+            
+            // Find the peer's position
+            for (const auto& p : net.peers()) {
+                if (p.id == peerId) {
+                    drawBubble({ p.x, p.y }, 42.0f, 80.0f, 32.0f, cb.text, cb.timer);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void Game::drawStoryBanner() const {
@@ -4672,6 +4796,13 @@ void Game::renderWorld3D() {
         // Sombra do player
         DrawPlane({ player.position.x, 0.1f, player.position.y }, { 24.0f, 12.0f }, ColorAlpha(BLACK, 0.45f));
 
+        // Sombras dos remote players
+        if (netActive) {
+            for (const auto& p : net.peers()) {
+                DrawPlane({ p.x, 0.1f, p.y }, { 24.0f, 12.0f }, ColorAlpha(BLACK, 0.45f));
+            }
+        }
+
         // Sombras dos companheiros
         for (auto& c : companions) {
             if (!c.active) continue;
@@ -4719,6 +4850,22 @@ void Game::renderWorld3D() {
 
         // Player
         drawProceduralEntity3D(player.position, 51.0f, [&]() { player.render(); });
+
+        // Remote Players (Peers)
+        if (netActive) {
+            static const Color cols[6] = {
+                {60,120,220,255},{220,80,140,255},{150,160,175,255},
+                {120,80,220,255},{180,120,255,255},{200,130,60,255}
+            };
+            for (const auto& p : net.peers()) {
+                drawProceduralEntity3D({ p.x, p.y }, 32.0f, [&]() {
+                    Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
+                    DrawRectangle((int)p.x - 9, (int)p.y - 14, 18, 28, c);
+                    DrawCircle((int)p.x, (int)(p.y - 20), 9.0f, c);
+                    DrawCircleLines((int)p.x, (int)(p.y - 20), 9.0f, ColorAlpha(WHITE, 0.4f));
+                });
+            }
+        }
     EndMode3D();
 
     // ── 2. Overlay 2D Projetado: Projéteis, Partículas, Nomes e UI ────────────
@@ -4770,6 +4917,17 @@ void Game::renderWorld3D() {
         p.position = s;
         p.render();
         p.position = originalPos;
+    }
+
+    // Remote Players (Names and Online Indicators)
+    if (netActive) {
+        for (const auto& p : net.peers()) {
+            Vector2 headS = proj({p.x, p.y}, 48.0f);
+            int w = MeasureText(p.name, 11);
+            DrawRectangle((int)headS.x - w/2 - 3, (int)headS.y - 12, w + 6, 14, ColorAlpha(BLACK, 0.6f));
+            DrawText(p.name, (int)headS.x - w/2, (int)headS.y - 10, 11, ColorAlpha(WHITE, 0.95f));
+            DrawCircle((int)headS.x + w/2 + 8, (int)headS.y - 5, 3.0f, Color{0,255,80,255}); // online dot
+        }
     }
 
     // NPCs (Nomes e Tags de Quest)
@@ -5355,6 +5513,24 @@ void Game::drawUI() const {
     if (dialogOpen && nearNpcIndex >= 0) {
         DrawText("[E] Continuar  [ESC] Fechar", 10, screenHeight - 36, 14,
                  ColorAlpha(WHITE, 0.7f));
+    }
+
+    // ── Chat Input Box ────────────────────────────────────────────────────────
+    if (chatActive) {
+        int boxW = 500, boxH = 36;
+        int boxX = screenWidth/2 - boxW/2;
+        int boxY = screenHeight - 120; // acima da barra de habilidades
+        
+        DrawPanel(boxX, boxY, boxW, boxH, C_cyan, 0.85f);
+        DrawText("CHAT:", boxX + 12, boxY + 11, 14, C_gold);
+        DrawText(chatInput.c_str(), boxX + 65, boxY + 11, 14, WHITE);
+        
+        // Cursor piscante
+        float t = (float)GetTime();
+        if (std::fmod(t, 0.8f) < 0.4f) {
+            int cursorX = boxX + 65 + MeasureText(chatInput.c_str(), 14);
+            DrawRectangle(cursorX + 2, boxY + 10, 2, 16, C_cyan);
+        }
     }
 }
 

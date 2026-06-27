@@ -32,6 +32,7 @@
 #include <string>
 #include <raylib.h>
 #include <functional>
+#include <unordered_map>
 
 // Equipment piece lying on the ground — requires E to pick up
 struct GroundEquipment {
@@ -138,12 +139,21 @@ private:
     Camera3D camera3D{};
     float    cameraHeight = 380.0f;   // altura da câmera acima do plano
     float    cameraDistY  = 280.0f;   // recuo no eixo Z (profundidade isométrica)
-    bool     render3D     = false;    // F10 alterna; default 2D (não quebra nada)
+    bool     render3D     = false;    // 2D (jogo real/estável) é o padrão; F10 = 2.5D WIP
     RenderTexture2D tempEntityTarget{}; // alvo temporário p/ desenhar entidades procedurais
     void     updateCamera3D();
     Vector2  mouseGround3D() const;   // raycast do mouse no plano Y=0 -> mundo 2D
     void     renderWorld3D();         // caminho de render 2.5D completo (mundo 3D + outdoors procedurais)
     void     drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function<void()> drawFunc);
+
+    struct ChatBubble {
+        std::string text;
+        float       timer = 0.0f;
+    };
+    std::unordered_map<uint32_t, ChatBubble> activeChats;
+    bool        chatActive = false;
+    std::string chatInput;
+    std::vector<const Enemy*> netKilledEnemies;
 
     ZoneID  currentZone       = ZoneID::LARuins;
     float   zoneNameTimer     = 0.0f;  // show zone name on transition
