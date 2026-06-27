@@ -59,6 +59,12 @@ if (process.env.DATABASE_URL) {
       provider TEXT NOT NULL, provider_ref TEXT NOT NULL, pack_id TEXT NOT NULL,
       amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'BRL',
       status TEXT NOT NULL DEFAULT 'pending', created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS progress (
+      account TEXT PRIMARY KEY REFERENCES accounts(id),
+      level INTEGER NOT NULL DEFAULT 1,
+      credits INTEGER NOT NULL DEFAULT 0,
+      char_class INTEGER NOT NULL DEFAULT 0,
+      save_json JSONB)`);
     console.log("[db] Postgres conectado (esquema normalizado)");
   } catch (e) {
     console.warn("[db] falha ao conectar Postgres — usando memória:", e.message);
@@ -92,6 +98,64 @@ async function savePlayer(p) {
       await pool.query("INSERT INTO inventory(account,item_id,qty) VALUES($1,$2,1)", [p.id, itemId]);
   } else {
     memPlayers.set(p.id, p);
+  }
+}
+
+const memProgress = new Map();
+
+async function getPlayerProgress(accountId) {
+  if (pool) {
+    const res = await pool.query(
+      "SELECT level, credits, char_class, save_json FROM progress WHERE account=$1",
+      [accountId]
+    );
+    if (res.rows.length > 0) {
+      const row = res.rows[0];
+      return {
+        account: accountId,
+        level: row.level,
+        credits: row.credits,
+        char_class: row.char_class,
+        save_json: row.save_json
+      };
+    }
+  } else {
+    if (memProgress.has(accountId)) {
+      return memProgress.get(accountId);
+    }
+  }
+  return {
+    account: accountId,
+    level: 1,
+    credits: 0,
+    char_class: 0,
+    save_json: {}
+  };
+}
+
+async function savePlayerProgress(accountId, data) {
+  const level = data.level || 1;
+  const credits = data.credits || 0;
+  const charClass = data.char_class || 0;
+  const saveJson = data.save_json || {};
+
+  if (pool) {
+    await pool.query(
+      `INSERT INTO progress (account, level, credits, char_class, save_json)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (account)
+       DO UPDATE SET level = EXCLUDED.level, credits = EXCLUDED.credits,
+                     char_class = EXCLUDED.char_class, save_json = EXCLUDED.save_json`,
+      [accountId, level, credits, charClass, saveJson]
+    );
+  } else {
+    memProgress.set(accountId, {
+      account: accountId,
+      level,
+      credits,
+      char_class: charClass,
+      save_json: saveJson
+    });
   }
 }
 
@@ -250,6 +314,27 @@ if (process.env.ALLOW_DEV_GRANT === "1") {
 }
 
 app.get("/me", auth, async (req, res) => res.json(await getPlayer(req.user.id)));
+
+app.get("/progress", auth, async (req, res) => {
+  try {
+    const prog = await getPlayerProgress(req.user.id);
+    res.json(prog);
+  } catch (err) {
+    console.error("[progress] falha ao buscar progresso:", err.message);
+    res.status(500).json({ error: "falha ao buscar progresso" });
+  }
+});
+
+app.post("/progress", auth, async (req, res) => {
+  try {
+    const { level, credits, char_class, save_json } = req.body || {};
+    await savePlayerProgress(req.user.id, { level, credits, char_class, save_json });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[progress] falha ao salvar progresso:", err.message);
+    res.status(500).json({ error: "falha ao salvar progresso" });
+  }
+});
 app.get("/healthz", (_req, res) => res.json({
   ok: true, service: "cyber-station",
   stripe: !!stripe, db: pool ? "postgres" : "memory",
