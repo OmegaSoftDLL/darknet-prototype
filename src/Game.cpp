@@ -4981,8 +4981,25 @@ void Game::ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn) {
 void Game::drawVoxel(int key, Vector2 pos, float rotDeg) {
     auto it = m_voxModels.find(key);
     if (it == m_voxModels.end() || it->second.meshCount == 0) return;
+    Model& mdl = it->second;
+
+    // SOMBRA REAL: projeta a SILHUETA do modelo no chão, deslocada pela DIREÇÃO da
+    // luz (matriz de projeção em y=0). Não é disco — tem o formato do personagem.
+    const Vector3 L = { -0.42f, -1.0f, -0.30f };       // direção da luz (de cima/frente)
+    Matrix saved = mdl.transform;
+    Matrix sm = MatrixIdentity();
+    sm.m4 = -L.x / L.y;   // x deslocado pela altura (alonga na direção oposta à luz)
+    sm.m5 = 0.0f;         // achata a altura (projeta no chão)
+    sm.m6 = -L.z / L.y;   // z deslocado pela altura
+    mdl.transform = sm;
+    rlDisableDepthMask();                               // evita z-fight da silhueta
+    DrawModel(mdl, { pos.x, 0.07f, pos.y }, 1.0f, ColorAlpha(BLACK, 0.42f));
+    rlEnableDepthMask();
+    mdl.transform = saved;
+
+    // Modelo 3D real (com leve bob de vida)
     float bob = sinf((float)GetTime() * 2.4f + pos.x * 0.05f) * 1.2f;
-    DrawModelEx(it->second, { pos.x, bob, pos.y }, { 0.0f, 1.0f, 0.0f }, rotDeg, { 1.0f, 1.0f, 1.0f }, WHITE);
+    DrawModelEx(mdl, { pos.x, bob, pos.y }, { 0.0f, 1.0f, 0.0f }, rotDeg, { 1.0f, 1.0f, 1.0f }, WHITE);
 }
 
 void Game::renderWorld3D() {
@@ -5128,43 +5145,19 @@ void Game::renderWorld3D() {
             }
         }
 
-        // ── Sombras 3D projetadas no plano Y=0.1 ──
-        // Sombra do player
-        DrawPlane({ player.position.x, 0.1f, player.position.y }, { 24.0f, 12.0f }, ColorAlpha(BLACK, 0.45f));
+        // ── Sombras REDONDAS suaves no chão (disco achatado, não retângulo) ──
+        auto shadow = [](Vector2 pos, float r, float a) {
+            DrawCylinderEx({ pos.x, 0.10f, pos.y }, { pos.x, 0.118f, pos.y }, r, r, 16, ColorAlpha(BLACK, a));
+        };
+        // player/inimigos/NPCs/companheiros têm SOMBRA PROJETADA (silhueta) no drawVoxel
+        if (netActive)
+            for (const auto& p : net.peers()) shadow({ p.x, p.y }, 11.0f, 0.34f);
 
-        // Sombras dos remote players
-        if (netActive) {
-            for (const auto& p : net.peers()) {
-                DrawPlane({ p.x, 0.1f, p.y }, { 24.0f, 12.0f }, ColorAlpha(BLACK, 0.45f));
-            }
-        }
+        for (auto& it : items) shadow(it.position, 5.5f, 0.26f);
 
-        // Sombras dos companheiros
-        for (auto& c : companions) {
-            if (!c.active) continue;
-            DrawPlane({ c.position.x, 0.1f, c.position.y }, { 16.0f, 8.0f }, ColorAlpha(BLACK, 0.35f));
-        }
-
-        // Sombras dos NPCs
-        for (auto& n : npcs) {
-            DrawPlane({ n.position.x, 0.1f, n.position.y }, { 18.0f, 9.0f }, ColorAlpha(BLACK, 0.4f));
-        }
-
-        // Sombras dos inimigos
-        for (auto& e : enemies) {
-            float sSize = e.radius * 2.0f;
-            DrawPlane({ e.position.x, 0.1f, e.position.y }, { sSize, sSize * 0.5f }, ColorAlpha(BLACK, 0.35f));
-        }
-
-        // Sombras dos itens
-        for (auto& it : items) {
-            DrawPlane({ it.position.x, 0.1f, it.position.y }, { 12.0f, 6.0f }, ColorAlpha(BLACK, 0.3f));
-        }
-
-        // Sombras dos animais
         for (const auto& a : animals) {
             if (std::fabs(a.position.x - camera.target.x) > 1100 || std::fabs(a.position.y - camera.target.y) > 700) continue;
-            DrawPlane({ a.position.x, 0.1f, a.position.y }, { 12.0f, 6.0f }, ColorAlpha(BLACK, 0.3f));
+            shadow(a.position, 6.0f, 0.26f);
         }
 
         // Sombras dos nós de recursos

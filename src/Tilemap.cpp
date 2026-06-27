@@ -495,11 +495,8 @@ void Tilemap::generateOpenWorld() {
             tiles[y][x].rect       = getBounds(x, y);
         }
 
-    // Borda externa solida (3 tiles) para o jogador nao sair do mundo
-    for (int y = 0; y < height; ++y)
-        for (int x = 0; x < width; ++x)
-            if (x < 3 || y < 3 || x >= width - 3 || y >= height - 3)
-                tiles[y][x].type = TileType::Wall;
+    // SEM borda: mundo aberto é INFINITO (isWall libera fora dos limites; o chão
+    // e o cenário se auto-geram por posição conforme o jogador explora).
 
     // Obstaculos esparsos por regiao — cobertura tatica, NUNCA bloqueiam passagem.
     // Pequenos blocos de 1-3 tiles espalhados; ha sempre chao aberto em volta.
@@ -1197,7 +1194,7 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
 
 // â”€â”€ isWall / isWallAtPosition / isPortalAtPosition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 bool Tilemap::isWall(int x, int y) const {
-    if (x < 0 || x >= width || y < 0 || y >= height) return true;
+    if (x < 0 || x >= width || y < 0 || y >= height) return openWorld ? false : true; // mundo aberto = infinito
     return tiles[y][x].type == TileType::Wall || tiles[y][x].solid;
 }
 
@@ -1302,20 +1299,25 @@ void Tilemap::render3D(Vector2 camTarget) const {
     const int   R  = 26; // raio da janela visível em tiles
     int ctx = (int)(camTarget.x / TS);
     int cty = (int)(camTarget.y / TS);
-    int x0 = std::max(0, ctx - R), x1 = std::min(width  - 1, ctx + R);
-    int y0 = std::max(0, cty - R), y1 = std::min(height - 1, cty + R);
+    int x0 = openWorld ? ctx - R : std::max(0, ctx - R);
+    int x1 = openWorld ? ctx + R : std::min(width  - 1, ctx + R);
+    int y0 = openWorld ? cty - R : std::max(0, cty - R);
+    int y1 = openWorld ? cty + R : std::min(height - 1, cty + R);
 
     for (int y = y0; y <= y1; ++y) {
         for (int x = x0; x <= x1; ++x) {
-            const Tile& t = tiles[y][x];
+            bool inB = (x >= 0 && x < width && y >= 0 && y < height);
+            TileType tt = inB ? tiles[y][x].type : TileType::Floor;
             float rx = x * TS, ry = y * TS;
             Vector3 floorCtr = { rx + TS * 0.5f, 0.0f, ry + TS * 0.5f };
 
-            // Bioma do tile (mundo aberto: por região; senão zona atual)
+            // Bioma por POSIÇÃO — INFINITO: repete o layout 3x3 de zonas pelo mundo
             ZoneID z = currentZone;
             if (openWorld) {
-                int col = std::min(OW_COLS - 1, std::max(0, x / OW_ZONE_W));
-                int row = std::min(OW_ROWS - 1, std::max(0, y / OW_ZONE_H));
+                int cx = (int)std::floor((float)x / OW_ZONE_W);
+                int cy = (int)std::floor((float)y / OW_ZONE_H);
+                int col = ((cx % OW_COLS) + OW_COLS) % OW_COLS;
+                int row = ((cy % OW_ROWS) + OW_ROWS) % OW_ROWS;
                 z = owLayout[row][col];
             }
             Color base = biomeFloorColor(z);
@@ -1324,13 +1326,13 @@ void Tilemap::render3D(Vector2 camTarget) const {
             unsigned int h = (unsigned int)(x * 73856093) ^ (unsigned int)(y * 19349663);
             float n = 0.86f + ((h >> 8) & 255) / 255.0f * 0.30f;
             Color floorColor = shade(base, n);
-            if (t.type == TileType::BrokenFloor) floorColor = shade(base, 0.55f);
-            if (t.type == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
+            if (tt == TileType::BrokenFloor) floorColor = shade(base, 0.55f);
+            if (tt == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
             SpriteBank& sb = SpriteBank::get();
             if (sb.ready) {
                 // Piso texturizado
                 Color ft = shade(WHITE, n);
-                if (t.type == TileType::BrokenFloor) ft = shade(WHITE, 0.55f);
+                if (tt == TileType::BrokenFloor) ft = shade(WHITE, 0.55f);
                 DrawCubeTexture(sb.tileFloor[(int)z], { floorCtr.x, 0.01f, floorCtr.z }, TS, 0.02f, TS, ft);
             } else {
                 // Fallback para piso sólido
@@ -1340,13 +1342,13 @@ void Tilemap::render3D(Vector2 camTarget) const {
             }
 
             // Paredes (tipo Wall ou cenário sólido) = cubos com volume texturizados
-            if (t.type == TileType::Wall) { // NAO desenhar cubo p/ t.solid (colisao invisivel do cenario)
+            if (inB && tt == TileType::Wall) {
                 const float WALL_H = openWorld ? TS * 0.8f : TS * 1.6f;
                 Vector3 c = { rx + TS * 0.5f, WALL_H * 0.5f, ry + TS * 0.5f };
                 if (sb.ready) {
                     DrawCubeTexture(sb.tileWall[(int)z], c, TS, WALL_H, TS, WHITE);
                 } else {
-                    Color wc = shade(base, t.solid ? 1.35f : 1.6f);
+                    Color wc = shade(base, 1.6f);
                     DrawCube(c, TS, WALL_H, TS, wc);
                     DrawCubeWires(c, TS, WALL_H, TS, shade(base, 2.0f));
                 }
