@@ -46,12 +46,6 @@ Game::Game() {
     SpriteBank::get().init();   // gera os sprites pixel-art (precisa de contexto GL)
 
     // Carrega modelos 3D para graficos reais
-    if (FileExists("resources/models/greenman.glb")) {
-        m_playerModel = LoadModel("resources/models/greenman.glb");
-    }
-    if (FileExists("resources/models/robot.glb")) {
-        m_enemyModel = LoadModel("resources/models/robot.glb");
-    }
     if (FileExists("resources/models/house.obj")) {
         m_houseModel = LoadModel("resources/models/house.obj");
         m_houseTex = LoadTexture("resources/models/house_diffuse.png");
@@ -113,8 +107,6 @@ Game::~Game() {
 
     // Desaloca modelos 3D e texturas correspondentes
     if (m_modelsLoaded) {
-        if (m_playerModel.meshCount > 0) UnloadModel(m_playerModel);
-        if (m_enemyModel.meshCount > 0)  UnloadModel(m_enemyModel);
         if (m_houseModel.meshCount > 0) {
             UnloadModel(m_houseModel);
             UnloadTexture(m_houseTex);
@@ -4999,17 +4991,12 @@ void Game::renderWorld3D() {
                 {120,80,220,255},{180,120,255,255},{200,130,60,255}
             };
             for (const auto& p : net.peers()) {
-                if (m_modelsLoaded && m_playerModel.meshCount > 0) {
+                drawProceduralEntity3D({ p.x, p.y }, 18.0f, [&, p]() {
                     Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
-                    DrawModelEx(m_playerModel, { p.x, 0.0f, p.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 28.0f, 28.0f, 28.0f }, c);
-                } else {
-                    drawProceduralEntity3D({ p.x, p.y }, 18.0f, [&, p]() {
-                        Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
-                        DrawRectangle((int)p.x - 9, (int)p.y - 14, 18, 28, c);
-                        DrawCircle((int)p.x, (int)(p.y - 20), 9.0f, c);
-                        DrawCircleLines((int)p.x, (int)(p.y - 20), 9.0f, ColorAlpha(WHITE, 0.4f));
-                    });
-                }
+                    DrawRectangle((int)p.x - 9, (int)p.y - 14, 18, 28, c);
+                    DrawCircle((int)p.x, (int)(p.y - 20), 9.0f, c);
+                    DrawCircleLines((int)p.x, (int)(p.y - 20), 9.0f, ColorAlpha(WHITE, 0.4f));
+                });
             }
         }
 
@@ -5146,23 +5133,15 @@ void Game::renderWorld3D() {
         }
         for (const auto& t : buildingSystem.tanks) {
             if (t.isDead()) continue;
-            if (m_modelsLoaded && m_enemyModel.meshCount > 0) {
-                DrawModelEx(m_enemyModel, { t.position.x, 0.0f, t.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 24.0f, 14.0f, 24.0f }, ORANGE);
-            } else {
-                drawProceduralEntity3D(t.position, 12.0f, [&, t]() {
-                    t.render();
-                });
-            }
+            drawProceduralEntity3D(t.position, 12.0f, [&, t]() {
+                t.render();
+            });
         }
         for (const auto& s : buildingSystem.soldiers) {
             if (s.isDead()) continue;
-            if (m_modelsLoaded && m_playerModel.meshCount > 0) {
-                DrawModelEx(m_playerModel, { s.position.x, 0.0f, s.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 18.0f, 18.0f, 18.0f }, GOLD);
-            } else {
-                drawProceduralEntity3D(s.position, 12.0f, [&, s]() {
-                    s.render();
-                });
-            }
+            drawProceduralEntity3D(s.position, 12.0f, [&, s]() {
+                s.render();
+            });
         }
 
         // RTS Building Preview Ghost
