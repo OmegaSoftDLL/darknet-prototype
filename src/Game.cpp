@@ -2453,6 +2453,20 @@ void Game::update(float dt) {
                     case ZoneID::InfernoZone:   lightSystem.ambientColor = {236,150, 98,255}; lightSystem.ambientDark = 0.28f; break;
                     default:                    lightSystem.ambientColor = {190,196,212,255}; lightSystem.ambientDark = 0.34f; break;
                 }
+                // ── CICLO DIA/NOITE (mundo vivo): noite escura/azulada, dia claro ──
+                worldClock += GetFrameTime() / 420.0f;          // ciclo completo ~7 min
+                if (worldClock >= 1.0f) worldClock -= 1.0f;
+                float sun = sinf(worldClock * 6.2831853f - 1.5707963f) * 0.5f + 0.5f; // 0=noite,1=meio-dia
+                lightSystem.ambientDark += (1.0f - sun) * 0.30f; // escurece à noite
+                if (lightSystem.ambientDark > 0.72f) lightSystem.ambientDark = 0.72f;
+                {
+                    Color d = lightSystem.ambientColor;
+                    Color n = { 70, 95, 165, 255 };              // azul noturno
+                    lightSystem.ambientColor = {
+                        (unsigned char)(n.r + (int)((d.r - n.r) * sun)),
+                        (unsigned char)(n.g + (int)((d.g - n.g) * sun)),
+                        (unsigned char)(n.b + (int)((d.b - n.b) * sun)), 255 };
+                }
                 lightSystem.clear();
                 lightSystem.addPlayerLight(player.position);
                 for (int i = 0; i < 5; ++i) { float a = i * 1.25664f;
