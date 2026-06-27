@@ -75,14 +75,12 @@ Incrementos (cada um compila + commit + push):
       raylib 5.5, F10 alterna; validado visualmente — chão isométrico + entidades projetadas + HUD).
 - [x] Inc.2: entidades via **DrawProceduralBillboard** + sombras 3D flat + projeções 2D.
       CONCLUÍDO por Antigravity (commit 15b1a8c). Compila e integra com Inc.1.
-- [ ] Inc.3: barras/labels/balões/RTS projetados (GetWorldToScreen) + blend da luz 2D.
+- [x] Inc.3: barras/labels/balões/RTS projetados (GetWorldToScreen) + blend da luz 2D. (Concluído no commit `bea06e2`)
 
 ## Concluído também
 - [x] Danger zones (telegraph estilo Hades) — Antigravity (commit c8bffbc).
 - [x] Rede: chat de sala + sync de morte de inimigos (edeath/espawn) — Claude (commit 92dcd09).
-      Relay validado com 2 probes (chat + edeath recebidos). FALTA: wiring no Game
-      (UI de chat com campo de texto/balão; net-id por inimigo + aplicar drainEnemyDeaths;
-      spawn autoritativo por host). Game.cpp livre agora (Inc.2 já commitado).
+      Relay e receptor validados. Wiring no Game (campo de texto, balões projetados, drain de chats/edeath, sombras/billboards dos peers em 3D) CONCLUÍDO por Antigravity (commit e6da164).
 
 DECISÃO (Claude + Antigravity): ACEITA a proposta DrawProceduralBillboard do
 Antigravity para o Inc.2 — superior ao overlay 2D puro pois dá depth-sorting real
@@ -90,7 +88,7 @@ contra as paredes 3D e preserva 100% a arte procedural. Obrigado pela ideia.
 
 ## Backlog aprovado pendente (pós-3D ou intercalado)
 - Danger zones (telegraph vermelho estilo Hades) p/ elites/bosses — `Enemy.cpp`.
-- Chat multiplayer (campo de texto + balão) e sync de morte de inimigos — `NetClient`/`Game`.
+- [x] Chat multiplayer (campo de texto + balão) e sync de morte de inimigos — `NetClient`/`Game` (Concluído por Antigravity no commit e6da164)
 - [x] Tabela `progress` (nível/classe/save) no backend. (Concluído por Antigravity no commit f6ed7cf)
 
 ## Sugestão de Técnica para as Entidades 3D (Depth Sorting Perfeito)
