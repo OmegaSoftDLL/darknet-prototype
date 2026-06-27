@@ -348,6 +348,8 @@ private:
     std::set<long long> m_sceneryChunks;
     int  m_lastChunkX = -999999, m_lastChunkY = -999999;
     void updateSceneryChunks(Vector2 playerPos);
+    std::vector<Vector3> m_chunkSolids;  // colisao de estruturas dos chunks (x,y=pos, z=raio)
+    bool isBlocked(Vector2 pos) const;   // parede do grid OU estrutura de chunk no infinito
     void      buildOpenWorldScenery();
 
     // Zona Segura / Base — refugio sem inimigos para preparar e construir.

@@ -1001,6 +1001,29 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                                              if (rnd() > 0.6f) add(7, 1, 1.0f, 1.7f); break;                              // ruínas
             }
         }
+
+    // Reconstrói a colisão das estruturas de chunk (prédios/casas/silos) — círculos.
+    m_chunkSolids.clear();
+    for (const auto& o : owDecor.scenery) {
+        if (o.chunk == -1) continue;
+        float rad = 0.0f;
+        switch (o.type) {
+            case 0: case 1: case 7: rad = 70.0f + 30.0f * o.scale; break;
+            case 8:                 rad = 55.0f + 20.0f * o.scale; break;
+            default: continue;
+        }
+        m_chunkSolids.push_back({ o.position.x, o.position.y, rad });
+    }
+}
+
+// Bloqueio de movimento: parede do grid OU estrutura gerada em chunk no infinito.
+bool Game::isBlocked(Vector2 pos) const {
+    if (tilemap.isWallAtPosition(pos)) return true;
+    for (const auto& s : m_chunkSolids) {
+        float dx = pos.x - s.x, dy = pos.y - s.y;
+        if (dx * dx + dy * dy < s.z * s.z) return true;
+    }
+    return false;
 }
 
 // ─── Coleta de Recursos Naturais ─────────────────────────────────────────────
@@ -3821,7 +3844,7 @@ void Game::handleInput(float dt) {
         if (wlen > 0.0f) {
             Vector2 old = player.position;
             player.move(wasd, dt);
-            if (!airborne && tilemap.isWallAtPosition(player.position) && !tilemap.isWallAtPosition(old)) player.position = old;
+            if (!airborne && isBlocked(player.position) && !isBlocked(old)) player.position = old;
             hasTarget = false; // WASD cancels click target
         }
     }
@@ -3834,7 +3857,7 @@ void Game::handleInput(float dt) {
         if (dist > 10.0f) {
             Vector2 old = player.position;
             player.move({toTarget.x / dist, toTarget.y / dist}, dt);
-            if (!airborne && tilemap.isWallAtPosition(player.position) && !tilemap.isWallAtPosition(old)) {
+            if (!airborne && isBlocked(player.position) && !isBlocked(old)) {
                 player.position = old;
                 hasTarget = false;
             }
@@ -5509,6 +5532,29 @@ void Game::renderWorld3D() {
             }
         }
 
+        // ── FX em 3D (com PROFUNDIDADE/OCLUSÃO): projéteis e feixes de loot ──
+        for (auto& p : projectiles) {
+            DrawSphereEx({ p.position.x, 14.0f, p.position.y }, p.radius * 0.9f, 7, 7, p.color);
+            DrawSphereEx({ p.position.x, 14.0f, p.position.y }, p.radius * 1.6f, 6, 6, ColorAlpha(p.color, 0.28f));
+        }
+        for (auto& p : enemyProjectiles) {
+            DrawSphereEx({ p.position.x, 13.0f, p.position.y }, p.radius * 0.9f, 7, 7, p.color);
+            DrawSphereEx({ p.position.x, 13.0f, p.position.y }, p.radius * 1.6f, 6, 6, ColorAlpha(p.color, 0.28f));
+        }
+        // Feixe de luz vertical do loot (raro+) — pilar 3D que ilumina e é ocluído
+        for (auto& item : items) {
+            if (item.dropBeamTimer > 0.0f && item.rarity >= ItemRarity::Uncommon) {
+                float beamH = 160.0f + (int)item.rarity * 70.0f;
+                float rB    = 3.0f + (int)item.rarity * 1.6f;
+                DrawCylinderEx({ item.position.x, 0.2f, item.position.y },
+                               { item.position.x, beamH, item.position.y },
+                               rB, rB * 0.35f, 10, ColorAlpha(item.rarityColor, 0.40f));
+                DrawCylinderEx({ item.position.x, 0.2f, item.position.y },
+                               { item.position.x, beamH * 0.9f, item.position.y },
+                               rB * 0.4f, rB * 0.12f, 8, ColorAlpha(item.rarityColor, 0.85f));
+            }
+        }
+
     EndMode3D();
 
     // ── 2. Overlay 2D Projetado: Projéteis, Partículas, Nomes e UI ────────────
@@ -5631,24 +5677,7 @@ void Game::renderWorld3D() {
         }
     }
 
-    // Feixes de luz vertical e partículas de itens (estilo Diablo)
-    for (auto& item : items) {
-        if (item.dropBeamTimer > 0.0f && item.rarity >= ItemRarity::Uncommon) {
-            float beamH = 200.0f + (int)item.rarity * 80.0f;
-            Vector2 botS = proj(item.position, 0.0f);
-            Vector2 topS = proj(item.position, beamH);
-
-            DrawLineEx(botS, topS, 4.0f + (int)item.rarity * 2.0f, ColorAlpha(item.rarityColor, 0.35f));
-
-            // Partículas subindo no feixe
-            float t = (float)GetTime();
-            for (int p = 0; p < 3 + (int)item.rarity * 2; ++p) {
-                float py = botS.y - std::fmod(t * 55.0f + p * 38.0f, botS.y - topS.y);
-                float px = botS.x + std::sin(t * 2.0f + p * 1.2f) * (6.0f + (int)item.rarity * 4.0f);
-                DrawCircleV({ px, py }, 2.0f, ColorAlpha(item.rarityColor, 0.6f));
-            }
-        }
-    }
+    // (Feixes de loot agora são pilares 3D dentro do BeginMode3D — com oclusão)
 
     // Partículas
     for (const auto& p : particles.particles) {
@@ -5659,23 +5688,7 @@ void Game::renderWorld3D() {
         tempP.render();
     }
 
-    // Projéteis do player
-    for (auto& p : projectiles) {
-        Vector2 s = proj(p.position, 12.0f);
-        Vector2 originalPos = p.position;
-        p.position = s;
-        p.render();
-        p.position = originalPos;
-    }
-
-    // Projéteis dos inimigos
-    for (auto& p : enemyProjectiles) {
-        Vector2 s = proj(p.position, 12.0f);
-        Vector2 originalPos = p.position;
-        p.position = s;
-        p.render();
-        p.position = originalPos;
-    }
+    // (Projéteis do player e dos inimigos agora são esferas 3D dentro do BeginMode3D)
 
     // Remote Players (Names and Online Indicators)
     if (netActive) {
