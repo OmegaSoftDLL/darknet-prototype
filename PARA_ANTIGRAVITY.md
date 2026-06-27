@@ -1,26 +1,30 @@
-# Handoff Claude → Antigravity (ATUAL)
+# DIRETRIZES PARA O ANTIGRAVITY (3D real — decisão do usuário)
 
-## 🟢 Entidades viram MODELOS 3D REAIS low-poly (SEM CUBOS, sem billboard/2.5D)
-Decisão do usuário: nada de cubo, nada de billboard/2.5D. Entidades = modelos 3D
-low-poly com formas ARREDONDADAS (DrawSphere / DrawCapsule / DrawCylinderEx).
+O usuário definiu: **os personagens têm que ser os modelos DO PRÓPRIO JOGO (como
+no 2D) só que em 3D real** — NÃO modelos genéricos (greenman/robot) e NÃO cubos.
 
-Claude lançou 4 agentes ADICIONANDO `void render3D() const;` (impl em .cpp) em:
-- `Player`  (src/Player.cpp/.h)
-- `Enemy`   (src/Enemy.cpp/.h)
-- `NPC` + `Companion` (src/NPC.*, src/Companion.*)
-- `Item`    (src/Item.cpp/.h)
-Eles NÃO tocam Game.cpp/Tilemap.cpp nem o `render()` 2D existente.
+## Regras (obrigatórias)
+1. **PERSONAGENS = `render3D()` do jogo.** Player, Enemy, NPC, Companion, Item já
+   têm `render3D()` (modelos 3D fiéis ao design 2D, feitos de esferas/cápsulas/
+   cilindros — SEM cubos). O Claude **já trocou** no `renderWorld3D`:
+   `player.render3D(); n.render3D(); c.render3D(); e.render3D(); it.render3D();`.
+   ❌ NÃO volte a usar `m_playerModel`/`m_enemyModel` (greenman/robot) para
+   personagens. Pode REMOVER esses dois modelos se quiser.
+2. **MODELOS REAIS (.obj/.glb) só para PRÉDIOS/CENÁRIO** — house/turret/castle/
+   barracks/market/well/old_car_new. Isso ficou ÓTIMO, mantenha. (Não são
+   personagens desenhados à mão.) Assets em `resources/models/` (Claude copiou).
+3. **CHÃO/PAREDES**: textura via DrawCubeTexture/rlgl com SpriteBank — ok manter.
+4. **NADA de cubo** para personagens. Cenário pode ser modelo real.
+5. Peers/tanks/soldiers: pode manter um modelo simples por enquanto (secundário).
 
-### Antigravity, sua parte (renderWorld3D em Game.cpp):
-1. Dentro do `BeginMode3D`, CHAMAR os novos `render3D()` de cada entidade
-   (player.render3D(); e em loop enemies/npcs/companions/items: x.render3D();),
-   substituindo o desenho 2D projetado (`drawEnt`/projeção pós-EndMode3D). Remover
-   esse overlay 2D das entidades. Manter sombras (DrawPlane) e projéteis/partículas.
-2. NÃO editar Player/Enemy/NPC/Companion/Item (os agentes do Claude estão neles).
-3. ⚠️ NADA DE CUBO em lugar nenhum — nem entidades, nem cenário. Cenário pode ser
-   DrawBillboard (texturas SpriteBank) ou primitivas arredondadas. Se você já pôs
-   `DrawCube` nas paredes do tilemap, troque por algo arredondado/textura depois
-   (Claude cuida do Tilemap).
+## LANES (sem clobber — crítico)
+- **CLAUDE** (via workflow de agentes AGORA): arquivos de ENTIDADE — `Player.cpp/h`,
+  `Enemy.cpp/h`, `NPC.cpp/h`, `Companion.cpp/h`, `Item.cpp/h` (refinando os
+  `render3D()` p/ ficarem fiéis) + `Tilemap::render3D` (chão). E o TRECHO de
+  personagens do `renderWorld3D` (as chamadas `*.render3D()`).
+  → Antigravity, NÃO edite esses arquivos/trecho enquanto o workflow roda.
+- **ANTIGRAVITY**: `Game.cpp` — carregamento/desenho dos MODELOS DE PRÉDIOS,
+  iluminação/fog 3D, câmera, decalques. E o backend.
 
-Claude compila + valida (screenshot) assim que os agentes terminarem e você ligar
-as chamadas. Sincronize por commit; antes de editar Game.cpp faça commit do que tem.
+Sync por commit; antes de editar Game.cpp faça commit/pull. O Claude compila e
+valida (screenshot) o resultado combinado quando o workflow terminar.
