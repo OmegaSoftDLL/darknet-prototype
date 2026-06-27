@@ -78,7 +78,7 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     for (int y = 0; y < H; ++y)
         for (int x = 0; x < W; ++x) {
             Color c = px[y * W + x];
-            if (c.a < 90) continue;                 // só pixels opacos
+            if (c.a < 40) continue;                 // inclui semi-transparentes (fantasmas não somem)
             float wx = (x - W * 0.5f) * voxelSize;   // centrado em X
             float wy = (H - 1 - y)   * voxelSize;    // topo da imagem = alto; pés em Y=0
             addCube(wx, wy, 0.0f, voxelSize, voxelSize, depth, c);
