@@ -1268,7 +1268,11 @@ void Tilemap::render3D(Vector2 camTarget) const {
             Color floorColor = shade(base, n);
             if (t.type == TileType::BrokenFloor) floorColor = shade(base, 0.55f);
             if (t.type == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
-            DrawPlane(floorCtr, { TS, TS }, floorColor);
+            // Rejunte: base escura no tamanho do tile + ladrilho colorido menor por
+            // cima -> dá leitura de piso ladrilhado em vez de um lençol liso.
+            DrawPlane(floorCtr, { TS, TS }, shade(base, 0.45f));
+            Vector3 tileTop = { floorCtr.x, 0.02f, floorCtr.z };
+            DrawPlane(tileTop, { TS - 5.0f, TS - 5.0f }, floorColor);
 
             // Paredes (tipo Wall ou cenário sólido) = cubos com volume, cor do bioma
             if (t.type == TileType::Wall || t.solid) {
