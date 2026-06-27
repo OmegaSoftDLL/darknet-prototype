@@ -4825,53 +4825,49 @@ void Game::renderWorld3D() {
             DrawPlane({ it.position.x, 0.1f, it.position.y }, { 12.0f, 6.0f }, ColorAlpha(BLACK, 0.3f));
         }
 
-        // Desenhar entidades procedurais como Billboards 3D
-        // Itens
-        for (auto& it : items) {
-            drawProceduralEntity3D(it.position, 8.0f, [&]() { it.render(); });
-        }
-
-        // Companheiros
-        for (auto& c : companions) {
-            if (!c.active) continue;
-            float h = c.isDead() ? 4.0f : 16.0f;
-            drawProceduralEntity3D(c.position, h, [&]() { c.render(); });
-        }
-
-        // NPCs
-        for (auto& n : npcs) {
-            drawProceduralEntity3D(n.position, 22.0f, [&]() { n.render(); });
-        }
-
-        // Inimigos
-        for (auto& e : enemies) {
-            drawProceduralEntity3D(e.position, e.radius * 0.9f, [&]() { e.render(); });
-        }
-
-        // Player
-        drawProceduralEntity3D(player.position, 51.0f, [&]() { player.render(); });
-
-        // Remote Players (Peers)
-        if (netActive) {
-            static const Color cols[6] = {
-                {60,120,220,255},{220,80,140,255},{150,160,175,255},
-                {120,80,220,255},{180,120,255,255},{200,130,60,255}
-            };
-            for (const auto& p : net.peers()) {
-                drawProceduralEntity3D({ p.x, p.y }, 32.0f, [&]() {
-                    Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
-                    DrawRectangle((int)p.x - 9, (int)p.y - 14, 18, 28, c);
-                    DrawCircle((int)p.x, (int)(p.y - 20), 9.0f, c);
-                    DrawCircleLines((int)p.x, (int)(p.y - 20), 9.0f, ColorAlpha(WHITE, 0.4f));
-                });
-            }
-        }
+        // NOTA: as entidades NÃO são desenhadas aqui dentro do BeginMode3D.
+        // O billboard-via-RenderTexture (drawProceduralEntity3D) chamava
+        // BeginTextureMode aninhado, o que reseta o FBO para a tela e fazia tudo
+        // depois da 1ª entidade sumir. Elas agora são desenhadas no overlay 2D
+        // projetado após o EndMode3D (mesmo padrão dos projéteis). Só as sombras
+        // (DrawPlane) ficam no passo 3D.
     EndMode3D();
 
     // ── 2. Overlay 2D Projetado: Projéteis, Partículas, Nomes e UI ────────────
     auto proj = [&](Vector2 w, float h) {
         return GetWorldToScreenEx({ w.x, h, w.y }, camera3D, screenWidth, screenHeight);
     };
+
+    // ── Entidades: arte procedural projetada na tela (FIX do bug "só o chão") ──
+    // Desenha a render() existente na posição projetada (troca temporária de
+    // position, como os projéteis). g_renderPass3D=true faz a entidade pular a
+    // própria sombra 2D (as sombras já saem em 3D no passo acima).
+    auto drawEnt = [&](auto& e, float h) {
+        Vector2 s = proj(e.position, h);
+        Vector2 op = e.position; e.position = s;
+        g_renderPass3D = true; e.render(); g_renderPass3D = false;
+        e.position = op;
+    };
+    for (auto& it : items)     drawEnt(it, 6.0f);
+    for (auto& n  : npcs)      drawEnt(n, 16.0f);
+    for (auto& c  : companions){ if (c.active) drawEnt(c, 14.0f); }
+    for (auto& e  : enemies)   drawEnt(e, 14.0f);
+    drawEnt(player, 18.0f);
+
+    // Remote Players (Peers) on 2D projected overlay
+    if (netActive) {
+        static const Color cols[6] = {
+            {60,120,220,255},{220,80,140,255},{150,160,175,255},
+            {120,80,220,255},{180,120,255,255},{200,130,60,255}
+        };
+        for (const auto& p : net.peers()) {
+            Vector2 s = proj({ p.x, p.y }, 18.0f);
+            Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
+            DrawRectangle((int)s.x - 9, (int)s.y - 14, 18, 28, c);
+            DrawCircle((int)s.x, (int)(s.y - 20), 9.0f, c);
+            DrawCircleLines((int)s.x, (int)(s.y - 20), 9.0f, ColorAlpha(WHITE, 0.4f));
+        }
+    }
 
     // Feixes de luz vertical e partículas de itens (estilo Diablo)
     for (auto& item : items) {
