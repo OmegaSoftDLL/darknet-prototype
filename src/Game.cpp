@@ -924,6 +924,63 @@ void Game::buildOpenWorldScenery() {
     setupAnimals();         // vida selvagem (veado/coelho/javali/lobo/passaro)
 }
 
+// Mundo INFINITO: gera cenário em CHUNKS ao redor do player conforme explora e
+// descarrega chunks distantes. Determinístico por chunk (auto-construção).
+void Game::updateSceneryChunks(Vector2 playerPos) {
+    if (!openWorldMode) return;
+    const float CH   = 1280.0f;                 // tamanho do chunk (~20 tiles)
+    const int   RAD  = 2;                        // raio em chunks (5x5 carregados)
+    const float ORIG = (float)(Tilemap::OW_COLS * Tilemap::OW_ZONE_W * 64); // região fixa original
+    int pcx = (int)floorf(playerPos.x / CH);
+    int pcy = (int)floorf(playerPos.y / CH);
+    if (pcx == m_lastChunkX && pcy == m_lastChunkY) return;  // só recalcula ao cruzar chunk
+    m_lastChunkX = pcx; m_lastChunkY = pcy;
+
+    auto keyOf = [](int cx, int cy) -> long long {
+        return ((long long)(cx + 100000) << 21) | (long long)(cy + 100000);
+    };
+    std::set<long long> want;
+    for (int cy = pcy - RAD; cy <= pcy + RAD; ++cy)
+        for (int cx = pcx - RAD; cx <= pcx + RAD; ++cx) want.insert(keyOf(cx, cy));
+
+    // Descarrega cenário de chunks fora do raio (mantém o fixo chunk == -1)
+    owDecor.scenery.erase(std::remove_if(owDecor.scenery.begin(), owDecor.scenery.end(),
+        [&](const SceneryObject& o){ return o.chunk != -1 && want.find(o.chunk) == want.end(); }),
+        owDecor.scenery.end());
+    for (auto it = m_sceneryChunks.begin(); it != m_sceneryChunks.end();)
+        it = (want.find(*it) == want.end()) ? m_sceneryChunks.erase(it) : std::next(it);
+
+    // Gera chunks novos
+    for (int cy = pcy - RAD; cy <= pcy + RAD; ++cy)
+        for (int cx = pcx - RAD; cx <= pcx + RAD; ++cx) {
+            long long k = keyOf(cx, cy);
+            if (m_sceneryChunks.count(k)) continue;
+            m_sceneryChunks.insert(k);
+            float ox = cx * CH, oy = cy * CH;
+            if (ox >= 0 && oy >= 0 && ox < ORIG && oy < ORIG) continue;  // região fixa já populada
+            unsigned int rng = (unsigned int)(cx * 73856093) ^ (unsigned int)(cy * 19349663) ^ 0x5151u;
+            auto rnd = [&]() { rng = rng * 1664525u + 1013904223u; return (float)((rng >> 8) & 0xFFFF) / 65535.0f; };
+            auto add = [&](int type, int count, float mn, float mx) {
+                for (int i = 0; i < count; ++i) {
+                    SceneryObject o;
+                    o.type = type;
+                    o.position = { ox + rnd() * CH, oy + rnd() * CH };
+                    o.rotation = rnd() * 3.14159f;
+                    o.scale = mn + rnd() * (mx - mn);
+                    o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
+                    o.chunk = k;
+                    owDecor.scenery.push_back(o);
+                }
+            };
+            add(11, 70, 0.6f, 1.7f);    // grama
+            add(2,  10, 0.8f, 1.7f);    // árvores
+            add(12, 16, 0.6f, 1.2f);    // pedras/detritos
+            add(5,   4, 1.0f, 1.0f);    // postes
+            if (rnd() > 0.55f) add(7, 1, 1.0f, 1.7f);   // prédio ocasional
+            if (rnd() > 0.70f) add(3, 6, 0.7f, 1.1f);   // lápides ocasionais
+        }
+}
+
 // ─── Coleta de Recursos Naturais ─────────────────────────────────────────────
 
 const char* Game::resourceName(ResourceType t) {
@@ -2407,15 +2464,11 @@ void Game::update(float dt) {
     // Câmera 3D (2.5D) acompanha o jogador — usada quando render3D está ativo (F10).
     updateCamera3D();
 
-    // Open World region detection and camera clamp
-    if (openWorldMode) {
-        float halfW = (float)screenWidth  / (2.0f * camera.zoom);
-        float halfH = (float)screenHeight / (2.0f * camera.zoom);
-        float worldW = (float)(tilemap.width  * Tilemap::tileSize);
-        float worldH = (float)(tilemap.height * Tilemap::tileSize);
-        camera.target.x = std::max(halfW, std::min(camera.target.x, worldW - halfW));
-        camera.target.y = std::max(halfH, std::min(camera.target.y, worldH - halfH));
+    // Mundo infinito: auto-gera/descarrega cenário em chunks ao redor do player.
+    updateSceneryChunks(player.position);
 
+    // Open World region detection (SEM clamp de câmera — mundo é infinito)
+    if (openWorldMode) {
         ZoneID newRegion = getRegionAt(player.position);
         if (newRegion != currentRegion) {
             currentRegion       = newRegion;
