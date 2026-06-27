@@ -30,7 +30,7 @@ Image CaptureToImage(int cap, Vector2 worldTarget, std::function<void()> drawFn)
 // o desenho 2D do jogo, agora sólido em 3D real (pés em Y=0, centrado em X/Z).
 Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     Image img = ImageCopy(src);
-    const int MAX = 40;                   // limita contagem de voxels
+    const int MAX = 34;                   // limita voxels (36 verts/voxel < 65535 idx)
     if (img.width > MAX || img.height > MAX) ImageResizeNN(&img, MAX, MAX);
     ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
     const int W = img.width, H = img.height;
@@ -41,25 +41,38 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     std::vector<unsigned short> idx;
     verts.reserve(4096); idx.reserve(8192);
 
+    auto shadeC = [](Color c, float k) -> Color {
+        auto ch = [&](unsigned char v){ float r = v * k; return (unsigned char)(r > 255.0f ? 255.0f : r); };
+        return Color{ ch(c.r), ch(c.g), ch(c.b), 255 };
+    };
+    // Cubo com 6 faces SEPARADAS (verts duplicados) e SOMBREAMENTO POR FACE — dá
+    // volume/relevo low-poly mesmo sem luz dinâmica (topo claro, base/laterais escuras).
     auto addCube = [&](float cx, float cy, float cz,
                        float sx, float sy, float sz, Color c) {
-        unsigned short b = (unsigned short)(verts.size() / 3);
         float hx = sx * 0.5f, hy = sy * 0.5f, hz = sz * 0.5f;
-        const float v[8][3] = {
+        const float p[8][3] = {
             {cx-hx,cy-hy,cz-hz},{cx+hx,cy-hy,cz-hz},{cx+hx,cy+hy,cz-hz},{cx-hx,cy+hy,cz-hz},
             {cx-hx,cy-hy,cz+hz},{cx+hx,cy-hy,cz+hz},{cx+hx,cy+hy,cz+hz},{cx-hx,cy+hy,cz+hz}
         };
-        // sombreamento leve por face (fake light) p/ leitura de volume mesmo sem luz
-        for (int i = 0; i < 8; ++i) {
-            verts.push_back(v[i][0]); verts.push_back(v[i][1]); verts.push_back(v[i][2]);
-            norms.push_back(0.0f); norms.push_back(0.0f); norms.push_back(1.0f);
-            cols.push_back(c.r); cols.push_back(c.g); cols.push_back(c.b); cols.push_back(255);
-        }
-        static const unsigned short f[36] = {
-            0,1,2, 0,2,3,   4,6,5, 4,7,6,   0,3,7, 0,7,4,
-            1,5,6, 1,6,2,   3,2,6, 3,6,7,   0,4,5, 0,5,1
+        auto face = [&](int i0,int i1,int i2,int i3,int i4,int i5,
+                        float k, float nx,float ny,float nz) {
+            int id[6] = { i0,i1,i2,i3,i4,i5 };
+            unsigned short b = (unsigned short)(verts.size() / 3);
+            Color sc = shadeC(c, k);
+            for (int j = 0; j < 6; ++j) {
+                const float* vv = p[id[j]];
+                verts.push_back(vv[0]); verts.push_back(vv[1]); verts.push_back(vv[2]);
+                norms.push_back(nx); norms.push_back(ny); norms.push_back(nz);
+                cols.push_back(sc.r); cols.push_back(sc.g); cols.push_back(sc.b); cols.push_back(255);
+                idx.push_back((unsigned short)(b + j));
+            }
         };
-        for (int i = 0; i < 36; ++i) idx.push_back((unsigned short)(b + f[i]));
+        face(0,1,2, 0,2,3, 0.58f,  0,0,-1);   // trás  (-Z)
+        face(4,6,5, 4,7,6, 0.95f,  0,0, 1);   // frente(+Z, encara a câmera) — mais clara
+        face(0,3,7, 0,7,4, 0.70f, -1,0, 0);   // esquerda (-X)
+        face(1,5,6, 1,6,2, 0.80f,  1,0, 0);   // direita  (+X)
+        face(3,2,6, 3,6,7, 1.00f,  0,1, 0);   // topo (+Y) — mais claro
+        face(0,4,5, 0,5,1, 0.48f,  0,-1,0);   // base (-Y) — mais escuro
     };
 
     for (int y = 0; y < H; ++y)

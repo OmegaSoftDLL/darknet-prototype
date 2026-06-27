@@ -802,10 +802,15 @@ void Game::setupWorldRegions() {
 }
 
 ZoneID Game::getRegionAt(Vector2 pos) const {
-    for (const auto& r : worldRegions) {
-        if (CheckCollisionPointRec(pos, r.bounds)) return r.zoneType;
-    }
-    return ZoneID::LARuins;
+    // Bioma por POSIÇÃO — MESMA regra (período 2560 e owLayout 3x3 por módulo) que
+    // Tilemap::render3D usa, para que INIMIGOS, ÁUDIO e ZONA concordem com o CHÃO
+    // em TODO o mundo infinito (não só na área fixa central).
+    const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize); // 2560
+    int zx = (int)std::floor(pos.x / ZONE);
+    int zy = (int)std::floor(pos.y / ZONE);
+    int col = ((zx % Tilemap::OW_COLS) + Tilemap::OW_COLS) % Tilemap::OW_COLS;
+    int row = ((zy % Tilemap::OW_ROWS) + Tilemap::OW_ROWS) % Tilemap::OW_ROWS;
+    return tilemap.owLayout[row][col];
 }
 
 // Popula TODAS as regioes do mundo aberto com cenario denso, espalhado por toda
@@ -4273,6 +4278,20 @@ void Game::spawnEnemy() {
         e.maxHealth *= diff.enemyHPMult;
         e.damage    *= diff.enemyDmgMult;
         e.speed     *= diff.enemySpeedMult;
+    }
+
+    // Gradiente por DISTÂNCIA da origem (mundo infinito): cada anel de 1 zona
+    // (2560px) além do centro endurece e recompensa mais — risco = recompensa.
+    if (openWorldMode) {
+        const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize);   // 2560
+        const Vector2 wc = { ZONE * Tilemap::OW_COLS * 0.5f, ZONE * Tilemap::OW_ROWS * 0.5f };
+        float dx = e.position.x - wc.x, dy = e.position.y - wc.y;
+        float ring = std::max(0.0f, (sqrtf(dx*dx + dy*dy) - ZONE) / ZONE);
+        if (ring > 0.0f) {
+            float hpMul = 1.0f + ring * 0.22f, dmgMul = 1.0f + ring * 0.18f;
+            e.health *= hpMul; e.maxHealth *= hpMul; e.damage *= dmgMul;
+            e.xpReward = (int)(e.xpReward * (1.0f + ring * 0.20f));
+        }
     }
 
     // Motor de Evolucao Infinita — Nivel de Ameaca + mutador ativo
