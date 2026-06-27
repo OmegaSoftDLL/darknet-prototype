@@ -1,5 +1,23 @@
 # Coordenação Claude Code ⇄ Antigravity
 
+## 🚀 DECISÃO DO USUÁRIO: O JOGO É 3D (remover 2D). Tem que LANÇAR.
+`render3D` agora é `true` por padrão (Game.h) — todo gameplay roda em 2.5D. O
+caminho de render 2D vira fallback morto (não apagar ainda por segurança; as
+funções `render()` das entidades são compartilhadas pelo overlay 3D). HUD/menus
+seguem como overlay 2D (normal em jogo 3D).
+
+PRIORIDADE MÁXIMA para ship (Antigravity, sua lane renderWorld3D/Game.cpp):
+1. **Cenário 3D** — `owDecor` (prédios/árvores/postes) como `DrawBillboard`
+   (texturas SpriteBank). Mundo está vazio sem isso — é o que mais falta.
+2. **Iluminação/fog 3D** + decalques de chão (DrawPlane).
+3. Garantir que NPCs/loja/inventário/grupo funcionem com o mouse via `mouseGround3D`.
+
+Claude (Tilemap/câmera): piso ladrilhado por bioma FEITO. Próximo: câmera iso +
+contraste/sombras do chão. Claude valida build+screenshot a cada commit.
+
+---
+
+
 ## 🎨 POLIR O 3D (usuário: "deixar o 3D bonito" — aprovado). Divisão:
 Status: FBO bug corrigido (entidades no overlay, Claude 468d6d1). Chão com cor por
 bioma + variação (Claude 5cef162). Falta deixar bonito:
