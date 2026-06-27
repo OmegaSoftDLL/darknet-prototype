@@ -1219,6 +1219,26 @@ void Tilemap::clearSolidFlags() {
 // ─── Render 2.5D isométrico — chão (DrawPlane) + paredes (DrawCube) ───────────
 // Mapeamento: X3D = X2D, Z3D = Y2D, altura no eixo Y. Culling em janela ao redor
 // do alvo da câmera (camTarget em coordenadas de mundo 2D).
+// Cor base de chão por bioma — dá identidade ao terreno em 3D (em vez de cinza).
+static Color biomeFloorColor(ZoneID z) {
+    switch (z) {
+        case ZoneID::LARuins:        return { 74, 76, 84, 255};   // concreto
+        case ZoneID::Bunker:         return { 58, 64, 72, 255};   // aço
+        case ZoneID::DarkForest:     return { 30, 46, 34, 255};   // mato escuro
+        case ZoneID::CursedFarm:     return { 78, 64, 40, 255};   // terra
+        case ZoneID::Cemetery:       return { 50, 54, 64, 255};   // pedra fria
+        case ZoneID::GhostCity:      return { 54, 56, 62, 255};   // asfalto
+        case ZoneID::KronosForge:    return { 66, 42, 34, 255};   // vulcânico
+        case ZoneID::AbandonedManor: return { 56, 50, 60, 255};   // madeira podre
+        case ZoneID::KronosNexus:    return { 44, 36, 62, 255};   // void roxo
+        default:                     return { 52, 56, 66, 255};
+    }
+}
+static Color shade(Color c, float f) {
+    auto cl = [](float v){ return (unsigned char)(v < 0 ? 0 : (v > 255 ? 255 : v)); };
+    return { cl(c.r * f), cl(c.g * f), cl(c.b * f), c.a };
+}
+
 void Tilemap::render3D(Vector2 camTarget) const {
     const float TS = (float)tileSize;
     const int   R  = 26; // raio da janela visível em tiles
@@ -1233,20 +1253,29 @@ void Tilemap::render3D(Vector2 camTarget) const {
             float rx = x * TS, ry = y * TS;
             Vector3 floorCtr = { rx + TS * 0.5f, 0.0f, ry + TS * 0.5f };
 
-            // Cor do chão por tipo (xadrez leve para leitura do grid)
-            bool chk = ((x + y) & 1) != 0;
-            Color floorColor = (t.type == TileType::BrokenFloor)
-                ? Color{30, 30, 40, 255}
-                : (chk ? Color{44, 50, 66, 255} : Color{38, 44, 58, 255});
-            if (t.type == TileType::Portal) floorColor = Color{0, 120, 180, 255};
+            // Bioma do tile (mundo aberto: por região; senão zona atual)
+            ZoneID z = currentZone;
+            if (openWorld) {
+                int col = std::min(OW_COLS - 1, std::max(0, x / OW_ZONE_W));
+                int row = std::min(OW_ROWS - 1, std::max(0, y / OW_ZONE_H));
+                z = owLayout[row][col];
+            }
+            Color base = biomeFloorColor(z);
+
+            // Variação determinística por tile (textura de terreno, sem cinza liso)
+            unsigned int h = (unsigned int)(x * 73856093) ^ (unsigned int)(y * 19349663);
+            float n = 0.86f + ((h >> 8) & 255) / 255.0f * 0.30f;
+            Color floorColor = shade(base, n);
+            if (t.type == TileType::BrokenFloor) floorColor = shade(base, 0.55f);
+            if (t.type == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
             DrawPlane(floorCtr, { TS, TS }, floorColor);
 
-            // Paredes (tipo Wall ou cenário sólido) = cubos com volume
+            // Paredes (tipo Wall ou cenário sólido) = cubos com volume, cor do bioma
             if (t.type == TileType::Wall || t.solid) {
                 Vector3 c = { rx + TS * 0.5f, TS * 0.5f, ry + TS * 0.5f };
-                Color wc = t.solid ? Color{60, 66, 84, 255} : Color{74, 80, 98, 255};
+                Color wc = shade(base, t.solid ? 1.35f : 1.6f);
                 DrawCube(c, TS, TS, TS, wc);
-                DrawCubeWires(c, TS, TS, TS, ColorAlpha(Color{0, 210, 255, 255}, 0.25f));
+                DrawCubeWires(c, TS, TS, TS, shade(base, 2.0f));
             }
         }
     }
