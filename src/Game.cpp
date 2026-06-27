@@ -4969,68 +4969,27 @@ void Game::renderWorld3D() {
 
         // ── Desenho dos Billboards 3D Reais (com oclusão e depth buffer) ──
 
-        // Player
-        if (m_modelsLoaded && m_playerModel.meshCount > 0) {
-            float rotAngle = 0.0f;
-            if (player.velocity.x != 0.0f || player.velocity.y != 0.0f) {
-                rotAngle = atan2f(-player.velocity.x, player.velocity.y) * RAD2DEG;
-            } else {
-                rotAngle = (player.facing == 1) ? -90.0f : 90.0f;
-            }
-            DrawModelEx(m_playerModel, { player.position.x, 0.0f, player.position.y }, { 0.0f, 1.0f, 0.0f }, rotAngle, { 28.0f, 28.0f, 28.0f }, WHITE);
-        } else {
-            drawProceduralEntity3D(player.position, 18.0f, [&]() {
-                player.render();
-            });
-        }
+        // Player — modelo 3D do PRÓPRIO personagem do jogo (render3D, não genérico)
+        player.render3D();
 
-        // NPCs
+        // NPCs — modelos 3D próprios do jogo
         for (auto& n : npcs) {
-            if (m_modelsLoaded && m_playerModel.meshCount > 0) {
-                DrawModelEx(m_playerModel, { n.position.x, 0.0f, n.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 25.0f, 25.0f, 25.0f }, GREEN);
-            } else {
-                drawProceduralEntity3D(n.position, 16.0f, [&]() {
-                    n.render();
-                });
-            }
+            n.render3D();
         }
 
-        // Companheiros
+        // Companheiros — modelos 3D próprios do jogo
         for (auto& c : companions) {
-            if (c.active) {
-                if (m_modelsLoaded && m_playerModel.meshCount > 0) {
-                    DrawModelEx(m_playerModel, { c.position.x, 0.0f, c.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 20.0f, 20.0f, 20.0f }, SKYBLUE);
-                } else {
-                    drawProceduralEntity3D(c.position, 14.0f, [&]() {
-                        c.render();
-                    });
-                }
-            }
+            if (c.active) c.render3D();
         }
 
-        // Inimigos
+        // Inimigos — modelos 3D próprios do jogo (cada tipo com sua silhueta)
         for (auto& e : enemies) {
-            if (m_modelsLoaded && m_enemyModel.meshCount > 0) {
-                float rotAngle = 0.0f;
-                Vector2 diff = Vector2Subtract(player.position, e.position);
-                if (diff.x != 0.0f || diff.y != 0.0f) {
-                    rotAngle = atan2f(-diff.x, diff.y) * RAD2DEG;
-                }
-                float esc = e.isElite ? 24.0f : 16.0f;
-                Color tc = e.isElite ? Color{255, 100, 100, 255} : WHITE;
-                DrawModelEx(m_enemyModel, { e.position.x, 0.0f, e.position.y }, { 0.0f, 1.0f, 0.0f }, rotAngle, { esc, esc, esc }, tc);
-            } else {
-                drawProceduralEntity3D(e.position, 14.0f, [&]() {
-                    e.render();
-                });
-            }
+            e.render3D();
         }
 
-        // Itens
+        // Itens — modelos 3D próprios do jogo
         for (auto& it : items) {
-            drawProceduralEntity3D(it.position, 6.0f, [&]() {
-                it.render();
-            });
+            it.render3D();
         }
 
         // Outros jogadores (Peers)
