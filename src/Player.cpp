@@ -1,4 +1,4 @@
-#include "Player.h"
+﻿#include "Player.h"
 #include "Effects.h"
 #include <cmath>
 #include <string>
@@ -742,256 +742,181 @@ void Player::useSkill(int index, Vector2 /*target*/) {
     }
 }
 
+// ── Ícones procedurais (armas/itens "reais") para o inventário visual ──
+static void invGearIcon(float cx, float cy, float s, EquipSlot slot, Color col) {
+    switch (slot) {
+        case EquipSlot::Weapon:
+            DrawRectangle((int)(cx-s*0.42f),(int)(cy-s*0.09f),(int)(s*0.70f),(int)(s*0.20f), col);
+            DrawRectangle((int)(cx+s*0.18f),(int)(cy-s*0.04f),(int)(s*0.34f),(int)(s*0.09f), col);
+            DrawRectangle((int)(cx-s*0.42f),(int)(cy+s*0.10f),(int)(s*0.18f),(int)(s*0.24f), col);
+            DrawRectangle((int)(cx-s*0.14f),(int)(cy+s*0.10f),(int)(s*0.10f),(int)(s*0.16f), ColorAlpha(col,0.7f));
+            break;
+        case EquipSlot::Armor:
+            DrawTriangle({cx,cy-s*0.40f},{cx-s*0.38f,cy-s*0.18f},{cx+s*0.38f,cy-s*0.18f}, col);
+            DrawRectangle((int)(cx-s*0.34f),(int)(cy-s*0.20f),(int)(s*0.68f),(int)(s*0.48f), col);
+            DrawTriangle({cx-s*0.34f,cy+s*0.28f},{cx,cy+s*0.46f},{cx+s*0.34f,cy+s*0.28f}, col);
+            DrawRectangle((int)(cx-s*0.04f),(int)(cy-s*0.16f),(int)(s*0.08f),(int)(s*0.42f), ColorAlpha(BLACK,0.3f));
+            break;
+        default: // implante / chip
+            DrawRectangle((int)(cx-s*0.30f),(int)(cy-s*0.30f),(int)(s*0.60f),(int)(s*0.60f), col);
+            for (int i=0;i<4;i++){ float o=-s*0.22f+i*s*0.15f;
+                DrawRectangle((int)(cx+o),(int)(cy-s*0.44f),(int)(s*0.06f),(int)(s*0.14f), col);
+                DrawRectangle((int)(cx+o),(int)(cy+s*0.30f),(int)(s*0.06f),(int)(s*0.14f), col);
+                DrawRectangle((int)(cx-s*0.44f),(int)(cy+o),(int)(s*0.14f),(int)(s*0.06f), col);
+                DrawRectangle((int)(cx+s*0.30f),(int)(cy+o),(int)(s*0.14f),(int)(s*0.06f), col); }
+            DrawRectangle((int)(cx-s*0.12f),(int)(cy-s*0.12f),(int)(s*0.24f),(int)(s*0.24f), ColorAlpha(BLACK,0.4f));
+            break;
+    }
+}
+static void invItemIcon(float cx, float cy, float s, ItemType t, Color col) {
+    switch (t) {
+        case ItemType::HealthPack:
+            DrawRectangle((int)(cx-s*0.30f),(int)(cy-s*0.30f),(int)(s*0.60f),(int)(s*0.60f), col);
+            DrawRectangle((int)(cx-s*0.06f),(int)(cy-s*0.20f),(int)(s*0.12f),(int)(s*0.40f), WHITE);
+            DrawRectangle((int)(cx-s*0.20f),(int)(cy-s*0.06f),(int)(s*0.40f),(int)(s*0.12f), WHITE);
+            break;
+        case ItemType::NanoCore:
+            DrawCircle((int)cx,(int)cy,s*0.32f, col); DrawCircle((int)cx,(int)cy,s*0.15f, ColorAlpha(WHITE,0.85f));
+            break;
+        case ItemType::PlasmaCell:
+            DrawRectangle((int)(cx-s*0.18f),(int)(cy-s*0.30f),(int)(s*0.36f),(int)(s*0.58f), col);
+            DrawRectangle((int)(cx-s*0.08f),(int)(cy-s*0.40f),(int)(s*0.16f),(int)(s*0.10f), col);
+            DrawRectangle((int)(cx-s*0.10f),(int)(cy-s*0.10f),(int)(s*0.20f),(int)(s*0.06f), ColorAlpha(WHITE,0.7f));
+            break;
+        case ItemType::EnergyCore: {
+            Vector2 h[6]; for(int i=0;i<6;i++){ float a=i*PI/3.0f; h[i]={cx+cosf(a)*s*0.32f, cy+sinf(a)*s*0.32f}; }
+            for(int i=0;i<6;i++) DrawTriangle({cx,cy}, h[(i+1)%6], h[i], col);
+            DrawCircle((int)cx,(int)cy,s*0.10f, WHITE);
+        } break;
+        case ItemType::WeaponPart: {
+            for(int i=0;i<8;i++){ float a=i*PI/4.0f;
+                DrawRectangle((int)(cx+cosf(a)*s*0.26f-s*0.05f),(int)(cy+sinf(a)*s*0.26f-s*0.05f),(int)(s*0.10f),(int)(s*0.10f), col); }
+            DrawCircle((int)cx,(int)cy,s*0.22f, col); DrawCircle((int)cx,(int)cy,s*0.10f, ColorAlpha(BLACK,0.45f));
+        } break;
+        default: // chip / techchip / scrap
+            DrawRectangle((int)(cx-s*0.26f),(int)(cy-s*0.26f),(int)(s*0.52f),(int)(s*0.52f), col);
+            DrawRectangle((int)(cx-s*0.10f),(int)(cy-s*0.10f),(int)(s*0.20f),(int)(s*0.20f), ColorAlpha(BLACK,0.4f));
+            DrawRectangleLinesEx({cx-s*0.26f,cy-s*0.26f,s*0.52f,s*0.52f},1.0f, ColorAlpha(WHITE,0.3f));
+            break;
+    }
+}
+
 void Player::drawInventory() const {
-    const int SW = 1280, SH = 720;
-    const int PX = 60, PY = 50, PW = SW - 120, PH = SH - 100;
-    Color C_cyan = {0,210,255,255};
-    Color C_gold = {255,190,0,255};
-    Color C_green= {0,210,80,255};
+    const int SW=1280, SH=720;
+    const Color C_cyan={0,210,255,255}, C_gold={255,190,0,255}, C_green={0,210,80,255};
+    DrawRectangle(0,0,SW,SH, ColorAlpha(BLACK,0.82f));
+    int PX=64, PY=44, PW=SW-128, PH=SH-88;
+    DrawRectangle(PX,PY,PW,PH, ColorAlpha(Color{10,12,24,255},0.97f));
+    DrawRectangleLinesEx({(float)PX,(float)PY,(float)PW,(float)PH},2.0f, ColorAlpha(C_cyan,0.7f));
+    DrawRectangle(PX,PY,PW,34, ColorAlpha(Color{0,180,220,255},0.14f));
+    DrawText("INVENTARIO", PX+16, PY+9, 20, C_cyan);
+    DrawText("[I] fechar   [1/2/3] slot + [U] upgrade   [SETAS]+[T] equipar gear   [Q/E]+[F] usar item   [R] fundir 3x",
+             PX+170, PY+12, 12, ColorAlpha(WHITE,0.55f));
 
-    // Dark overlay background
-    DrawRectangle(0, 0, SW, SH, ColorAlpha(BLACK, 0.80f));
+    // ===== ESQUERDA: stats + slots equipados =====
+    int lx=PX+18, ly=PY+50;
+    DrawText("PERSONAGEM", lx, ly, 15, C_gold); ly+=22;
+    auto stat=[&](const char* a,const char* b,Color col){ DrawText(a,lx,ly,13,ColorAlpha(WHITE,0.6f)); DrawText(b,lx+120,ly,13,col); ly+=17; };
+    stat("NIVEL",    TextFormat("%d",level),                  C_gold);
+    stat("HP",       TextFormat("%.0f/%.0f",health,maxHealth),C_green);
+    stat("DANO",     TextFormat("%.0f",attackDamage),         Color{255,100,80,255});
+    stat("DEFESA",   TextFormat("%.0f%%",defense),            Color{100,200,255,255});
+    stat("VELOC.",   TextFormat("%.0f",speed),                Color{255,200,80,255});
+    stat("CREDITOS", TextFormat("$%d",credits),               C_gold);
+    ly+=10;
+    DrawText("EQUIPADO", lx, ly, 15, C_gold); ly+=24;
 
-    // Main panel
-    DrawRectangle(PX, PY, PW, PH, ColorAlpha({8,10,22,255}, 0.96f));
-    // Cyberpunk border
-    int c = 10;
-    Color brd = C_cyan;
-    DrawLine(PX+c, PY,   PX+PW-c, PY,   ColorAlpha(brd, 0.8f));
-    DrawLine(PX, PY+c,   PX, PY+PH-c,   ColorAlpha(brd, 0.6f));
-    DrawLine(PX+c, PY+PH,PX+PW-c, PY+PH,ColorAlpha(brd, 0.8f));
-    DrawLine(PX+PW, PY+c,PX+PW, PY+PH-c,ColorAlpha(brd, 0.6f));
-    DrawLine(PX, PY+c, PX+c, PY, ColorAlpha(brd, 0.7f));
-    DrawLine(PX+PW-c, PY, PX+PW, PY+c, ColorAlpha(brd, 0.7f));
-    DrawLine(PX, PY+PH-c, PX+c, PY+PH, ColorAlpha(brd, 0.7f));
-    DrawLine(PX+PW-c, PY+PH, PX+PW, PY+PH-c, ColorAlpha(brd, 0.7f));
-
-    // Title bar
-    DrawRectangle(PX, PY, PW, 30, ColorAlpha({0,180,220,255}, 0.12f));
-    DrawText("INVENTARIO  /  BUILD", PX+14, PY+8, 18, C_cyan);
-    DrawText("[I] FECHAR  [1/2/3] SLOT  [U] UPGRADE  [Q/E] ITEM  [F] USAR  [R] FUNDIR  [SETAS/T] EQUIPAR",
-             PX + 200, PY+9, 12, ColorAlpha(WHITE, 0.55f));
-
-    // â"€â"€ LEFT COLUMN: Character stats â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-    int lx = PX + 14, ly = PY + 44;
-    DrawText("PERSONAGEM", lx, ly, 14, ColorAlpha(C_gold, 0.9f));
-    DrawLine(lx, ly+18, lx+220, ly+18, ColorAlpha(C_cyan, 0.3f));
-    ly += 24;
-
-    auto statRow = [&](const char* label, const char* val, Color col) {
-        DrawText(label, lx, ly, 13, ColorAlpha(WHITE, 0.6f));
-        DrawText(val, lx + 110, ly, 13, col);
-        ly += 18;
-    };
-    statRow("NIVEL",     TextFormat("%d",        level),                 C_gold);
-    statRow("HP",        TextFormat("%.0f / %.0f", health, maxHealth),   C_green);
-    statRow("DANO",      TextFormat("%.0f",       attackDamage),         {255,100,80,255});
-    statRow("ALCANCE",   TextFormat("%.0f",       attackRange),          {180,140,255,255});
-    statRow("DEFESA",    TextFormat("%.0f%%",     defense),              {100,200,255,255});
-    statRow("VELOC.",    TextFormat("%.0f",       speed),                {255,200,80,255});
-    statRow("XP MULT",   TextFormat("x%.1f",     xpMultiplier),         {0,255,180,255});
-    statRow("CREDITOS",  TextFormat("$ %d",       credits),              C_gold);
-
-    ly += 6;
-    DrawLine(lx, ly, lx+220, ly, ColorAlpha(C_cyan, 0.2f));
-    ly += 8;
-    DrawText("SKILLS", lx, ly, 13, ColorAlpha(C_gold, 0.8f));
-    ly += 18;
-    for (const auto& sk : skills) {
-        bool rdy = sk.isReady();
-        Color sc = rdy ? C_green : ColorAlpha(WHITE, 0.4f);
-        DrawText(TextFormat("%s", sk.name.c_str()),    lx,      ly, 12, sc);
-        DrawText(TextFormat("CD:%.1fs Dano:%.0f", sk.cooldown, sk.damage),
-                 lx + 90, ly, 11, ColorAlpha(sc, 0.7f));
-        ly += 15;
-    }
-
-    // â"€â"€ CENTER COLUMN: Equipped slots â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-    int cx = PX + 250, cy = PY + 44;
-    int slotW = 330, slotH = 80;
-    DrawText("EQUIPAMENTOS", cx, cy, 14, ColorAlpha(C_gold, 0.9f));
-    DrawLine(cx, cy+18, cx+slotW, cy+18, ColorAlpha(C_cyan, 0.3f));
-    cy += 26;
-
-    const Equipment* slots[3] = {&equippedWeapon, &equippedArmor, &equippedImplant};
-    const char* slotNames[3]  = {"[1] ARMA", "[2] ARMADURA", "[3] IMPLANTE"};
-    const char* slotKeys[3]   = {"DMG", "HP", "VEL"};
-    const char* slot2Keys[3]  = {"Alc", "Def%", "XPx"};
-    Color slotColors[3]       = {{255,100,80,255}, {100,200,255,255}, {255,200,80,255}};
-
-    for (int s = 0; s < 3; ++s) {
-        bool selected = (selectedEquipSlot == s);
-        Color bg = selected ? ColorAlpha(slotColors[s], 0.16f) : ColorAlpha(BLACK, 0.3f);
-        Color bd = selected ? slotColors[s] : ColorAlpha(C_cyan, 0.35f);
-        DrawRectangle(cx, cy, slotW, slotH, bg);
-        DrawRectangleLinesEx({(float)cx,(float)cy,(float)slotW,(float)slotH},
-                              selected ? 2.0f : 1.0f, bd);
-
-        // Slot label
-        DrawText(slotNames[s], cx+8, cy+6, 13, ColorAlpha(bd, 0.9f));
-
-        const Equipment& eq = *slots[s];
-        if (eq.isEmpty()) {
-            DrawText("--- vazio ---", cx+10, cy+26, 14, ColorAlpha(DARKGRAY, 0.8f));
+    const Equipment* eqs[3]={&equippedWeapon,&equippedArmor,&equippedImplant};
+    const char* enames[3]={"ARMA","ARMADURA","IMPLANTE"};
+    EquipSlot eslot[3]={EquipSlot::Weapon,EquipSlot::Armor,EquipSlot::Implant};
+    const char* p1n[3]={"DANO","HP","VEL"}; const char* p2n[3]={"Alc","Def%","XPx"};
+    int sw=304, sh=82;
+    for(int s=0;s<3;s++){
+        int sx=lx, sy=ly+s*(sh+8);
+        bool sel=(selectedEquipSlot==s);
+        const Equipment& e=*eqs[s];
+        Color accent = e.isEmpty()? ColorAlpha(C_cyan,0.45f) : e.color;
+        DrawRectangle(sx,sy,sw,sh, sel?ColorAlpha(accent,0.16f):ColorAlpha(BLACK,0.35f));
+        DrawRectangleLinesEx({(float)sx,(float)sy,(float)sw,(float)sh}, sel?2.5f:1.0f, sel?accent:ColorAlpha(accent,0.6f));
+        int ib=sh-12;
+        DrawRectangle(sx+6,sy+6,ib,ib, ColorAlpha(BLACK,0.5f));
+        DrawRectangleLinesEx({(float)(sx+6),(float)(sy+6),(float)ib,(float)ib},1.0f, ColorAlpha(accent,0.5f));
+        invGearIcon(sx+6+ib*0.5f, sy+6+ib*0.5f, ib*0.78f, eslot[s], e.isEmpty()?ColorAlpha(WHITE,0.16f):e.color);
+        DrawText(TextFormat("[%d] %s",s+1,enames[s]), sx+ib+16, sy+8, 12, ColorAlpha(accent,0.9f));
+        if(e.isEmpty()){
+            DrawText("vazio", sx+ib+16, sy+34, 16, ColorAlpha(DARKGRAY,0.9f));
         } else {
-            // Name + upgrade stars
-            DrawText(eq.name.c_str(), cx+10, cy+26, 15, eq.color);
-            // Stars
-            for (int st = 0; st < 3; ++st) {
-                Color starC = (st < eq.upgradeLevel) ? C_gold : ColorAlpha(DARKGRAY, 0.5f);
-                DrawText("â˜…", cx + 10 + st*16 + MeasureText(eq.name.c_str(),15) + 8,
-                         cy+26, 13, starC);
-            }
-            // Tier badge
-            DrawText(TextFormat("T%d", eq.tier), cx+slotW-34, cy+6, 11,
-                     ColorAlpha(C_gold, 0.8f));
-
-            // Stats
-            float ep = eq.getEffectivePrimary();
-            float es = eq.getEffectiveSecondary();
-            DrawText(TextFormat("%s: %.0f", slotKeys[s],  ep), cx+10, cy+46, 12, ColorAlpha(WHITE,0.8f));
-            if (eq.upgradeLevel > 0 && eq.primary > 0)
-                DrawText(TextFormat("(base %.0f)", eq.primary), cx+90, cy+46, 10, ColorAlpha(WHITE,0.45f));
-            DrawText(TextFormat("%s: %.1f", slot2Keys[s], es), cx+180, cy+46, 12, ColorAlpha(WHITE,0.8f));
-
-            // Upgrade cost / max
-            if (eq.canUpgrade()) {
-                DrawText(TextFormat("[U] Upgrade: $%d", eq.upgradeCost()),
-                         cx+10, cy+62, 11, selected ? C_gold : ColorAlpha(C_gold,0.5f));
-            } else if (eq.upgradeLevel >= 3) {
-                DrawText("MAXIMO ALCANCADO", cx+10, cy+62, 11, ColorAlpha(C_gold,0.7f));
-            }
+            DrawText(e.name.c_str(), sx+ib+16, sy+26, 15, e.color);
+            DrawText(TextFormat("%s +%.0f   %s +%.1f", p1n[s], e.getEffectivePrimary(), p2n[s], e.getEffectiveSecondary()),
+                     sx+ib+16, sy+46, 12, ColorAlpha(WHITE,0.8f));
+            DrawText(TextFormat("T%d",e.tier), sx+sw-30, sy+8, 11, ColorAlpha(C_gold,0.8f));
+            for(int st=0;st<3;st++) DrawText("*", sx+ib+16+st*10, sy+62, 12, st<e.upgradeLevel?C_gold:ColorAlpha(DARKGRAY,0.5f));
+            if(e.canUpgrade() && sel) DrawText(TextFormat("[U] $%d",e.upgradeCost()), sx+sw-92, sy+62, 11, C_gold);
         }
-        cy += slotH + 10;
     }
 
-    // ── CENTER COLUMN (cont.): Equipamentos guardados (mochila de gear) ────────
-    {
-        int gx = PX + 250, gy = cy + 4;
-        DrawText("EQUIPAMENTOS GUARDADOS", gx, gy, 14, ColorAlpha(C_gold, 0.9f));
-        DrawText("[Setas] navegar  [T] equipar", gx + 200, gy + 2, 11, ColorAlpha(WHITE, 0.5f));
-        DrawLine(gx, gy+18, gx+slotW, gy+18, ColorAlpha(C_cyan, 0.3f));
-        gy += 24;
+    // ===== DIREITA: grades de slots (gear coletado + itens) =====
+    int gx=PX+362, gy=PY+50;
+    const int cell=62, gap=6, cols=11;
+    auto cellAt=[&](int idx,int baseY)->Rectangle{ int r=idx/cols, c2=idx%cols;
+        return Rectangle{ (float)(gx+c2*(cell+gap)), (float)(baseY+r*(cell+gap)), (float)cell,(float)cell }; };
 
-        if (equipBag.empty()) {
-            DrawText("Vazio. Itens trocados ficam guardados aqui.",
-                     gx+6, gy+6, 12, ColorAlpha(WHITE, 0.4f));
+    DrawText("EQUIPAMENTOS COLETADOS   [SETAS] navegar   [T] equipar", gx, gy, 14, C_gold); gy+=22;
+    int gearRows=2;
+    for(int i=0;i<gearRows*cols;i++){
+        Rectangle cr=cellAt(i,gy);
+        DrawRectangle((int)cr.x,(int)cr.y,(int)cr.width,(int)cr.height, ColorAlpha(BLACK,0.4f));
+        if(i<(int)equipBag.size()){
+            const Equipment& e=equipBag[i]; bool sel=(i==selectedBagEquip);
+            DrawRectangle((int)cr.x,(int)cr.y,(int)cr.width,(int)cr.height, ColorAlpha(e.color,sel?0.28f:0.10f));
+            DrawRectangleLinesEx(cr, sel?2.5f:1.0f, sel?e.color:ColorAlpha(e.color,0.6f));
+            invGearIcon(cr.x+cr.width*0.5f, cr.y+cr.height*0.42f, cell*0.62f, e.slot, e.color);
+            DrawText(TextFormat("T%d",e.tier), (int)cr.x+4, (int)(cr.y+cr.height)-13, 10, ColorAlpha(C_gold,0.9f));
+            const char* sn=(e.slot==EquipSlot::Weapon)?"ARM":(e.slot==EquipSlot::Armor)?"DEF":"IMP";
+            DrawText(sn, (int)(cr.x+cr.width)-MeasureText(sn,10)-4, (int)(cr.y+cr.height)-13, 10, ColorAlpha(C_cyan,0.85f));
         } else {
-            // Janela rolavel centrada no item selecionado
-            int rowH = 40, maxRows = 4;
-            int start = std::max(0, selectedBagEquip - maxRows/2);
-            if (start + maxRows > (int)equipBag.size())
-                start = std::max(0, (int)equipBag.size() - maxRows);
-            for (int i = start; i < (int)equipBag.size() && i < start + maxRows; ++i) {
-                const Equipment& e = equipBag[i];
-                bool sel = (i == selectedBagEquip);
-                int ey = gy + (i - start) * (rowH + 4);
-                Color bd = sel ? e.color : ColorAlpha(e.color, 0.5f);
-                DrawRectangle(gx, ey, slotW, rowH, sel ? ColorAlpha(e.color,0.18f) : ColorAlpha(BLACK,0.35f));
-                DrawRectangleLinesEx({(float)gx,(float)ey,(float)slotW,(float)rowH}, sel?2.0f:1.0f, bd);
-                // tipo de slot
-                const char* sn = (e.slot==EquipSlot::Weapon)?"ARMA":
-                                 (e.slot==EquipSlot::Armor)?"ARMADURA":"IMPLANTE";
-                DrawText(sn, gx+6, ey+4, 10, ColorAlpha(C_cyan, 0.8f));
-                DrawText(e.name.c_str(), gx+6, ey+18, 14, e.color);
-                // estrelas de upgrade + tier
-                for (int st = 0; st < 3; ++st) {
-                    Color sc = (st < e.upgradeLevel) ? C_gold : ColorAlpha(DARKGRAY,0.5f);
-                    DrawText("*", gx+slotW-90+st*10, ey+4, 12, sc);
-                }
-                DrawText(TextFormat("T%d", e.tier), gx+slotW-34, ey+4, 11, ColorAlpha(C_gold,0.8f));
-                // poderes / atributos
-                const char* p1 = (e.slot==EquipSlot::Weapon)?"DMG":(e.slot==EquipSlot::Armor)?"HP":"VEL";
-                const char* p2 = (e.slot==EquipSlot::Weapon)?"Alc":(e.slot==EquipSlot::Armor)?"Def%":"XPx";
-                DrawText(TextFormat("%s +%.0f   %s +%.1f", p1, e.getEffectivePrimary(),
-                         p2, e.getEffectiveSecondary()),
-                         gx+slotW-200, ey+20, 12, ColorAlpha(WHITE, 0.85f));
-            }
-            if ((int)equipBag.size() > maxRows)
-                DrawText(TextFormat("%d/%d", selectedBagEquip+1, (int)equipBag.size()),
-                         gx+slotW-44, gy + maxRows*(rowH+4), 11, ColorAlpha(WHITE,0.5f));
+            DrawRectangleLinesEx(cr,1.0f, ColorAlpha(C_cyan,0.15f));
         }
     }
+    gy += gearRows*(cell+gap) + 14;
 
-    // â"€â"€ RIGHT COLUMN: Item bag â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-    int rx = PX + 610, ry = PY + 44;
-    int itemCols = 2;
-    DrawText("BOLSA DE ITENS", rx, ry, 14, ColorAlpha(C_gold, 0.9f));
-    DrawLine(rx, ry+18, rx+560, ry+18, ColorAlpha(C_cyan, 0.3f));
-    ry += 26;
-
-    if (inventory.empty()) {
-        DrawText("Nenhum item coletado ainda.", rx+8, ry+10, 13, ColorAlpha(WHITE,0.4f));
-        DrawText("Derrote inimigos para encontrar itens!", rx+8, ry+28, 12, ColorAlpha(WHITE,0.35f));
-    } else {
-        // Count items per type for fusion hints
-        int typeCounts[8] = {};
-        for (const auto& it : inventory) {
-            int t = (int)it.type;
-            if (t >= 0 && t < 8) typeCounts[t]++;
+    DrawText("ITENS COLETADOS   [Q/E] navegar   [F] usar   [R] fundir 3x iguais", gx, gy, 14, C_gold); gy+=22;
+    int itemRows=3;
+    int tcount[16]={};
+    for(const auto& it:inventory){ int t=(int)it.type; if(t>=0&&t<16) tcount[t]++; }
+    for(int i=0;i<itemRows*cols;i++){
+        Rectangle cr=cellAt(i,gy);
+        DrawRectangle((int)cr.x,(int)cr.y,(int)cr.width,(int)cr.height, ColorAlpha(BLACK,0.4f));
+        if(i<(int)inventory.size()){
+            const Item& it=inventory[i]; bool sel=(i==selectedInvItem);
+            DrawRectangle((int)cr.x,(int)cr.y,(int)cr.width,(int)cr.height, ColorAlpha(it.color,sel?0.28f:0.10f));
+            DrawRectangleLinesEx(cr, sel?2.5f:1.0f, sel?it.color:ColorAlpha(it.color,0.6f));
+            invItemIcon(cr.x+cr.width*0.5f, cr.y+cr.height*0.42f, cell*0.62f, it.type, it.color);
+            int tc=tcount[(int)it.type];
+            if(tc>=2) DrawText(TextFormat("x%d",tc), (int)(cr.x+cr.width)-22, (int)cr.y+4, 11, tc>=3?C_gold:ColorAlpha(C_gold,0.6f));
+        } else {
+            DrawRectangleLinesEx(cr,1.0f, ColorAlpha(C_cyan,0.15f));
         }
-
-        int col = 0;
-        int cellW = 270, cellH = 50;
-        for (int i = 0; i < (int)inventory.size() && i < 16; ++i) {
-            const Item& it = inventory[i];
-            int ix = rx + col * (cellW + 8);
-            int iy = ry + (i / itemCols) * (cellH + 4);
-            bool selected = (i == selectedInvItem);
-
-            Color bgCol = selected ? ColorAlpha(it.color, 0.20f) : ColorAlpha(BLACK, 0.45f);
-            float bdW   = selected ? 2.0f : 1.0f;
-            Color bdCol = selected ? it.color : ColorAlpha(it.color, 0.55f);
-
-            DrawRectangle(ix, iy, cellW, cellH, bgCol);
-            DrawRectangleLinesEx({(float)ix,(float)iy,(float)cellW,(float)cellH}, bdW, bdCol);
-            DrawCircleV({(float)(ix+22),(float)(iy+25)}, 10.0f, ColorAlpha(it.color, 0.5f));
-            DrawCircleV({(float)(ix+22),(float)(iy+25)}, 6.0f, it.color);
-            DrawText(it.name.c_str(), ix+40, iy+6, 13, it.color);
-
-            const char* hint = "";
-            switch (it.type) {
-                case ItemType::HealthPack:  hint = "[F] Usar: +30 HP"; break;
-                case ItemType::NanoCore:    hint = "[F] Usar: +25 MaxHP permanente"; break;
-                case ItemType::TechChip:    hint = "[F] Usar: +50 XP"; break;
-                case ItemType::PlasmaCell:  hint = "[F] Usar: Zerar CDs"; break;
-                case ItemType::EnergyCore:  hint = "[F] Usar: Escudo 2.5s"; break;
-                case ItemType::ScrapMetal:  hint = "[F] Usar: +8 HP / +$8"; break;
-                case ItemType::WeaponPart:  hint = "[F] Usar: +$20"; break;
-                default: hint = ""; break;
-            }
-            DrawText(hint, ix+40, iy+24, 11, ColorAlpha(WHITE, selected ? 0.9f : 0.55f));
-
-            // Fusion counter badge
-            int tc = typeCounts[(int)it.type];
-            if (tc >= 2) {
-                Color fusCol = (tc >= 3) ? C_gold : ColorAlpha(C_gold,0.5f);
-                DrawText(TextFormat("x%d", tc), ix+cellW-26, iy+6, 11, fusCol);
-                if (tc >= 3)
-                    DrawText("FUNDIR!", ix+cellW-46, iy+34, 9, ColorAlpha(C_gold,0.85f));
-            }
-
-            col = 1 - col;
-        }
-        if ((int)inventory.size() > 16) {
-            DrawText(TextFormat("...+%d mais", (int)inventory.size()-16),
-                     rx+8, ry + 8*(cellH+4) + 4, 12, ColorAlpha(WHITE,0.4f));
-        }
-
-        // Fusion panel at bottom of item column
-        int fusY = ry + 8*(cellH+4) + 18;
-        DrawLine(rx, fusY, rx+560, fusY, ColorAlpha(C_gold,0.25f));
-        fusY += 6;
-        DrawText("[R] FUNDIR 3x mesmo tipo", rx, fusY, 12, ColorAlpha(C_gold,0.7f));
-        DrawText("=> efeito duplicado + bonus permanente", rx+220, fusY, 11, ColorAlpha(WHITE,0.45f));
     }
+    gy += itemRows*(cell+gap) + 12;
 
-    // â"€â"€ Bottom help bar â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-    int bby = PY + PH - 28;
-    DrawRectangle(PX, bby, PW, 28, ColorAlpha(BLACK, 0.6f));
-    DrawLine(PX, bby, PX+PW, bby, ColorAlpha(C_cyan, 0.3f));
-    DrawText("DICA: Colete NanoCore para aumentar MaxHP  |  TechChip = XP bonus  |  PlasmaCell = Skills mais rapidas",
-             PX+12, bby+8, 12, ColorAlpha(WHITE, 0.45f));
+    // Detalhe do item selecionado
+    if(selectedInvItem>=0 && selectedInvItem<(int)inventory.size()){
+        const Item& it=inventory[selectedInvItem];
+        DrawText(it.name.c_str(), gx, gy, 16, it.color);
+        const char* hint="";
+        switch(it.type){
+            case ItemType::HealthPack: hint="+30 HP"; break;
+            case ItemType::NanoCore:   hint="+25 MaxHP permanente"; break;
+            case ItemType::TechChip:   hint="+50 XP"; break;
+            case ItemType::PlasmaCell: hint="zera cooldowns"; break;
+            case ItemType::EnergyCore: hint="escudo 2.5s"; break;
+            case ItemType::ScrapMetal: hint="+8 HP / +$8"; break;
+            case ItemType::WeaponPart: hint="+$20"; break;
+            default: break;
+        }
+        DrawText(TextFormat("[F] usar:  %s", hint), gx, gy+20, 13, ColorAlpha(WHITE,0.85f));
+    }
 }
 
 void Player::drawEquipment() const {
