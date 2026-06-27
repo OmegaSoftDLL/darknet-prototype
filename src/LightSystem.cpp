@@ -101,7 +101,7 @@ void LightSystem::prepareMask(Camera2D camera) {
     BeginTextureMode(lightMask);
     // Fill with ambient darkness
     float amb = 1.0f - ambientDark;
-    ClearBackground({ (unsigned char)(amb*150.0f), (unsigned char)(amb*170.0f), (unsigned char)(amb*215.0f), 255 });
+    ClearBackground({ (unsigned char)(amb*ambientColor.r), (unsigned char)(amb*ambientColor.g), (unsigned char)(amb*ambientColor.b), 255 });
 
     BeginMode2D(camera);
     BeginBlendMode(BLEND_ADDITIVE);
@@ -137,7 +137,7 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
     BeginTextureMode(lightMask);
     // Fill with ambient darkness
     float amb = 1.0f - ambientDark;
-    ClearBackground({ (unsigned char)(amb*150.0f), (unsigned char)(amb*170.0f), (unsigned char)(amb*215.0f), 255 });
+    ClearBackground({ (unsigned char)(amb*ambientColor.r), (unsigned char)(amb*ambientColor.g), (unsigned char)(amb*ambientColor.b), 255 });
 
     BeginBlendMode(BLEND_ADDITIVE);
 

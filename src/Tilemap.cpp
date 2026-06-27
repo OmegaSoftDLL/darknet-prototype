@@ -1341,7 +1341,7 @@ void Tilemap::render3D(Vector2 camTarget) const {
 
             // Paredes (tipo Wall ou cenário sólido) = cubos com volume texturizados
             if (t.type == TileType::Wall) { // NAO desenhar cubo p/ t.solid (colisao invisivel do cenario)
-                const float WALL_H = TS * 3.0f;
+                const float WALL_H = TS * 1.5f;
                 Vector3 c = { rx + TS * 0.5f, WALL_H * 0.5f, ry + TS * 0.5f };
                 if (sb.ready) {
                     DrawCubeTexture(sb.tileWall[(int)z], c, TS, WALL_H, TS, WHITE);
