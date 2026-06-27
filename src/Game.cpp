@@ -1,4 +1,4 @@
-#include "Game.h"
+﻿#include "Game.h"
 #include "SpriteGen.h"
 bool g_renderPass3D = false;
 #include <raylib.h>
@@ -2345,6 +2345,12 @@ void Game::update(float dt) {
     float camT = 1.0f - std::exp(-8.0f * dt);
     camera.target.x += (player.position.x - camera.target.x) * camT;
     camera.target.y += (player.position.y - camera.target.y) * camT;
+    if (render3D && !buildingSystem.buildModeActive && !shopSystem.open && !craftingSystem.open && !showInventory) {
+        float wh = GetMouseWheelMove();
+        if (wh != 0.0f) { cameraZoom -= wh * 0.10f;
+            if (cameraZoom < 0.45f) cameraZoom = 0.45f;
+            if (cameraZoom > 2.20f) cameraZoom = 2.20f; }
+    }
 
     // Câmera 3D (2.5D) acompanha o jogador — usada quando render3D está ativo (F10).
     updateCamera3D();
@@ -4859,7 +4865,8 @@ void Game::drawStoryBanner() const {
 // ─── 2.5D isométrico (Incremento 1: câmera + tilemap 3D + raycast) ───────────
 
 void Game::updateCamera3D() {
-    camera3D.position   = { player.position.x, cameraHeight, player.position.y + cameraDistY };
+    float z = cameraZoom;
+    camera3D.position   = { player.position.x, cameraHeight * z, player.position.y + cameraDistY * z };
     camera3D.target     = { player.position.x, 0.0f, player.position.y };
     camera3D.up         = { 0.0f, 1.0f, 0.0f };
     camera3D.fovy       = 45.0f;
