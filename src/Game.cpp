@@ -80,18 +80,26 @@ Game::Game() {
     // Inicia em JANELA que cabe na area util do monitor (evita ficar maior que a
     // tela e cortar). Reduz mantendo proporcao se o monitor for pequeno.
     {
-        int mon = GetCurrentMonitor();
+        // Abre no monitor MAIS A DIREITA (onde o Antigravity fica). Acha o monitor
+        // com maior X virtual.
+        int mc = GetMonitorCount();
+        int mon = 0; float bestX = -1e9f;
+        for (int i = 0; i < mc; ++i) {
+            Vector2 mp = GetMonitorPosition(i);
+            if (mp.x > bestX) { bestX = mp.x; mon = i; }
+        }
+        Vector2 mpos = GetMonitorPosition(mon);
         int mw  = GetMonitorWidth(mon);
         int mh  = GetMonitorHeight(mon);
         if (mw > 0 && mh > 0) {
-            // 90% da area do monitor como teto, preservando proporcao 16:9.
             float maxW = mw * 0.90f, maxH = mh * 0.90f;
             float s = std::min(maxW / screenWidth, maxH / screenHeight);
-            if (s > 1.0f) s = 1.0f;             // nunca maior que 1280x720 nativo
+            if (s > 1.0f) s = 1.0f;
             int winW = (int)(screenWidth  * s);
             int winH = (int)(screenHeight * s);
             SetWindowSize(winW, winH);
-            SetWindowPosition((mw - winW) / 2, std::max(0, (mh - winH) / 2 - 16));
+            SetWindowPosition((int)mpos.x + (mw - winW) / 2,
+                              (int)mpos.y + std::max(0, (mh - winH) / 2 - 16));
         }
     }
     gameTarget = LoadRenderTexture(screenWidth, screenHeight);
