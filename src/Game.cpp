@@ -5065,7 +5065,14 @@ void Game::updateCamera3D() {
 Vector2 Game::mouseGround3D() const {
     Ray ray = GetScreenToWorldRayEx(virtualizeMousePos(GetMousePosition()),
                                     camera3D, screenWidth, screenHeight);
-    float t = (std::fabs(ray.direction.y) > 1e-5f) ? (-ray.position.y / ray.direction.y) : 0.0f;
+    // Blindagem: garante o raio apontando para BAIXO e limita o alcance, para que
+    // cliques perto do horizonte NÃO gerem alvo no infinito (player disparava pra
+    // longe e o mundo infinito colapsava — causa do "travou").
+    float dy = ray.direction.y;
+    if (dy > -0.08f) dy = -0.08f;
+    float t = -ray.position.y / dy;
+    if (t < 0.0f)    t = 0.0f;
+    if (t > 5000.0f) t = 5000.0f;
     return { ray.position.x + ray.direction.x * t,
              ray.position.z + ray.direction.z * t };
 }
@@ -5099,7 +5106,7 @@ void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function
 
     // 4. Draw billboard in 3D space
     Rectangle source = { 0.0f, 0.0f, (float)tempEntityTarget.texture.width, -(float)tempEntityTarget.texture.height };
-    Vector3 pos3D = { pos.x, 44.0f, pos.y }; Vector3 upv = { 0.0f, 1.0f, 0.0f }; Vector2 org = { 0.0f, 0.0f };
+    Vector3 pos3D = { pos.x, heightOffset, pos.y }; Vector3 upv = { 0.0f, 1.0f, 0.0f }; Vector2 org = { 0.0f, 0.0f };
     Vector2 size = { 120.0f, 120.0f };
     DrawBillboardPro(camera3D, tempEntityTarget.texture, source, pos3D, upv, size, org, 0.0f, WHITE);
 }
