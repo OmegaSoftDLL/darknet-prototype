@@ -2328,7 +2328,20 @@ void Game::update(float dt) {
         }
         if (darkZoneActive) {
             if (render3D) {
-                lightSystem.ambientDark = 0.50f;
+                switch (currentZone) {
+                    case ZoneID::LARuins:       lightSystem.ambientColor = {212,196,165,255}; lightSystem.ambientDark = 0.28f; break;
+                    case ZoneID::Bunker:        lightSystem.ambientColor = {150,165,188,255}; lightSystem.ambientDark = 0.40f; break;
+                    case ZoneID::KronosForge:   lightSystem.ambientColor = {224,158,116,255}; lightSystem.ambientDark = 0.34f; break;
+                    case ZoneID::KronosNexus:   lightSystem.ambientColor = {150,202,222,255}; lightSystem.ambientDark = 0.36f; break;
+                    case ZoneID::Cemetery:      lightSystem.ambientColor = {138,158,212,255}; lightSystem.ambientDark = 0.48f; break;
+                    case ZoneID::CursedFarm:    lightSystem.ambientColor = {174,182,136,255}; lightSystem.ambientDark = 0.40f; break;
+                    case ZoneID::GhostCity:     lightSystem.ambientColor = {160,176,202,255}; lightSystem.ambientDark = 0.44f; break;
+                    case ZoneID::DarkForest:    lightSystem.ambientColor = {128,176,140,255}; lightSystem.ambientDark = 0.46f; break;
+                    case ZoneID::Catacombs:     lightSystem.ambientColor = {188,150,118,255}; lightSystem.ambientDark = 0.54f; break;
+                    case ZoneID::AbandonedManor:lightSystem.ambientColor = {180,156,200,255}; lightSystem.ambientDark = 0.48f; break;
+                    case ZoneID::InfernoZone:   lightSystem.ambientColor = {236,150, 98,255}; lightSystem.ambientDark = 0.28f; break;
+                    default:                    lightSystem.ambientColor = {190,196,212,255}; lightSystem.ambientDark = 0.34f; break;
+                }
                 lightSystem.clear();
                 lightSystem.addPlayerLight(player.position);
                 for (int i = 0; i < 5; ++i) { float a = i * 1.25664f;
@@ -4947,9 +4960,9 @@ void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function
 
     // 4. Draw billboard in 3D space
     Rectangle source = { 0.0f, 0.0f, (float)tempEntityTarget.texture.width, -(float)tempEntityTarget.texture.height };
-    Vector3 pos3D = { pos.x, heightOffset, pos.y };
-    Vector2 size = { 128.0f, 128.0f };
-    DrawBillboardRec(camera3D, tempEntityTarget.texture, source, pos3D, size, WHITE);
+    Vector3 pos3D = { pos.x, 44.0f, pos.y }; Vector3 upv = { 0.0f, 1.0f, 0.0f }; Vector2 org = { 0.0f, 0.0f };
+    Vector2 size = { 120.0f, 120.0f };
+    DrawBillboardPro(camera3D, tempEntityTarget.texture, source, pos3D, upv, size, org, 0.0f, WHITE);
 }
 
 void Game::renderWorld3D() {
@@ -5135,21 +5148,21 @@ void Game::renderWorld3D() {
         // ── Desenho dos Billboards 3D Reais (com oclusão e depth buffer) ──
 
         // Player — modelo 3D do PRÓPRIO personagem do jogo (render3D, não genérico)
-        player.render3D();
+        drawProceduralEntity3D(player.position, 0.0f, [this](){ player.render(); });
 
         // NPCs — modelos 3D próprios do jogo
         for (auto& n : npcs) {
-            n.render3D();
+            drawProceduralEntity3D(n.position, 0.0f, [&n](){ n.render(); });
         }
 
         // Companheiros — modelos 3D próprios do jogo
         for (auto& c : companions) {
-            if (c.active) c.render3D();
+            if (c.active) drawProceduralEntity3D(c.position, 0.0f, [&c](){ c.render(); });
         }
 
         // Inimigos — modelos 3D próprios do jogo (cada tipo com sua silhueta)
         for (auto& e : enemies) {
-            e.render3D();
+            drawProceduralEntity3D(e.position, 0.0f, [&e](){ e.render(); });
         }
 
         // Itens — modelos 3D próprios do jogo

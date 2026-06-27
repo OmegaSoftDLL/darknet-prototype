@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <raylib.h>
 #include <vector>
 
@@ -19,6 +19,7 @@ struct LightSystem {
     RenderTexture2D lightMask  = {};
     bool  enabled              = false;
     float ambientDark          = 0.55f; // fraction of screen in darkness (0=bright, 1=black)
+    Color ambientColor         = {180, 190, 210, 255}; // cor da luz ambiente (varia por fase)
     int   maskW                = 0;
     int   maskH                = 0;
 

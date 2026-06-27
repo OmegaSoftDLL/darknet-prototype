@@ -71,15 +71,22 @@ static ZonePal zonePalette(int zone) {
 }
 
 static Texture2D makeFloorTex(int zone) {
-    const int S = 64;
+    const int S = 128;
     Image img = GenImageColor(S, S, BLANK);
     ZonePal p = zonePalette(zone);
 
-    // Base xadrez sutil + granulado pixel a pixel
+    // Base REALISTA: ruido de baixa frequencia (manchas suaves) + grao fino —
+    // sem xadrez. Grade 9x9 de valores aleatorios interpolada bilinearmente.
+    float ng[9][9];
+    for (int gi = 0; gi < 9; ++gi) for (int gj = 0; gj < 9; ++gj) ng[gi][gj] = frnd();
     for (int y = 0; y < S; ++y) {
         for (int x = 0; x < S; ++x) {
-            Color base = ((x >> 3) + (y >> 3)) % 2 == 0 ? p.floorA : p.floorB;
-            float n    = 0.85f + frnd() * 0.30f;     // granulado
+            float fxx = x / (float)S * 8.0f, fyy = y / (float)S * 8.0f;
+            int ix = (int)fxx, iy = (int)fyy; float txx = fxx - ix, tyy = fyy - iy;
+            float blob = ng[iy][ix]   * (1-txx)*(1-tyy) + ng[iy][ix+1]   * txx*(1-tyy)
+                       + ng[iy+1][ix] * (1-txx)*tyy     + ng[iy+1][ix+1] * txx*tyy;
+            Color base = ColorLerp(p.floorB, p.floorA, blob);   // manchas entre 2 tons
+            float n    = 0.90f + frnd() * 0.16f;                 // grao fino
             ImageDrawPixel(&img, x, y, shade(base, n));
         }
     }
@@ -123,7 +130,9 @@ static Texture2D makeFloorTex(int zone) {
     // (borda do chao removida — criava grade/seam em 3D; auditoria P4)
 
     Texture2D t = LoadTextureFromImage(img);
-    SetTextureFilter(t, TEXTURE_FILTER_POINT);
+    GenTextureMipmaps(&t);
+    SetTextureFilter(t, TEXTURE_FILTER_TRILINEAR);   // anti-shimmer em perspectiva
+    SetTextureWrap(t, TEXTURE_WRAP_REPEAT);
     UnloadImage(img);
     return t;
 }
@@ -153,7 +162,9 @@ static Texture2D makeWallTex(int zone) {
     ImageDrawLine(&img, 0, 0, S, 0, shade(p.wallA, 1.3f));
 
     Texture2D t = LoadTextureFromImage(img);
-    SetTextureFilter(t, TEXTURE_FILTER_POINT);
+    GenTextureMipmaps(&t);
+    SetTextureFilter(t, TEXTURE_FILTER_TRILINEAR);
+    SetTextureWrap(t, TEXTURE_WRAP_REPEAT);
     UnloadImage(img);
     return t;
 }
