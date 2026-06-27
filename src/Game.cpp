@@ -2282,7 +2282,7 @@ void Game::update(float dt) {
 
     // Light system — dark zone detection and flicker
     {
-        bool isDark = lightSystem.isDarkZone((int)currentZone);
+        bool isDark = render3D || lightSystem.isDarkZone((int)currentZone); // 3D = clima Diablo sempre
         if (isDark != darkZoneActive) {
             darkZoneActive = isDark;
             lightSystem.setEnabled(isDark);
@@ -2301,6 +2301,15 @@ void Game::update(float dt) {
             }
         }
         if (darkZoneActive) {
+            if (render3D) {
+                lightSystem.ambientDark = 0.66f;
+                lightSystem.clear();
+                lightSystem.addPlayerLight(player.position);
+                for (int i = 0; i < 5; ++i) { float a = i * 1.25664f;
+                    lightSystem.addTorchLight({ player.position.x + cosf(a)*360.0f, player.position.y + sinf(a)*360.0f }); }
+                int lit = 0;
+                for (auto& b : buildingSystem.buildings) { if (b.active && lit < 10 && Vector2Distance(b.position, player.position) < 850.0f) { lightSystem.addBuildingLight(b.position); lit++; } }
+            }
             lightSystem.updateFlicker(dt);
             lightSystem.updatePlayerPos(player.position);
         }
