@@ -152,11 +152,11 @@ Game::Game() {
             float d = fmaxf(bb.max.y - bb.min.y, fmaxf(bb.max.x - bb.min.x, bb.max.z - bb.min.z));
             return (d > 0.001f) ? target / d : 1.0f;
         };
-        m_houseScale    = _fit(m_houseModel, 95.0f);
+        m_houseScale    = _fit(m_houseModel, 110.0f);
         m_barracksScale = _fit(m_barracksModel, 90.0f);
-        m_castleScale   = _fit(m_castleModel, 120.0f);
+        m_castleScale   = _fit(m_castleModel, 155.0f);
         m_turretScale   = _fit(m_turretModel, 75.0f);
-        m_marketScale   = _fit(m_marketModel, 100.0f);
+        m_marketScale   = _fit(m_marketModel, 130.0f);
         m_wellScale     = _fit(m_wellModel, 55.0f);
         m_carScale      = _fit(m_carModel, 40.0f);
     }
@@ -5006,18 +5006,56 @@ void Game::renderWorld3D() {
                     DrawModelEx(*mdl, { obj.position.x, 0.0f, obj.position.y }, { 0.0f, 1.0f, 0.0f },
                                 obj.rotation * RAD2DEG, { s, s, s }, WHITE);
                     w = s; h = s;
-                } else if (hasSprite) {
-                    int variant = ((int)(obj.position.x * 0.13f + obj.position.y * 0.07f)) % SpriteBank::SCENERY_VARIANTS;
-                    if (variant < 0) variant += SpriteBank::SCENERY_VARIANTS;
-                    Texture2D tx = sb.scenery[obj.type][variant];
-                    float K = 1.7f * (obj.scale > 0.01f ? obj.scale : 1.0f);
-                    w = tx.width * K;
-                    h = tx.height * K;
-                    // props pequenos (arvore/poste/cerca/lapide/estatua) seguem billboard
-                    Rectangle source = { 0.0f, 0.0f, (float)tx.width, -(float)tx.height };
-                    Vector3 pos3D = { obj.position.x, h * 0.5f, obj.position.y };
-                    Vector2 size = { w, h };
-                    DrawBillboardRec(camera3D, tx, source, pos3D, size, WHITE);
+                } else {
+                    // Props do cenario em PRIMITIVAS 3D (sem billboard "tabua de pe").
+                    float sc = (obj.scale > 0.01f ? obj.scale : 1.0f);
+                    float x = obj.position.x, zz = obj.position.y;
+                    float H = 78.0f * sc, rr = 17.0f * sc;
+                    w = rr * 2.0f; h = H;
+                    switch (obj.type) {
+                        case 2: { // arvore: tronco conico + copa de esferas
+                            DrawCylinderEx({x,0,zz},{x,H*0.5f,zz}, rr*0.30f, rr*0.18f, 7, {78,54,30,255});
+                            DrawSphereEx({x, H*0.74f, zz}, rr*0.98f, 8, 8, {34,80,44,255});
+                            DrawSphereEx({x-rr*0.45f, H*0.58f, zz}, rr*0.66f, 8, 8, {26,62,36,255});
+                            DrawSphereEx({x+rr*0.45f, H*0.62f, zz+rr*0.2f}, rr*0.70f, 8, 8, {42,92,50,255});
+                        } break;
+                        case 3: { // lapide: laje + topo curvo + base
+                            DrawCubeV({x, H*0.32f, zz}, {rr*1.1f, H*0.55f, rr*0.35f}, {120,122,130,255});
+                            DrawSphereEx({x, H*0.58f, zz}, rr*0.55f, 8, 8, {120,122,130,255});
+                            DrawCubeV({x, H*0.06f, zz}, {rr*1.4f, H*0.12f, rr*0.6f}, {92,92,98,255});
+                            h = H*0.64f;
+                        } break;
+                        case 4: { // cerca: 2 postes + travessa (orientada por rot)
+                            float c=cosf(obj.rotation), s2=sinf(obj.rotation), L=rr*1.6f;
+                            DrawCylinderEx({x-c*L,0,zz-s2*L},{x-c*L,H*0.5f,zz-s2*L}, rr*0.12f, rr*0.12f, 6, {70,52,34,255});
+                            DrawCylinderEx({x+c*L,0,zz+s2*L},{x+c*L,H*0.5f,zz+s2*L}, rr*0.12f, rr*0.12f, 6, {70,52,34,255});
+                            DrawCubeV({x, H*0.40f, zz}, {L*2.0f, rr*0.18f, rr*0.14f}, {84,62,40,255});
+                            h = H*0.5f;
+                        } break;
+                        case 5: { // poste de luz: haste + luminaria emissiva
+                            DrawCylinderEx({x,0,zz},{x,H,zz}, rr*0.12f, rr*0.09f, 6, {46,46,54,255});
+                            DrawSphereEx({x, H*0.97f, zz}, rr*0.28f, 8, 8, {255,224,150,255});
+                        } break;
+                        case 9: { // arco/catacumba: 2 pilares + lintel
+                            float c=cosf(obj.rotation), s2=sinf(obj.rotation), L=rr*1.2f;
+                            DrawCubeV({x-c*L,H*0.45f,zz-s2*L},{rr*0.5f,H*0.9f,rr*0.5f},{96,90,80,255});
+                            DrawCubeV({x+c*L,H*0.45f,zz+s2*L},{rr*0.5f,H*0.9f,rr*0.5f},{96,90,80,255});
+                            DrawCubeV({x,H*0.92f,zz},{L*2.4f,rr*0.5f,rr*0.6f},{104,98,86,255});
+                        } break;
+                        case 10: { // estatua: pedestal + figura low-poly de pedra
+                            DrawCubeV({x, H*0.10f, zz}, {rr*1.3f, H*0.2f, rr*1.3f}, {108,108,116,255});
+                            DrawCapsule({x, H*0.25f, zz}, {x, H*0.74f, zz}, rr*0.45f, 8, 8, {150,150,158,255});
+                            DrawSphereEx({x, H*0.84f, zz}, rr*0.42f, 8, 8, {150,150,158,255});
+                        } break;
+                        default: if (hasSprite) { // fallback billboard so p/ tipos sem 3D
+                            int variant = ((int)(obj.position.x*0.13f+obj.position.y*0.07f)) % SpriteBank::SCENERY_VARIANTS;
+                            if (variant<0) variant+=SpriteBank::SCENERY_VARIANTS;
+                            Texture2D tx=sb.scenery[obj.type][variant]; float K=1.7f*sc;
+                            w=tx.width*K; h=tx.height*K;
+                            Rectangle src={0.0f,0.0f,(float)tx.width,-(float)tx.height};
+                            DrawBillboardRec(camera3D, tx, src, {x,h*0.5f,zz}, {w,h}, WHITE);
+                        } break;
+                    }
                 }
 
                 // Desenha plano horizontal de sombra
