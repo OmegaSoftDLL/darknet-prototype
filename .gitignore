@@ -1,0 +1,22 @@
+# Build (gerado por CMake)
+build/
+*.obj
+*.exe
+*.pdb
+*.ilk
+
+# Backend Node
+server/game-server/node_modules/
+server/game-server/server.log
+server/game-server/server.log.err
+
+# Relatorios do bot (gerados em runtime)
+bot_report*.txt
+
+# Saves
+*.sav
+darknet_save.txt
+
+# Editor
+.vs/
+*.user

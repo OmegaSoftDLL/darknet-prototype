@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# DARKNET — CYBER STATION (servidor do jogo)
+# Orquestra os containers do backend: gateway, game-server, banco e cache.
+#   docker compose up -d
+# ─────────────────────────────────────────────────────────────────────────────
+version: "3.9"
+
+services:
+  # API gateway / reverse proxy (TLS termina aqui em produção)
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: cyber-gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - game-server
+    restart: unless-stopped
+
+  # Servidor do jogo: auth, loja, inventário, realtime (WebSocket) e matchmaking
+  game-server:
+    build: ./game-server
+    container_name: cyber-game-server
+    environment:
+      PORT: "9000"
+      DATABASE_URL: "postgres://darknet:darknet@db:5432/darknet"
+      REDIS_URL: "redis://cache:6379"
+      JWT_SECRET: "${JWT_SECRET:-troque-em-producao}"
+      # Pagamentos: preencha com SUA conta Stripe (NUNCA commitar chaves reais)
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+    depends_on:
+      - db
+      - cache
+    restart: unless-stopped
+
+  # Banco de dados: contas, inventário, transações, progresso
+  db:
+    image: postgres:16-alpine
+    container_name: cyber-db
+    environment:
+      POSTGRES_USER: darknet
+      POSTGRES_PASSWORD: darknet
+      POSTGRES_DB: darknet
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+
+  # Cache / sessões / salas de matchmaking em tempo real
+  cache:
+    image: redis:7-alpine
+    container_name: cyber-cache
+    restart: unless-stopped
+
+volumes:
+  dbdata:

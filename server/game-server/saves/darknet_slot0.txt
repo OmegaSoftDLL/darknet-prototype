@@ -1,0 +1,55 @@
+DARKNET_SAVE_V4
+slot 0
+saveDate 2026-06-27 15:22:17
+posX 3869.856445
+posY 3904.145508
+health 323.000000
+maxHealth 323.000000
+attackDamage 64.000000
+attackRange 117.500000
+speed 211.000000
+defense 23.000000
+level 4
+xp 4648
+xpToNext 7716
+credits 377
+zone 4
+evolutionPath 0
+evolutionTier 0
+totalKills 0
+totalDeaths 0
+bossesKilled 0
+portalsSealed 0
+difficultyLevel 0
+playMinutes 0.000000
+weaponName Pistola Plasma
+armorName Armadura Avancada
+implantName Neural Link
+questCount 25
+quest q_limpar 5 1 1
+quest q_suprimentos 3 1 1
+quest q_executor 0 0 0
+quest q_morphx 3 1 1
+quest q_drones 5 1 1
+quest q_zergling 10 0 0
+quest q_hydra 8 1 1
+quest q_brood 0 0 0
+quest q_fantasmas 10 1 1
+quest q_zumbis 10 0 0
+quest q_portais 3 1 1
+quest q_orc 5 1 1
+quest q_paladin 5 1 1
+quest q_omega_boss 0 0 0
+quest q_cemiterio 4 1 1
+quest q_inferno 0 0 0
+quest q_loot 10 1 1
+quest q_kamikaze 8 1 1
+quest q_sniper 6 1 1
+quest q_alien_boss 0 0 0
+quest q_sombra 8 1 1
+quest q_banshee 5 1 1
+quest q_zombie_lord 0 0 0
+quest q_coleta_raro 5 1 1
+quest q_nocturna 10 0 0
+inventory 1
+8
