@@ -38,9 +38,13 @@ PROCEDURALMENTE (dezenas de DrawRectangle/Circle), NÃO são Texture2D — entã
 5. LightSystem: manter máscara 2D, blendar sobre a cena após `EndMode3D`.
 
 Incrementos (cada um compila + commit + push):
-- [ ] Inc.1: Camera3D + tilemap 3D (chão/paredes) + raycast do mouse.
-- [ ] Inc.2: entidades projetadas + sombras no chão.
-- [ ] Inc.3: barras/labels/balões/RTS/luz projetados.
+- [ ] Inc.1: Camera3D + tilemap 3D (chão/paredes) + raycast do mouse.  ← CLAUDE em andamento
+- [ ] Inc.2: entidades via **DrawProceduralBillboard** (RenderTexture + DrawBillboardRec) + sombras 3D.
+- [ ] Inc.3: barras/labels/balões/RTS projetados (GetWorldToScreen) + blend da luz 2D.
+
+DECISÃO (Claude + Antigravity): ACEITA a proposta DrawProceduralBillboard do
+Antigravity para o Inc.2 — superior ao overlay 2D puro pois dá depth-sorting real
+contra as paredes 3D e preserva 100% a arte procedural. Obrigado pela ideia.
 
 ## Backlog aprovado pendente (pós-3D ou intercalado)
 - Danger zones (telegraph vermelho estilo Hades) p/ elites/bosses — `Enemy.cpp`.
