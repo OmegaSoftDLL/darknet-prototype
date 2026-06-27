@@ -1,4 +1,4 @@
-#include "Tilemap.h"
+﻿#include "Tilemap.h"
 #include "SpriteGen.h"
 #include "rlgl.h"
 #include <cmath>
@@ -1329,7 +1329,9 @@ void Tilemap::render3D(Vector2 camTarget) const {
             SpriteBank& sb = SpriteBank::get();
             if (sb.ready) {
                 // Piso texturizado
-                DrawCubeTexture(sb.tileFloor[(int)z], { floorCtr.x, 0.01f, floorCtr.z }, TS, 0.02f, TS, WHITE);
+                Color ft = shade(WHITE, n);
+                if (t.type == TileType::BrokenFloor) ft = shade(WHITE, 0.55f);
+                DrawCubeTexture(sb.tileFloor[(int)z], { floorCtr.x, 0.01f, floorCtr.z }, TS, 0.02f, TS, ft);
             } else {
                 // Fallback para piso sólido
                 DrawPlane(floorCtr, { TS, TS }, shade(base, 0.45f));
@@ -1338,14 +1340,15 @@ void Tilemap::render3D(Vector2 camTarget) const {
             }
 
             // Paredes (tipo Wall ou cenário sólido) = cubos com volume texturizados
-            if (t.type == TileType::Wall || t.solid) {
-                Vector3 c = { rx + TS * 0.5f, TS * 0.5f, ry + TS * 0.5f };
+            if (t.type == TileType::Wall) { // NAO desenhar cubo p/ t.solid (colisao invisivel do cenario)
+                const float WALL_H = TS * 3.0f;
+                Vector3 c = { rx + TS * 0.5f, WALL_H * 0.5f, ry + TS * 0.5f };
                 if (sb.ready) {
-                    DrawCubeTexture(sb.tileWall[(int)z], c, TS, TS, TS, WHITE);
+                    DrawCubeTexture(sb.tileWall[(int)z], c, TS, WALL_H, TS, WHITE);
                 } else {
                     Color wc = shade(base, t.solid ? 1.35f : 1.6f);
-                    DrawCube(c, TS, TS, TS, wc);
-                    DrawCubeWires(c, TS, TS, TS, shade(base, 2.0f));
+                    DrawCube(c, TS, WALL_H, TS, wc);
+                    DrawCubeWires(c, TS, WALL_H, TS, shade(base, 2.0f));
                 }
             }
         }

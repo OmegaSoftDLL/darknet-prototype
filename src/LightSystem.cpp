@@ -100,8 +100,8 @@ void LightSystem::prepareMask(Camera2D camera) {
 
     BeginTextureMode(lightMask);
     // Fill with ambient darkness
-    unsigned char darkAlpha = (unsigned char)(int)(ambientDark * 255.0f);
-    ClearBackground({0, 0, 0, darkAlpha});
+    float amb = 1.0f - ambientDark;
+    ClearBackground({ (unsigned char)(amb*150.0f), (unsigned char)(amb*170.0f), (unsigned char)(amb*215.0f), 255 });
 
     BeginMode2D(camera);
     BeginBlendMode(BLEND_ADDITIVE);
@@ -115,7 +115,7 @@ void LightSystem::prepareMask(Camera2D camera) {
         for (int s = steps; s >= 0; s--) {
             float t      = (float)s / (float)steps;     // 1.0 = inner, 0.0 = outer
             float r      = l.radius * (float)(steps - s + 1) / (float)(steps + 1);
-            float bright = l.intensity * t;         // quadratic falloff
+            float bright = l.intensity * t * t * 0.38f;         // quadratic falloff
             Color c = {
                 (unsigned char)((float)l.color.r * bright),
                 (unsigned char)((float)l.color.g * bright),
@@ -136,8 +136,8 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
 
     BeginTextureMode(lightMask);
     // Fill with ambient darkness
-    unsigned char darkAlpha = (unsigned char)(int)(ambientDark * 255.0f);
-    ClearBackground({0, 0, 0, darkAlpha});
+    float amb = 1.0f - ambientDark;
+    ClearBackground({ (unsigned char)(amb*150.0f), (unsigned char)(amb*170.0f), (unsigned char)(amb*215.0f), 255 });
 
     BeginBlendMode(BLEND_ADDITIVE);
 
@@ -158,7 +158,7 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
         for (int s = steps; s >= 0; s--) {
             float t      = (float)s / (float)steps;     // 1.0 = inner, 0.0 = outer
             float r      = projRadius * (float)(steps - s + 1) / (float)(steps + 1);
-            float bright = l.intensity * t;         // quadratic falloff
+            float bright = l.intensity * t * t * 0.38f;         // quadratic falloff
             Color c = {
                 (unsigned char)((float)l.color.r * bright),
                 (unsigned char)((float)l.color.g * bright),
