@@ -1,6 +1,7 @@
 #include "LightSystem.h"
 #include <cmath>
 #include <algorithm>
+#include <raymath.h>
 
 // ─── Init / Shutdown ─────────────────────────────────────────────────────────
 
@@ -127,6 +128,48 @@ void LightSystem::prepareMask(Camera2D camera) {
 
     EndBlendMode();
     EndMode2D();
+    EndTextureMode();
+}
+
+void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int screenH) {
+    if (!enabled) return;
+
+    BeginTextureMode(lightMask);
+    // Fill with ambient darkness
+    unsigned char darkAlpha = (unsigned char)(int)(ambientDark * 255.0f);
+    ClearBackground({0, 0, 0, darkAlpha});
+
+    BeginBlendMode(BLEND_ADDITIVE);
+
+    for (const auto& l : lights) {
+        if (!l.active) continue;
+
+        // Project center and edge to screen space to get center position and perspective-scaled radius
+        Vector3 pos3D = { l.position.x, 8.0f, l.position.y };
+        Vector2 centerS = GetWorldToScreenEx(pos3D, camera3D, screenW, screenH);
+        
+        Vector3 edge3D = { l.position.x + l.radius, 8.0f, l.position.y };
+        Vector2 edgeS = GetWorldToScreenEx(edge3D, camera3D, screenW, screenH);
+        
+        float projRadius = Vector2Distance(centerS, edgeS);
+
+        // Soft gradient: concentric circles
+        const int steps = 14;
+        for (int s = steps; s >= 0; s--) {
+            float t      = (float)s / (float)steps;     // 1.0 = inner, 0.0 = outer
+            float r      = projRadius * (float)(steps - s + 1) / (float)(steps + 1);
+            float bright = l.intensity * t * t;         // quadratic falloff
+            Color c = {
+                (unsigned char)((float)l.color.r * bright),
+                (unsigned char)((float)l.color.g * bright),
+                (unsigned char)((float)l.color.b * bright),
+                (unsigned char)(bright * 255.0f)
+            };
+            DrawCircleV(centerS, r, c);
+        }
+    }
+
+    EndBlendMode();
     EndTextureMode();
 }
 

@@ -42,6 +42,7 @@ struct LightSystem {
     // Two-step render:
     // 1. Call prepareMask() BEFORE BeginTextureMode(gameTarget) — renders lights to lightMask
     void prepareMask(Camera2D camera);
+    void prepareMask3D(const Camera3D& camera3D, int screenW, int screenH);
     // 2. Call applyMask() INSIDE BeginTextureMode(gameTarget), after EndMode2D()
     void applyMask() const;
 

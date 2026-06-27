@@ -4657,6 +4657,9 @@ void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function
 }
 
 void Game::renderWorld3D() {
+    // Prepare light mask before drawing (uses screen-space projection of 3D lights)
+    lightSystem.prepareMask3D(camera3D, screenWidth, screenHeight);
+
     BeginTextureMode(gameTarget);
     ClearBackground(Color{10, 12, 20, 255});
 
@@ -4815,9 +4818,12 @@ void Game::renderWorld3D() {
         }
     }
 
+    // Apply light mask overlay (darkens world except around light sources)
+    lightSystem.applyMask();
+
     // ── 3. Interface e HUD Final ─────────────────────────────────────────────
     drawUI();
-    DrawText("MODO 2.5D (F10) - Incremento 2: depth sorting, billboards e sombras 3D",
+    DrawText("MODO 2.5D (F10) - Incremento 3: depth sorting, billboards, sombras e iluminação 3D",
              12, screenHeight - 18, 11, ColorAlpha(Color{0,210,255,255}, 0.6f));
 
     EndTextureMode();
