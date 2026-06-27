@@ -3461,6 +3461,13 @@ void Game::handleInput(float dt) {
     // ── Inventory absorbs 1/2/3/U when open ──────────────────────────────────
     if (showInventory) {
         player.handleInventoryInput();
+        // Mouse: clique seleciona/equipa/usa; botão X fecha.
+        bool lc = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+        bool rc = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
+        if (lc || rc) {
+            Vector2 vm = virtualizeMousePos(GetMousePosition());
+            if (player.handleInventoryMouse(vm, lc, rc)) showInventory = false;
+        }
         if (IsKeyPressed(KEY_I)) showInventory = false;
         return;
     }

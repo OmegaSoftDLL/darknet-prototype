@@ -810,8 +810,11 @@ void Player::drawInventory() const {
     DrawRectangleLinesEx({(float)PX,(float)PY,(float)PW,(float)PH},2.0f, ColorAlpha(C_cyan,0.7f));
     DrawRectangle(PX,PY,PW,34, ColorAlpha(Color{0,180,220,255},0.14f));
     DrawText("INVENTARIO", PX+16, PY+9, 20, C_cyan);
-    DrawText("[I] fechar   [1/2/3] slot + [U] upgrade   [SETAS]+[T] equipar gear   [Q/E]+[F] usar item   [R] fundir 3x",
+    DrawText("clique p/ selecionar/equipar/usar  |  [I] fechar  [U] upgrade  [R] fundir",
              PX+170, PY+12, 12, ColorAlpha(WHITE,0.55f));
+    DrawRectangle(PX+PW-32, PY+6, 24, 24, ColorAlpha(Color{200,40,40,255},0.55f));
+    DrawRectangleLinesEx({(float)(PX+PW-32),(float)(PY+6),24,24}, 1.0f, Color{255,120,120,255});
+    DrawText("X", PX+PW-25, PY+9, 18, WHITE);
 
     // ===== ESQUERDA: stats + slots equipados =====
     int lx=PX+18, ly=PY+50;
@@ -919,6 +922,45 @@ void Player::drawInventory() const {
     }
 }
 
+// Mouse no inventário (coords já virtualizadas p/ 1280x720). Layout casado com
+// drawInventory(): slots equipados à esquerda; grades de gear/itens à direita.
+bool Player::handleInventoryMouse(Vector2 m, bool leftClick, bool rightClick) {
+    const int PX = 64, PY = 44, PW = 1280 - 128;
+    // Botão FECHAR (X)
+    Rectangle closeR = { (float)(PX + PW - 32), (float)(PY + 6), 24, 24 };
+    if (leftClick && CheckCollisionPointRec(m, closeR)) return true;
+    if (!leftClick && !rightClick) return false;
+
+    // Slots equipados (esquerda): x=82, y=252+s*90, 304x82
+    for (int s = 0; s < 3; ++s) {
+        Rectangle r = { 82.0f, (float)(252 + s * 90), 304.0f, 82.0f };
+        if (CheckCollisionPointRec(m, r)) {
+            selectedEquipSlot = s;
+            if (rightClick) tryUpgradeEquip(s);     // botão direito = upgrade
+            return false;
+        }
+    }
+    const int gx = 426, cell = 62, step = 68, cols = 11;
+    // Grade EQUIPAMENTOS COLETADOS (baseY=116, 2 linhas) — clique esquerdo EQUIPA
+    for (int i = 0; i < (int)equipBag.size() && i < 2 * cols; ++i) {
+        Rectangle r = { (float)(gx + (i % cols) * step), (float)(116 + (i / cols) * step), (float)cell, (float)cell };
+        if (CheckCollisionPointRec(m, r)) {
+            selectedBagEquip = i;
+            if (leftClick) equipFromBag(i);
+            return false;
+        }
+    }
+    // Grade ITENS COLETADOS (baseY=288, 3 linhas) — clique seleciona; no já-selecionado (ou direito) USA
+    for (int i = 0; i < (int)inventory.size() && i < 3 * cols; ++i) {
+        Rectangle r = { (float)(gx + (i % cols) * step), (float)(288 + (i / cols) * step), (float)cell, (float)cell };
+        if (CheckCollisionPointRec(m, r)) {
+            if (rightClick || (leftClick && selectedInvItem == i)) useInventoryItem(i);
+            else selectedInvItem = i;
+            return false;
+        }
+    }
+    return false;
+}
 void Player::drawEquipment() const {
     // Legacy â€" full inventory now shown via drawInventory
     drawInventory();

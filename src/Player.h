@@ -154,6 +154,9 @@ public:
     void  useSkill(int index, Vector2 target);
     void  drawInventory() const;
     void  handleInventoryInput();
+    // Mouse no inventário (vmouse já virtualizado p/ 1280x720). Retorna true se
+    // o clique foi no botão FECHAR (Game deve então fechar o inventário).
+    bool  handleInventoryMouse(Vector2 vmouse, bool leftClick, bool rightClick);
     bool  tryUpgradeEquip(int slot);
     void  heal(float amount);
     void  addXP(int amount);
