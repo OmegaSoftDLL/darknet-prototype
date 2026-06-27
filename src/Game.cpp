@@ -938,8 +938,6 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
     const float ORIG = (float)(Tilemap::OW_COLS * Tilemap::OW_ZONE_W * 64); // região fixa original
     int pcx = (int)floorf(playerPos.x / CH);
     int pcy = (int)floorf(playerPos.y / CH);
-    if (pcx == m_lastChunkX && pcy == m_lastChunkY) return;  // só recalcula ao cruzar chunk
-    m_lastChunkX = pcx; m_lastChunkY = pcy;
 
     auto keyOf = [](int cx, int cy) -> long long {
         return ((long long)(cx + 100000) << 21) | (long long)(cy + 100000);
@@ -948,59 +946,66 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
     for (int cy = pcy - RAD; cy <= pcy + RAD; ++cy)
         for (int cx = pcx - RAD; cx <= pcx + RAD; ++cx) want.insert(keyOf(cx, cy));
 
-    // Descarrega cenário de chunks fora do raio (mantém o fixo chunk == -1)
-    owDecor.scenery.erase(std::remove_if(owDecor.scenery.begin(), owDecor.scenery.end(),
-        [&](const SceneryObject& o){ return o.chunk != -1 && want.find(o.chunk) == want.end(); }),
-        owDecor.scenery.end());
-    for (auto it = m_sceneryChunks.begin(); it != m_sceneryChunks.end();)
-        it = (want.find(*it) == want.end()) ? m_sceneryChunks.erase(it) : std::next(it);
+    // Ao CRUZAR de chunk: descarrega o que saiu do raio (poda). Mantém o fixo (-1).
+    if (pcx != m_lastChunkX || pcy != m_lastChunkY) {
+        m_lastChunkX = pcx; m_lastChunkY = pcy;
+        owDecor.scenery.erase(std::remove_if(owDecor.scenery.begin(), owDecor.scenery.end(),
+            [&](const SceneryObject& o){ return o.chunk != -1 && want.find(o.chunk) == want.end(); }),
+            owDecor.scenery.end());
+        for (auto it = m_sceneryChunks.begin(); it != m_sceneryChunks.end();)
+            it = (want.find(*it) == want.end()) ? m_sceneryChunks.erase(it) : std::next(it);
+    }
 
-    // Gera chunks novos
-    for (int cy = pcy - RAD; cy <= pcy + RAD; ++cy)
+    // AMORTIZADO: gera no máximo 1 chunk por frame (evita engasgo ao cruzar fronteira).
+    long long toGen = -1; int gcx = 0, gcy = 0;
+    for (int cy = pcy - RAD; cy <= pcy + RAD && toGen < 0; ++cy)
         for (int cx = pcx - RAD; cx <= pcx + RAD; ++cx) {
             long long k = keyOf(cx, cy);
-            if (m_sceneryChunks.count(k)) continue;
-            m_sceneryChunks.insert(k);
-            float ox = cx * CH, oy = cy * CH;
-            if (ox >= 0 && oy >= 0 && ox < ORIG && oy < ORIG) continue;  // região fixa já populada
-            unsigned int rng = (unsigned int)(cx * 73856093) ^ (unsigned int)(cy * 19349663) ^ 0x5151u;
-            auto rnd = [&]() { rng = rng * 1664525u + 1013904223u; return (float)((rng >> 8) & 0xFFFF) / 65535.0f; };
-            auto add = [&](int type, int count, float mn, float mx) {
-                for (int i = 0; i < count; ++i) {
-                    SceneryObject o;
-                    o.type = type;
-                    o.position = { ox + rnd() * CH, oy + rnd() * CH };
-                    o.rotation = rnd() * 3.14159f;
-                    o.scale = mn + rnd() * (mx - mn);
-                    o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
-                    o.chunk = k;
-                    owDecor.scenery.push_back(o);
-                }
-            };
-            // Bioma do chunk (mesmo layout 3x3 do render, repetido por módulo).
-            int tcx = (int)floorf((ox + CH * 0.5f) / (float)Tilemap::tileSize);
-            int tcy = (int)floorf((oy + CH * 0.5f) / (float)Tilemap::tileSize);
-            int cgx = (int)floorf((float)tcx / Tilemap::OW_ZONE_W);
-            int cgy = (int)floorf((float)tcy / Tilemap::OW_ZONE_H);
-            int bcol = ((cgx % Tilemap::OW_COLS) + Tilemap::OW_COLS) % Tilemap::OW_COLS;
-            int brow = ((cgy % Tilemap::OW_ROWS) + Tilemap::OW_ROWS) % Tilemap::OW_ROWS;
-            ZoneID z = tilemap.owLayout[brow][bcol];
-
-            add(11, 80, 0.6f, 1.7f);   // grama base em todo lugar
-            switch (z) {
-                case ZoneID::DarkForest:     add(2, 42, 0.9f, 1.9f); add(12, 10, 0.6f, 1.1f); break;                 // floresta densa
-                case ZoneID::Cemetery:       add(3, 30, 0.7f, 1.2f); add(2, 8, 0.9f, 1.4f); add(10, 3, 1.0f, 1.4f); break; // cemitério
-                case ZoneID::GhostCity:      add(7, 7, 1.0f, 2.1f); add(5, 9, 1.0f, 1.0f); add(6, 4, 1.0f, 1.0f); break;   // cidade fantasma
-                case ZoneID::KronosForge:
-                case ZoneID::InfernoZone:    add(12, 26, 0.7f, 1.4f); add(8, 3, 1.0f, 1.6f); add(2, 4, 0.6f, 1.0f); break; // lava/forja
-                case ZoneID::CursedFarm:     add(0, 3, 1.0f, 1.6f); add(4, 18, 1.0f, 1.4f); add(2, 8, 0.8f, 1.3f); break;  // fazenda
-                case ZoneID::Bunker:         add(8, 5, 1.0f, 1.6f); add(7, 5, 0.8f, 1.4f); add(4, 10, 1.0f, 1.3f); break;  // bunker
-                case ZoneID::AbandonedManor: add(10, 6, 1.0f, 1.5f); add(3, 10, 0.7f, 1.1f); add(2, 10, 0.9f, 1.5f); break;// mansão
-                case ZoneID::KronosNexus:    add(10, 8, 1.2f, 2.0f); add(7, 5, 1.0f, 1.8f); break;                        // núcleo
-                default:                     add(2, 10, 0.8f, 1.7f); add(12, 14, 0.6f, 1.2f); add(5, 4, 1.0f, 1.0f);
-                                             if (rnd() > 0.6f) add(7, 1, 1.0f, 1.7f); break;                              // ruínas
-            }
+            if (!m_sceneryChunks.count(k)) { toGen = k; gcx = cx; gcy = cy; break; }
         }
+    if (toGen < 0) return;                       // todos os chunks do raio já existem
+    m_sceneryChunks.insert(toGen);
+
+    float ox = gcx * CH, oy = gcy * CH;
+    if (!(ox >= 0 && oy >= 0 && ox < ORIG && oy < ORIG)) {   // não gera na região fixa
+        unsigned int rng = (unsigned int)(gcx * 73856093) ^ (unsigned int)(gcy * 19349663) ^ 0x5151u;
+        auto rnd = [&]() { rng = rng * 1664525u + 1013904223u; return (float)((rng >> 8) & 0xFFFF) / 65535.0f; };
+        auto add = [&](int type, int count, float mn, float mx) {
+            for (int i = 0; i < count; ++i) {
+                SceneryObject o;
+                o.type = type;
+                o.position = { ox + rnd() * CH, oy + rnd() * CH };
+                o.rotation = rnd() * 3.14159f;
+                o.scale = mn + rnd() * (mx - mn);
+                o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
+                o.chunk = toGen;
+                owDecor.scenery.push_back(o);
+            }
+        };
+        // Bioma do chunk (mesmo layout 3x3 do render, por módulo).
+        int tcx = (int)floorf((ox + CH * 0.5f) / (float)Tilemap::tileSize);
+        int tcy = (int)floorf((oy + CH * 0.5f) / (float)Tilemap::tileSize);
+        int cgx = (int)floorf((float)tcx / Tilemap::OW_ZONE_W);
+        int cgy = (int)floorf((float)tcy / Tilemap::OW_ZONE_H);
+        int bcol = ((cgx % Tilemap::OW_COLS) + Tilemap::OW_COLS) % Tilemap::OW_COLS;
+        int brow = ((cgy % Tilemap::OW_ROWS) + Tilemap::OW_ROWS) % Tilemap::OW_ROWS;
+        ZoneID z = tilemap.owLayout[brow][bcol];
+
+        add(11, 80, 0.6f, 1.7f);   // grama base
+        switch (z) {
+            case ZoneID::DarkForest:     add(2, 42, 0.9f, 1.9f); add(12, 10, 0.6f, 1.1f); break;
+            case ZoneID::Cemetery:       add(3, 30, 0.7f, 1.2f); add(2, 8, 0.9f, 1.4f); add(10, 3, 1.0f, 1.4f); break;
+            case ZoneID::GhostCity:      add(7, 7, 1.0f, 2.1f); add(5, 9, 1.0f, 1.0f); add(6, 4, 1.0f, 1.0f); break;
+            case ZoneID::KronosForge:
+            case ZoneID::InfernoZone:    add(12, 26, 0.7f, 1.4f); add(8, 3, 1.0f, 1.6f); add(2, 4, 0.6f, 1.0f); break;
+            case ZoneID::CursedFarm:     add(0, 3, 1.0f, 1.6f); add(4, 18, 1.0f, 1.4f); add(2, 8, 0.8f, 1.3f); break;
+            case ZoneID::Bunker:         add(8, 5, 1.0f, 1.6f); add(7, 5, 0.8f, 1.4f); add(4, 10, 1.0f, 1.3f); break;
+            case ZoneID::AbandonedManor: add(10, 6, 1.0f, 1.5f); add(3, 10, 0.7f, 1.1f); add(2, 10, 0.9f, 1.5f); break;
+            case ZoneID::KronosNexus:    add(10, 8, 1.2f, 2.0f); add(7, 5, 1.0f, 1.8f); break;
+            default:                     add(2, 10, 0.8f, 1.7f); add(12, 14, 0.6f, 1.2f); add(5, 4, 1.0f, 1.0f);
+                                         if (rnd() > 0.6f) add(7, 1, 1.0f, 1.7f); break;
+        }
+    }
 
     // Reconstrói a colisão das estruturas de chunk (prédios/casas/silos) — círculos.
     m_chunkSolids.clear();
