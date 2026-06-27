@@ -78,7 +78,9 @@ static Texture2D makeFloorTex(int zone) {
     // Base REALISTA: ruido de baixa frequencia (manchas suaves) + grao fino —
     // sem xadrez. Grade 9x9 de valores aleatorios interpolada bilinearmente.
     float ng[9][9];
-    for (int gi = 0; gi < 9; ++gi) for (int gj = 0; gj < 9; ++gj) ng[gi][gj] = frnd();
+    for (int gi = 0; gi < 8; ++gi) for (int gj = 0; gj < 8; ++gj) ng[gi][gj] = frnd();
+    for (int gi = 0; gi < 8; ++gi) ng[gi][8] = ng[gi][0];   // tileável: borda = início (sem seam)
+    for (int gj = 0; gj < 9; ++gj) ng[8][gj] = ng[0][gj];
     for (int y = 0; y < S; ++y) {
         for (int x = 0; x < S; ++x) {
             float fxx = x / (float)S * 8.0f, fyy = y / (float)S * 8.0f;
