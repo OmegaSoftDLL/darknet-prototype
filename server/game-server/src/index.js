@@ -360,6 +360,13 @@ wss.on("connection", (ws) => {
       case "chat":
         broadcast(ws.roomId, { t: "chat", id: msg.id, text: String(msg.text).slice(0, 200) });
         break;
+      case "edeath":  // inimigo abatido -> retransmite p/ a sala (evita "fantasmas")
+        broadcast(ws.roomId, { t: "edeath", id: msg.id }, ws);
+        break;
+      case "espawn":  // inimigo spawnado (host autoritativo) -> demais clientes espelham
+        broadcast(ws.roomId,
+          { t: "espawn", id: msg.id, et: msg.et, x: msg.x, y: msg.y }, ws);
+        break;
     }
   });
   ws.on("close", () => leaveRoom(ws));
