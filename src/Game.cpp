@@ -1,5 +1,6 @@
 ﻿#include "Game.h"
 #include "SpriteGen.h"
+#include "SpriteExtrude.h"
 bool g_renderPass3D = false;
 #include <raylib.h>
 #include <raymath.h>
@@ -4965,7 +4966,29 @@ void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function
     DrawBillboardPro(camera3D, tempEntityTarget.texture, source, pos3D, upv, size, org, 0.0f, WHITE);
 }
 
+void Game::ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn) {
+    if (m_voxModels.count(key)) return;
+    g_renderPass3D = true;
+    Image img = SpriteExtrude::CaptureToImage(96, capPos, drawFn);
+    g_renderPass3D = false;
+    m_voxModels[key] = SpriteExtrude::BuildVoxelModel(img, 1.6f, 6.0f);
+    UnloadImage(img);
+}
+
+void Game::drawVoxel(int key, Vector2 pos, float rotDeg) {
+    auto it = m_voxModels.find(key);
+    if (it == m_voxModels.end() || it->second.meshCount == 0) return;
+    float bob = sinf((float)GetTime() * 2.4f + pos.x * 0.05f) * 1.2f;
+    DrawModelEx(it->second, { pos.x, bob, pos.y }, { 0.0f, 1.0f, 0.0f }, rotDeg, { 1.0f, 1.0f, 1.0f }, WHITE);
+}
+
 void Game::renderWorld3D() {
+    // PRE-PASS (sem FBO ativo): captura/voxeliza o sprite 2D em MODELO 3D real, por tipo.
+    ensureVoxel((int)player.charClass, player.position, [this](){ player.render(); });
+    for (auto& e : enemies)    ensureVoxel(100 + (int)e.type, e.position, [&e](){ e.render(); });
+    for (auto& n : npcs)       ensureVoxel(300 + (int)n.role, n.position, [&n](){ n.render(); });
+    for (auto& c : companions) if (c.active) ensureVoxel(500 + (int)c.type, c.position, [&c](){ c.render(); });
+
     // Prepare light mask before drawing (uses screen-space projection of 3D lights)
     lightSystem.prepareMask3D(camera3D, screenWidth, screenHeight);
 
@@ -5148,21 +5171,21 @@ void Game::renderWorld3D() {
         // ── Desenho dos Billboards 3D Reais (com oclusão e depth buffer) ──
 
         // Player — modelo 3D do PRÓPRIO personagem do jogo (render3D, não genérico)
-        drawProceduralEntity3D(player.position, 0.0f, [this](){ player.render(); });
+        drawVoxel((int)player.charClass, player.position, 0.0f);
 
         // NPCs — modelos 3D próprios do jogo
         for (auto& n : npcs) {
-            drawProceduralEntity3D(n.position, 0.0f, [&n](){ n.render(); });
+            drawVoxel(300 + (int)n.role, n.position, 0.0f);
         }
 
         // Companheiros — modelos 3D próprios do jogo
         for (auto& c : companions) {
-            if (c.active) drawProceduralEntity3D(c.position, 0.0f, [&c](){ c.render(); });
+            if (c.active) drawVoxel(500 + (int)c.type, c.position, 0.0f);
         }
 
         // Inimigos — modelos 3D próprios do jogo (cada tipo com sua silhueta)
         for (auto& e : enemies) {
-            drawProceduralEntity3D(e.position, 0.0f, [&e](){ e.render(); });
+            drawVoxel(100 + (int)e.type, e.position, 0.0f);
         }
 
         // Itens — modelos 3D próprios do jogo

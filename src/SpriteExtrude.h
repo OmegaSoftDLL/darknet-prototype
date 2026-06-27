@@ -19,8 +19,7 @@ namespace SpriteExtrude {
     // O modelo fica centrado em X/Z e assenta a base em Y=0.
     Model BuildVoxelModel(Image img, float voxelSize, float depth);
 
-    // Captura o desenho 2D (drawFn, que desenha em torno de (origin,origin)) para
-    // uma Image RGBA de tamanho 'cap' x 'cap'. drawFn deve desenhar usando coords
-    // de tela ao redor do ponto (cap/2, cap/2).
-    Image CaptureToImage(int cap, std::function<void()> drawFn);
+    // Captura o desenho 2D (drawFn) CENTRADO em worldTarget para uma Image RGBA
+    // cap×cap (fundo transparente). drawFn desenha em coords de mundo normais.
+    Image CaptureToImage(int cap, Vector2 worldTarget, std::function<void()> drawFn);
 }
