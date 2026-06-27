@@ -50,6 +50,16 @@ public:
     void joinParty(const std::string& room);
     std::string currentRoom() const;
 
+    // ── Chat de sala ───────────────────────────────────────────────────────────
+    void sendChat(const std::string& text);          // envia {"t":"chat",...}
+    // Drena as mensagens de chat recebidas desde a última chamada (id != o meu).
+    std::vector<std::pair<uint32_t,std::string>> drainChats();
+
+    // ── Sincronização de inimigos ──────────────────────────────────────────────
+    void sendEnemyDeath(uint32_t enemyId);           // envia {"t":"edeath","id":...}
+    // Drena os IDs de inimigos abatidos por outros jogadores (evita "fantasmas").
+    std::vector<uint32_t> drainEnemyDeaths();
+
     // Jogadores remotos vistos nos últimos ~3s (snapshot, só lido na main thread).
     const std::vector<NetPeer>& peers() const { return snapshot_; }
 
@@ -67,6 +77,8 @@ private:
     std::vector<NetPeer>     peersShared_;   // atualizado pela thread de rede
     std::vector<NetPeer>     snapshot_;       // só main thread (retornado por peers())
     std::deque<std::string>  outQueue_;       // JSONs a enviar (preenchido na main)
+    std::deque<std::pair<uint32_t,std::string>> chatIn_;     // chats recebidos
+    std::deque<uint32_t>     enemyDeathIn_;   // mortes de inimigos recebidas
 
     uint32_t myId_       = 0;
     char     myName_[24] = {0};

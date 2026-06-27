@@ -4,6 +4,8 @@
 #include <sstream>
 #include <algorithm>
 
+extern bool g_renderPass3D;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Construtor legado
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,14 +292,16 @@ void NPC::render() const {
         case NPCRole::WeaponDealer: renderMerchant();  break;
         case NPCRole::ArmorSmith:   renderMerchant();  break;
     }
-    if (hasQuest) {
-        DrawText("!", (int)position.x - 4, (int)position.y - 50, 28, GOLD);
+    if (!g_renderPass3D) {
+        if (hasQuest) {
+            DrawText("!", (int)position.x - 4, (int)position.y - 50, 28, GOLD);
+        }
+        if (hasNewDialogue && dialogues.size() > 0) {
+            DrawText("!", (int)position.x + 6, (int)position.y - 52, 20, Color{255, 220, 0, 255});
+        }
+        DrawText(name.c_str(), (int)position.x - (int)name.size() * 4,
+                 (int)position.y + 30, 14, WHITE);
     }
-    if (hasNewDialogue && dialogues.size() > 0) {
-        DrawText("!", (int)position.x + 6, (int)position.y - 52, 20, Color{255, 220, 0, 255});
-    }
-    DrawText(name.c_str(), (int)position.x - (int)name.size() * 4,
-             (int)position.y + 30, 14, WHITE);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
