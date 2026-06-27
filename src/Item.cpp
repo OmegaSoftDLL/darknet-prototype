@@ -804,80 +804,310 @@ void Item::render() const {
 void Item::render3D() const {
     const float kPI = 3.14159265f;
     float t      = (float)GetTime();
-    // Gentle sinusoidal bob between ~8 and ~14 of height.
-    float baseY  = 11.0f + std::sin(t * 2.0f) * 3.0f;
-    float spin   = t * 1.2f;
+    // Gentle sinusoidal bob — the pickup floats over the ground.
+    float baseY  = 11.0f + std::sin(t * 2.0f) * 2.5f;
+    float spin   = t * 1.4f;
+    float pulse  = 0.5f + 0.5f * std::sin(t * 4.0f);
     Vector3 base = { position.x, baseY, position.y };
+
+    // Brighten a color by a flat amount (keeps alpha).
+    auto lighten = [](Color c, int a) -> Color {
+        return { (unsigned char)std::min(255, (int)c.r + a),
+                 (unsigned char)std::min(255, (int)c.g + a),
+                 (unsigned char)std::min(255, (int)c.b + a), c.a };
+    };
 
     // Whether this is a high-rarity drop (Rare and above) -> translucent halo.
     bool isRare  = (rarity >= ItemRarity::Rare);
 
-    // ── Per-type model selection ───────────────────────────────────────────
+    // ── Per-type model selection — faithful to the 2D render() above ─────────
     switch (type) {
 
-    // HealthPack / MedKit — capsule with a bright cross.
+    // ── WeaponPart — mini gun: stock + receiver + barrel + neon muzzle ──────
+    case ItemType::WeaponPart: {
+        Color orange = {255,130,0,255};
+        Color muzz   = {255,220,80,255};
+        float y = base.y;
+        // Coronha (stock) — esquerda, madeira/cobre escuro
+        DrawCapsule({base.x-5.5f, y-0.4f, base.z}, {base.x-2.2f, y, base.z}, 1.7f, 8, 8, {90,60,30,255});
+        // Receiver — corpo central
+        DrawCapsule({base.x-2.5f, y, base.z}, {base.x+2.0f, y, base.z}, 1.9f, 8, 8, {70,60,60,255});
+        // Cano (barrel) — fino, direita
+        DrawCylinderEx({base.x+1.5f, y, base.z}, {base.x+6.0f, y, base.z}, 0.85f, 0.65f, 10, {45,45,45,255});
+        // Mira/trilho laranja por cima
+        DrawCapsule({base.x-1.2f, y+1.7f, base.z}, {base.x+1.2f, y+1.7f, base.z}, 0.45f, 6, 6, orange);
+        // Empunhadura (grip) abaixo
+        DrawCapsule({base.x-0.6f, y-1.4f, base.z}, {base.x+0.4f, y-3.4f, base.z}, 0.7f, 6, 6, {90,60,30,255});
+        // Muzzle neon
+        DrawSphere({base.x+6.3f, y, base.z}, 1.1f, muzz);
+        break;
+    }
+
+    // ── ScrapMetal — placa de armadura: disco achatado + rebites ────────────
+    case ItemType::ScrapMetal: {
+        Color plateC = {80,85,92,255};
+        Color edge   = {170,170,185,255};
+        Color shine  = {220,220,240,255};
+        Vector3 f0 = { base.x, base.y, base.z - 0.7f };
+        Vector3 f1 = { base.x, base.y, base.z + 0.7f };
+        DrawCylinderEx(f0, f1, 4.1f, 4.1f, 8, plateC);           // placa frontal
+        DrawCylinderEx(f0, f1, 4.4f, 4.4f, 8, ColorAlpha(edge, 0.5f));
+        // Rebites nos cantos (frente da placa)
+        for (int i=0;i<4;i++){
+            float a = kPI*0.25f + i*(kPI*0.5f);
+            DrawSphere({base.x+std::cos(a)*2.7f, base.y+std::sin(a)*2.7f, base.z+0.8f}, 0.6f, shine);
+        }
+        break;
+    }
+
+    // ── TechChip — chip: corpo escuro + pinos + nucleo ciano pulsante ───────
+    case ItemType::TechChip: {
+        Color body  = {15,18,40,255};
+        Color cyan  = {0,200,255,255};
+        Vector3 f0 = { base.x, base.y, base.z - 0.6f };
+        Vector3 f1 = { base.x, base.y, base.z + 0.6f };
+        DrawCylinderEx(f0, f1, 3.9f, 3.9f, 8, body);             // corpo do chip
+        DrawCylinderEx(f0, f1, 4.1f, 4.1f, 8, ColorAlpha(cyan, 0.5f));
+        // Pinos laterais
+        for (int p=-1;p<=1;p++){
+            float yy = base.y + p*2.0f;
+            DrawCapsule({base.x-3.8f, yy, base.z}, {base.x-5.4f, yy, base.z}, 0.4f, 5, 5, cyan);
+            DrawCapsule({base.x+3.8f, yy, base.z}, {base.x+5.4f, yy, base.z}, 0.4f, 5, 5, cyan);
+        }
+        // Nucleo central pulsante
+        DrawSphere({base.x, base.y, base.z+0.8f}, 1.0f + pulse*0.6f, lighten(cyan, 40));
+        break;
+    }
+
+    // ── Credits — moeda dourada girando em torno do eixo vertical ───────────
+    case ItemType::Credits: {
+        Color gold     = {255,205,60,255};
+        Color goldEdge = {200,150,20,255};
+        Vector3 n  = { std::sin(spin)*0.55f, 0.0f, std::cos(spin)*0.55f };
+        Vector3 c0 = { base.x - n.x, base.y, base.z - n.z };
+        Vector3 c1 = { base.x + n.x, base.y, base.z + n.z };
+        DrawCylinderEx(c0, c1, 4.1f, 4.1f, 16, gold);
+        DrawCylinderEx(c0, c1, 4.3f, 4.3f, 16, ColorAlpha(goldEdge, 0.7f));
+        DrawSphere(base, 1.3f, {255,245,200,255});               // brilho central
+        break;
+    }
+
+    // ── HealthPack / MedKit — capsula branca com cruz vermelha ──────────────
     case ItemType::HealthPack:
     case ItemType::MedKit: {
         Color shell = {230, 235, 245, 255};
         Color cross = {235, 40, 40, 255};
-        Vector3 top = { base.x, base.y + 3.0f, base.z };
-        Vector3 bot = { base.x, base.y - 3.0f, base.z };
-        DrawCapsule(top, bot, 3.6f, 10, 10, shell);
-        // Red cross — two thin perpendicular capsules on the front face.
-        float zf = base.z;
-        DrawCapsule({base.x - 2.4f, base.y, zf}, {base.x + 2.4f, base.y, zf},
-                    0.9f, 6, 6, cross);
-        DrawCapsule({base.x, base.y - 2.4f, zf}, {base.x, base.y + 2.4f, zf},
-                    0.9f, 6, 6, cross);
+        DrawCapsule({base.x, base.y+3.0f, base.z}, {base.x, base.y-3.0f, base.z}, 3.4f, 10, 10, shell);
+        float zf = base.z + 2.6f;                                 // cruz na face frontal
+        DrawCapsule({base.x-2.2f, base.y, zf}, {base.x+2.2f, base.y, zf}, 0.85f, 6, 6, cross);
+        DrawCapsule({base.x, base.y-2.2f, zf}, {base.x, base.y+2.2f, zf}, 0.85f, 6, 6, cross);
         break;
     }
 
-    // Credits / coins — flat golden cylinder, slowly spinning.
-    case ItemType::Credits: {
-        Color gold     = {255, 205, 60, 255};
-        Color goldEdge = {200, 150, 20, 255};
-        float wob = std::sin(spin) * 0.6f;
-        Vector3 c0 = { base.x, base.y - 0.8f, base.z };
-        Vector3 c1 = { base.x, base.y + 0.8f + wob, base.z };
-        DrawCylinderEx(c0, c1, 4.2f, 4.2f, 14, gold);
-        DrawCylinderEx(c0, c1, 4.4f, 4.4f, 14, ColorAlpha(goldEdge, 0.6f));
-        // tiny center stud
-        DrawSphere(base, 1.4f, ColorAlpha({255,245,200,255}, 0.9f));
+    // ── EnergyCore — prisma hexagonal ciano + nucleo branco + raios ─────────
+    case ItemType::EnergyCore: {
+        Color cyan  = {0,255,255,255};
+        Color white = {200,240,255,255};
+        float hexR  = 3.1f + pulse*0.5f;
+        DrawCylinderEx({base.x, base.y, base.z-0.9f}, {base.x, base.y, base.z+0.9f},
+                       hexR, hexR, 6, ColorAlpha(cyan, 0.85f));    // hexagono
+        DrawSphere(base, 1.4f + pulse*0.5f, white);               // nucleo brilhante
+        for (int i=0;i<4;i++){                                     // raios eletricos
+            float a = spin + i*(kPI*0.5f);
+            float len = hexR + 1.6f + pulse;
+            DrawCapsule(base, {base.x+std::cos(a)*len, base.y+std::sin(a)*len, base.z}, 0.3f, 5, 5, white);
+        }
         break;
     }
 
-    // Crafting materials — colored spheres / capsules using the material color.
-    case ItemType::MetalScrap:
-    case ItemType::AlienCarapace:
-    case ItemType::PlasmaCore:
-    case ItemType::NanoFiber:
+    // ── NanoCore — esfera magenta pulsante + pontos em orbita ───────────────
+    case ItemType::NanoCore: {
+        Color magenta = {255,80,200,255};
+        DrawSphereEx(base, 2.8f + pulse*0.4f, 10, 10, magenta);
+        DrawSphere(base, 1.4f, {255,200,240,255});
+        for (int i=0;i<2;i++){
+            float a = t*(2.0f+i) + i*kPI;
+            float r = 4.2f;
+            DrawSphere({base.x+std::cos(a)*r, base.y+std::sin(a*1.3f)*1.4f, base.z+std::sin(a)*r}, 0.8f, WHITE);
+        }
+        break;
+    }
+
+    // ── PlasmaCell — celula oval roxa + arcos de plasma ciano ───────────────
+    case ItemType::PlasmaCell: {
+        Color shell  = {60,0,90,255};
+        Color plasma = {180,0,255,255};
+        Color glow2  = {100,200,255,255};
+        DrawCapsule({base.x, base.y-1.6f, base.z}, {base.x, base.y+1.6f, base.z}, 2.6f, 10, 10, shell);
+        DrawSphereEx(base, 2.0f, 8, 8, ColorAlpha(plasma, 0.85f));
+        for (int i=0;i<3;i++){                                     // arcos internos
+            float a = t*4.0f + i*(2.0f*kPI/3.0f);
+            DrawCapsule({base.x+std::cos(a)*1.8f, base.y+std::sin(a)*1.2f, base.z+0.5f},
+                        {base.x-std::cos(a)*1.8f, base.y-std::sin(a)*1.2f, base.z-0.5f},
+                        0.25f, 4, 4, glow2);
+        }
+        DrawSphere(base, 0.9f + pulse*0.4f, lighten(glow2, 40));
+        break;
+    }
+
+    // ── MetalScrap — fragmento metalico facetado cinza ──────────────────────
+    case ItemType::MetalScrap: {
+        DrawSphereEx(base, 3.0f, 5, 4, {120,120,135,255});        // low-poly facetado
+        DrawSphereEx(base, 1.6f, 5, 4, {185,185,200,255});
+        break;
+    }
+
+    // ── AlienCarapace — casca organica verde + protuberancias ───────────────
+    case ItemType::AlienCarapace: {
+        DrawSphereEx(base, 3.0f, 8, 8, {20,70,25,255});
+        DrawSphereEx(base, 2.2f, 8, 8, {35,160,55,255});
+        for (int i=0;i<5;i++){
+            float a = i*(2.0f*kPI/5.0f) + t;
+            DrawSphere({base.x+std::cos(a)*2.6f, base.y+std::sin(a)*0.8f, base.z+std::sin(a)*2.6f},
+                       0.7f, {80,220,80,255});
+        }
+        break;
+    }
+
+    // ── PlasmaCore — nucleo incandescente laranja em camadas ────────────────
+    case ItemType::PlasmaCore: {
+        DrawSphereEx(base, 3.0f, 8, 8, {90,30,0,255});
+        DrawSphereEx(base, 2.1f, 8, 8, {255,80,0,255});
+        DrawSphere(base, 1.2f + pulse*0.5f, {255,210,90,255});
+        break;
+    }
+
+    // ── NanoFiber — fios nanotecnologicos turquesa radiando ─────────────────
+    case ItemType::NanoFiber: {
+        Color fib = {0,200,180,255};
+        DrawSphere(base, 1.4f, {0,60,60,255});
+        for (int i=0;i<4;i++){
+            float a = i*(kPI*0.5f) + t*2.0f;
+            DrawCapsule(base, {base.x+std::cos(a)*3.0f, base.y+std::sin(a)*1.5f, base.z+std::sin(a*1.5f)*3.0f},
+                        0.35f, 5, 5, fib);
+        }
+        DrawSphere(base, 0.9f, {0,255,220,255});
+        break;
+    }
+
+    // ── OmegaEssence — essencia roxa em camadas + pontos orbitando ──────────
     case ItemType::OmegaEssence: {
-        // Capsule core with a brighter inner sphere, tinted by item color.
-        Vector3 top = { base.x, base.y + 2.5f, base.z };
-        Vector3 bot = { base.x, base.y - 2.5f, base.z };
-        DrawCapsule(top, bot, 3.0f, 10, 10, color);
-        Color inner = { (unsigned char)std::min(255, color.r + 60),
-                        (unsigned char)std::min(255, color.g + 60),
-                        (unsigned char)std::min(255, color.b + 60), 255 };
-        DrawSphereEx(base, 2.0f, 8, 8, ColorAlpha(inner, 0.85f));
+        float r = 3.0f + pulse*0.6f;
+        DrawSphereEx(base, r,       8, 8, {70,0,95,255});
+        DrawSphereEx(base, r*0.65f, 8, 8, {170,0,230,255});
+        DrawSphere  (base, r*0.30f,       {255,120,255,255});
+        for (int i=0;i<6;i++){
+            float a = i*(kPI/3.0f) + t*3.0f;
+            DrawSphere({base.x+std::cos(a)*r*0.9f, base.y+std::sin(a*0.7f)*1.2f, base.z+std::sin(a)*r*0.9f},
+                       0.5f + pulse*0.4f, {220,90,255,255});
+        }
         break;
     }
 
-    // Default — sphere with the item's own color, plus a subtle core highlight.
+    // ── Armas — lamina flutuante (guarda + cabo + pomo) na cor do item ──────
+    case ItemType::PlasmaRifle:
+    case ItemType::VoidBlade:
+    case ItemType::CrystalStaff:
+    case ItemType::NanoBow:
+    case ItemType::FrostHammer:
+    case ItemType::AcidGun:
+    case ItemType::SoulScythe:
+    case ItemType::ChainBlade:
+    case ItemType::OmegaWeapon:
+    case ItemType::DragonSlayer: {
+        Color metal = lighten(color, 50);
+        // Lamina afilada apontando para cima
+        DrawCylinderEx({base.x-0.8f, base.y-1.4f, base.z}, {base.x+1.2f, base.y+4.6f, base.z},
+                       0.9f, 0.12f, 8, color);
+        // Guarda-mao
+        DrawCapsule({base.x-2.0f, base.y-1.5f, base.z}, {base.x+0.4f, base.y-1.5f, base.z}, 0.5f, 6, 6, metal);
+        // Cabo
+        DrawCapsule({base.x-0.8f, base.y-1.5f, base.z}, {base.x-1.6f, base.y-3.5f, base.z}, 0.5f, 6, 6, {60,50,45,255});
+        // Pomo
+        DrawSphere({base.x-1.7f, base.y-3.7f, base.z}, 0.7f, metal);
+        break;
+    }
+
+    // ── Armaduras — peitoral (torso + ombreiras + emblema) na cor do item ───
+    case ItemType::NanoSuit:
+    case ItemType::CrystalArmor:
+    case ItemType::VoidPlating:
+    case ItemType::DragonScale:
+    case ItemType::PhaseCloak:
+    case ItemType::IronBastionArmor:
+    case ItemType::BioRegenSuit: {
+        Color hi = lighten(color, 45);
+        DrawCapsule({base.x, base.y-2.5f, base.z}, {base.x, base.y+2.5f, base.z}, 3.0f, 10, 10, color);
+        DrawSphere({base.x-3.0f, base.y+1.8f, base.z}, 1.4f, hi);   // ombreiras
+        DrawSphere({base.x+3.0f, base.y+1.8f, base.z}, 1.4f, hi);
+        DrawSphere({base.x, base.y+0.4f, base.z+2.6f}, 0.9f, lighten(color, 90)); // emblema
+        break;
+    }
+
+    // ── Acessorios — gema/cristal (diamante facetado) na cor do item ────────
+    case ItemType::QuantumCore:
+    case ItemType::SoulCrystal:
+    case ItemType::VoidFragment:
+    case ItemType::NanoChip:
+    case ItemType::TimePiece:
+    case ItemType::FrostRune:
+    case ItemType::PlasmaCell2:
+    case ItemType::InfinityCore: {
+        DrawCylinderEx(base, {base.x, base.y+3.0f, base.z}, 2.2f, 0.0f, 6, color);            // topo
+        DrawCylinderEx(base, {base.x, base.y-3.0f, base.z}, 2.2f, 0.0f, 6, lighten(color, 30)); // base
+        DrawSphere(base, 0.9f + pulse*0.4f, lighten(color, 90));   // brilho interno
+        break;
+    }
+
+    // ── Consumiveis — frasco/pocao (vidro + liquido + rolha) na cor do item ─
+    case ItemType::EnergyDrink:
+    case ItemType::NanoPatch:
+    case ItemType::VoidEssence2:
+    case ItemType::FrostCrystal2:
+    case ItemType::PlasmaVial:
+    case ItemType::SoulFragment2: {
+        Color liquid = color;
+        DrawCylinderEx({base.x, base.y-2.4f, base.z}, {base.x, base.y+1.6f, base.z}, 1.8f, 1.8f, 12, ColorAlpha(liquid, 0.85f));
+        DrawSphere({base.x, base.y-2.4f, base.z}, 1.8f, ColorAlpha(liquid, 0.85f));    // fundo arredondado
+        DrawCylinderEx({base.x, base.y+1.6f, base.z}, {base.x, base.y+3.0f, base.z}, 0.9f, 0.9f, 8, ColorAlpha({200,220,235,255}, 0.45f)); // gargalo
+        DrawSphere({base.x, base.y+3.2f, base.z}, 0.8f, {150,110,70,255});             // rolha
+        DrawSphere({base.x, base.y - 1.0f + pulse*1.8f, base.z}, 0.5f, lighten(liquid, 80)); // bolha
+        break;
+    }
+
+    // ── VoidCrown — coroa lendaria: aro + espigoes com gemas ────────────────
+    case ItemType::VoidCrown: {
+        Color spike = lighten(color, 60);
+        DrawCylinderEx({base.x, base.y-1.0f, base.z}, {base.x, base.y+1.5f, base.z}, 2.6f, 2.6f, 10, color);
+        for (int i=0;i<6;i++){
+            float a  = i*(kPI/3.0f);
+            float sx = base.x + std::cos(a)*2.4f;
+            float sz = base.z + std::sin(a)*2.4f;
+            DrawCylinderEx({sx, base.y+1.3f, sz}, {sx, base.y+3.2f, sz}, 0.6f, 0.0f, 6, spike);
+            DrawSphere({sx, base.y+3.3f, sz}, 0.5f, {255,220,120,255});
+        }
+        break;
+    }
+
+    // Default — esfera na cor do item com nucleo destacado.
     default: {
-        DrawSphereEx(base, 3.4f, 10, 10, color);
-        Color hi = { (unsigned char)std::min(255, color.r + 70),
-                     (unsigned char)std::min(255, color.g + 70),
-                     (unsigned char)std::min(255, color.b + 70), 255 };
-        DrawSphereEx({ base.x, base.y + 0.8f, base.z }, 1.6f, 8, 8, ColorAlpha(hi, 0.8f));
+        DrawSphereEx(base, 3.2f, 10, 10, color);
+        DrawSphereEx({ base.x, base.y + 0.8f, base.z }, 1.5f, 8, 8, ColorAlpha(lighten(color, 70), 0.85f));
         break;
     }
     }
 
-    // ── Rare-drop translucent glow sphere ──────────────────────────────────
+    // ── Halo translucido + faiscas em orbita para drops raros ───────────────
     if (isRare) {
-        float pulse  = 0.5f + 0.5f * std::sin(t * 3.0f);
-        float glowR  = 5.5f + pulse * 1.5f;
-        DrawSphereEx(base, glowR, 10, 10, ColorAlpha(rarityColor, 0.18f + 0.10f * pulse));
+        float gp = 0.5f + 0.5f * std::sin(t * 3.0f);
+        DrawSphereEx(base, 5.5f + gp*1.5f, 8, 8, ColorAlpha(rarityColor, 0.12f + 0.08f*gp));
+        if (rarity >= ItemRarity::Epic) {
+            int n = (rarity >= ItemRarity::Legendary) ? 3 : 2;
+            for (int i=0;i<n;i++){
+                float a = t*3.5f + i*(2.0f*kPI/n);
+                DrawSphere({base.x+std::cos(a)*6.0f, base.y, base.z+std::sin(a)*6.0f},
+                           0.6f, ColorAlpha(rarityColor, 0.9f));
+            }
+        }
     }
 }

@@ -498,8 +498,6 @@ private:
     int   zonesVisitedSet  = 0;  // bitmask of visited zone ids
 
     // 3D Models and textures for realistic 3D graphics
-    Model m_playerModel;
-    Model m_enemyModel;
     Model m_houseModel;
     Model m_turretModel;
     Model m_barracksModel;
