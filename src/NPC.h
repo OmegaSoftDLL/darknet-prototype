@@ -95,6 +95,7 @@ public:
     void setup(NPCType t, const std::string& n, Vector2 pos);
     void update(float dt, Vector2 playerPos, bool playerInteract);
     void renderFull() const;                        // render novo detalhado
+    void render3D() const;                           // modelo 3D low-poly (humanoide)
     void renderDialogue(int screenW, int screenH) const;
     void advanceDialogue();
     void startDialogue(const std::string& treeId = "");

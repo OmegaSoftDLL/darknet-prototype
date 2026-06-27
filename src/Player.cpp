@@ -1396,3 +1396,53 @@ void Player::onEnterZone(int zoneId) {
     say(zoneSpeeches[idx], 3.0f, {0, 220, 255, 255});
 }
 
+
+// ── Render 3D low-poly do jogador ───────────────────────────────────────────
+// Humanoide montado SO com primitivas arredondadas (sem cubos).
+// Mapeamento: X3D = position.x, Z3D = position.y (o "y" 2D vira profundidade),
+// e Y e a ALTURA (pes em Y=0, cabeca por volta de Y=46-52). O pulo soma jumpZ.
+void Player::render3D() const {
+    const float px = position.x;
+    const float pz = position.y;
+    const float f  = (float)facing;          // -1 ou 1: orienta arma/visor
+    const float base = jumpZ;                 // levanta o corpo inteiro no pulo
+
+    // Passada das pernas a partir da animacao de caminhada.
+    float swing = isMoving ? std::sin(walkAnimTimer * 9.0f) * 5.0f : 0.0f;
+
+    // Paleta da classe (membros existentes).
+    Color skin = classSkin;
+    Color ac   = accentNow();
+    Color limb = classSecondary;             // pernas/braco
+    Color torsoCol = classPrimary;           // tronco
+    if (hasCosmeticTint) {                    // tinta cosmetica modula o tronco
+        torsoCol.r = (unsigned char)(torsoCol.r * cosmeticTint.r / 255);
+        torsoCol.g = (unsigned char)(torsoCol.g * cosmeticTint.g / 255);
+        torsoCol.b = (unsigned char)(torsoCol.b * cosmeticTint.b / 255);
+    }
+
+    // ── Pernas (capsulas) — pe em Y=0, quadril ~Y=22 ──
+    DrawCapsule({px - 5, base + 1,  pz - swing}, {px - 4, base + 22, pz}, 4.0f, 8, 6, limb);
+    DrawCapsule({px + 5, base + 1,  pz + swing}, {px + 4, base + 22, pz}, 4.0f, 8, 6, limb);
+
+    // ── Tronco (capsula mais grossa) — quadril ~Y=22 ate ombros ~Y=40 ──
+    DrawCapsule({px, base + 22, pz}, {px, base + 40, pz}, 7.5f, 10, 8, torsoCol);
+
+    // ── Bracos (capsulas) — do ombro para baixo, com balanco oposto ──
+    DrawCapsule({px - 8, base + 39, pz + swing*0.5f}, {px - 9, base + 24, pz + swing}, 3.2f, 8, 6, limb);
+    DrawCapsule({px + 8, base + 39, pz - swing*0.5f}, {px + 9, base + 24, pz - swing}, 3.2f, 8, 6, limb);
+
+    // ── Cabeca (esfera) — pescoco curto + cranio ~Y=46-52 ──
+    DrawCapsule({px, base + 40, pz}, {px, base + 44, pz}, 2.6f, 8, 6, skin);
+    DrawSphere({px, base + 49, pz}, 5.5f, skin);
+
+    // ── Visor/olho neon (esfera ciano pequena) na frente conforme facing ──
+    DrawSphere({px + f * 4.2f, base + 50, pz}, 1.6f, ac);
+
+    // ── Arma (cilindro horizontal saindo da mao na direcao facing) ──
+    Color gun = !equippedWeapon.isEmpty() ? equippedWeapon.color : Color{0, 230, 255, 255};
+    Vector3 handPos = { px + f * 9.0f, base + 24, pz };
+    Vector3 gunTip  = { px + f * 24.0f, base + 25, pz };
+    DrawCylinderEx(handPos, gunTip, 1.8f, 1.2f, 8, gun);
+    DrawSphere(gunTip, 1.4f, ColorAlpha(ac, 0.9f));  // ponta brilhante
+}

@@ -149,6 +149,7 @@ public:
     void  updateSpeech(float dt);
     void  renderSpeech() const;
     void  render() const;
+    void  render3D() const;   // humanoide 3D low-poly (primitivas arredondadas)
     void  addItem(const Item& item);
     void  useSkill(int index, Vector2 target);
     void  drawInventory() const;

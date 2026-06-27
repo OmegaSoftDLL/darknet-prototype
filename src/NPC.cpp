@@ -305,6 +305,62 @@ void NPC::render() const {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Render 3D low-poly (humanoide parado) — somente primitivas arredondadas
+//   Mapeamento: X3D = position.x, Z3D = position.y, Y = altura (pes em Y=0)
+// ─────────────────────────────────────────────────────────────────────────────
+void NPC::render3D() const {
+    const float X = position.x;
+    const float Z = position.y;
+
+    // Cores derivadas dos membros existentes
+    Color body   = bodyColor;
+    Color accent = accentColor;
+    Color skin   = { 210, 170, 130, 255 };
+
+    bool isVendor = (role == NPCRole::Merchant ||
+                     role == NPCRole::WeaponDealer ||
+                     role == NPCRole::ArmorSmith);
+    Color gold = { 255, 200, 40, 255 };
+
+    // ── Pernas (duas capsulas verticais) ──
+    float legR   = 4.0f;
+    float legTop = 16.0f;   // quadril
+    DrawCapsule({ X - 4.0f, 0.0f, Z }, { X - 4.0f, legTop, Z }, legR, 8, 4, body);
+    DrawCapsule({ X + 4.0f, 0.0f, Z }, { X + 4.0f, legTop, Z }, legR, 8, 4, body);
+
+    // ── Tronco (capsula vertical) ──
+    float torsoBot = legTop;
+    float torsoTop = 30.0f;
+    DrawCapsule({ X, torsoBot, Z }, { X, torsoTop, Z }, 6.5f, 10, 6, body);
+
+    // Faixa/detalhe no peito
+    DrawCapsule({ X, torsoBot + 3.0f, Z }, { X, torsoTop - 3.0f, Z }, 6.7f, 10, 4, accent);
+
+    // ── Bracos (duas capsulas inclinadas ao lado do tronco) ──
+    float shoulderY = torsoTop - 2.0f;
+    float handY     = legTop + 1.0f;
+    DrawCapsule({ X - 7.5f, shoulderY, Z }, { X - 8.5f, handY, Z }, 3.0f, 8, 4, body);
+    DrawCapsule({ X + 7.5f, shoulderY, Z }, { X + 8.5f, handY, Z }, 3.0f, 8, 4, body);
+
+    // ── Pescoco + cabeca (esfera) ──
+    float neckY = torsoTop;
+    float headY = torsoTop + 5.5f;
+    DrawCapsule({ X, neckY, Z }, { X, neckY + 2.0f, Z }, 2.5f, 6, 4, skin);
+    DrawSphere({ X, headY, Z }, 5.5f, skin);
+
+    // ── Detalhe dourado para vendedores ──
+    if (isVendor) {
+        // cinto/bolsa dourada
+        DrawCapsule({ X, legTop, Z }, { X, legTop + 2.0f, Z }, 6.8f, 10, 4, gold);
+        // emblema flutuante acima da cabeca
+        DrawSphere({ X, headY + 7.0f, Z }, 1.8f, gold);
+    } else {
+        // pequeno marcador com a cor de acento
+        DrawSphere({ X, headY + 6.0f, Z }, 1.2f, accent);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Render novo (detalhado)
 // ─────────────────────────────────────────────────────────────────────────────
 void NPC::renderFull() const {

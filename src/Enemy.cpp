@@ -3265,3 +3265,192 @@ void Enemy::renderBansheeHowler() const {
     DrawHealthBar({px, py - radius - 16}, hpPct, barW, 4, hpc);
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// render3D() — modelo 3D low-poly (SEM CUBOS). Apenas primitivas arredondadas:
+// DrawSphere / DrawSphereEx / DrawCapsule / DrawCylinderEx.
+// Mapeamento de mundo: X3D = position.x, Z3D = position.y, Y = altura (base Y=0).
+// Tamanho escalado por `radius`. Silhuetas agrupadas por categoria:
+//   FLY      — incorporeos/voadores (Ghost, Wraith, Banshee, Bat, FrostWyrm...)
+//   DRONE    — voadores mecanicos (HunterDrone, CorrupterDrone)
+//   SPIDER   — insectoides/alienigenas (Zergling, Hydra, Broodmother, AlienBoss...)
+//   BRUTE    — golens/tanques/bosses pesados (Boss, VoidColossus, Orc, Tank...)
+//   TURRET   — torres estacionarias (KronosSentry, SiegeCrawler)
+//   HUMANOID — fallback bipede (zumbis, paladinos, samurais, scouts...)
+// ─────────────────────────────────────────────────────────────────────────────
+void Enemy::render3D() const {
+    const float x = position.x;
+    const float z = position.y;
+    const float r = radius;
+    const float t = aliveTimer;            // anima discretamente (bob/orbita)
+    const float TAU = 6.28318530718f;
+
+    auto V = [](float vx, float vy, float vz) -> Vector3 { return Vector3{ vx, vy, vz }; };
+
+    Color c   = bodyColor;
+    Color cd  = ColorBrightness(bodyColor, -0.35f);   // tom escuro (membros)
+    Color cl  = ColorBrightness(bodyColor,  0.30f);   // tom claro  (cabeca/luz)
+    Color eye = Color{ 255, 70, 50, 255 };            // brilho dos olhos
+
+    enum Cat { FLY, DRONE, SPIDER, BRUTE, TURRET, HUMANOID } cat = HUMANOID;
+    switch (type) {
+        case EnemyType::Ghost:          case EnemyType::GhostElite:
+        case EnemyType::ShadowWraith:   case EnemyType::BansheeHowler:
+        case EnemyType::PoltergeistBoss:case EnemyType::CrimsonBat:
+        case EnemyType::FrostWyrm:      case EnemyType::DarkMatter:
+            cat = FLY; break;
+        case EnemyType::HunterDrone:    case EnemyType::CorrupterDrone:
+            cat = DRONE; break;
+        case EnemyType::Zergling:       case EnemyType::Hydra:
+        case EnemyType::Broodmother:    case EnemyType::AlienBoss:
+        case EnemyType::NeuralParasite: case EnemyType::AbyssalEel:
+        case EnemyType::ChaosSpawn:     case EnemyType::Leviathan:
+            cat = SPIDER; break;
+        case EnemyType::KronosSentry:   case EnemyType::SiegeCrawler:
+            cat = TURRET; break;
+        case EnemyType::Boss:           case EnemyType::OmegaBoss:
+        case EnemyType::VoidColossus:   case EnemyType::VolcanicTitan:
+        case EnemyType::InfernoHerald:  case EnemyType::MoltenGolem:
+        case EnemyType::OrcCibernetico: case EnemyType::Tank:
+        case EnemyType::IronGuard:
+            cat = BRUTE; break;
+        default:
+            cat = HUMANOID; break;
+    }
+
+    switch (cat) {
+
+    case FLY: {
+        // Flutua acima do chao e baila levemente.
+        float hov  = r * 1.4f + sinf(t * 2.0f) * r * 0.18f;
+        Vector3 core = V(x, hov + r * 0.9f, z);
+        // Corpo etereo translucido.
+        DrawSphereEx(core, r * 0.95f, 8, 8, ColorAlpha(cl, 0.55f));
+        // Manto/cauda afunilando para baixo (cone arredondado).
+        DrawCylinderEx(V(x, hov - r * 0.4f, z), core, r * 0.12f, r * 0.85f, 8,
+                       ColorAlpha(c, 0.40f));
+        // Mechas/cauda esvoacante.
+        DrawSphereEx(V(x - r*0.35f, hov - r*0.20f, z), r*0.26f, 6, 6, ColorAlpha(c, 0.30f));
+        DrawSphereEx(V(x + r*0.35f, hov - r*0.50f, z), r*0.22f, 6, 6, ColorAlpha(c, 0.25f));
+        // Olhos brilhantes.
+        DrawSphere(V(x - r*0.30f, core.y + r*0.10f, z + r*0.55f), r*0.16f, eye);
+        DrawSphere(V(x + r*0.30f, core.y + r*0.10f, z + r*0.55f), r*0.16f, eye);
+        break;
+    }
+
+    case DRONE: {
+        float hov = r * 1.6f + sinf(t * 3.0f) * r * 0.12f;
+        Vector3 hull = V(x, hov, z);
+        DrawSphereEx(hull, r * 0.60f, 8, 8, c);                       // casco
+        // Disco/anel fino (cilindro de altura baixa).
+        DrawCylinderEx(V(x, hov - r*0.08f, z), V(x, hov + r*0.08f, z),
+                       r * 1.0f, r * 1.0f, 12, cd);
+        // Rotores orbitando nas pontas.
+        for (int i = 0; i < 4; ++i) {
+            float a  = (float)i / 4.0f * TAU + t * 4.0f;
+            DrawSphere(V(x + cosf(a)*r*1.0f, hov, z + sinf(a)*r*1.0f), r*0.18f, cl);
+        }
+        // Sensor/olho frontal.
+        DrawSphere(V(x, hov, z + r*0.55f), r*0.20f, eye);
+        break;
+    }
+
+    case SPIDER: {
+        int   nLegs = (type == EnemyType::Broodmother || isBoss()) ? 8 : 6;
+        float bodyY = r * 0.85f;
+        Vector3 body = V(x, bodyY, z);
+        DrawSphereEx(body, r * 0.90f, 9, 9, c);                       // abdomen
+        Vector3 head = V(x, bodyY + r*0.10f, z + r*0.85f);
+        DrawSphereEx(head, r * 0.55f, 8, 8, cd);                      // cefalotorax
+        // Pernas radiais bipartidas (joelho elevado + pe no chao).
+        for (int i = 0; i < nLegs; ++i) {
+            float a   = ((float)i / nLegs) * TAU + 0.3f;
+            float dx  = cosf(a), dz = sinf(a);
+            float wob = sinf(t * 6.0f + i) * 0.10f;
+            Vector3 knee = V(x + dx*r*1.0f, bodyY + r*0.55f + wob*r, z + dz*r*1.0f);
+            Vector3 foot = V(x + dx*r*1.7f, 0.0f, z + dz*r*1.7f);
+            DrawCapsule(body, knee, r*0.13f, 5, 4, cd);
+            DrawCapsule(knee, foot, r*0.11f, 5, 4, cd);
+        }
+        // Olhos.
+        DrawSphere(V(x - r*0.18f, head.y + r*0.15f, head.z + r*0.30f), r*0.12f, eye);
+        DrawSphere(V(x + r*0.18f, head.y + r*0.15f, head.z + r*0.30f), r*0.12f, eye);
+        break;
+    }
+
+    case BRUTE: {
+        float hipY = r * 0.9f, shY = hipY + r * 1.3f;
+        // Pernas grossas.
+        DrawCapsule(V(x - r*0.45f, 0, z), V(x - r*0.40f, hipY, z), r*0.32f, 7, 6, cd);
+        DrawCapsule(V(x + r*0.45f, 0, z), V(x + r*0.40f, hipY, z), r*0.32f, 7, 6, cd);
+        // Torso volumoso (esfera + capsula).
+        DrawSphereEx(V(x, hipY + r*0.55f, z), r*0.95f, 9, 9, c);
+        DrawCapsule(V(x, hipY, z), V(x, shY, z), r*0.70f, 9, 8, c);
+        // Bracos grossos com leve balanco.
+        float sw = sinf(t * 3.0f) * r * 0.15f;
+        DrawCapsule(V(x - r*0.90f, shY, z), V(x - r*1.05f, hipY*0.7f, z + sw), r*0.28f, 7, 6, cd);
+        DrawCapsule(V(x + r*0.90f, shY, z), V(x + r*1.05f, hipY*0.7f, z - sw), r*0.28f, 7, 6, cd);
+        DrawSphere(V(x - r*1.05f, hipY*0.7f, z + sw), r*0.32f, c);    // punhos
+        DrawSphere(V(x + r*1.05f, hipY*0.7f, z - sw), r*0.32f, c);
+        // Cabeca pequena + olhos.
+        DrawSphereEx(V(x, shY + r*0.45f, z), r*0.42f, 8, 8, cl);
+        DrawSphere(V(x - r*0.18f, shY + r*0.50f, z + r*0.35f), r*0.10f, eye);
+        DrawSphere(V(x + r*0.18f, shY + r*0.50f, z + r*0.35f), r*0.10f, eye);
+        break;
+    }
+
+    case TURRET: {
+        // Base conica arredondada.
+        DrawCylinderEx(V(x, 0, z), V(x, r*0.6f, z), r*1.0f, r*0.7f, 10, cd);
+        Vector3 dome = V(x, r*0.95f, z);
+        DrawSphereEx(dome, r*0.70f, 9, 9, c);                         // domo
+        // Cano apontando para frente (+Z).
+        DrawCylinderEx(dome, V(x, r*0.95f, z + r*1.6f), r*0.16f, r*0.12f, 8, cd);
+        DrawSphere(V(x, r*1.05f, z + r*0.45f), r*0.18f, eye);         // mira
+        break;
+    }
+
+    default: { // HUMANOID
+        float gait = sinf(t * 5.0f) * r * 0.30f;
+        float hipY = r * 1.0f, shY = hipY + r * 1.05f;
+        // Pernas (passada alternada ao longo de Z).
+        DrawCapsule(V(x - r*0.35f, 0, z - gait), V(x - r*0.30f, hipY, z), r*0.20f, 6, 5, cd);
+        DrawCapsule(V(x + r*0.35f, 0, z + gait), V(x + r*0.30f, hipY, z), r*0.20f, 6, 5, cd);
+        // Tronco.
+        DrawCapsule(V(x, hipY, z), V(x, shY, z), r*0.50f, 8, 7, c);
+        // Bracos.
+        DrawCapsule(V(x - r*0.55f, shY, z), V(x - r*0.50f, hipY*0.85f, z + gait), r*0.16f, 6, 5, cd);
+        DrawCapsule(V(x + r*0.55f, shY, z), V(x + r*0.50f, hipY*0.85f, z - gait), r*0.16f, 6, 5, cd);
+        // Cabeca + olhos.
+        DrawSphereEx(V(x, shY + r*0.50f, z), r*0.42f, 8, 8, cl);
+        DrawSphere(V(x - r*0.16f, shY + r*0.55f, z + r*0.34f), r*0.09f, eye);
+        DrawSphere(V(x + r*0.16f, shY + r*0.55f, z + r*0.34f), r*0.09f, eye);
+        break;
+    }
+    } // switch(cat)
+
+    // ── Bosses: corpo maior ja vem do radius; adiciona esferas de energia
+    //    orbitando e uma "coroa" flutuante. ──
+    if (isBoss()) {
+        float topY = r * 3.4f;
+        for (int i = 0; i < 4; ++i) {
+            float a = ((float)i / 4.0f) * TAU + t * 1.5f;
+            Vector3 p = V(x + cosf(a)*r*1.3f,
+                          topY + sinf(t*2.0f + i) * r*0.20f,
+                          z + sinf(a)*r*1.3f);
+            DrawSphere(p, r*0.22f, ColorAlpha(cl, 0.85f));
+        }
+        DrawSphereEx(V(x, topY + r*0.4f, z), r*0.30f, 7, 7, ColorAlpha(cl, 0.9f));
+    }
+
+    // ── Elite: aura translucida + anel de esferas brilhantes no chao. ──
+    if (isElite) {
+        Color glow = (auraColor.a > 0) ? auraColor : Color{ 255, 215, 0, 255 };
+        DrawSphereEx(V(x, r*1.2f, z), r*1.6f, 8, 8, ColorAlpha(glow, 0.12f));
+        for (int i = 0; i < 6; ++i) {
+            float a = ((float)i / 6.0f) * TAU + t * 2.0f;
+            DrawSphere(V(x + cosf(a)*r*1.5f, r*0.15f, z + sinf(a)*r*1.5f),
+                       r*0.12f, glow);
+        }
+    }
+}

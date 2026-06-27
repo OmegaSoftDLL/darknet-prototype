@@ -90,6 +90,7 @@ struct Companion {
 
     void update(float dt, Vector2 playerPos, const std::vector<Enemy*>& nearbyEnemies);
     void render() const;
+    void render3D() const;          // modelo 3D low-poly por tipo
     void takeDamage(float dmg);
     bool isDead() const;
     void revive(Vector2 pos);
