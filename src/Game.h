@@ -502,9 +502,13 @@ private:
     Model m_turretModel;
     Model m_barracksModel;
     Model m_castleModel; // used for Town Hall / Arca
+    Model m_marketModel; // used for Tank Factory
+    Model m_wellModel;   // used for MedBay
     Texture2D m_houseTex;
     Texture2D m_turretTex;
     Texture2D m_barracksTex;
     Texture2D m_castleTex;
+    Texture2D m_marketTex;
+    Texture2D m_wellTex;
     bool m_modelsLoaded = false;
 };

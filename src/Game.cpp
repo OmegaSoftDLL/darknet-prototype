@@ -3,11 +3,69 @@
 bool g_renderPass3D = false;
 #include <raylib.h>
 #include <raymath.h>
+#include "rlgl.h"
 #include <cmath>
 #include <algorithm>
 #include <sstream>
 #include <unordered_map>
 #include <chrono>
+
+static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, float height, float length, Color color)
+{
+    float x = position.x;
+    float y = position.y;
+    float z = position.z;
+
+    rlSetTexture(texture.id);
+
+    rlBegin(RL_QUADS);
+        rlColor4ub(color.r, color.g, color.b, color.a);
+
+        // Front Face
+        rlNormal3f(0.0f, 0.0f, 1.0f);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z + length/2);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z + length/2);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z + length/2);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z + length/2);
+
+        // Back Face
+        rlNormal3f(0.0f, 0.0f, -1.0f);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z - length/2);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z - length/2);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z - length/2);
+
+        // Top Face
+        rlNormal3f(0.0f, 1.0f, 0.0f);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z + length/2);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z + length/2);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + width/2, y + height/2, z - length/2);
+
+        // Bottom Face
+        rlNormal3f(0.0f, -1.0f, 0.0f);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z - length/2);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z - length/2);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + width/2, y - height/2, z + length/2);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - width/2, y - height/2, z + length/2);
+
+        // Right face
+        rlNormal3f(1.0f, 0.0f, 0.0f);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z - length/2);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z - length/2);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x + width/2, y + height/2, z + length/2);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x + width/2, y - height/2, z + length/2);
+
+        // Left Face
+        rlNormal3f(-1.0f, 0.0f, 0.0f);
+        rlTexCoord2f(0.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z - length/2);
+        rlTexCoord2f(1.0f, 1.0f); rlVertex3f(x - width/2, y - height/2, z + length/2);
+        rlTexCoord2f(1.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z + length/2);
+        rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);
+    rlEnd();
+
+    rlSetTexture(0);
+}
 
 // ─── Constructor / Destructor ────────────────────────────────────────────────
 
@@ -66,6 +124,16 @@ Game::Game() {
         m_castleTex = LoadTexture("resources/models/castle_diffuse.png");
         m_castleModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_castleTex;
     }
+    if (FileExists("resources/models/market.obj")) {
+        m_marketModel = LoadModel("resources/models/market.obj");
+        m_marketTex = LoadTexture("resources/models/market_diffuse.png");
+        m_marketModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_marketTex;
+    }
+    if (FileExists("resources/models/well.obj")) {
+        m_wellModel = LoadModel("resources/models/well.obj");
+        m_wellTex = LoadTexture("resources/models/well_diffuse.png");
+        m_wellModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_wellTex;
+    }
     m_modelsLoaded = true;
 
     audio.init();
@@ -122,6 +190,14 @@ Game::~Game() {
         if (m_castleModel.meshCount > 0) {
             UnloadModel(m_castleModel);
             UnloadTexture(m_castleTex);
+        }
+        if (m_marketModel.meshCount > 0) {
+            UnloadModel(m_marketModel);
+            UnloadTexture(m_marketTex);
+        }
+        if (m_wellModel.meshCount > 0) {
+            UnloadModel(m_wellModel);
+            UnloadTexture(m_wellTex);
         }
     }
 
@@ -5120,6 +5196,17 @@ void Game::renderWorld3D() {
                     DrawModelEx(m_barracksModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
                 } else if (b.type == BuildingType::Turret && m_turretModel.meshCount > 0) {
                     DrawModelEx(m_turretModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 35.0f, 35.0f, 35.0f }, WHITE);
+                } else if (b.type == BuildingType::TankFactory && m_marketModel.meshCount > 0) {
+                    DrawModelEx(m_marketModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 45.0f, 45.0f, 45.0f }, WHITE);
+                } else if (b.type == BuildingType::MedBay && m_wellModel.meshCount > 0) {
+                    DrawModelEx(m_wellModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { 35.0f, 35.0f, 35.0f }, WHITE);
+                } else if (b.type == BuildingType::Wall) {
+                    SpriteBank& sb = SpriteBank::get();
+                    if (sb.ready) {
+                        DrawCubeTexture(sb.tileWall[(int)currentZone], { b.position.x, 32.0f, b.position.y }, 64.0f, 64.0f, 64.0f, WHITE);
+                    } else {
+                        DrawCube({ b.position.x, 32.0f, b.position.y }, 64.0f, 64.0f, 64.0f, GRAY);
+                    }
                 } else {
                     drawProceduralEntity3D(b.position, 24.0f, [&, b]() {
                         buildingSystem.renderBuilding(b);

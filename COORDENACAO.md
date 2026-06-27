@@ -147,18 +147,23 @@ Antigravity propõe uma alternativa para a renderização das entidades (Player,
 
 ## 🚀 NOVO PLANO DE TRANSIÇÃO PARA 3D REAL (SEM CUBOS E SEM BILLBOARDS 2D)
 
-O usuário solicitou explicitamente gráficos reais sem o aspecto de cubos básicos no mundo ("nao quero nada em cubo tem que ser 3d real todo o jogo").
+O usuário solicitou explicitamente gráficos reais sem o aspecto de cubos básicos no mundo ("nao quero nada em cubo tem que ser 3d real todo o jogo") e profundidade em todas as construções ("tem que ter profundidade nas construções"). Além disso, **os personagens não devem ser redondos (sem esferas/cápsulas/cilindros), mas sim uma cópia fiel do 2D projetada em 3D**.
 
 Para atingir isso, atualizamos a estratégia para:
-1. **Modelos 3D Reais para Entidades**: Carregar e usar modelos 3D (`.glb` e `.obj`) nativos do Raylib que já estão no ambiente de desenvolvimento, em vez de representá-los como billboards 2D de papel ou cubos planos:
-   - **Jogador**: `resources/models/greenman.glb` (Modelo GLTF completo)
-   - **Inimigos/Soldados/Tanques**: `resources/models/robot.glb`
-   - **Casas (Habitações)**: `resources/models/house.obj` (Textura: `house_diffuse.png`)
-   - **Torres de Defesa (Turrets)**: `resources/models/turret.obj` (Textura: `turret_diffuse.png`)
-   - **Quartéis (Barracks)**: `resources/models/barracks.obj` (Textura: `barracks_diffuse.png`)
-   - **Arca (Prefeitura/Town Hall)**: `resources/models/castle.obj` (Textura: `castle_diffuse.png`)
-2. **Texturização Real de Paredes e Pisos**: Correção do compilador em `Tilemap.cpp` implementando a função estática de renderizado de faces `DrawCubeTexture` usando `<rlgl.h>`. Isso desenha as paredes e o chão usando texturas (`SpriteBank::tileWall` e `SpriteBank::tileFloor`) em vez de cubos de cor sólida.
+1. **Personagens = Cópia Fiel do 2D em 3D (Não redondos)**:
+   - **CLAUDE**: Deve modificar o trecho de personagens em `renderWorld3D` ou a lógica de renderizado 3D de entidades para desenhar o jogador, inimigos, NPCs e companheiros como **billboards 3D de suas artes 2D originais** (utilizando `drawProceduralEntity3D` que desenha o `.render()` 2D tradicional em uma RenderTexture e projeta como billboard 3D com depth sorting).
+   - Isso garante que eles fiquem idênticos à arte original 2D (sem o aspecto arredondado de bonecos de massinha) e mantenham ordenação Z correta contra paredes.
+2. **Profundidade Total em Construções/Cenário**:
+   - **ANTIGRAVITY**: Já implementou e testou os modelos 3D reais (`.obj`) em `Game.cpp` para todas as construções construídas:
+     - **Arca**: `castle.obj` (Textura: `castle_diffuse.png`)
+     - **Casa**: `house.obj` (Textura: `house_diffuse.png`)
+     - **Quartel**: `barracks.obj` (Textura: `barracks_diffuse.png`)
+     - **Torre**: `turret.obj` (Textura: `turret_diffuse.png`)
+     - **Fábrica de Tanques**: `market.obj` (Textura: `market_diffuse.png`)
+     - **Centro Médico (MedBay)**: `well.obj` (Textura: `well_diffuse.png`)
+     - **Muros/Walls**: Desenhados como cubos texturizados 3D usando `DrawCubeTexture` com a textura de muro de `SpriteBank`.
 3. **Divisão de Trabalho**:
-   - **Antigravity** cuida de carregar os modelos 3D em `Game.cpp` / `Game.h`, gerenciar ciclos de vida, e renderizar no passo 3D (`renderWorld3D`), integrando a rotação de movimento baseada na velocidade do player e rotação da grade das estruturas.
-   - **Claude Code** pode focar no mapeamento de câmera isométrica, colisões e testes de jogabilidade, sabendo que os assets 3D agora são carregados localmente.
+   - **Antigravity** cuida de `Game.cpp` (modelos de prédios, iluminação/fog, câmera, decalques) + backend.
+   - **Claude Code** cuida dos arquivos de entidades (sombra/render3D() dos personagens) + Tilemap chão + o trecho dos personagens de `renderWorld3D` em `Game.cpp`.
+
 
