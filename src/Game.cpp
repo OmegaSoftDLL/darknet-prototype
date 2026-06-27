@@ -6003,10 +6003,7 @@ void Game::render() {
                  fontSize, c);
     }
 
-    // Dialog balloon
-    if (dialogOpen && nearNpcIndex >= 0 && nearNpcIndex < (int)npcs.size()) {
-        npcs[nearNpcIndex].showDialog(dialogLine);
-    }
+    // (Balão de diálogo agora é desenhado em drawUI() — vale p/ 3D e 2D)
 
     // Inferno zone effects — geysers + ash (drawn after entities)
     if (infernoZone.active) {
@@ -6318,7 +6315,8 @@ void Game::drawUI() const {
                  screenWidth/2 - MeasureText("[E]  FALAR COM NPC",16)/2,
                  screenHeight-44, 16, C_gold);
     }
-    if (dialogOpen && nearNpcIndex >= 0) {
+    if (dialogOpen && nearNpcIndex >= 0 && nearNpcIndex < (int)npcs.size()) {
+        npcs[nearNpcIndex].showDialog(dialogLine);   // balão do diálogo (vale p/ 3D e 2D)
         DrawText("[E] Continuar  [ESC] Fechar", 10, screenHeight - 36, 14,
                  ColorAlpha(WHITE, 0.7f));
     }
