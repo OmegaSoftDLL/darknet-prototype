@@ -19,6 +19,8 @@ public:
     std::string host = "127.0.0.1";
     int         port = 9000;
 
+    ~StoreClient();   // espera threads de rede em voo (evita use-after-free no shutdown)
+
     // Todas assíncronas (disparam thread de fundo, retornam imediatamente).
     void loginAsync(const std::string& name);   // POST /auth/login -> token+id
     void fetchStoreAsync();                      // GET  /store      -> catálogo
@@ -41,6 +43,7 @@ private:
     std::string               playerId_;
     std::atomic<bool>         logged_{false};
     std::atomic<bool>         busy_{false};
+    std::atomic<int>          activeThreads_{0};   // threads de rede em voo
     int                       gems_ = 0;
     std::vector<PremiumItem>  items_;
     std::vector<GemPack>      packs_;

@@ -26,6 +26,9 @@ HttpResponse request(const std::string& method, const std::string& host, int por
                                      WINHTTP_ACCESS_TYPE_NO_PROXY,
                                      WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hSession) return out;
+    // Timeouts (ms): resolve/connect/send/receive — sem isso uma rede ruim trava a
+    // thread indefinidamente (e o destrutor do StoreClient esperando por ela).
+    WinHttpSetTimeouts(hSession, 4000, 4000, 5000, 5000);
 
     HINTERNET hConnect = WinHttpConnect(hSession, widen(host).c_str(), (INTERNET_PORT)port, 0);
     if (!hConnect) { WinHttpCloseHandle(hSession); return out; }
