@@ -851,8 +851,8 @@ void Game::buildOpenWorldScenery() {
         }
     };
     // Zona livre do HUB (NPCs ficam no centro do mundo) — nenhuma estrutura nasce lá.
-    const float hubX = (float)(tilemap.width  * Tilemap::tileSize) / 2.0f;
-    const float hubY = (float)(tilemap.height * Tilemap::tileSize) / 2.0f;
+    const float hubX = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f; // centro do hub (1ª zona)
+    const float hubY = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
     std::vector<Vector2> placedB;   // estruturas já colocadas (anti-sobreposição)
     auto isStruct = [](int t) { return t == 0 || t == 1 || t == 7 || t == 8 || t == 10; };
     // Coloca 1 objeto. Estruturas grandes: longe do hub + sem encostar em outra.
@@ -1030,8 +1030,8 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
         // Estrutura só entra se: a bioma DA POSIÇÃO bate (sem vazar pro vizinho),
         // está longe do hub (NPCs) e NÃO encosta em outra estrutura (anti-amontoado).
         std::vector<Vector2> placedB;
-        const float hubX = (float)(tilemap.width  * Tilemap::tileSize) / 2.0f;
-        const float hubY = (float)(tilemap.height * Tilemap::tileSize) / 2.0f;
+        const float hubX = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f; // centro do hub (1ª zona)
+        const float hubY = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
         auto putB = [&](int type, Vector2 pos, float sc, ZoneID want) {
             if (tilemap.biomeAtWorld(pos.x, pos.y) != want) return;
             float hdx = pos.x - hubX, hdy = pos.y - hubY;
@@ -4323,17 +4323,30 @@ void Game::handleInput(float dt) {
 
 void Game::spawnEnemy() {
     float angle = GetRandomValue(0, 360) * DEG2RAD;
-    float dist  = 380.0f;
+    float dist  = (float)GetRandomValue(840, 1120);   // LONGE (fora da tela) — não "nascem do meu lado"
     Vector2 pos = {
         player.position.x + std::cos(angle) * dist,
         player.position.y + std::sin(angle) * dist
     };
+    // Nunca dentro da ZONA SEGURA (cidade/refúgio): joga o spawn pra fora do raio.
+    if (inSafeZone(pos)) {
+        Vector2 d = { pos.x - safeZoneCenter.x, pos.y - safeZoneCenter.y };
+        float l = std::sqrt(d.x*d.x + d.y*d.y); if (l < 1.0f) { d = {1.0f, 0.0f}; l = 1.0f; }
+        pos.x = safeZoneCenter.x + d.x / l * (safeZoneRadius + 140.0f);
+        pos.y = safeZoneCenter.y + d.y / l * (safeZoneRadius + 140.0f);
+    }
 
     int attempts = 0;
     while (tilemap.isWallAtPosition(pos) && attempts < 10) {
         angle = GetRandomValue(0, 360) * DEG2RAD;
         pos.x = player.position.x + std::cos(angle) * dist;
         pos.y = player.position.y + std::sin(angle) * dist;
+        if (inSafeZone(pos)) {
+            Vector2 d = { pos.x - safeZoneCenter.x, pos.y - safeZoneCenter.y };
+            float l = std::sqrt(d.x*d.x + d.y*d.y); if (l < 1.0f) { d = {1.0f, 0.0f}; l = 1.0f; }
+            pos.x = safeZoneCenter.x + d.x / l * (safeZoneRadius + 140.0f);
+            pos.y = safeZoneCenter.y + d.y / l * (safeZoneRadius + 140.0f);
+        }
         attempts++;
     }
 
