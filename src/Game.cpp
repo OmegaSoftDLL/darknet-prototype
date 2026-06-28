@@ -2795,6 +2795,7 @@ void Game::update(float dt) {
     // Aviso ao CRUZAR a fronteira da zona segura (portao da base)
     if (openWorldMode) {
         bool nowInSafe = inSafeZone(player.position);
+        player.inSafeRefuge = nowInSafe;   // invulnerável no refúgio (ninguém te mata na cidade)
         if (wasInSafeZone && !nowInSafe) {
             // Saindo da base para o perigo
             showStoryBanner("!! SAINDO DA ZONA SEGURA !!",
@@ -2916,9 +2917,14 @@ void Game::update(float dt) {
                              enemy.position.y - safeZoneCenter.y };
             float len = std::sqrt(away.x*away.x + away.y*away.y);
             if (len < 1.0f) { away = {1.0f, 0.0f}; len = 1.0f; }
-            float push = enemy.speed * 1.5f * dt;
+            // Empurra forte; se entrou MUITO fundo, joga direto pra borda (não fica perseguindo).
+            float push = enemy.speed * 4.0f * dt + 90.0f * dt;
             enemy.position.x += (away.x / len) * push;
             enemy.position.y += (away.y / len) * push;
+            if (len < safeZoneRadius - 200.0f) {
+                enemy.position.x = safeZoneCenter.x + (away.x / len) * (safeZoneRadius + 30.0f);
+                enemy.position.y = safeZoneCenter.y + (away.y / len) * (safeZoneRadius + 30.0f);
+            }
         }
 
         // Auto-evolution notification
