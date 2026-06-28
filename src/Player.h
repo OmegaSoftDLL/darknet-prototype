@@ -99,6 +99,7 @@ public:
     // Buff timers
     float overloadTimer = 0.0f;
     float shieldTimer   = 0.0f;
+    bool  inSafeRefuge  = false;   // setado pelo Game: invulnerável dentro da zona segura
 
     bool isOverloaded() const { return overloadTimer > 0.0f; }
     bool isShielded()   const { return shieldTimer   > 0.0f; }

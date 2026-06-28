@@ -1114,6 +1114,7 @@ void Player::increaseBaseMaxHP(float amount) {
 }
 
 void Player::takeDamage(float amount) {
+    if (inSafeRefuge) return;   // refúgio = invulnerável (ninguém te mata na cidade)
     if (isShielded()) return;
     float reduced = amount * (1.0f - defense / 100.0f);
     health -= reduced;
