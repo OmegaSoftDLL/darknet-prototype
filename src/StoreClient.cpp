@@ -1,8 +1,9 @@
-#include "StoreClient.h"
+﻿#include "StoreClient.h"
 #include "HttpClient.h"
 #include <thread>
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
 
 // ── Parsing JSON minimalista (suficiente para as respostas do backend) ───────
 namespace {
@@ -92,6 +93,7 @@ bool StoreClient::ownsItem(const std::string& id) const {
 // ── login: POST /auth/login {name} -> {token,id} ─────────────────────────────
 void StoreClient::loginAsync(const std::string& name) {
     std::string h = host; int p = port; std::string nm = name;
+    activeThreads_.fetch_add(1);
     std::thread([this, h, p, nm]() {
         std::string body = std::string("{\"name\":\"") + nm + "\"}";
         HttpResponse r = HttpClient::post(h, p, "/auth/login", body);
@@ -112,12 +114,14 @@ void StoreClient::loginAsync(const std::string& name) {
             setMsg(r.status == 0 ? "Backend offline (loja premium indisponivel)"
                                  : "Falha no login da loja");
         }
+        activeThreads_.fetch_sub(1);
     }).detach();
 }
 
 // ── catálogo: GET /store -> {gemPacks:[...], items:[...]} ─────────────────────
 void StoreClient::fetchStoreAsync() {
     std::string h = host; int p = port;
+    activeThreads_.fetch_add(1);
     std::thread([this, h, p]() {
         HttpResponse r = HttpClient::get(h, p, "/store");
         if (r.status == 200) {
@@ -145,6 +149,7 @@ void StoreClient::fetchStoreAsync() {
         } else {
             setMsg(r.status == 0 ? "Backend offline" : "Falha ao carregar a loja");
         }
+        activeThreads_.fetch_sub(1);
     }).detach();
 }
 
@@ -153,6 +158,7 @@ void StoreClient::refreshAsync() {
     if (!logged_.load()) return;
     std::string h = host; int p = port; std::string tok;
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
+    activeThreads_.fetch_add(1);
     std::thread([this, h, p, tok]() {
         HttpResponse r = HttpClient::get(h, p, "/me", tok);
         if (r.status == 200) {
@@ -171,6 +177,7 @@ void StoreClient::refreshAsync() {
             }
             { std::lock_guard<std::mutex> lk(mtx_); gems_ = (int)g; inventory_ = inv; }
         }
+        activeThreads_.fetch_sub(1);
     }).detach();
 }
 
@@ -180,6 +187,7 @@ void StoreClient::buyItemAsync(const std::string& itemId) {
     if (busy_.exchange(true)) return;
     std::string h = host; int p = port; std::string tok, id = itemId;
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
+    activeThreads_.fetch_add(1);
     std::thread([this, h, p, tok, id]() {
         std::string body = std::string("{\"itemId\":\"") + id + "\"}";
         HttpResponse r = HttpClient::post(h, p, "/store/buy-item", body, tok);
@@ -203,6 +211,7 @@ void StoreClient::buyItemAsync(const std::string& itemId) {
             setMsg(r.status == 0 ? "Backend offline" : "Falha na compra");
         }
         busy_ = false;
+        activeThreads_.fetch_sub(1);
     }).detach();
 }
 
@@ -212,6 +221,7 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
     if (busy_.exchange(true)) return;
     std::string h = host; int p = port; std::string tok, id = packId;
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
+    activeThreads_.fetch_add(1);
     std::thread([this, h, p, tok, id]() {
         std::string body = std::string("{\"packId\":\"") + id + "\"}";
         HttpResponse r = HttpClient::post(h, p, "/store/buy-gems", body, tok);
@@ -227,5 +237,14 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
             setMsg(r.status == 0 ? "Backend offline" : "Falha ao iniciar pagamento");
         }
         busy_ = false;
+        activeThreads_.fetch_sub(1);
     }).detach();
+}
+
+
+StoreClient::~StoreClient() {
+    // Espera (limitado) as threads de rede em voo antes de destruir membros
+    // (mutex/strings) — evita use-after-free no encerramento.
+    for (int i = 0; i < 200 && activeThreads_.load() > 0; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
