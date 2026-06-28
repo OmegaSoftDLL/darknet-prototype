@@ -65,7 +65,7 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
         rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);
     rlEnd();
 
-    rlSetTexture(0);
+    rlSetTexture(rlGetTextureIdDefault());   // P0: religa branca p/ não vazar textura nas primitivas
 }
 
 // ─── Constructor / Destructor ────────────────────────────────────────────────
@@ -226,7 +226,11 @@ Game::~Game() {
             UnloadModel(m_wellModel);
             UnloadTexture(m_wellTex);
         }
+        if (m_carModel.meshCount > 0) UnloadModel(m_carModel);
     }
+    // Libera os modelos VOXEL gerados em runtime (eram leak de CPU+GPU).
+    for (auto& kv : m_voxModels) if (kv.second.meshCount > 0) UnloadModel(kv.second);
+    m_voxModels.clear();
 
     CloseWindow();
 }

@@ -1,4 +1,4 @@
-#include "SaveManager.h"
+﻿#include "SaveManager.h"
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -125,7 +125,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     // Accept any DARKNET_SAVE_V* version
 
     int  slotRead = 0, zoneInt = 0;
-    char dateBuf[64] = {};
+    char dateBuf[256] = {};
 
     // Try to parse new format first
     char key[64];

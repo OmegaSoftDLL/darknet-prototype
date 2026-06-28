@@ -514,19 +514,19 @@ private:
     int   zonesVisitedSet  = 0;  // bitmask of visited zone ids
 
     // 3D Models and textures for realistic 3D graphics
-    Model m_houseModel;
-    Model m_turretModel;
-    Model m_barracksModel;
+    Model m_houseModel{};
+    Model m_turretModel{};
+    Model m_barracksModel{};
     Model m_castleModel; // used for Town Hall / Arca
     Model m_marketModel; // used for Tank Factory
     Model m_wellModel;   // used for MedBay
     Model m_carModel;    // old_car_new.glb — carros do cenário 3D
     float m_houseScale=1,m_turretScale=1,m_barracksScale=1,m_castleScale=1,m_marketScale=1,m_wellScale=1,m_carScale=1;
-    Texture2D m_houseTex;
-    Texture2D m_turretTex;
-    Texture2D m_barracksTex;
-    Texture2D m_castleTex;
-    Texture2D m_marketTex;
-    Texture2D m_wellTex;
+    Texture2D m_houseTex{};
+    Texture2D m_turretTex{};
+    Texture2D m_barracksTex{};
+    Texture2D m_castleTex{};
+    Texture2D m_marketTex{};
+    Texture2D m_wellTex{};
     bool m_modelsLoaded = false;
 };
