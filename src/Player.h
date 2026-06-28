@@ -154,6 +154,20 @@ public:
     void  useSkill(int index, Vector2 target);
     void  drawInventory() const;
     void  absorbBossEssence(int kind);   // buff PERMANENTE de boss (mexe no stat BASE)
+
+    // ── Save/Load de progresso (classe + stats BASE — efetivos sao recalculados) ──
+    CharacterClass getCharClass() const { return charClass; }
+    float getBaseMaxHealth()    const { return baseMaxHealth; }
+    float getBaseAttackDamage() const { return baseAttackDamage; }
+    float getBaseSpeed()        const { return baseSpeed; }
+    float getBaseAttackRange()  const { return baseAttackRange; }
+    float getBaseDefense()      const { return baseDefense; }
+    void  loadSavedProgress(CharacterClass c, float bMax, float bDmg, float bSpd, float bRng, float bDef) {
+        applyClass(c);
+        baseMaxHealth = bMax; baseAttackDamage = bDmg; baseSpeed = bSpd;
+        baseAttackRange = bRng; baseDefense = bDef;
+        applyEquipmentStats();
+    }
     void  handleInventoryInput();
     // Mouse no inventário (vmouse já virtualizado p/ 1280x720). Retorna true se
     // o clique foi no botão FECHAR (Game deve então fechar o inventário).

@@ -139,6 +139,7 @@ public:
     float aliveTimer     = 0.0f;   // segundos vivo
     int   evolTier       = 0;      // 0=normal 1=veterano 2=elite 3=lendario
     bool  justEvolved    = false;  // flag: evoluiu neste frame (Game consome)
+    bool  netKilled      = false;  // morto por sync de rede — nao rebroadcastar a morte
     float evolveFlash    = 0.0f;   // timer do flash branco ao evoluir
     Color auraColor      = {0,0,0,0}; // cor da aura de tier
 

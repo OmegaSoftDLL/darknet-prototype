@@ -2724,8 +2724,9 @@ void Game::update(float dt) {
             }
             if (closest) {
                 closest->health = 0.0f;
-                // Add to netKilledEnemies so we don't send edeath for it
-                netKilledEnemies.push_back(closest);
+                // Marca no PRÓPRIO inimigo (flag move junto na realocação do vetor) —
+                // evita o use-after-free de guardar ponteiro em netKilledEnemies.
+                closest->netKilled = true;
             }
         }
 
@@ -3046,10 +3047,9 @@ void Game::update(float dt) {
             if (it->shouldDropLoot()) {
                 it->markLootDropped();
 
-                // Check if this death was triggered by network sync
-                auto netIt = std::find(netKilledEnemies.begin(), netKilledEnemies.end(), &(*it));
-                if (netIt != netKilledEnemies.end()) {
-                    netKilledEnemies.erase(netIt);
+                // Morte por sync de rede (flag no inimigo) → não rebroadcastar.
+                if (it->netKilled) {
+                    // já tratada pela rede; nada a enviar
                 } else {
                     if (netActive) {
                         uint32_t cx = (uint32_t)(it->position.x / 10.0f) & 0xFFFF;
@@ -5594,6 +5594,11 @@ void Game::renderWorld3D() {
 
     EndMode3D();
 
+    // Máscara de luz/noite + vignette ANTES dos overlays — assim barras de vida,
+    // nomes e prompts ficam por cima e LEGÍVEIS mesmo no escuro/noite.
+    lightSystem.applyMask();
+    DrawVignette(screenWidth, screenHeight);
+
     // ── 2. Overlay 2D Projetado: Projéteis, Partículas, Nomes e UI ────────────
     auto proj = [&](Vector2 w, float h) {
         return GetWorldToScreenEx({ w.x, h, w.y }, camera3D, screenWidth, screenHeight);
@@ -5784,11 +5789,7 @@ void Game::renderWorld3D() {
         }
     }
 
-    // Apply light mask overlay (darkens world except around light sources)
-    lightSystem.applyMask();
-
-    // Atmosfera Diablo: vignette nos cantos (escurece bordas)
-    DrawVignette(screenWidth, screenHeight);
+    // (máscara de luz + vignette já aplicadas logo após EndMode3D — overlays acima ficam legíveis)
 
     // ── 3. Interface e HUD Final ─────────────────────────────────────────────
     drawUI();
