@@ -6131,8 +6131,7 @@ void Game::renderWorld3D() {
 
     // ── 3. Interface e HUD Final ─────────────────────────────────────────────
     drawUI();
-    DrawText("MODO 2.5D (F10) - Incremento 3: depth sorting, billboards, sombras e iluminação 3D",
-             12, screenHeight - 18, 11, ColorAlpha(Color{0,210,255,255}, 0.6f));
+    drawHudAndOverlays();   // recursos/ameaça + pause/levelup/evolução/loja/crafting/party (faltava no 3D!)
 
     EndTextureMode();
 }
@@ -6466,6 +6465,40 @@ void Game::render() {
 
     drawUI();
 
+drawHudAndOverlays();
+
+    EndTextureMode();
+}
+
+// ─── UI helpers ──────────────────────────────────────────────────────────────
+
+void Game::DrawPanel(int x, int y, int w, int h, Color border, float alpha) {
+    DrawRectangle(x, y, w, h, ColorAlpha(Color{8,10,18,255}, alpha));
+    // Angular corner cuts (cyberpunk style)
+    int c = 6;
+    DrawLine(x+c, y,   x+w-c, y,   ColorAlpha(border, 0.7f));
+    DrawLine(x, y+c,   x, y+h-c,   ColorAlpha(border, 0.5f));
+    DrawLine(x+c, y+h, x+w-c, y+h, ColorAlpha(border, 0.7f));
+    DrawLine(x+w, y+c, x+w, y+h-c, ColorAlpha(border, 0.5f));
+    DrawLine(x, y+c, x+c, y,       ColorAlpha(border, 0.6f));
+    DrawLine(x+w-c, y, x+w, y+c,   ColorAlpha(border, 0.6f));
+    DrawLine(x, y+h-c, x+c, y+h,   ColorAlpha(border, 0.6f));
+    DrawLine(x+w-c, y+h, x+w, y+h-c, ColorAlpha(border, 0.6f));
+}
+
+void Game::DrawBarH(int x, int y, int w, int h, float pct, Color fill, Color bg) {
+    DrawRectangle(x, y, w, h, bg);
+    int filled = (int)(w * std::max(0.0f, std::min(1.0f, pct)));
+    if (filled > 0) DrawRectangle(x, y, filled, h, fill);
+    // Sheen on top of bar
+    DrawRectangle(x, y, filled, h/3, ColorAlpha(WHITE, 0.12f));
+    DrawRectangleLinesEx({(float)x,(float)y,(float)w,(float)h}, 1.0f,
+                         ColorAlpha(fill, 0.4f));
+}
+
+// ─── UI ──────────────────────────────────────────────────────────────────────
+
+void Game::drawHudAndOverlays() {
     // HUD de recursos coletados (madeira/pedra/ferro/prata/ouro)
     if (openWorldMode) drawResourceHUD();
 
@@ -6516,37 +6549,7 @@ void Game::render() {
 
     // Grupo / aliança (indicador sempre visível + painel com tecla O)
     drawPartyPanel();
-
-    EndTextureMode();
 }
-
-// ─── UI helpers ──────────────────────────────────────────────────────────────
-
-void Game::DrawPanel(int x, int y, int w, int h, Color border, float alpha) {
-    DrawRectangle(x, y, w, h, ColorAlpha(Color{8,10,18,255}, alpha));
-    // Angular corner cuts (cyberpunk style)
-    int c = 6;
-    DrawLine(x+c, y,   x+w-c, y,   ColorAlpha(border, 0.7f));
-    DrawLine(x, y+c,   x, y+h-c,   ColorAlpha(border, 0.5f));
-    DrawLine(x+c, y+h, x+w-c, y+h, ColorAlpha(border, 0.7f));
-    DrawLine(x+w, y+c, x+w, y+h-c, ColorAlpha(border, 0.5f));
-    DrawLine(x, y+c, x+c, y,       ColorAlpha(border, 0.6f));
-    DrawLine(x+w-c, y, x+w, y+c,   ColorAlpha(border, 0.6f));
-    DrawLine(x, y+h-c, x+c, y+h,   ColorAlpha(border, 0.6f));
-    DrawLine(x+w-c, y+h, x+w, y+h-c, ColorAlpha(border, 0.6f));
-}
-
-void Game::DrawBarH(int x, int y, int w, int h, float pct, Color fill, Color bg) {
-    DrawRectangle(x, y, w, h, bg);
-    int filled = (int)(w * std::max(0.0f, std::min(1.0f, pct)));
-    if (filled > 0) DrawRectangle(x, y, filled, h, fill);
-    // Sheen on top of bar
-    DrawRectangle(x, y, filled, h/3, ColorAlpha(WHITE, 0.12f));
-    DrawRectangleLinesEx({(float)x,(float)y,(float)w,(float)h}, 1.0f,
-                         ColorAlpha(fill, 0.4f));
-}
-
-// ─── UI ──────────────────────────────────────────────────────────────────────
 
 void Game::drawUI() const {
     Color C_cyan  = {0, 210, 255, 255};

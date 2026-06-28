@@ -103,6 +103,7 @@ private:
     // Render
     void render();
     void drawUI() const;
+    void drawHudAndOverlays();   // HUD de recursos/ameaça + pause/levelup/loja/etc. (2D E 3D)
     void drawSkills() const;
     void drawMinimap() const;
     void drawMainMenu() const;
