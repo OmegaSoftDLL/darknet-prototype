@@ -965,6 +965,56 @@ void Game::buildOpenWorldScenery() {
     owDecorBuilt       = true;
     setupResourceNodes();   // nós de coleta (madeira/pedra/ferro/prata/ouro)
     setupAnimals();         // vida selvagem (veado/coelho/javali/lobo/passaro)
+    spawnCityFolk();        // civis que perambulam pela cidade (vida ambiente)
+}
+
+// Popula a CIDADE (zona segura) com civis que andam — dão vida ao lugar; reusam
+// os modelos voxel dos NPCs (por NPCRole). Não combatem, só perambulam.
+void Game::spawnCityFolk() {
+    cityFolk.clear();
+    if (!openWorldMode) return;
+    int n = 24;
+    for (int i = 0; i < n; ++i) {
+        CityFolk f;
+        float a = GetRandomValue(0, 359) * DEG2RAD;
+        float d = (float)GetRandomValue(170, (int)(safeZoneRadius * 0.92f));
+        f.home = { safeZoneCenter.x + std::cos(a) * d, safeZoneCenter.y + std::sin(a) * d };
+        int tries = 0;
+        while (isBlocked(f.home) && tries < 10) {
+            a = GetRandomValue(0, 359) * DEG2RAD;
+            d = (float)GetRandomValue(170, (int)(safeZoneRadius * 0.92f));
+            f.home = { safeZoneCenter.x + std::cos(a) * d, safeZoneCenter.y + std::sin(a) * d };
+            tries++;
+        }
+        f.position    = f.home;
+        f.target      = f.home;
+        f.role        = GetRandomValue(0, 6);              // NPCRole 0..6
+        f.speed       = 42.0f + (float)GetRandomValue(0, 46);
+        f.wanderTimer = (float)GetRandomValue(0, 350) / 100.0f;
+        cityFolk.push_back(f);
+    }
+}
+
+void Game::updateCityFolk(float dt) {
+    if (!openWorldMode) return;
+    for (auto& f : cityFolk) {
+        if (f.pauseTimer > 0.0f) { f.pauseTimer -= dt; continue; }  // parado um tempo (conversando/olhando)
+        f.wanderTimer -= dt;
+        Vector2 d = { f.target.x - f.position.x, f.target.y - f.position.y };
+        float dist = std::sqrt(d.x*d.x + d.y*d.y);
+        if (dist < 14.0f || f.wanderTimer <= 0.0f) {
+            if (GetRandomValue(0, 100) < 35) f.pauseTimer = 1.0f + (float)GetRandomValue(0, 250) / 100.0f;
+            float a = GetRandomValue(0, 359) * DEG2RAD;
+            float r = (float)GetRandomValue(50, 300);
+            f.target = { f.home.x + std::cos(a) * r, f.home.y + std::sin(a) * r };
+            f.wanderTimer = 2.0f + (float)GetRandomValue(0, 400) / 100.0f;
+        } else {
+            Vector2 step = { d.x / dist * f.speed * dt, d.y / dist * f.speed * dt };
+            Vector2 np   = { f.position.x + step.x, f.position.y + step.y };
+            if (!isBlocked(np)) { f.position = np; f.facing = (step.x >= 0.0f) ? 1 : -1; }
+            else f.wanderTimer = 0.0f;   // bateu num prédio → escolhe outro destino
+        }
+    }
 }
 
 // Mundo INFINITO: gera cenário em CHUNKS ao redor do player conforme explora e
@@ -2860,6 +2910,7 @@ void Game::update(float dt) {
 
     // Animais / vida selvagem
     updateAnimals(dt);
+    updateCityFolk(dt);   // civis perambulando pela cidade
 
     // Spawn enemies — COM LIMITE para nao acumular sem fim (perf + estabilidade).
     // O cap escala um pouco com a dificuldade; bosses/minions ainda podem somar.
@@ -5324,6 +5375,7 @@ void Game::renderWorld3D() {
     ensureVoxel((int)player.charClass, player.position, [this](){ player.render(); });
     for (auto& e : enemies)    ensureVoxel(100 + (int)e.type, e.position, [&e](){ e.render(); });
     for (auto& n : npcs)       ensureVoxel(300 + (int)n.role, n.position, [&n](){ n.render(); });
+    for (auto& f : cityFolk)   ensureVoxel(300 + f.role, f.position, [&f](){ NPC t; t.role = (NPCRole)f.role; t.position = f.position; t.render(); });
     for (auto& c : companions) if (c.active) ensureVoxel(500 + (int)c.type, c.position, [&c](){ c.render(); });
 
     // Prepare light mask before drawing (uses screen-space projection of 3D lights)
@@ -5506,6 +5558,13 @@ void Game::renderWorld3D() {
         // NPCs — modelos 3D próprios do jogo
         for (auto& n : npcs) {
             drawVoxel(300 + (int)n.role, n.position, 0.0f);
+        }
+
+        // Civis da cidade (vida ambiente) — com culling pra perto da câmera
+        for (auto& f : cityFolk) {
+            if (std::fabs(f.position.x - camera.target.x) > 1200 ||
+                std::fabs(f.position.y - camera.target.y) > 800) continue;
+            drawVoxel(300 + f.role, f.position, 0.0f);
         }
 
         // Companheiros — modelos 3D próprios do jogo

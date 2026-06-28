@@ -402,6 +402,19 @@ private:
     void  updateAnimals(float dt);
     void  renderAnimals() const;
 
+    // ── Civis da cidade (vida ambiente: perambulam pela cidade, reusam voxel NPC) ──
+    struct CityFolk {
+        Vector2 position, target, home;
+        float   speed       = 55.0f;
+        float   wanderTimer = 0.0f;
+        float   pauseTimer  = 0.0f;   // para de vez em quando (conversar/olhar)
+        int     role        = 0;      // NPCRole → modelo voxel + cor
+        int     facing      = 1;
+    };
+    std::vector<CityFolk> cityFolk;
+    void  spawnCityFolk();
+    void  updateCityFolk(float dt);
+
     // ── Multiplayer em tempo real (NetClient — WebSocket) ─────────────────────
     NetClient net;
     uint32_t  netId     = 0;
