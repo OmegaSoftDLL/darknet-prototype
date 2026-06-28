@@ -968,29 +968,63 @@ void Game::buildOpenWorldScenery() {
     spawnCityFolk();        // civis que perambulam pela cidade (vida ambiente)
 }
 
-// Popula a CIDADE (zona segura) com civis que andam — dão vida ao lugar; reusam
-// os modelos voxel dos NPCs (por NPCRole). Não combatem, só perambulam.
+// Popula a CIDADE com civis que TÊM TAREFAS (não vagam à toa): guardas patrulham
+// rotas, trabalhadores ficam numa obra (martelando), grupos conversam em rodas,
+// vendedores ficam no posto. Reusam os modelos voxel dos NPCs (por NPCRole).
 void Game::spawnCityFolk() {
     cityFolk.clear();
     if (!openWorldMode) return;
-    int n = 24;
+
+    // Rodas de conversa (pontos fixos onde grupos se juntam)
+    Vector2 meet[4];
+    for (int i = 0; i < 4; ++i) {
+        float a = GetRandomValue(0, 359) * DEG2RAD;
+        float d = (float)GetRandomValue(220, (int)(safeZoneRadius * 0.7f));
+        meet[i] = { safeZoneCenter.x + std::cos(a) * d, safeZoneCenter.y + std::sin(a) * d };
+    }
+    // Lista de prédios da cidade (postos de trabalho)
+    std::vector<Vector2> builds;
+    for (const auto& o : owDecor.scenery)
+        if ((o.type==0||o.type==1||o.type==7||o.type==8) &&
+            Vector2Distance(o.position, safeZoneCenter) < safeZoneRadius + 200.0f)
+            builds.push_back(o.position);
+
+    int n = 26;
     for (int i = 0; i < n; ++i) {
         CityFolk f;
         float a = GetRandomValue(0, 359) * DEG2RAD;
-        float d = (float)GetRandomValue(170, (int)(safeZoneRadius * 0.92f));
+        float d = (float)GetRandomValue(170, (int)(safeZoneRadius * 0.9f));
         f.home = { safeZoneCenter.x + std::cos(a) * d, safeZoneCenter.y + std::sin(a) * d };
         int tries = 0;
         while (isBlocked(f.home) && tries < 10) {
-            a = GetRandomValue(0, 359) * DEG2RAD;
-            d = (float)GetRandomValue(170, (int)(safeZoneRadius * 0.92f));
-            f.home = { safeZoneCenter.x + std::cos(a) * d, safeZoneCenter.y + std::sin(a) * d };
-            tries++;
+            a = GetRandomValue(0, 359) * DEG2RAD; d = (float)GetRandomValue(170, (int)(safeZoneRadius * 0.9f));
+            f.home = { safeZoneCenter.x + std::cos(a) * d, safeZoneCenter.y + std::sin(a) * d }; tries++;
         }
-        f.position    = f.home;
-        f.target      = f.home;
-        f.role        = GetRandomValue(0, 6);              // NPCRole 0..6
-        f.speed       = 42.0f + (float)GetRandomValue(0, 46);
-        f.wanderTimer = (float)GetRandomValue(0, 350) / 100.0f;
+        f.position = f.home; f.role = GetRandomValue(0, 6); f.speed = 40.0f + (float)GetRandomValue(0, 38);
+
+        int jr = GetRandomValue(0, 99);
+        if      (jr < 28) f.job = FolkJob::Guard;
+        else if (jr < 60) f.job = FolkJob::Worker;
+        else if (jr < 86) f.job = FolkJob::Chatter;
+        else              f.job = FolkJob::Vendor;
+
+        if (f.job == FolkJob::Guard) {                         // ronda entre 2 pontos
+            float ga = GetRandomValue(0, 359) * DEG2RAD, gd = 200.0f + GetRandomValue(0, 180);
+            f.anchor = { f.home.x + std::cos(ga) * gd, f.home.y + std::sin(ga) * gd };
+            f.target = f.anchor;
+        } else if (f.job == FolkJob::Worker) {                 // posto = perto de um prédio
+            if (!builds.empty()) {
+                Vector2 b = builds[GetRandomValue(0, (int)builds.size()-1)];
+                Vector2 dir = { f.home.x - b.x, f.home.y - b.y };
+                float l = std::sqrt(dir.x*dir.x + dir.y*dir.y); if (l < 1.0f) { dir = {1,0}; l = 1; }
+                f.anchor = { b.x + dir.x/l * 95.0f, b.y + dir.y/l * 95.0f };  // em FRENTE ao prédio
+            } else f.anchor = f.home;
+            f.target = f.anchor;
+        } else if (f.job == FolkJob::Chatter) {                // junta-se a uma roda
+            f.anchor = meet[GetRandomValue(0, 3)];
+            f.anchor.x += (float)GetRandomValue(-28, 28); f.anchor.y += (float)GetRandomValue(-28, 28);
+            f.target = f.anchor;
+        } else { f.anchor = f.home; f.target = f.home; }       // vendedor fica no posto
         cityFolk.push_back(f);
     }
 }
@@ -998,21 +1032,41 @@ void Game::spawnCityFolk() {
 void Game::updateCityFolk(float dt) {
     if (!openWorldMode) return;
     for (auto& f : cityFolk) {
-        if (f.pauseTimer > 0.0f) { f.pauseTimer -= dt; continue; }  // parado um tempo (conversando/olhando)
-        f.wanderTimer -= dt;
         Vector2 d = { f.target.x - f.position.x, f.target.y - f.position.y };
         float dist = std::sqrt(d.x*d.x + d.y*d.y);
-        if (dist < 14.0f || f.wanderTimer <= 0.0f) {
-            if (GetRandomValue(0, 100) < 35) f.pauseTimer = 1.0f + (float)GetRandomValue(0, 250) / 100.0f;
-            float a = GetRandomValue(0, 359) * DEG2RAD;
-            float r = (float)GetRandomValue(50, 300);
-            f.target = { f.home.x + std::cos(a) * r, f.home.y + std::sin(a) * r };
-            f.wanderTimer = 2.0f + (float)GetRandomValue(0, 400) / 100.0f;
-        } else {
-            Vector2 step = { d.x / dist * f.speed * dt, d.y / dist * f.speed * dt };
-            Vector2 np   = { f.position.x + step.x, f.position.y + step.y };
-            if (!isBlocked(np)) { f.position = np; f.facing = (step.x >= 0.0f) ? 1 : -1; }
-            else f.wanderTimer = 0.0f;   // bateu num prédio → escolhe outro destino
+
+        if (f.job == FolkJob::Guard) {                         // PATRULHA: vai-e-volta sem parar
+            if (dist < 20.0f) {
+                bool atB = Vector2Distance(f.target, f.anchor) < 5.0f;
+                f.target = atB ? f.home : f.anchor;            // troca a ponta da ronda
+            } else {
+                Vector2 s = { d.x/dist * f.speed * dt, d.y/dist * f.speed * dt };
+                Vector2 np = { f.position.x + s.x, f.position.y + s.y };
+                if (!isBlocked(np)) { f.position = np; f.facing = (s.x>=0)?1:-1; }
+                else { Vector2 tmp = f.target; f.target = f.home; f.home = tmp; }  // contorna: inverte rota
+            }
+            continue;
+        }
+
+        if (dist > 16.0f) {                                    // indo para o posto
+            Vector2 s = { d.x/dist * f.speed * dt, d.y/dist * f.speed * dt };
+            Vector2 np = { f.position.x + s.x, f.position.y + s.y };
+            if (!isBlocked(np)) { f.position = np; f.facing = (s.x>=0)?1:-1; f.atStation = false; }
+            else f.target = f.home;
+        } else {                                               // CHEGOU → executa a TAREFA
+            f.atStation = true; f.work += dt;
+            if (f.job == FolkJob::Worker) {                    // martela; de vez em quando muda de pé
+                f.timer -= dt;
+                if (f.timer <= 0.0f) {
+                    float a = GetRandomValue(0, 359) * DEG2RAD;
+                    f.target = { f.anchor.x + std::cos(a)*26.0f, f.anchor.y + std::sin(a)*26.0f };
+                    f.timer = 2.5f + (float)GetRandomValue(0, 300)/100.0f;
+                }
+            } else if (f.job == FolkJob::Chatter) {            // fica na roda; raramente troca de grupo
+                f.timer -= dt;
+                if (f.timer <= 0.0f) { f.timer = 5.0f + (float)GetRandomValue(0, 600)/100.0f; }
+            }
+            // Vendor: fica parado no posto.
         }
     }
 }
@@ -5560,11 +5614,20 @@ void Game::renderWorld3D() {
             drawVoxel(300 + (int)n.role, n.position, 0.0f);
         }
 
-        // Civis da cidade (vida ambiente) — com culling pra perto da câmera
+        // Civis da cidade (cada um na sua tarefa) — com culling pra perto da câmera
         for (auto& f : cityFolk) {
             if (std::fabs(f.position.x - camera.target.x) > 1200 ||
                 std::fabs(f.position.y - camera.target.y) > 800) continue;
             drawVoxel(300 + f.role, f.position, 0.0f);
+            // Trabalhador martelando: faísca pulsante (sinal de "fazendo algo")
+            if (f.job == FolkJob::Worker && f.atStation) {
+                float ph = std::sin(f.work * 9.0f);
+                if (ph > 0.2f) {
+                    Vector3 sp = { f.position.x + 10.0f * f.facing, 30.0f + ph * 4.0f, f.position.y };
+                    DrawSphereEx(sp, 2.2f, 5, 5, Color{255, 210, 90, 255});
+                    DrawSphereEx(sp, 3.6f, 5, 5, ColorAlpha(Color{255,160,40,255}, 0.4f));
+                }
+            }
         }
 
         // Companheiros — modelos 3D próprios do jogo
