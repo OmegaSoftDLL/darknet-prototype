@@ -883,7 +883,10 @@ void Game::buildOpenWorldScenery() {
                     for (float gy = b.y + 220.0f; gy < b.y + b.height - 220.0f; gy += gp) {
                         if (rnd() < skip) continue;                            // lote vazio = praça/rua larga
                         Vector2 bp = { gx + (rnd()-0.5f)*70.0f, gy + (rnd()-0.5f)*70.0f };
-                        put1(7, bp, 1.1f + rnd()*0.9f);   // put1 respeita a praça do hub + anti-overlap
+                        // VARIA o prédio (não 5 castelos iguais): casa/celeiro/prédio/silo
+                        float tr = rnd();
+                        int bt = (tr < 0.34f) ? 7 : (tr < 0.64f) ? 1 : (tr < 0.88f) ? 0 : 8;
+                        put1(bt, bp, 0.9f + rnd()*0.8f);   // put1 respeita a praça do hub + anti-overlap
                     }
                 place(b, 5, 20, 1.0f, 1.0f, 150);  // postes nas ruas
                 place(b, 6, 12, 1.0f, 1.0f, 150);  // carros abandonados
@@ -1076,7 +1079,9 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                         if (rnd() < 0.18f) continue;          // lote vazio (variedade)
                         Vector2 bp = { seed.x + (c - cols * 0.5f) * sp + (rnd() - 0.5f) * 26.0f,
                                        seed.y + (r - rows * 0.5f) * sp + (rnd() - 0.5f) * 26.0f };
-                        putB(7, bp, 1.2f + rnd() * 0.9f, bz);
+                        float tr = rnd();
+                        int bt = (tr < 0.34f) ? 7 : (tr < 0.64f) ? 1 : (tr < 0.88f) ? 0 : 8;
+                        putB(bt, bp, 0.9f + rnd() * 0.8f, bz);
                     }
                     for (int k = 0; k < 4; ++k)
                         put(5, { seed.x + (rnd() - 0.5f) * sp * cols, seed.y + (rnd() - 0.5f) * sp * rows }, 1.0f);
