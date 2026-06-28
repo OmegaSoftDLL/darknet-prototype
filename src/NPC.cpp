@@ -707,38 +707,33 @@ void NPC::showDialog(int line) const {
     int idx   = line % total;
     const std::string& text = dialogLines[idx];
 
-    int boxW = 440;
-    int pad  = 12;
-    // Quebra o texto em linhas que cabem na caixa
-    std::vector<std::string> wrapped = wrapText(text, boxW - pad*2, 15);
-    int lineH = 19;
-    int boxH  = 40 + (int)wrapped.size() * lineH + 12;
-    int boxX  = (int)position.x - boxW/2;
-    int boxY  = (int)position.y - 60 - boxH;
+    // Balão FIXO na tela (coords de render 1280x720) — sempre visível no 2D e no 3D.
+    // (Antes usava position.x/y do MUNDO como tela → no 3D caía fora da vista = invisível,
+    //  e o diálogo travava o input dando a sensação de "mouse travado".)
+    const int SW = 1280, SH = 720;
+    int boxW = 760, pad = 16;
+    std::vector<std::string> wrapped = wrapText(text, boxW - pad*2, 16);
+    int lineH = 22;
+    int boxH  = 56 + (int)wrapped.size() * lineH;
+    int boxX  = SW/2 - boxW/2;
+    int boxY  = SH - boxH - 96;   // logo acima da barra de habilidades
 
-    // Fundo + borda + "rabicho" do balao apontando para o NPC
-    DrawRectangleRounded({(float)boxX,(float)boxY,(float)boxW,(float)boxH}, 0.06f, 6,
-                         ColorAlpha(Color{6,10,20,255}, 0.92f));
-    DrawRectangleLinesEx({(float)boxX,(float)boxY,(float)boxW,(float)boxH}, 1.5f, color);
-    DrawTriangle({position.x - 10, (float)(boxY + boxH)},
-                 {position.x + 10, (float)(boxY + boxH)},
-                 {position.x, (float)(boxY + boxH + 16)},
-                 ColorAlpha(Color{6,10,20,255}, 0.92f));
+    DrawRectangleRounded({(float)boxX,(float)boxY,(float)boxW,(float)boxH}, 0.05f, 6,
+                         ColorAlpha(Color{6,10,20,255}, 0.95f));
+    DrawRectangleLinesEx({(float)boxX,(float)boxY,(float)boxW,(float)boxH}, 2.0f, color);
 
-    // Nome + contador de falas
-    DrawText(TextFormat("%s", name.c_str()), boxX+pad, boxY+8, 16, color);
+    DrawText(name.c_str(), boxX+pad, boxY+10, 18, color);
     DrawText(TextFormat("%d/%d", idx+1, total),
-             boxX+boxW-44, boxY+10, 12, ColorAlpha(WHITE, 0.5f));
-    DrawLine(boxX+pad, boxY+30, boxX+boxW-pad, boxY+30, ColorAlpha(color, 0.4f));
+             boxX+boxW-52, boxY+12, 13, ColorAlpha(WHITE, 0.5f));
+    DrawLine(boxX+pad, boxY+34, boxX+boxW-pad, boxY+34, ColorAlpha(color, 0.4f));
 
-    // Texto quebrado
     for (int i = 0; i < (int)wrapped.size(); ++i)
-        DrawText(wrapped[i].c_str(), boxX+pad, boxY+38 + i*lineH, 15,
+        DrawText(wrapped[i].c_str(), boxX+pad, boxY+42 + i*lineH, 16,
                  ColorAlpha(WHITE, 0.92f));
 
-    // Dica para continuar
-    const char* hint = (idx+1 < total) ? "[E] / clique continua" : "[E] recomecar";
-    DrawText(hint, boxX+pad, boxY+boxH-18, 12, ColorAlpha(Color{0,200,255,255}, 0.8f));
+    const char* hint = (idx+1 < total) ? "[E] / clique: continuar      [ESC]: fechar"
+                                       : "[E]: recomecar      [ESC]: fechar";
+    DrawText(hint, boxX+pad, boxY+boxH-24, 13, ColorAlpha(Color{0,200,255,255}, 0.85f));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

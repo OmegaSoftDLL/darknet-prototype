@@ -4083,7 +4083,9 @@ void Game::handleInput(float dt) {
     // NPC dialog / Shop
     // E = conversar com o NPC proximo (TODOS contam sua historia em baloes).
     // Vendedores tambem conversam; a loja deles abre com [TAB].
-    if (IsKeyPressed(KEY_E)) {
+    // [E] ou CLIQUE ESQUERDO (com diálogo aberto) avança a fala; ESC fecha.
+    bool advanceDialog = IsKeyPressed(KEY_E) || (dialogOpen && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !producedThisClick);
+    if (advanceDialog) {
         if (nearNpcIndex >= 0 && nearNpcIndex < (int)npcs.size()) {
             int nLines = (int)npcs[nearNpcIndex].dialogLines.size();
             if (nLines > 0) {
