@@ -465,6 +465,20 @@ ZoneID Tilemap::tileZone(int tx, int ty) const {
     return owLayout[row][col];
 }
 
+// Bioma na POSIÇÃO do mundo, repetindo o layout 3x3 ao infinito (módulo) — usa
+// EXATAMENTE a mesma fórmula do piso em render3D, então o cenário gerado por aqui
+// sempre combina com o chão embaixo dele.
+ZoneID Tilemap::biomeAtWorld(float wx, float wy) const {
+    if (!openWorld) return currentZone;
+    int x = (int)std::floor(wx / (float)tileSize);
+    int y = (int)std::floor(wy / (float)tileSize);
+    int cx = (int)std::floor((float)x / OW_ZONE_W);
+    int cy = (int)std::floor((float)y / OW_ZONE_H);
+    int col = ((cx % OW_COLS) + OW_COLS) % OW_COLS;
+    int row = ((cy % OW_ROWS) + OW_ROWS) % OW_ROWS;
+    return owLayout[row][col];
+}
+
 void Tilemap::generateOpenWorld() {
     openWorld = true;
 

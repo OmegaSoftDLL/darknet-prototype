@@ -991,29 +991,49 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                 owDecor.scenery.push_back(o);
             }
         };
-        // Bioma do chunk (mesmo layout 3x3 do render, por módulo).
-        int tcx = (int)floorf((ox + CH * 0.5f) / (float)Tilemap::tileSize);
-        int tcy = (int)floorf((oy + CH * 0.5f) / (float)Tilemap::tileSize);
-        int cgx = (int)floorf((float)tcx / Tilemap::OW_ZONE_W);
-        int cgy = (int)floorf((float)tcy / Tilemap::OW_ZONE_H);
-        int bcol = ((cgx % Tilemap::OW_COLS) + Tilemap::OW_COLS) % Tilemap::OW_COLS;
-        int brow = ((cgy % Tilemap::OW_ROWS) + Tilemap::OW_ROWS) % Tilemap::OW_ROWS;
-        ZoneID z = tilemap.owLayout[brow][bcol];
-
-        add(11, 80, 0.6f, 1.7f);   // grama base
-        switch (z) {
-            case ZoneID::DarkForest:     add(2, 42, 0.9f, 1.9f); add(12, 10, 0.6f, 1.1f); break;
-            case ZoneID::Cemetery:       add(3, 30, 0.7f, 1.2f); add(2, 8, 0.9f, 1.4f); add(10, 3, 1.0f, 1.4f); break;
-            case ZoneID::GhostCity:      add(7, 7, 1.0f, 2.1f); add(5, 9, 1.0f, 1.0f); add(6, 4, 1.0f, 1.0f); break;
-            case ZoneID::KronosForge:
-            case ZoneID::InfernoZone:    add(12, 26, 0.7f, 1.4f); add(8, 3, 1.0f, 1.6f); add(2, 4, 0.6f, 1.0f); break;
-            case ZoneID::CursedFarm:     add(0, 3, 1.0f, 1.6f); add(4, 18, 1.0f, 1.4f); add(2, 8, 0.8f, 1.3f); break;
-            case ZoneID::Bunker:         add(8, 5, 1.0f, 1.6f); add(7, 5, 0.8f, 1.4f); add(4, 10, 1.0f, 1.3f); break;
-            case ZoneID::AbandonedManor: add(10, 6, 1.0f, 1.5f); add(3, 10, 0.7f, 1.1f); add(2, 10, 0.9f, 1.5f); break;
-            case ZoneID::KronosNexus:    add(10, 8, 1.2f, 2.0f); add(7, 5, 1.0f, 1.8f); break;
-            default:                     add(2, 10, 0.8f, 1.7f); add(12, 14, 0.6f, 1.2f); add(5, 4, 1.0f, 1.0f);
-                                         if (rnd() > 0.6f) add(7, 1, 1.0f, 1.7f); break;
-        }
+        // Cada objeto escolhe o TIPO pela bioma DA SUA POSIÇÃO (não do centro do
+        // chunk) — assim casa/celeiro/castelo/silo só nascem em biomas que combinam
+        // com o CHÃO embaixo. Nunca um castelo no meio da floresta.
+        add(11, 70, 0.6f, 1.7f);   // grama base (universal, sem colisão)
+        auto addThematic = [&](int count) {
+            for (int i = 0; i < count; ++i) {
+                Vector2 p  = { ox + rnd() * CH, oy + rnd() * CH };
+                ZoneID  lz = tilemap.biomeAtWorld(p.x, p.y);
+                float   roll = rnd();
+                int     type = -1; float mn = 0.7f, mx = 1.5f;
+                switch (lz) {
+                    case ZoneID::DarkForest:                                   // floresta: SÓ árvores/pedras
+                        type = (roll < 0.82f) ? 2 : 12; mx = 1.9f; break;
+                    case ZoneID::Cemetery:                                     // cemitério: lápides/árvores/estátua
+                        type = (roll < 0.62f) ? 3 : (roll < 0.86f) ? 2 : 10; break;
+                    case ZoneID::GhostCity:                                    // cidade: prédios/postes/carros/detritos
+                        type = (roll < 0.22f) ? 7 : (roll < 0.60f) ? 5 : (roll < 0.80f) ? 6 : 12; mx = 2.1f; break;
+                    case ZoneID::KronosForge:
+                    case ZoneID::InfernoZone:                                  // forja/lava: pedras/silos/árvore queimada
+                        type = (roll < 0.58f) ? 12 : (roll < 0.76f) ? 8 : 2; break;
+                    case ZoneID::CursedFarm:                                   // fazenda: cercas/casa/celeiro/silo/árvore
+                        type = (roll < 0.42f) ? 4 : (roll < 0.52f) ? 0 : (roll < 0.60f) ? 1 : (roll < 0.70f) ? 8 : 2; break;
+                    case ZoneID::Bunker:                                       // bunker: cercas/silos/estrutura/poste
+                        type = (roll < 0.42f) ? 4 : (roll < 0.57f) ? 8 : (roll < 0.69f) ? 7 : 5; break;
+                    case ZoneID::AbandonedManor:                              // mansão: árvores/lápides/estátuas/casarão
+                        type = (roll < 0.42f) ? 2 : (roll < 0.66f) ? 3 : (roll < 0.84f) ? 10 : 0; mx = 1.8f; break;
+                    case ZoneID::KronosNexus:                                  // núcleo: estátuas/estrutura void
+                        type = (roll < 0.66f) ? 10 : 7; mx = 2.0f; break;
+                    case ZoneID::LARuins:                                      // ruínas: prédios/carros/postes/árvore
+                        type = (roll < 0.26f) ? 7 : (roll < 0.48f) ? 6 : (roll < 0.72f) ? 5 : 2; break;
+                    default:                                                  // desconhecido: SEM prédios
+                        type = (roll < 0.7f) ? 2 : 12; break;
+                }
+                if (type < 0) continue;
+                SceneryObject o;
+                o.type = type; o.position = p; o.rotation = rnd() * 3.14159f;
+                o.scale = mn + rnd() * (mx - mn);
+                o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
+                o.chunk = toGen;
+                owDecor.scenery.push_back(o);
+            }
+        };
+        addThematic(48);
     }
 
     // Reconstrói a colisão das estruturas de chunk (prédios/casas/silos) — círculos.
