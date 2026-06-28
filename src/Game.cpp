@@ -850,8 +850,19 @@ void Game::buildOpenWorldScenery() {
             owDecor.scenery.push_back(o);
         }
     };
-    // Coloca 1 objeto e checa limite da região (clusters não vazam pra fora).
-    auto put1  = [&](int type, Vector2 pos, float sc) {
+    // Zona livre do HUB (NPCs ficam no centro do mundo) — nenhuma estrutura nasce lá.
+    const float hubX = (float)(tilemap.width  * Tilemap::tileSize) / 2.0f;
+    const float hubY = (float)(tilemap.height * Tilemap::tileSize) / 2.0f;
+    std::vector<Vector2> placedB;   // estruturas já colocadas (anti-sobreposição)
+    auto isStruct = [](int t) { return t == 0 || t == 1 || t == 7 || t == 8 || t == 10; };
+    // Coloca 1 objeto. Estruturas grandes: longe do hub + sem encostar em outra.
+    auto put1 = [&](int type, Vector2 pos, float sc) {
+        if (isStruct(type)) {
+            float hdx = pos.x - hubX, hdy = pos.y - hubY;
+            if (hdx*hdx + hdy*hdy < 900.0f * 900.0f) return;                 // protege os NPCs do hub
+            for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < 300.0f*300.0f) return; }
+            placedB.push_back(pos);
+        }
         SceneryObject o; o.type = type; o.position = pos; o.rotation = rnd() * 3.14159f;
         o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
         owDecor.scenery.push_back(o);
@@ -866,9 +877,9 @@ void Game::buildOpenWorldScenery() {
         switch (r.zoneType) {
             case ZoneID::LARuins:    // Ruínas — quarteirões de prédios em ruína + carros
             case ZoneID::GhostCity: {// Cidade fantasma — MUITOS quarteirões
-                int blocks = (r.zoneType == ZoneID::GhostCity) ? 6 : 4;
+                int blocks = (r.zoneType == ZoneID::GhostCity) ? 3 : 2;
                 for (int bl = 0; bl < blocks; ++bl) {
-                    Vector2 seed = seedIn(); int cols = 2 + (int)(rnd()*2.0f), rows = 2 + (int)(rnd()*2.0f); float sp = 155.0f;
+                    Vector2 seed = seedIn(); int cols = 2 + (int)(rnd()*2.0f), rows = 2 + (int)(rnd()*2.0f); float sp = 340.0f;
                     for (int rr = 0; rr < rows; ++rr) for (int c = 0; c < cols; ++c) {
                         if (rnd() < 0.18f) continue;
                         Vector2 bp = { seed.x + (c-cols*0.5f)*sp + (rnd()-0.5f)*26.0f, seed.y + (rr-rows*0.5f)*sp + (rnd()-0.5f)*26.0f };
@@ -1016,10 +1027,18 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
             o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
             o.chunk = toGen; owDecor.scenery.push_back(o);
         };
-        // Estrutura só entra se a bioma DA POSIÇÃO bate com a do cluster (sem vazar
-        // pro bioma vizinho na borda do chunk).
+        // Estrutura só entra se: a bioma DA POSIÇÃO bate (sem vazar pro vizinho),
+        // está longe do hub (NPCs) e NÃO encosta em outra estrutura (anti-amontoado).
+        std::vector<Vector2> placedB;
+        const float hubX = (float)(tilemap.width  * Tilemap::tileSize) / 2.0f;
+        const float hubY = (float)(tilemap.height * Tilemap::tileSize) / 2.0f;
         auto putB = [&](int type, Vector2 pos, float sc, ZoneID want) {
-            if (tilemap.biomeAtWorld(pos.x, pos.y) == want) put(type, pos, sc);
+            if (tilemap.biomeAtWorld(pos.x, pos.y) != want) return;
+            float hdx = pos.x - hubX, hdy = pos.y - hubY;
+            if (hdx*hdx + hdy*hdy < 900.0f * 900.0f) return;
+            for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < 300.0f*300.0f) return; }
+            placedB.push_back(pos);
+            put(type, pos, sc);
         };
 
         add(11, 70, 0.6f, 1.7f);   // grama base (universal, sem colisão)
@@ -1053,7 +1072,7 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                 case ZoneID::GhostCity:
                 case ZoneID::LARuins: {                       // quarteirão: GRADE de prédios + postes nas ruas
                     int cols = 2 + (int)(rnd() * 2.0f), rows = 2 + (int)(rnd() * 2.0f);
-                    float sp = 155.0f;
+                    float sp = 340.0f;
                     for (int r = 0; r < rows; ++r) for (int c = 0; c < cols; ++c) {
                         if (rnd() < 0.18f) continue;          // lote vazio (variedade)
                         Vector2 bp = { seed.x + (c - cols * 0.5f) * sp + (rnd() - 0.5f) * 26.0f,
