@@ -5797,6 +5797,54 @@ void Game::renderWorld3D() {
         }
     }
 
+    // ── HOVER TOOLTIP universal: passe o mouse em cima e veja O QUE É ─────────
+    // (NPCs, armas/equipamentos no chão, itens/consumíveis e recursos ouro/prata/ferro).
+    if (!showInventory && !shopSystem.open && !craftingSystem.open && !dialogOpen
+        && !buildingSystem.buildModeActive) {
+        Vector2 vm = virtualizeMousePos(GetMousePosition());
+        float bestD = 1e9f; bool hov = false;
+        std::string hTitle, hDesc; Color hCol = {255,255,255,255};
+        auto consider = [&](Vector2 wp, float wh, float rad, std::string title, std::string desc, Color col) {
+            if (Vector2Distance(wp, camera.target) > 1500.0f) return;          // cull longe
+            Vector2 s = proj(wp, wh);
+            float d = Vector2Distance(s, vm);
+            if (d <= rad && d < bestD) { bestD = d; hTitle = std::move(title); hDesc = std::move(desc); hCol = col; hov = true; }
+        };
+        for (const auto& n : npcs)
+            consider(n.position, 30.0f, 44.0f, n.name,
+                     (n.title.empty() ? std::string("Personagem") : n.title) + "   [E] falar", n.color);
+        for (const auto& ge : groundEquips) {
+            if (ge.collected) continue;
+            consider(ge.position, 14.0f, 34.0f, ge.equip.name,
+                     ge.equip.description + "   Tier " + std::to_string(ge.equip.tier) + "   [E] equipar",
+                     ge.equip.color);
+        }
+        for (const auto& it : items) {
+            if (it.pickedUp) continue;
+            consider(it.position, 10.0f, 38.0f, it.name,
+                     std::string(Item::rarityToName(it.rarity)) + "   item", it.rarityColor);
+        }
+        for (const auto& nd : resourceNodes) {
+            if (nd.depleted) continue;
+            consider(nd.position, 12.0f, 34.0f, resourceName(nd.type),
+                     "Recurso   x" + std::to_string(nd.amount) + "   [H] coletar", resourceColor(nd.type));
+        }
+        if (hov) {
+            int padX = 10, padY = 8;
+            int tw = MeasureText(hTitle.c_str(), 16);
+            int dw = MeasureText(hDesc.c_str(), 12);
+            int boxW = (tw > dw ? tw : dw) + padX * 2;
+            int boxH = 46;
+            int bx = (int)vm.x + 18, by = (int)vm.y + 12;
+            if (bx + boxW > screenWidth)  bx = (int)vm.x - boxW - 12;   // não sai da tela
+            if (by + boxH > screenHeight) by = screenHeight - boxH - 4;
+            DrawRectangleRounded({(float)bx,(float)by,(float)boxW,(float)boxH}, 0.12f, 5, ColorAlpha(Color{8,12,22,255}, 0.95f));
+            DrawRectangleLinesEx({(float)bx,(float)by,(float)boxW,(float)boxH}, 1.5f, hCol);
+            DrawText(hTitle.c_str(), bx + padX, by + padY, 16, hCol);
+            DrawText(hDesc.c_str(),  bx + padX, by + padY + 21, 12, ColorAlpha(WHITE, 0.82f));
+        }
+    }
+
     // (máscara de luz + vignette já aplicadas logo após EndMode3D — overlays acima ficam legíveis)
 
     // ── 3. Interface e HUD Final ─────────────────────────────────────────────
