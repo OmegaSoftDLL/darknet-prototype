@@ -991,49 +991,102 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                 owDecor.scenery.push_back(o);
             }
         };
-        // Cada objeto escolhe o TIPO pela bioma DA SUA POSIÇÃO (não do centro do
-        // chunk) — assim casa/celeiro/castelo/silo só nascem em biomas que combinam
-        // com o CHÃO embaixo. Nunca um castelo no meio da floresta.
-        add(11, 70, 0.6f, 1.7f);   // grama base (universal, sem colisão)
-        auto addThematic = [&](int count) {
-            for (int i = 0; i < count; ++i) {
-                Vector2 p  = { ox + rnd() * CH, oy + rnd() * CH };
-                ZoneID  lz = tilemap.biomeAtWorld(p.x, p.y);
-                float   roll = rnd();
-                int     type = -1; float mn = 0.7f, mx = 1.5f;
-                switch (lz) {
-                    case ZoneID::DarkForest:                                   // floresta: SÓ árvores/pedras
-                        type = (roll < 0.82f) ? 2 : 12; mx = 1.9f; break;
-                    case ZoneID::Cemetery:                                     // cemitério: lápides/árvores/estátua
-                        type = (roll < 0.62f) ? 3 : (roll < 0.86f) ? 2 : 10; break;
-                    case ZoneID::GhostCity:                                    // cidade: prédios/postes/carros/detritos
-                        type = (roll < 0.22f) ? 7 : (roll < 0.60f) ? 5 : (roll < 0.80f) ? 6 : 12; mx = 2.1f; break;
-                    case ZoneID::KronosForge:
-                    case ZoneID::InfernoZone:                                  // forja/lava: pedras/silos/árvore queimada
-                        type = (roll < 0.58f) ? 12 : (roll < 0.76f) ? 8 : 2; break;
-                    case ZoneID::CursedFarm:                                   // fazenda: cercas/casa/celeiro/silo/árvore
-                        type = (roll < 0.42f) ? 4 : (roll < 0.52f) ? 0 : (roll < 0.60f) ? 1 : (roll < 0.70f) ? 8 : 2; break;
-                    case ZoneID::Bunker:                                       // bunker: cercas/silos/estrutura/poste
-                        type = (roll < 0.42f) ? 4 : (roll < 0.57f) ? 8 : (roll < 0.69f) ? 7 : 5; break;
-                    case ZoneID::AbandonedManor:                              // mansão: árvores/lápides/estátuas/casarão
-                        type = (roll < 0.42f) ? 2 : (roll < 0.66f) ? 3 : (roll < 0.84f) ? 10 : 0; mx = 1.8f; break;
-                    case ZoneID::KronosNexus:                                  // núcleo: estátuas/estrutura void
-                        type = (roll < 0.66f) ? 10 : 7; mx = 2.0f; break;
-                    case ZoneID::LARuins:                                      // ruínas: prédios/carros/postes/árvore
-                        type = (roll < 0.26f) ? 7 : (roll < 0.48f) ? 6 : (roll < 0.72f) ? 5 : 2; break;
-                    default:                                                  // desconhecido: SEM prédios
-                        type = (roll < 0.7f) ? 2 : 12; break;
-                }
-                if (type < 0) continue;
-                SceneryObject o;
-                o.type = type; o.position = p; o.rotation = rnd() * 3.14159f;
-                o.scale = mn + rnd() * (mx - mn);
-                o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
-                o.chunk = toGen;
-                owDecor.scenery.push_back(o);
-            }
+        // ── Cenário com AGRUPAMENTO coerente + contexto por bioma da POSIÇÃO ──
+        // Props pequenos espalhados; estruturas grandes em CLUSTERS (quarteirões,
+        // vilas, compostos) só na bioma certa. Castelo/casa nunca solto fora de tema.
+        auto put = [&](int type, Vector2 pos, float sc) {
+            SceneryObject o;
+            o.type = type; o.position = pos; o.rotation = rnd() * 3.14159f;
+            o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
+            o.chunk = toGen; owDecor.scenery.push_back(o);
         };
-        addThematic(48);
+        // Estrutura só entra se a bioma DA POSIÇÃO bate com a do cluster (sem vazar
+        // pro bioma vizinho na borda do chunk).
+        auto putB = [&](int type, Vector2 pos, float sc, ZoneID want) {
+            if (tilemap.biomeAtWorld(pos.x, pos.y) == want) put(type, pos, sc);
+        };
+
+        add(11, 70, 0.6f, 1.7f);   // grama base (universal, sem colisão)
+
+        // 1) Props pequenos espalhados pela bioma local (SEM prédios grandes aqui).
+        for (int i = 0; i < 38; ++i) {
+            Vector2 p  = { ox + rnd() * CH, oy + rnd() * CH };
+            ZoneID  lz = tilemap.biomeAtWorld(p.x, p.y);
+            float   roll = rnd(); int t = -1; float mn = 0.7f, mx = 1.6f;
+            switch (lz) {
+                case ZoneID::DarkForest:     t = (roll < 0.84f) ? 2 : 12; mx = 1.9f; break;  // árvores/pedras
+                case ZoneID::Cemetery:       t = (roll < 0.70f) ? 2 : 12; break;             // árvores/pedras (lápides no cluster)
+                case ZoneID::GhostCity:      t = (roll < 0.5f) ? 5 : (roll < 0.8f) ? 6 : 12; break; // postes/carros/detritos
+                case ZoneID::KronosForge:
+                case ZoneID::InfernoZone:    t = (roll < 0.72f) ? 12 : 2; break;             // pedras/árvore queimada
+                case ZoneID::CursedFarm:     t = (roll < 0.55f) ? 4 : 2; break;              // cercas/árvores
+                case ZoneID::Bunker:         t = (roll < 0.6f) ? 4 : 5; break;               // cercas/postes
+                case ZoneID::AbandonedManor: t = (roll < 0.6f) ? 2 : 3; break;               // árvores/lápides
+                case ZoneID::KronosNexus:    t = 12; break;                                  // detritos
+                case ZoneID::LARuins:        t = (roll < 0.5f) ? 5 : (roll < 0.8f) ? 6 : 2; break; // postes/carros/árvore
+                default:                     t = (roll < 0.7f) ? 2 : 12; break;
+            }
+            if (t >= 0) put(t, p, mn + rnd() * (mx - mn));
+        }
+
+        // 2) CLUSTERS estruturais (2 sementes por chunk) — só na bioma do seed.
+        for (int s = 0; s < 2; ++s) {
+            Vector2 seed = { ox + (0.22f + rnd() * 0.56f) * CH, oy + (0.22f + rnd() * 0.56f) * CH };
+            ZoneID  bz   = tilemap.biomeAtWorld(seed.x, seed.y);
+            switch (bz) {
+                case ZoneID::GhostCity:
+                case ZoneID::LARuins: {                       // quarteirão: GRADE de prédios + postes nas ruas
+                    int cols = 2 + (int)(rnd() * 2.0f), rows = 2 + (int)(rnd() * 2.0f);
+                    float sp = 155.0f;
+                    for (int r = 0; r < rows; ++r) for (int c = 0; c < cols; ++c) {
+                        if (rnd() < 0.18f) continue;          // lote vazio (variedade)
+                        Vector2 bp = { seed.x + (c - cols * 0.5f) * sp + (rnd() - 0.5f) * 26.0f,
+                                       seed.y + (r - rows * 0.5f) * sp + (rnd() - 0.5f) * 26.0f };
+                        putB(7, bp, 1.2f + rnd() * 0.9f, bz);
+                    }
+                    for (int k = 0; k < 4; ++k)
+                        put(5, { seed.x + (rnd() - 0.5f) * sp * cols, seed.y + (rnd() - 0.5f) * sp * rows }, 1.0f);
+                } break;
+                case ZoneID::CursedFarm: {                    // vila: casas + celeiro + silo + cerca em anel
+                    putB(0, seed, 1.2f + rnd() * 0.4f, bz);
+                    int houses = 1 + (int)(rnd() * 3.0f);
+                    for (int k = 0; k < houses; ++k) {
+                        float a = rnd() * 6.2832f, d = 110.0f + rnd() * 90.0f;
+                        putB(0, { seed.x + cosf(a) * d, seed.y + sinf(a) * d }, 1.0f + rnd() * 0.5f, bz);
+                    }
+                    putB(1, { seed.x + (rnd() - 0.5f) * 170.0f, seed.y + (rnd() - 0.5f) * 170.0f }, 1.1f + rnd() * 0.4f, bz);
+                    putB(8, { seed.x + (rnd() - 0.5f) * 210.0f, seed.y + (rnd() - 0.5f) * 210.0f }, 1.0f + rnd() * 0.4f, bz);
+                    for (int k = 0; k < 12; ++k) { float a = k / 12.0f * 6.2832f; put(4, { seed.x + cosf(a) * 245.0f, seed.y + sinf(a) * 245.0f }, 1.0f + rnd() * 0.3f); }
+                } break;
+                case ZoneID::Bunker: {                        // composto militar: estruturas+silos em linha + cercas
+                    float ax = (rnd() < 0.5f) ? 1.0f : 0.0f, ay = 1.0f - ax;
+                    int n = 3 + (int)(rnd() * 2.0f);
+                    for (int k = 0; k < n; ++k) {
+                        Vector2 bp = { seed.x + ax * (k - n * 0.5f) * 135.0f, seed.y + ay * (k - n * 0.5f) * 135.0f };
+                        putB((rnd() < 0.5f) ? 7 : 8, bp, 1.0f + rnd() * 0.6f, bz);
+                    }
+                    for (int k = 0; k < 10; ++k) put(4, { seed.x + (rnd() - 0.5f) * 360.0f, seed.y + (rnd() - 0.5f) * 360.0f }, 1.0f);
+                } break;
+                case ZoneID::AbandonedManor: {                // mansão: casarão central + estátuas nos cantos
+                    putB(0, seed, 1.8f + rnd() * 0.6f, bz);
+                    for (int k = 0; k < 4; ++k) { float a = k / 4.0f * 6.2832f + 0.7f; putB(10, { seed.x + cosf(a) * 175.0f, seed.y + sinf(a) * 175.0f }, 1.1f + rnd() * 0.5f, bz); }
+                } break;
+                case ZoneID::KronosNexus: {                   // núcleo: estrutura central + anel de estátuas
+                    putB(7, seed, 1.4f + rnd() * 0.6f, bz);
+                    for (int k = 0; k < 6; ++k) { float a = k / 6.0f * 6.2832f; putB(10, { seed.x + cosf(a) * 165.0f, seed.y + sinf(a) * 165.0f }, 1.2f + rnd() * 0.5f, bz); }
+                } break;
+                case ZoneID::Cemetery: {                      // cemitério: lápides em FILEIRAS regulares
+                    int rows = 3 + (int)(rnd() * 3.0f), cols = 4 + (int)(rnd() * 3.0f);
+                    float sx = 48.0f, sy = 66.0f;
+                    for (int r = 0; r < rows; ++r) for (int c = 0; c < cols; ++c) {
+                        Vector2 gp = { seed.x + (c - cols * 0.5f) * sx, seed.y + (r - rows * 0.5f) * sy };
+                        if (tilemap.biomeAtWorld(gp.x, gp.y) == bz) put(3, gp, 0.8f + rnd() * 0.4f);
+                    }
+                    putB(9, { seed.x, seed.y - rows * 0.5f * sy - 40.0f }, 1.0f, bz);  // arco/portão na entrada
+                } break;
+                default: break;   // floresta/forja: sem cluster estrutural (só props espalhados)
+            }
+        }
     }
 
     // Reconstrói a colisão das estruturas de chunk (prédios/casas/silos) — círculos.
