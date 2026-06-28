@@ -850,63 +850,79 @@ void Game::buildOpenWorldScenery() {
             owDecor.scenery.push_back(o);
         }
     };
+    // Coloca 1 objeto e checa limite da região (clusters não vazam pra fora).
+    auto put1  = [&](int type, Vector2 pos, float sc) {
+        SceneryObject o; o.type = type; o.position = pos; o.rotation = rnd() * 3.14159f;
+        o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
+        owDecor.scenery.push_back(o);
+    };
+    auto inBnd = [&](Rectangle b, Vector2 p, float m) {
+        return p.x >= b.x + m && p.x <= b.x + b.width - m && p.y >= b.y + m && p.y <= b.y + b.height - m;
+    };
 
     for (const auto& r : worldRegions) {
         Rectangle b = r.bounds;
+        auto seedIn = [&]() { return Vector2{ b.x + 90 + rnd() * (b.width - 180), b.y + 90 + rnd() * (b.height - 180) }; };
         switch (r.zoneType) {
-            case ZoneID::LARuins: // Ruinas tecnologicas
-                place(b, 7, 14, 0.8f, 1.6f, 200);  // predios em ruina
-                place(b, 6, 10, 1.0f, 1.0f, 150);  // carros abandonados
-                place(b, 5, 12, 1.0f, 1.0f, 150);  // postes
-                place(b, 2,  6, 0.8f, 1.2f, 150);  // arvores mortas
+            case ZoneID::LARuins:    // Ruínas — quarteirões de prédios em ruína + carros
+            case ZoneID::GhostCity: {// Cidade fantasma — MUITOS quarteirões
+                int blocks = (r.zoneType == ZoneID::GhostCity) ? 6 : 4;
+                for (int bl = 0; bl < blocks; ++bl) {
+                    Vector2 seed = seedIn(); int cols = 2 + (int)(rnd()*2.0f), rows = 2 + (int)(rnd()*2.0f); float sp = 155.0f;
+                    for (int rr = 0; rr < rows; ++rr) for (int c = 0; c < cols; ++c) {
+                        if (rnd() < 0.18f) continue;
+                        Vector2 bp = { seed.x + (c-cols*0.5f)*sp + (rnd()-0.5f)*26.0f, seed.y + (rr-rows*0.5f)*sp + (rnd()-0.5f)*26.0f };
+                        if (inBnd(b, bp, 30.0f)) put1(7, bp, 1.1f + rnd()*1.0f);
+                    }
+                    for (int k = 0; k < 4; ++k) put1(5, { seed.x+(rnd()-0.5f)*sp*cols, seed.y+(rnd()-0.5f)*sp*rows }, 1.0f);
+                }
+                place(b, 6, 10, 1.0f, 1.0f, 150);  // carros esparsos
+                place(b, 2,  6, 0.8f, 1.2f, 150);  // árvores
+            } break;
+            case ZoneID::Bunker: {   // Bunker — compostos militares (estruturas+silos em linha)
+                for (int bl = 0; bl < 3; ++bl) {
+                    Vector2 seed = seedIn(); float ax = (rnd()<0.5f)?1.0f:0.0f, ay = 1.0f-ax; int n = 3 + (int)(rnd()*2.0f);
+                    for (int k = 0; k < n; ++k) { Vector2 bp = { seed.x+ax*(k-n*0.5f)*135.0f, seed.y+ay*(k-n*0.5f)*135.0f }; if (inBnd(b,bp,30.0f)) put1((rnd()<0.5f)?7:8, bp, 1.0f+rnd()*0.6f); }
+                    for (int k = 0; k < 8; ++k) put1(4, { seed.x+(rnd()-0.5f)*340.0f, seed.y+(rnd()-0.5f)*340.0f }, 1.0f);
+                }
+                place(b, 5, 8, 1.0f, 1.0f, 150);   // postes
+            } break;
+            case ZoneID::DarkForest: // Floresta densa — só árvores/cercas/lápides perdidas
+                place(b, 2, 60, 0.9f, 1.8f, 80); place(b, 4, 10, 1.0f, 1.3f, 120); place(b, 3, 8, 0.7f, 1.0f, 120);
                 break;
-            case ZoneID::Bunker: // Bunker militar
-                place(b, 7, 10, 0.7f, 1.3f, 200);  // estruturas
-                place(b, 8,  6, 1.0f, 1.6f, 200);  // silos/tanques
-                place(b, 5,  8, 1.0f, 1.0f, 150);  // postes
-                place(b, 4, 14, 1.0f, 1.4f, 120);  // cercas
+            case ZoneID::CursedFarm: {// Fazenda — VILAS (casas+celeiro+silo+cerca em anel)
+                for (int v = 0; v < 3; ++v) {
+                    Vector2 seed = seedIn(); put1(0, seed, 1.2f + rnd()*0.4f);
+                    int houses = 1 + (int)(rnd()*3.0f);
+                    for (int k = 0; k < houses; ++k) { float a = rnd()*6.2832f, d = 110.0f+rnd()*90.0f; Vector2 bp = { seed.x+cosf(a)*d, seed.y+sinf(a)*d }; if (inBnd(b,bp,30.0f)) put1(0, bp, 1.0f+rnd()*0.5f); }
+                    Vector2 barn = { seed.x+(rnd()-0.5f)*170.0f, seed.y+(rnd()-0.5f)*170.0f }; if (inBnd(b,barn,30.0f)) put1(1, barn, 1.1f+rnd()*0.4f);
+                    Vector2 silo = { seed.x+(rnd()-0.5f)*210.0f, seed.y+(rnd()-0.5f)*210.0f }; if (inBnd(b,silo,30.0f)) put1(8, silo, 1.0f+rnd()*0.4f);
+                    for (int k = 0; k < 12; ++k) { float a = k/12.0f*6.2832f; put1(4, { seed.x+cosf(a)*245.0f, seed.y+sinf(a)*245.0f }, 1.0f+rnd()*0.3f); }
+                }
+                place(b, 2, 10, 0.8f, 1.3f, 120);  // árvores
+            } break;
+            case ZoneID::Cemetery: { // Cemitério — lápides em FILEIRAS + portão
+                for (int g = 0; g < 4; ++g) {
+                    Vector2 seed = seedIn(); int rows = 3 + (int)(rnd()*3.0f), cols = 4 + (int)(rnd()*3.0f); float sx = 48.0f, sy = 66.0f;
+                    for (int rr = 0; rr < rows; ++rr) for (int c = 0; c < cols; ++c) { Vector2 gp = { seed.x+(c-cols*0.5f)*sx, seed.y+(rr-rows*0.5f)*sy }; if (inBnd(b,gp,30.0f)) put1(3, gp, 0.8f+rnd()*0.4f); }
+                    Vector2 gate = { seed.x, seed.y - rows*0.5f*sy - 40.0f }; if (inBnd(b,gate,30.0f)) put1(9, gate, 1.0f);
+                }
+                place(b, 2, 14, 0.9f, 1.5f, 120); place(b, 10, 4, 1.0f, 1.4f, 250);  // árvores/estátuas
+            } break;
+            case ZoneID::KronosForge: // Forja de lava — silos/estátuas/pedras (sem casas)
+                place(b, 8, 8, 1.0f, 1.8f, 220); place(b, 10, 5, 1.0f, 1.5f, 250); place(b, 12, 30, 0.7f, 1.3f, 60); place(b, 2, 6, 0.7f, 1.0f, 150);
                 break;
-            case ZoneID::DarkForest: // Floresta densa
-                place(b, 2, 60, 0.9f, 1.8f, 80);   // MUITAS arvores mortas
-                place(b, 4, 10, 1.0f, 1.3f, 120);  // cercas
-                place(b, 3,  8, 0.7f, 1.0f, 120);  // lapides perdidas
-                break;
-            case ZoneID::CursedFarm: // Fazenda
-                place(b, 0,  6, 1.0f, 1.6f, 250);  // casas
-                place(b, 1,  4, 1.0f, 1.5f, 300);  // celeiros
-                place(b, 8,  5, 1.0f, 1.4f, 250);  // silos
-                place(b, 4, 26, 1.0f, 1.4f, 100);  // muitas cercas
-                place(b, 2, 10, 0.8f, 1.3f, 120);  // arvores
-                break;
-            case ZoneID::Cemetery: // Cemiterio
-                place(b, 3, 55, 0.7f, 1.2f, 80);   // MUITAS lapides
-                place(b, 2, 14, 0.9f, 1.5f, 120);  // arvores mortas
-                place(b, 4, 16, 1.0f, 1.3f, 100);  // cercas
-                place(b, 9,  6, 1.0f, 1.0f, 200);  // arcos de catacumba
-                place(b,10,  4, 1.0f, 1.4f, 250);  // estatuas
-                break;
-            case ZoneID::GhostCity: // Cidade fantasma
-                place(b, 7, 22, 1.0f, 2.2f, 180);  // MUITOS predios
-                place(b, 5, 16, 1.0f, 1.0f, 120);  // postes
-                place(b, 6, 10, 1.0f, 1.0f, 150);  // carros
-                break;
-            case ZoneID::KronosForge: // Forja de lava industrial
-                place(b, 8,  8, 1.0f, 1.8f, 220);  // silos/tanques
-                place(b, 7, 10, 0.8f, 1.5f, 220);  // estruturas
-                place(b,10,  5, 1.0f, 1.5f, 250);  // estatuas
-                place(b, 2,  6, 0.7f, 1.0f, 150);  // arvores carbonizadas
-                break;
-            case ZoneID::AbandonedManor: // Mansao
-                place(b, 0,  3, 1.6f, 2.4f, 350);  // casarões grandes
-                place(b, 2, 16, 0.9f, 1.6f, 120);  // arvores
-                place(b, 3, 12, 0.7f, 1.1f, 120);  // lapides
-                place(b,10,  8, 1.0f, 1.5f, 200);  // estatuas
-                place(b, 4, 20, 1.0f, 1.3f, 100);  // cercas
-                break;
-            case ZoneID::KronosNexus: // Nucleo final
-                place(b,10, 10, 1.2f, 2.0f, 200);  // estatuas imponentes
-                place(b, 7,  8, 1.0f, 1.8f, 220);  // estruturas void
-                break;
+            case ZoneID::AbandonedManor: {// Mansão — casarão central + estátuas nos cantos
+                for (int m = 0; m < 2; ++m) {
+                    Vector2 seed = seedIn(); put1(0, seed, 1.8f + rnd()*0.6f);
+                    for (int k = 0; k < 4; ++k) { float a = k/4.0f*6.2832f + 0.7f; Vector2 bp = { seed.x+cosf(a)*175.0f, seed.y+sinf(a)*175.0f }; if (inBnd(b,bp,30.0f)) put1(10, bp, 1.1f+rnd()*0.5f); }
+                }
+                place(b, 2, 16, 0.9f, 1.6f, 120); place(b, 3, 12, 0.7f, 1.1f, 120); place(b, 4, 20, 1.0f, 1.3f, 100);
+            } break;
+            case ZoneID::KronosNexus: {// Núcleo — estrutura central + anel de estátuas
+                for (int c2 = 0; c2 < 2; ++c2) { Vector2 seed = seedIn(); put1(7, seed, 1.4f+rnd()*0.6f); for (int k = 0; k < 6; ++k) { float a = k/6.0f*6.2832f; Vector2 bp = { seed.x+cosf(a)*165.0f, seed.y+sinf(a)*165.0f }; if (inBnd(b,bp,30.0f)) put1(10, bp, 1.2f+rnd()*0.5f); } }
+                place(b, 10, 6, 1.2f, 2.0f, 200);  // estátuas imponentes
+            } break;
             default:
                 place(b, 2, 10, 0.8f, 1.4f, 150);
                 break;
