@@ -1339,29 +1339,38 @@ void Game::updateResourceGathering(float dt) {
         if (d < bestDist) { bestDist = d; nearResourceIdx = i; }
     }
 
-    // Coletar segurando H no nó mais próximo
-    if (nearResourceIdx >= 0 && IsKeyDown(KEY_H)) {
+    // ── MINERAÇÃO COM PICARETA: segura H perto do nó → bate em GOLPES (cadência) ──
+    if (mineSwingCD   > 0.0f) mineSwingCD   -= dt;
+    if (mineSwingAnim > 0.0f) mineSwingAnim -= dt * 4.5f;   // anim do golpe decai
+    if (nearResourceIdx >= 0 && (IsKeyDown(KEY_H) || (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && nearResourceIdx == mineFxIdx))) {
+        mineFxIdx = nearResourceIdx;
         auto& n = resourceNodes[nearResourceIdx];
-        // ferramentas: metais demoram mais que madeira
-        float speed = (n.type == ResourceType::Wood)  ? 1.4f :
-                      (n.type == ResourceType::Stone) ? 1.0f : 0.7f;
-        n.harvestProg += dt * speed;
-        n.shake = 1.0f;
-        if (n.harvestProg >= 1.0f) {
-            n.harvestProg = 0.0f;
-            int got = 1;
+        // cadência da picareta: madeira rápida, metais lentos (picareta "pesa" mais)
+        float swingTime = (n.type == ResourceType::Wood) ? 0.34f :
+                          (n.type == ResourceType::Stone) ? 0.42f : 0.52f;
+        if (mineSwingCD <= 0.0f) {                          // ★ um GOLPE
+            mineSwingCD   = swingTime;
+            mineSwingAnim = 1.0f;
+            n.shake = 1.3f;                                  // o nó leva o impacto
+            Color oc = resourceColor(n.type);
+            particles.spawnHit(n.position, oc, 14);          // estilhaços/faíscas
+            particles.spawnHit({n.position.x, n.position.y - 6.0f}, Color{230,230,230,255}, 6);
+            audio.playPickup();
+            triggerShake(2.0f, 0.10f);                       // tranco da picareta
+            int got = (n.type == ResourceType::Wood) ? 2 : 1;  // cada golpe extrai
+            if (got > n.amount) got = n.amount;
             playerResources[(int)n.type] += got;
             n.amount -= got;
-            damageNumbers.push_back({n.position, (float)got, resourceColor(n.type), 1.0f,
-                                     TextFormat("%s+", resourceName(n.type))});
-            particles.spawnHit(n.position, resourceColor(n.type), 8);
-            audio.playPickup();
-            if (n.amount <= 0) {                // esgotou — ressurge depois
-                n.depleted = true;
-                n.respawnTimer = 35.0f;
-                n.harvestProg = 0.0f;
+            damageNumbers.push_back({{n.position.x, n.position.y - 10.0f}, (float)got, oc, 1.0f,
+                                     TextFormat("%s +%d", resourceName(n.type), got)});
+            n.harvestProg = (n.maxAmount > 0) ? 1.0f - (float)n.amount / (float)n.maxAmount : 0.0f;
+            if (n.amount <= 0) {                             // esgotou — ressurge depois
+                n.depleted = true; n.respawnTimer = 35.0f; n.harvestProg = 0.0f;
+                particles.spawnHit(n.position, oc, 26);      // estoura ao quebrar
             }
         }
+    } else if (!IsKeyDown(KEY_H) && !IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        mineFxIdx = -1;
     }
 }
 
@@ -1404,7 +1413,7 @@ void Game::renderResourceNodes() const {
         // Indicador quando é o nó coletável mais próximo
         if (i == nearResourceIdx) {
             DrawCircleLines((int)x, (int)y, 22.0f, ColorAlpha(c, 0.8f));
-            const char* lbl = TextFormat("[H] Coletar %s (%d)", resourceName(n.type), n.amount);
+            const char* lbl = TextFormat("[H] Minerar %s (%d)", resourceName(n.type), n.amount);
             int w = MeasureText(lbl, 11);
             DrawRectangle((int)x - w/2 - 4, (int)y - 46, w + 8, 16, ColorAlpha(BLACK, 0.7f));
             DrawText(lbl, (int)x - w/2, (int)y - 44, 11, c);
@@ -5609,6 +5618,26 @@ void Game::renderWorld3D() {
         // Player — modelo 3D do PRÓPRIO personagem do jogo (render3D, não genérico)
         drawVoxel((int)player.charClass, player.position, 0.0f);
 
+        // ── PICARETA: golpe animado quando minerando um nó perto ──
+        if (mineFxIdx >= 0 && mineFxIdx < (int)resourceNodes.size() && !resourceNodes[mineFxIdx].depleted) {
+            const auto& mn = resourceNodes[mineFxIdx];
+            Vector2 dir = { mn.position.x - player.position.x, mn.position.y - player.position.y };
+            float dl = std::sqrt(dir.x*dir.x + dir.y*dir.y); if (dl < 1.0f) { dir = {1,0}; dl = 1; }
+            dir.x /= dl; dir.y /= dl;
+            float sw  = 1.0f - mineSwingAnim;                 // 0=erguida, 1=batendo
+            float ang = 1.15f - sw * 1.65f;                   // arco: ergue (+) → desce (-)
+            float L = 28.0f;
+            Vector3 piv = { player.position.x + dir.x*10.0f, 22.0f, player.position.y + dir.y*10.0f };
+            Vector3 tip = { piv.x + dir.x * L * cosf(ang), piv.y + L * sinf(ang), piv.z + dir.y * L * cosf(ang) };
+            DrawCylinderEx(piv, tip, 1.7f, 1.4f, 6, Color{120, 78, 40, 255});           // cabo
+            DrawCubeV(tip, {9.0f, 4.0f, 4.0f}, Color{180, 185, 195, 255});               // cabeça (metal)
+            // Impacto no nó no momento do golpe
+            if (sw > 0.7f) {
+                Vector3 ip = { mn.position.x, 12.0f, mn.position.y };
+                DrawSphereEx(ip, 4.0f + (sw-0.7f)*14.0f, 6, 6, ColorAlpha(Color{255,245,200,255}, 0.6f));
+            }
+        }
+
         // NPCs — modelos 3D próprios do jogo
         for (auto& n : npcs) {
             drawVoxel(300 + (int)n.role, n.position, 0.0f);
@@ -5949,7 +5978,7 @@ void Game::renderWorld3D() {
             Vector2 s = proj(n.position, 0.0f);
             Color c = resourceColor(n.type);
             DrawCircleLines((int)s.x, (int)s.y, 22.0f, ColorAlpha(c, 0.8f));
-            const char* lbl = TextFormat("[H] Coletar %s (%d)", resourceName(n.type), n.amount);
+            const char* lbl = TextFormat("[H] Minerar %s (%d)", resourceName(n.type), n.amount);
             int w = MeasureText(lbl, 11);
             DrawRectangle((int)s.x - w/2 - 4, (int)s.y - 46, w + 8, 16, ColorAlpha(BLACK, 0.7f));
             DrawText(lbl, (int)s.x - w/2, (int)s.y - 44, 11, c);
@@ -6080,7 +6109,7 @@ void Game::renderWorld3D() {
         for (const auto& nd : resourceNodes) {
             if (nd.depleted) continue;
             consider(nd.position, 12.0f, 34.0f, resourceName(nd.type),
-                     "Recurso   x" + std::to_string(nd.amount) + "   [H] coletar", resourceColor(nd.type));
+                     "Recurso   x" + std::to_string(nd.amount) + "   [H] minerar (picareta)", resourceColor(nd.type));
         }
         if (hov) {
             int padX = 10, padY = 8;
