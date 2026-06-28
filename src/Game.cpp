@@ -859,7 +859,7 @@ void Game::buildOpenWorldScenery() {
     auto put1 = [&](int type, Vector2 pos, float sc) {
         if (isStruct(type)) {
             float hdx = pos.x - hubX, hdy = pos.y - hubY;
-            if (hdx*hdx + hdy*hdy < 900.0f * 900.0f) return;                 // protege os NPCs do hub
+            if (hdx*hdx + hdy*hdy < 360.0f * 360.0f) return;   // praça central (NPCs) livre                 // protege os NPCs do hub
             for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < 300.0f*300.0f) return; }
             placedB.push_back(pos);
         }
@@ -875,19 +875,18 @@ void Game::buildOpenWorldScenery() {
         Rectangle b = r.bounds;
         auto seedIn = [&]() { return Vector2{ b.x + 90 + rnd() * (b.width - 180), b.y + 90 + rnd() * (b.height - 180) }; };
         switch (r.zoneType) {
-            case ZoneID::LARuins:    // Ruínas — quarteirões de prédios em ruína + carros
-            case ZoneID::GhostCity: {// Cidade fantasma — MUITOS quarteirões
-                int blocks = (r.zoneType == ZoneID::GhostCity) ? 3 : 2;
-                for (int bl = 0; bl < blocks; ++bl) {
-                    Vector2 seed = seedIn(); int cols = 2 + (int)(rnd()*2.0f), rows = 2 + (int)(rnd()*2.0f); float sp = 340.0f;
-                    for (int rr = 0; rr < rows; ++rr) for (int c = 0; c < cols; ++c) {
-                        if (rnd() < 0.18f) continue;
-                        Vector2 bp = { seed.x + (c-cols*0.5f)*sp + (rnd()-0.5f)*26.0f, seed.y + (rr-rows*0.5f)*sp + (rnd()-0.5f)*26.0f };
-                        if (inBnd(b, bp, 30.0f)) put1(7, bp, 1.1f + rnd()*1.0f);
+            case ZoneID::LARuins:    // Ruínas de LA — CIDADE: grade de prédios com praça central
+            case ZoneID::GhostCity: {// Cidade fantasma
+                float gp   = 360.0f;                                            // espaçamento da grade (ruas)
+                float skip = (r.zoneType == ZoneID::GhostCity) ? 0.18f : 0.32f; // ruínas têm mais buracos
+                for (float gx = b.x + 220.0f; gx < b.x + b.width - 220.0f; gx += gp)
+                    for (float gy = b.y + 220.0f; gy < b.y + b.height - 220.0f; gy += gp) {
+                        if (rnd() < skip) continue;                            // lote vazio = praça/rua larga
+                        Vector2 bp = { gx + (rnd()-0.5f)*70.0f, gy + (rnd()-0.5f)*70.0f };
+                        put1(7, bp, 1.1f + rnd()*0.9f);   // put1 respeita a praça do hub + anti-overlap
                     }
-                    for (int k = 0; k < 4; ++k) put1(5, { seed.x+(rnd()-0.5f)*sp*cols, seed.y+(rnd()-0.5f)*sp*rows }, 1.0f);
-                }
-                place(b, 6, 10, 1.0f, 1.0f, 150);  // carros esparsos
+                place(b, 5, 20, 1.0f, 1.0f, 150);  // postes nas ruas
+                place(b, 6, 12, 1.0f, 1.0f, 150);  // carros abandonados
                 place(b, 2,  6, 0.8f, 1.2f, 150);  // árvores
             } break;
             case ZoneID::Bunker: {   // Bunker — compostos militares (estruturas+silos em linha)
@@ -1035,7 +1034,7 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
         auto putB = [&](int type, Vector2 pos, float sc, ZoneID want) {
             if (tilemap.biomeAtWorld(pos.x, pos.y) != want) return;
             float hdx = pos.x - hubX, hdy = pos.y - hubY;
-            if (hdx*hdx + hdy*hdy < 900.0f * 900.0f) return;
+            if (hdx*hdx + hdy*hdy < 360.0f * 360.0f) return;   // praça central (NPCs) livre
             for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < 300.0f*300.0f) return; }
             placedB.push_back(pos);
             put(type, pos, sc);
