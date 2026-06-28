@@ -1351,7 +1351,6 @@ void Tilemap::render3D(Vector2 camTarget) const {
                 rlTexCoord2f(u1, v1); rlVertex3f(rx + TS, 0.02f, ry + TS);
                 rlTexCoord2f(u1, v0); rlVertex3f(rx + TS, 0.02f, ry);
                 rlEnd();
-                rlSetTexture(0);
             } else {
                 // Fallback para piso sólido
                 DrawPlane(floorCtr, { TS, TS }, shade(base, 0.45f));
@@ -1373,6 +1372,9 @@ void Tilemap::render3D(Vector2 camTarget) const {
             }
         }
     }
+    // P0 fix: religa a textura BRANCA padrão uma vez (rlSetTexture(0) não faz isso)
+    // — senão a textura do piso/parede vaza e TINGE todas as primitivas 3D seguintes.
+    rlSetTexture(rlGetTextureIdDefault());
 }
 
 bool Tilemap::isWallAtPosition(Vector2 pos) const {
