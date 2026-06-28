@@ -402,14 +402,18 @@ private:
     void  updateAnimals(float dt);
     void  renderAnimals() const;
 
-    // ── Civis da cidade (vida ambiente: perambulam pela cidade, reusam voxel NPC) ──
+    // ── Civis da cidade (vida ambiente: cada um TEM UMA TAREFA, não vaga à toa) ──
+    enum class FolkJob { Guard, Worker, Chatter, Vendor };
     struct CityFolk {
-        Vector2 position, target, home;
+        Vector2 position, target, home, anchor;  // anchor = posto de trabalho / ponto B da ronda / roda de conversa
         float   speed       = 55.0f;
-        float   wanderTimer = 0.0f;
-        float   pauseTimer  = 0.0f;   // para de vez em quando (conversar/olhar)
+        float   timer       = 0.0f;   // genérico (ronda/troca de alvo)
+        float   work        = 0.0f;   // animação/progresso da tarefa
+        float   pauseTimer  = 0.0f;   // parado executando a tarefa
         int     role        = 0;      // NPCRole → modelo voxel + cor
         int     facing      = 1;
+        FolkJob job         = FolkJob::Worker;
+        bool    atStation   = false;  // chegou no posto e está trabalhando/conversando
     };
     std::vector<CityFolk> cityFolk;
     void  spawnCityFolk();
