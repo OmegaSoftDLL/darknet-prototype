@@ -450,6 +450,9 @@ private:
     Vector2   botPrevPos      = {0, 0};
     Vector2   botPathGoal     = {0, 0};
     int   nearResourceIdx = -1;    // nó mais próximo coletável
+    float mineSwingCD     = 0.0f;  // cadência entre golpes da picareta
+    float mineSwingAnim   = 0.0f;  // 0..1 animação do golpe atual (1=acabou de bater)
+    int   mineFxIdx       = -1;    // nó sendo golpeado (p/ desenhar picareta/impacto)
     void  setupResourceNodes();
     void  updateResourceGathering(float dt);
     void  renderResourceNodes() const;   // world-space (dentro de BeginMode2D)
