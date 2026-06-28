@@ -71,6 +71,13 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
     fprintf(f, "attackRange %f\n",  player.attackRange);
     fprintf(f, "speed %f\n",        player.speed);
     fprintf(f, "defense %f\n",      player.defense);
+    // Classe + stats BASE (efetivos sao recalculados; sem isso o "continuar" quebra)
+    fprintf(f, "charClass %d\n",        (int)player.getCharClass());
+    fprintf(f, "baseMaxHealth %f\n",    player.getBaseMaxHealth());
+    fprintf(f, "baseAttackDamage %f\n", player.getBaseAttackDamage());
+    fprintf(f, "baseSpeed %f\n",        player.getBaseSpeed());
+    fprintf(f, "baseAttackRange %f\n",  player.getBaseAttackRange());
+    fprintf(f, "baseDefense %f\n",      player.getBaseDefense());
     fprintf(f, "level %d\n",        player.level);
     fprintf(f, "xp %d\n",           player.xp);
     fprintf(f, "xpToNext %d\n",     player.xpToNextLevel);
@@ -131,6 +138,8 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     char key[64];
     char val[256];
     bool hasCredits = false, hasEvolution = false;
+    int   savedClass = -1;
+    float bMax = 0, bDmg = 0, bSpd = 0, bRng = 0, bDef = 0;
 
     // Re-read from start for simple line-by-line parsing
     rewind(f);
@@ -147,6 +156,12 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"attackRange")==0) { fscanf(f," %f",&player.attackRange); }
         else if (strcmp(key,"speed")==0)    { fscanf(f," %f",&player.speed); }
         else if (strcmp(key,"defense")==0)  { fscanf(f," %f",&player.defense); }
+        else if (strcmp(key,"charClass")==0)       { fscanf(f," %d",&savedClass); }
+        else if (strcmp(key,"baseMaxHealth")==0)   { fscanf(f," %f",&bMax); }
+        else if (strcmp(key,"baseAttackDamage")==0){ fscanf(f," %f",&bDmg); }
+        else if (strcmp(key,"baseSpeed")==0)       { fscanf(f," %f",&bSpd); }
+        else if (strcmp(key,"baseAttackRange")==0) { fscanf(f," %f",&bRng); }
+        else if (strcmp(key,"baseDefense")==0)     { fscanf(f," %f",&bDef); }
         else if (strcmp(key,"level")==0)    { fscanf(f," %d",&player.level); }
         else if (strcmp(key,"xp")==0)       { fscanf(f," %d",&player.xp); }
         else if (strcmp(key,"xpToNext")==0) { fscanf(f," %d",&player.xpToNextLevel); }
@@ -199,6 +214,14 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     }
 
     fclose(f);
+
+    // Restaura CLASSE + stats BASE (com o gear ja equipado acima), recalculando os
+    // efetivos corretamente — sem isso o "continuar" voltava como Soldado nivel-base.
+    if (savedClass >= 0) {
+        float keepHealth = player.health;
+        player.loadSavedProgress(static_cast<CharacterClass>(savedClass), bMax, bDmg, bSpd, bRng, bDef);
+        player.health = (keepHealth > 0.0f && keepHealth <= player.maxHealth) ? keepHealth : player.maxHealth;
+    }
     return true;
 }
 
