@@ -48,6 +48,7 @@ public:
     void   generate(ZoneID zone = ZoneID::LARuins);
     void   generateOpenWorld();
     ZoneID tileZone(int tx, int ty) const;
+    ZoneID biomeAtWorld(float wx, float wy) const;  // bioma INFINITO (módulo 3x3) na posição do mundo — bate com o chão
     void   render(Vector2 camTarget = {0,0}, float zoom = 1.0f) const; // frustum culling
     void   render3D(Vector2 camTarget) const;  // 2.5D: chão (DrawPlane) + paredes (DrawCube)
     bool   isWall(int x, int y) const;
