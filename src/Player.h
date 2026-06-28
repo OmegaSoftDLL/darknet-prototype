@@ -153,6 +153,7 @@ public:
     void  addItem(const Item& item);
     void  useSkill(int index, Vector2 target);
     void  drawInventory() const;
+    void  absorbBossEssence(int kind);   // buff PERMANENTE de boss (mexe no stat BASE)
     void  handleInventoryInput();
     // Mouse no inventário (vmouse já virtualizado p/ 1280x720). Retorna true se
     // o clique foi no botão FECHAR (Game deve então fechar o inventário).

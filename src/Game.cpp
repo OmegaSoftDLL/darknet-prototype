@@ -3112,14 +3112,10 @@ void Game::update(float dt) {
                 // ── ABSORÇÃO DE PODER (estilo V Rising): matar BOSS = buff PERMANENTE ──
                 if (it->isBoss()) {
                     bossPowersAbsorbed++;
-                    const char* pname = "";
-                    switch (bossPowersAbsorbed % 4) {
-                        case 0: player.maxHealth   *= 1.10f; pname = "+10% Vida Maxima"; break;
-                        case 1: player.attackDamage*= 1.10f; pname = "+10% Dano";        break;
-                        case 2: player.defense     += 4.0f;  pname = "+4% Defesa";        break;
-                        case 3: player.speed       *= 1.06f; pname = "+6% Velocidade";    break;
-                    }
-                    player.health = std::min(player.health + player.maxHealth * 0.5f, player.maxHealth);
+                    int kind = bossPowersAbsorbed % 4;
+                    const char* pname = (kind==0) ? "+10% Vida Maxima" : (kind==1) ? "+10% Dano"
+                                      : (kind==2) ? "+4% Defesa" : "+6% Velocidade";
+                    player.absorbBossEssence(kind);   // buff PERMANENTE (mexe no base + recalcula)
                     showStoryBanner("PODER ABSORVIDO",
                         TextFormat("Essencia do boss: %s   (total: %d)", pname, bossPowersAbsorbed), 3.5f);
                     triggerShake(6.0f, 0.4f);
