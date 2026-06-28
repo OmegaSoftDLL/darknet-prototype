@@ -821,6 +821,11 @@ ZoneID Game::getRegionAt(Vector2 pos) const {
 // a area de cada regiao. Chamado uma vez ao iniciar o mundo aberto.
 void Game::buildOpenWorldScenery() {
     owDecor.scenery.clear();
+    // Reseta o streaming de chunks (senão prédios sólidos invisíveis / cenário
+    // fantasma sobrevivem ao Continuar/Novo Jogo dentro do mesmo processo).
+    m_sceneryChunks.clear();
+    m_chunkSolids.clear();
+    m_lastChunkX = m_lastChunkY = -999999;
 
     // Gerador pseudo-aleatorio deterministico (nao usa Math.random)
     unsigned int rng = 0x1234abcd;
@@ -1931,6 +1936,7 @@ void Game::run() {
 
 void Game::startNewGame() {
     // Inicia a partida do zero apos escolher dificuldade e personagem.
+    victoryReported = false;
     buildQuests();
     currentZone   = ZoneID::LARuins;
     currentRegion = ZoneID::LARuins;
@@ -2087,6 +2093,7 @@ void Game::startLoadedGame() {
 
 void Game::restartRun() {
     // Reset do jogador (o construtor reconfigura skills e stats base)
+    victoryReported = false;
     player = Player();
 
     // Limpa todas as entidades em jogo
@@ -2260,7 +2267,6 @@ void Game::update(float dt) {
         audio.updateMusic();
         if (playerSpeechTimer > 0.0f) playerSpeechTimer -= dt;
         // Bot: registra a vitoria UMA vez e encerra o teste
-        static bool victoryReported = false;
         if (botController.active && !victoryReported) {
             victoryReported = true;
             botController.addLog("=== JOGO ZERADO! NUCLEO KRONOS DESTRUIDO ===");
