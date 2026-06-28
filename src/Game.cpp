@@ -2457,6 +2457,7 @@ void Game::update(float dt) {
                 worldClock += GetFrameTime() / 420.0f;          // ciclo completo ~7 min
                 if (worldClock >= 1.0f) worldClock -= 1.0f;
                 float sun = sinf(worldClock * 6.2831853f - 1.5707963f) * 0.5f + 0.5f; // 0=noite,1=meio-dia
+                worldSun = sun;
                 lightSystem.ambientDark += (1.0f - sun) * 0.30f; // escurece à noite
                 if (lightSystem.ambientDark > 0.72f) lightSystem.ambientDark = 0.72f;
                 {
@@ -2744,7 +2745,8 @@ void Game::update(float dt) {
         const int enemyCap   = baseCap + diffBonus + threatLevel * 3; // mais ameaca = mais inimigos
         spawnTimer += dt;
         // Mutador "Invasao Total" acelera o spawn
-        float effectiveInterval = spawnInterval * mutatorSpawnMult();
+        float dayNight = 0.62f + 0.38f * worldSun;   // noite: intervalo menor = mais inimigos
+        float effectiveInterval = spawnInterval * mutatorSpawnMult() * dayNight;
         if (spawnTimer >= effectiveInterval) {
             // ZONA SEGURA: nao spawna inimigos enquanto o player esta no refugio
             if ((int)enemies.size() < enemyCap && !inSafeZone(player.position))
@@ -5389,64 +5391,56 @@ void Game::renderWorld3D() {
                 {120,80,220,255},{180,120,255,255},{200,130,60,255}
             };
             for (const auto& p : net.peers()) {
-                drawProceduralEntity3D({ p.x, p.y }, 18.0f, [&, p]() {
-                    Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
-                    DrawRectangle((int)p.x - 9, (int)p.y - 14, 18, 28, c);
-                    DrawCircle((int)p.x, (int)(p.y - 20), 9.0f, c);
-                    DrawCircleLines((int)p.x, (int)(p.y - 20), 9.0f, ColorAlpha(WHITE, 0.4f));
-                });
+                Color c = cols[(p.charClass >= 0 && p.charClass < 6) ? p.charClass : 0];
+                DrawCylinderEx({p.x, 0.12f, p.y}, {p.x, 0.13f, p.y}, 11.0f, 11.0f, 12, ColorAlpha(BLACK, 0.34f));
+                DrawCapsule({p.x, 6.0f, p.y}, {p.x, 34.0f, p.y}, 7.0f, 8, 8, c);
+                DrawSphereEx({p.x, 44.0f, p.y}, 8.0f, 8, 8, c);
             }
         }
 
         // Animais / Vida Selvagem
         for (const auto& a : animals) {
             if (std::fabs(a.position.x - camera.target.x) > 1100 || std::fabs(a.position.y - camera.target.y) > 700) continue;
-            drawProceduralEntity3D(a.position, 10.0f, [&, a]() {
-                float x = a.position.x, y = a.position.y;
-                float bob = std::sin(a.animTimer * 8.0f) * 1.5f;
+            {
+                float x = a.position.x, zz = a.position.y;
+                float bob = std::sin(a.animTimer * 8.0f) * 1.2f;
+                DrawCylinderEx({x,0.12f,zz},{x,0.13f,zz}, 12.0f,12.0f,10, ColorAlpha(BLACK,0.30f));
                 switch (a.type) {
                     case AnimalType::Deer: {
                         Color body={150,110,70,255};
-                        DrawEllipse((int)x,(int)(y+bob),12.0f,8.0f,body);
-                        DrawCircleV({x+9,y-6+bob},5.0f,body);
-                        DrawLine((int)x+9,(int)(y-10+bob),(int)x+6,(int)(y-16+bob),Color{90,60,30,255});
-                        DrawLine((int)x+11,(int)(y-10+bob),(int)x+14,(int)(y-16+bob),Color{90,60,30,255});
-                        DrawRectangle((int)x-8,(int)(y+6),2,8,body); DrawRectangle((int)x+6,(int)(y+6),2,8,body);
-                        break;
-                    }
+                        DrawCapsule({x-9,16.0f+bob,zz},{x+9,16.0f+bob,zz}, 6.0f,8,8, body);
+                        DrawSphereEx({x+12,24.0f+bob,zz}, 5.0f,7,7, body);
+                        DrawCylinderEx({x+12,28.0f,zz},{x+10,36.0f,zz}, 1.2f,0.4f,5, Color{90,60,30,255});
+                        DrawCylinderEx({x+14,28.0f,zz},{x+16,36.0f,zz}, 1.2f,0.4f,5, Color{90,60,30,255});
+                        for(int lg=0;lg<4;++lg){float lx=x+(lg<2?-7:7),lz=zz+((lg%2)?4:-4);DrawCylinderEx({lx,0,lz},{lx,12.0f,lz},1.6f,1.6f,5,Color{110,80,50,255});}
+                    } break;
                     case AnimalType::Rabbit: {
                         Color body={210,200,190,255};
-                        DrawCircleV({x,y+bob},6.0f,body);
-                        DrawEllipse((int)(x-2),(int)(y-8+bob),2.0f,5.0f,body);
-                        DrawEllipse((int)(x+2),(int)(y-8+bob),2.0f,5.0f,body);
-                        break;
-                    }
+                        DrawSphereEx({x,6.0f+bob,zz}, 6.0f,7,7, body);
+                        DrawCapsule({x-2,10.0f,zz},{x-2,17.0f,zz}, 1.6f,5,5, body);
+                        DrawCapsule({x+2,10.0f,zz},{x+2,17.0f,zz}, 1.6f,5,5, body);
+                    } break;
                     case AnimalType::Boar: {
                         Color body={90,70,60,255};
-                        DrawEllipse((int)x,(int)(y+bob),13.0f,8.0f,body);
-                        DrawCircleV({x+10,y+bob},5.0f,body);
-                        DrawCircleV({x+13,y+bob},2.0f,Color{40,30,25,255});
-                        break;
-                    }
+                        DrawCapsule({x-10,9.0f+bob,zz},{x+8,9.0f+bob,zz}, 7.0f,8,8, body);
+                        DrawSphereEx({x+12,9.0f+bob,zz}, 5.0f,7,7, body);
+                        for(int lg=0;lg<4;++lg){float lx=x+(lg<2?-6:6),lz=zz+((lg%2)?4:-4);DrawCylinderEx({lx,0,lz},{lx,6.0f,lz},1.8f,1.8f,5,Color{70,55,48,255});}
+                    } break;
                     case AnimalType::Wolf: {
                         Color body=a.fleeing?Color{120,120,130,255}:Color{90,95,105,255};
-                        DrawEllipse((int)x,(int)(y+bob),12.0f,7.0f,body);
-                        DrawCircleV({x+9,y-3+bob},5.0f,body);
-                        DrawLine((int)x+7,(int)(y-7+bob),(int)x+6,(int)(y-11+bob),body);
-                        DrawLine((int)x+11,(int)(y-7+bob),(int)x+12,(int)(y-11+bob),body);
-                        DrawCircleV({x+11,y-3+bob},1.5f,Color{255,200,0,255});
-                        break;
-                    }
-                    default: { // Bird
-                        float fl = std::sin(a.animTimer*12.0f)*4.0f;
+                        DrawCapsule({x-10,11.0f+bob,zz},{x+8,11.0f+bob,zz}, 5.0f,8,8, body);
+                        DrawSphereEx({x+12,14.0f+bob,zz}, 4.5f,7,7, body);
+                        for(int lg=0;lg<4;++lg){float lx=x+(lg<2?-7:7),lz=zz+((lg%2)?4:-4);DrawCylinderEx({lx,0,lz},{lx,9.0f,lz},1.5f,1.5f,5,body);}
+                    } break;
+                    default: {
+                        float fl = std::sin(a.animTimer*12.0f)*5.0f;
                         Color body={60,60,70,255};
-                        DrawCircleV({x,y-20+bob*2},3.0f,body);
-                        DrawLine((int)x,(int)(y-20+bob*2),(int)(x-6),(int)(y-20-fl+bob*2),body);
-                        DrawLine((int)x,(int)(y-20+bob*2),(int)(x+6),(int)(y-20-fl+bob*2),body);
-                        break;
-                    }
+                        DrawSphereEx({x,34.0f+bob*2,zz}, 3.2f,6,6, body);
+                        DrawCapsule({x-7,34.0f+fl,zz},{x,34.0f,zz}, 1.4f,5,5, body);
+                        DrawCapsule({x+7,34.0f+fl,zz},{x,34.0f,zz}, 1.4f,5,5, body);
+                    } break;
                 }
-            });
+            }
         }
 
         // Nós de Recursos Naturais
@@ -5455,35 +5449,27 @@ void Game::renderWorld3D() {
             if (n.depleted) continue;
             if (std::fabs(n.position.x - camera.target.x) > 1100 || std::fabs(n.position.y - camera.target.y) > 700) continue;
 
-            drawProceduralEntity3D(n.position, 14.0f, [&, i, n]() {
+            {
                 float sx = (n.shake > 0.0f) ? std::sin(n.shake * 30.0f) * 2.0f : 0.0f;
-                float x = n.position.x + sx, y = n.position.y;
+                float x = n.position.x + sx, zz = n.position.y;
                 Color c = resourceColor(n.type);
-                switch (n.type) {
-                    case ResourceType::Wood: {
-                        DrawRectangle((int)(x-4), (int)(y-6), 8, 22, Color{90,60,30,255});
-                        DrawCircleV({x, y-22}, 18.0f, Color{30,90,40,255});
-                        DrawCircleV({x-10, y-14}, 12.0f, Color{36,100,46,255});
-                        DrawCircleV({x+10, y-14}, 12.0f, Color{28,84,38,255});
-                        break;
-                    }
-                    case ResourceType::Stone: {
-                        DrawCircleV({x, y}, 15.0f, Color{120,120,128,255});
-                        DrawCircleV({x-6, y+2}, 9.0f, Color{145,145,155,255});
-                        DrawCircleV({x+7, y-1}, 8.0f, Color{100,100,110,255});
-                        break;
-                    }
-                    default: {
-                        DrawCircleV({x, y}, 15.0f, Color{80,72,66,255});
-                        DrawCircleV({x-5, y+2}, 8.0f, Color{96,88,80,255});
-                        for (int v = 0; v < 5; ++v) {
-                            float a = v * 1.2f + i;
-                            DrawCircleV({x + std::cos(a)*7.0f, y + std::sin(a)*7.0f}, 2.6f, c);
-                        }
-                        break;
-                    }
+                DrawCylinderEx({x, 0.12f, zz}, {x, 0.14f, zz}, 14.0f, 14.0f, 12, ColorAlpha(BLACK, 0.35f));
+                if (n.type == ResourceType::Wood) {
+                    DrawCylinderEx({x,0,zz},{x,26.0f,zz}, 5.0f, 3.5f, 8, Color{82,56,30,255});
+                    DrawSphereEx({x, 40.0f, zz}, 20.0f, 8, 8, Color{30,86,42,255});
+                    DrawSphereEx({x-12, 32.0f, zz}, 13.0f, 8, 8, Color{26,72,36,255});
+                    DrawSphereEx({x+12, 34.0f, zz}, 14.0f, 8, 8, Color{36,96,46,255});
+                } else if (n.type == ResourceType::Stone) {
+                    DrawSphereEx({x, 9.0f, zz}, 14.0f, 8, 8, Color{120,120,128,255});
+                    DrawSphereEx({x-8, 6.0f, zz+5}, 9.0f, 7, 7, Color{145,145,155,255});
+                    DrawSphereEx({x+8, 5.0f, zz-4}, 8.0f, 7, 7, Color{100,100,110,255});
+                } else {
+                    DrawSphereEx({x, 9.0f, zz}, 14.0f, 8, 8, Color{80,72,66,255});
+                    DrawSphereEx({x-5, 6.0f, zz+3}, 8.0f, 7, 7, Color{96,88,80,255});
+                    for (int v = 0; v < 6; ++v) { float a = v * 1.05f + i;
+                        DrawSphereEx({x + cosf(a)*9.0f, 12.0f + sinf(a)*4.0f, zz + sinf(a)*9.0f}, 2.8f, 5, 5, c); }
                 }
-            });
+            }
         }
 
         // Equipamentos no chão
@@ -5491,20 +5477,17 @@ void Game::renderWorld3D() {
             if (ge.collected) continue;
             if (std::fabs(ge.position.x - camera.target.x) > 1100 || std::fabs(ge.position.y - camera.target.y) > 700) continue;
 
-            drawProceduralEntity3D(ge.position, 8.0f, [&, ge]() {
+            {
                 float pulse = 0.5f + 0.5f * std::sin(ge.pulseTimer * 4.0f);
                 Color ec = ge.equip.color;
                 float fade = (ge.lifetime < 5.0f) ? ge.lifetime / 5.0f : 1.0f;
-                DrawCircleV(ge.position, 22.0f + pulse * 6.0f, ColorAlpha(ec, 0.18f * fade));
-                DrawCircleV(ge.position, 16.0f + pulse * 4.0f, ColorAlpha(ec, 0.28f * fade));
-                DrawCircleLines((int)ge.position.x, (int)ge.position.y, 18.0f + pulse * 4.0f, ColorAlpha(ec, 0.65f * fade));
-                for (int s = 0; s < 2; ++s) {
-                    float a = ge.pulseTimer * 3.5f + s * 3.14159f;
-                    DrawCircleV({ge.position.x + std::cos(a) * 16.0f, ge.position.y + std::sin(a) * 16.0f}, 3.0f, ColorAlpha(WHITE, 0.85f * fade));
-                }
-                DrawCircleV(ge.position, 10.0f, ColorAlpha(ec, fade));
-                DrawCircleV(ge.position, 5.0f, ColorAlpha(WHITE, 0.7f * fade));
-            });
+                float gy = 13.0f + std::sin(ge.pulseTimer * 2.0f) * 3.0f;   // gema flutua suave
+                DrawCylinderEx({ge.position.x,0.12f,ge.position.y},{ge.position.x,0.14f,ge.position.y},
+                               14.0f + pulse*4.0f, 14.0f + pulse*4.0f, 16, ColorAlpha(ec, 0.30f * fade));
+                DrawSphereEx({ge.position.x, gy, ge.position.y}, 9.0f, 8, 8, ColorAlpha(ec, 0.40f * fade));
+                DrawSphereEx({ge.position.x, gy, ge.position.y}, 5.5f, 8, 8, ColorAlpha(ec, fade));
+                DrawSphereEx({ge.position.x, gy + 1.5f, ge.position.y}, 2.5f, 6, 6, ColorAlpha(WHITE, 0.8f * fade));
+            }
         }
 
         // Construções, Tanques e Soldados (Building System / RTS)
@@ -5530,44 +5513,34 @@ void Game::renderWorld3D() {
                         DrawCube({ b.position.x, 32.0f, b.position.y }, 64.0f, 64.0f, 64.0f, GRAY);
                     }
                 } else {
-                    drawProceduralEntity3D(b.position, 24.0f, [&, b]() {
-                        buildingSystem.renderBuilding(b);
-                    });
+                    DrawCube({ b.position.x, 24.0f, b.position.y }, 48.0f, 48.0f, 48.0f, Color{90,90,105,255}); DrawCubeWires({ b.position.x, 24.0f, b.position.y }, 48.0f, 48.0f, 48.0f, Color{150,150,170,255});
                 }
             } else {
-                drawProceduralEntity3D(b.position, 24.0f, [&, b]() {
-                    buildingSystem.renderBuilding(b);
-                });
+                DrawCube({ b.position.x, 24.0f, b.position.y }, 48.0f, 48.0f, 48.0f, Color{90,90,105,255}); DrawCubeWires({ b.position.x, 24.0f, b.position.y }, 48.0f, 48.0f, 48.0f, Color{150,150,170,255});
             }
         }
         for (const auto& t : buildingSystem.tanks) {
             if (t.isDead()) continue;
-            drawProceduralEntity3D(t.position, 12.0f, [&, t]() {
-                t.render();
-            });
+            DrawCylinderEx({t.position.x,0.12f,t.position.y},{t.position.x,0.13f,t.position.y},18.0f,18.0f,10,ColorAlpha(BLACK,0.34f)); DrawCubeV({t.position.x,7.0f,t.position.y},{28.0f,12.0f,20.0f},Color{70,90,70,255}); DrawCubeV({t.position.x,16.0f,t.position.y},{16.0f,8.0f,14.0f},Color{86,106,86,255}); DrawCylinderEx({t.position.x,16.0f,t.position.y},{t.position.x+26.0f,16.0f,t.position.y},2.2f,2.2f,6,Color{60,70,60,255});
         }
         for (const auto& s : buildingSystem.soldiers) {
             if (s.isDead()) continue;
-            drawProceduralEntity3D(s.position, 12.0f, [&, s]() {
-                s.render();
-            });
+            DrawCylinderEx({s.position.x,0.12f,s.position.y},{s.position.x,0.13f,s.position.y},9.0f,9.0f,10,ColorAlpha(BLACK,0.32f)); DrawCapsule({s.position.x,5.0f,s.position.y},{s.position.x,26.0f,s.position.y},5.0f,8,8,Color{70,110,90,255}); DrawSphereEx({s.position.x,33.0f,s.position.y},5.5f,8,8,Color{200,170,140,255});
         }
 
         // RTS Building Preview Ghost
         if (buildingSystem.buildModeActive) {
             Vector2 mouseWorld = mouseGround3D();
-            drawProceduralEntity3D(mouseWorld, 16.0f, [&]() {
-                BuildingType preview = static_cast<BuildingType>(buildingSystem.selectedType);
-                Color previewCol = {0, 255, 180, 100};
+            {
+                BuildingType preview = static_cast<BuildingType>(buildingSystem.selectedType); (void)preview;
                 bool canPlace = true;
                 for (const auto& b : buildingSystem.buildings) {
                     if (Vector2Distance(b.position, mouseWorld) < 80.f) { canPlace = false; break; }
                 }
-                previewCol = canPlace ? Color{0, 255, 100, 80} : Color{255, 50, 50, 80};
-                DrawRectangle((int)(mouseWorld.x - 32), (int)(mouseWorld.y - 32), 64, 64, previewCol);
-                DrawRectangleLinesEx({mouseWorld.x - 32, mouseWorld.y - 32, 64, 64},
-                                     2.f, canPlace ? Color{0, 255, 100, 200} : Color{255, 50, 50, 200});
-            });
+                Color pc = canPlace ? Color{0,255,100,255} : Color{255,50,50,255};
+                DrawPlane({mouseWorld.x, 0.2f, mouseWorld.y}, {64.0f, 64.0f}, ColorAlpha(pc, 0.25f));
+                DrawCubeWires({mouseWorld.x, 32.0f, mouseWorld.y}, 64.0f, 64.0f, 64.0f, pc);
+            }
         }
 
         // ── VIDA AMBIENTE: partículas flutuando (poeira/brasas/pólen) por TEMA ──
