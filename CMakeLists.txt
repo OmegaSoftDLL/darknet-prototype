@@ -65,3 +65,12 @@ target_link_libraries(darknet PRIVATE raylib)
 if (WIN32)
     target_link_libraries(darknet PRIVATE winmm ws2_32 winhttp shell32)
 endif()
+
+# Copia os recursos para o diretório do executável (Release/Debug) — assim o jogo
+# roda mesmo ao executar o .exe diretamente (não só do diretório do projeto).
+if (EXISTS "${CMAKE_SOURCE_DIR}/resources")
+    add_custom_command(TARGET darknet POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:darknet>/resources"
+        COMMENT "Copiando resources/ para o diretorio do executavel")
+endif()

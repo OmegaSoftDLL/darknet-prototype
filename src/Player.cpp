@@ -168,6 +168,19 @@ void Player::update(float dt) {
     evolutionPulse += dt;
 }
 
+void Player::absorbBossEssence(int kind) {
+    // Mexe no stat BASE (nao no efetivo) para o buff ser PERMANENTE.
+    switch (kind) {
+        case 0: baseMaxHealth    *= 1.10f; break;
+        case 1: baseAttackDamage *= 1.10f; break;
+        case 2: baseDefense      += 4.0f;  break;
+        case 3: baseSpeed        *= 1.06f; break;
+        default: break;
+    }
+    applyEquipmentStats();
+    health = maxHealth;
+}
+
 void Player::render() const {
     // Ciclo de caminhada com peso: pernas alternam e o corpo afunda a cada
     // pisada (footfall), dando sensacao de pisar no chao em vez de flutuar.
