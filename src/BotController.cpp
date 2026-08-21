@@ -64,17 +64,34 @@ static float angleDiff(float a, float b) {
 // Rastreio de "preso" — usado tanto pelo pathfinding global quanto pelo desvio
 // reativo de fallback, e alimenta a telemetria de stuck events do relatorio.
 void BotController::updateStuckTracking(Vector2 currentPos, float dt) {
-    float moved = Vector2Distance(currentPos, lastPos);
-    if (moved < 3.0f) {
-        stuckTimer     += dt;
-        longStuckTimer += dt;
+    // BUG QUE ISTO CORRIGE: a versao anterior comparava o deslocamento de UM
+    // FRAME com 3 px. A 60 fps e velocidade 155 u/s o personagem anda 2,58 px por
+    // frame — ou seja, andando normalmente ele era classificado como PRESO o
+    // tempo todo. O bot vivia em "escape", nunca engajava (0 abates) e o
+    // relatorio acusava travamento sem haver travamento nenhum.
+    // Agora a medida e por JANELA DE TEMPO: distancia acumulada em 0,5 s.
+    stuckAccum += Vector2Distance(currentPos, lastPos);
+    lastPos     = currentPos;
+    stuckSample += dt;
+    if (stuckSample < 0.5f) return;
+
+    // 0,5 s de caminhada normal percorre ~75 px; 15 px e chao de sobra para
+    // distinguir "empurrando parede" de "andando devagar".
+    bool blockedNow = (stuckAccum < 15.0f);
+    stuckAccum  = 0.0f;
+    stuckSample = 0.0f;
+
+    if (blockedNow) {
+        stuckTimer     += 0.5f;
+        longStuckTimer += 0.5f;
         isStuck = true;
+        if (stuckTimer >= 2.0f && !stuckCounted) { stuckEvents++; stuckCounted = true; }
     } else {
         stuckTimer     = 0.0f;
         longStuckTimer = 0.0f;
         isStuck        = false;
+        stuckCounted   = false;
     }
-    lastPos = currentPos;
 
     if (longStuckTimer >= 10.0f) {
         longStuckTimer = 0.0f;
@@ -134,6 +151,8 @@ Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
 
         int   bestI = startI;
         float bestD = std::hypot((float)(tgx - pgx), (float)(tgy - pgy));
+        int   farI  = startI;      // celula alcancavel mais LONGE do bot
+        float farD  = 0.0f;
 
         static const int dxs[8] = { 1,-1, 0, 0, 1, 1,-1,-1 };
         static const int dys[8] = { 0, 0, 1,-1, 1,-1, 1,-1 };
@@ -143,6 +162,8 @@ Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
             int cgx = cur % W, cgy = cur / W;
             float dd = std::hypot((float)((ox + cgx) - tgx), (float)((oy + cgy) - tgy));
             if (dd < bestD) { bestD = dd; bestI = cur; }
+            float fd = std::hypot((float)((ox + cgx) - pgx), (float)((oy + cgy) - pgy));
+            if (fd > farD) { farD = fd; farI = cur; }
             if (cur == goalI) break;
 
             for (int k = 0; k < 8; ++k) {
@@ -158,6 +179,11 @@ Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
                 q.push(ni);
             }
         }
+
+        // destino de emergencia: o ponto acessivel mais distante que a BFS achou
+        hasFarReach = (farD > 4.0f);
+        farthestReachable = { (ox + farI % W) * TS + TS * 0.5f,
+                              (oy + farI / W) * TS + TS * 0.5f };
 
         // reconstroi a partir da celula acessivel mais proxima do alvo
         std::vector<Vector2> rev;
@@ -796,6 +822,13 @@ BotController::BotDecision BotController::update(
             float dx = cand.x - playerPos.x, dy = cand.y - playerPos.y;
             float d  = dx*dx + dy*dy;
             if (d > bestD) { bestD = d; best = cand; }
+        }
+        // Encurralado de verdade (>4s): o ponto sorteado pode ser inalcancavel e o
+        // escape vira outro laco. A celula que a BFS alcancou e uma promessa.
+        if (stuckTimer > 4.0f && hasFarReach &&
+            Vector2Distance(farthestReachable, playerPos) > 120.0f) {
+            best = farthestReachable;
+            addLog("Escape -> celula alcancavel mais distante (BFS)");
         }
         escapeTarget = best;
         escapeTimer  = 5.0f;

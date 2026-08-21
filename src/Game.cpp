@@ -4227,7 +4227,15 @@ void Game::handleInput(float dt) {
         // de validacao acusou.
         if (!botController.wallQuery)
             botController.wallQuery = [this](Vector2 p) {
+                // Testa o CORPO, nao um ponto: existe fresta com o centro do tile
+                // livre por onde o personagem (raio ~22u) nao passa. A rota mandava
+                // atravessar, a colisao barrava, e o bot empurrava parede pra sempre.
+                const float BR = 24.0f;
                 if (isBlocked(p)) return true;
+                if (isBlocked({ p.x + BR, p.y })) return true;
+                if (isBlocked({ p.x - BR, p.y })) return true;
+                if (isBlocked({ p.x, p.y + BR })) return true;
+                if (isBlocked({ p.x, p.y - BR })) return true;
                 float dx = p.x - safeZoneCenter.x, dy = p.y - safeZoneCenter.y;
                 float lim = owPhaseRadius - 60.0f;          // margem: nao colar na barreira
                 return openWorldMode && (dx*dx + dy*dy > lim*lim);

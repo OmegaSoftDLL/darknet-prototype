@@ -88,6 +88,14 @@ public:
     // preso numa borda/barreira do mundo aberto. {0,0} = nao definido.
     Vector2 worldCenter = {0, 0};
     float   worldRadius = 0.0f;   // raio jogavel da fase (0 = desconhecido)
+    // Celula alcancavel mais LONGE do bot na ultima BFS. E o unico destino que
+    // se pode prometer que produz deslocamento quando ele esta encurralado.
+    // janela de medicao do 'preso' (ver updateStuckTracking)
+    float   stuckAccum  = 0.0f;
+    float   stuckSample = 0.0f;
+    bool    stuckCounted = false;
+    Vector2 farthestReachable = {0, 0};
+    bool    hasFarReach       = false;
 
     // ── Telemetry ─────────────────────────────────────────────────────────────
     int   frameCount        = 0;
