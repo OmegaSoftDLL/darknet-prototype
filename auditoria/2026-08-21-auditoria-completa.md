@@ -6,7 +6,7 @@
 | **Commit auditado** | `6113e73` (master) |
 | **Binário** | `build/Release/darknet.exe` de 21/08 16:13, posterior à última edição de código; `content/` e `resources/shaders/` presentes ao lado do exe |
 | **Auditor** | Claude (papel exclusivo de auditoria — ver `.agents/AUDITOR.md`) |
-| **Veredito** | **APROVADO COM RESSALVAS** — 1×P0, 4×P1, 2×P2 |
+| **Veredito** | **APROVADO COM RESSALVAS** — na 1ª passada: 1×P0, 4×P1, 2×P2. **Atualizado pelo adendo (§6): P0 rebaixado após verificação → 0×P0, 4×P1, 5×P2.** |
 
 Este relatório é para o programador. Cada achado traz onde, evidência, repro e o
 efeito no jogador. Está separado o que foi **medido** do que foi **deduzido** —
@@ -51,6 +51,11 @@ sumiu (0 críticos).
 ## 2. Achados
 
 ### [P0] Portal da fase pode nascer dentro de construção — soft-lock de progressão
+
+> **⚠ SUPERADO PELO ADENDO (§6):** verificado por reconstrução determinística —
+> 120/120 variantes com o portal alcançável. Rebaixado para risco residual
+> (P2: tornar a garantia intencional). O texto abaixo é mantido como registro
+> da hipótese original e do porquê ela era plausível.
 
 - **Onde:** `src/Game.cpp:5486` — `owPortalPos = safeZoneCenter + (620, −520)`,
   posição fixa definida quando a cota de abates fecha.
@@ -176,7 +181,7 @@ sumiu (0 críticos).
 
 ---
 
-## ADENDO (2026-08-21, mesmo dia) — Verificação do P0 do portal
+## 6. ADENDO (2026-08-21, mesmo dia) — Verificação do P0 do portal
 
 ### Método
 
@@ -242,3 +247,60 @@ checksum). A conclusão do portal não depende disso (120 variantes
 descorrelacionadas concordam), mas qualquer uso futuro da réplica para
 perguntas *sensíveis à posição exata* de um objeto específico exige fechar
 essa diferença primeiro.
+
+---
+
+## 7. CONSOLIDAÇÃO FINAL (2026-08-21) — estado após a verificação
+
+### Placar de achados (vigente)
+
+| Sev. | Achado | Status | Evidência |
+|---|---|---|---|
+| ~~P0~~→P2 | Portal pode nascer dentro de construção | **Rebaixado** — 120/120 variantes alcançável (§6); proteção é acidental, recomenda-se assert `!isBlocked(owPortalPos)` ao abrir | Reconstrução determinística |
+| P1 | Fluxo de fase com cobertura automatizada ZERO | Aberto | Medido: `Zonas avancadas: 0` em todos os runs |
+| P1 | "Siga o marcador" sem marcador | Aberto | Medido: frame `shot_09` |
+| P1 | Arca/RTS medievais na cidade moderna | Aberto | Medido: frame `shot_04` |
+| P1 | ~6 FPS sustentado na abertura | Aberto | Medido: 38+ amostras, 0 entidades no mínimo |
+| P2 | Cenário construído 2× na inicialização (1ª vez com centro velho, descartada) | Aberto | Medido: 2 logs `SCENERY` (1626→3014) |
+| P2 | Fases 2+ mantêm cidade de LA no hub sobre chão de outro bioma | Aberto | Deduzido de código (invisível até haver cobertura de fases) |
+| P2 | Melee inerte na automação (1 ataque em 240 s) | Aberto | Medido |
+| P2 | Alerta de FPS do relatório grita sempre (mistura hitch de carga com FPS de jogo) | Aberto | Medido |
+| P2 | Assert/garantia intencional do corredor do portal | Recomendação nova (§6) | — |
+
+### Prioridades REVISADAS para o programador (substituem a §5)
+
+1. **Bot atravessa o portal** (informar `owPortalPos` ao `BotController` +
+   simular o [E]). Passou a ser o nº 1: destrava a cobertura das fases 2–11,
+   coloca `advanceOpenWorldPhase` sob o portão de validação e exporia em
+   screenshot o achado "cidade de LA em toda fase". Sem isso, ~90% do conteúdo
+   do jogo segue sem nenhum teste.
+2. **Marcador do portal no HUD/radar** — ou corrigir o texto que promete um
+   marcador inexistente. Junto, o assert de `!isBlocked(owPortalPos)` ao abrir
+   (3 linhas, transforma a proteção acidental do §6 em garantia).
+3. **Arca/RTS sem modelos medievais** — objeto mais olhado do jogo (ponto de
+   respawn), único remanescente da incoerência de direção de arte já resolvida
+   no cenário.
+4. **Engasgo de abertura** — eliminar a construção dupla do cenário (ganho
+   grátis, medido) e tirar o readback GPU→CPU da geração de voxel do caminho
+   quente (pré-gerar na tela de título ou cachear em disco).
+
+### Observação de higiene do repositório
+
+Durante a auditoria foi encontrada no working tree uma modificação em
+`src/BotController.h` **de origem desconhecida** (não é do auditor e não está
+em nenhum commit): remove o campo `shouldPickupItem` da struct de decisão e
+declara um método `reset()` referindo um `Game::restartRun` **que não existe
+no código atual**. Estado: incompleta — a remoção do campo quebra a compilação
+se algo ainda o ler, e o `reset()` declarado sem implementação quebra no link
+se for chamado. Recomenda-se ao programador identificar a origem (outra
+sessão/agente/edição manual) antes do próximo build; o auditor não tocou no
+arquivo.
+
+### Instrumentos deixados para reuso
+
+- `validate.sh [segundos] [seed]` — portão pass/fail (compila Debug+Release,
+  roda o bot, exit ≠ 0 reprova com motivo).
+- Réplica determinística do gerador de cenário (scratchpad da sessão,
+  descartável) — reutilizável para perguntas de layout; limitação declarada:
+  ~0,7% de divergência do stream exato do MSVC (§6).
+- `bot_report.txt` + `shot_NN.png` a cada 10 s durante `--autotest`.
