@@ -173,3 +173,72 @@ sumiu (0 críticos).
 > Nota de risco: os três tocam `Game.cpp` (8.000+ linhas concentrando render,
 > update, mundo e UI). Tratar qualquer mudança ali como risco alto de regressão
 > e rodar `./validate.sh 120 7` **e** com uma segunda seed antes de commitar.
+
+---
+
+## ADENDO (2026-08-21, mesmo dia) — Verificação do P0 do portal
+
+### Método
+
+A geração do cenário **não usa `--seed`**: `buildOpenWorldScenery` roda uma LCG
+própria com constante fixa `0x1234abcd` e zero chamadas a `GetRandomValue`
+(verificado no fonte). Chunks não geram dentro da região fixa (`ox < ORIG`).
+Logo o entorno do portal é **um fato determinístico**, não uma probabilidade —
+"varredura de seeds" era o instrumento errado; o correto é reconstruir o layout.
+
+Portei o gerador da região (0,0) para um script de medição (scratchpad, fora do
+repo) e validei contra o checksum que o próprio jogo loga (`SCENERY
+total/estruturas/grama`). A réplica chegou a ~99,3% do checksum (2992–2999 vs
+3014; grama 1439 vs 1440) — o stream exato do MSVC não foi reproduzido (ordem
+de avaliação de argumentos/float32). Para blindar a conclusão contra esse
+resíduo, rodei **120 variantes de stream** (2 ordens de avaliação × 2 × 30
+deslocamentos iniciais da LCG): a geometria da grade (células, EDGE=350,
+slots) é fixa; só variam quais lotes existem, tipos e escalas.
+
+### Resultado
+
+**120/120 variantes: disco de interação do portal LIVRE e ALCANÇÁVEL a pé
+desde o hub** (BFS na grade de tiles sólidos). Pior caso: 12 dos ~13 tiles do
+disco livres. Razão estrutural: o portal (hub + 620,−520 = 4716,3576) cai no
+**corredor de rua** entre as fileiras de lotes (y=3420 e y=3670); o lote mais
+próximo possível fica a ~123u do portal com pegada máxima de 96u (prédio
+moderno, escala ≤1.0), e o raio de interação é 105u — nenhuma estrutura
+isolada cobre o disco, e a cobertura combinada nunca ocorreu.
+
+### Reclassificação
+
+> **P0 "portal pode nascer dentro de construção" → REBAIXADO para risco
+> residual (monitorar).** Não confirmado na fase 1 sob 120 variantes. Vira P0
+> de novo se: o offset do portal mudar, `EDGE`/grade mudarem, os catálogos
+> ganharem pegada > 105u perto do hub, ou o raio de interação diminuir. A
+> proteção estrutural é acidental — nenhuma linha de código garante o corredor
+> livre; um comentário-guarda no código (ou um assert de `!isBlocked` ao abrir
+> o portal) tornaria a garantia intencional. Fica como recomendação P2.
+
+### Achados novos descobertos na verificação
+
+**[P2] O cenário do mundo é construído DUAS vezes na inicialização**
+- **Evidência (MEDIDA):** `gt.log` linhas 468–469 — dois `SCENERY` seguidos com
+  contagens diferentes (`total=1626/grama=749`, depois `total=3014/grama=1440`).
+- **Dedução:** a primeira construção roda com `safeZoneCenter` velho
+  (~(1280,1280) — a réplica com esse centro aproxima 1665/757 ≈ 1626/749); a
+  segunda, com o centro correto (4096,4096), é a que vale. A primeira é
+  trabalho jogado fora e contribui para o engasgo de abertura (achado P1 já
+  reportado).
+
+**[P2] Fases 2+ mantêm a cidade de LA no hub, sobre o chão de outro bioma**
+- **Evidência (DEDUZIDA de código):** `setupWorldRegions` reconstrói sempre o
+  mesmo mapa 3×3; a região (0,0) é sempre `LARuins`, e o ramo de grade da
+  cidade usa `structuresFor(r.zoneType)` = catálogo urbano — em **toda** fase.
+  Já o piso segue `biomeAtWorld` = zona da fase. Resultado esperado: na fase
+  Cemitério, o hub terá prédios modernos e bunkers sobre terra de cemitério.
+  Não observável hoje porque nenhum run alcança fases 2+ (achado P1 de
+  cobertura) — as duas pendências se somam.
+
+### Limite declarado do método
+
+A réplica não reproduziu o stream exato do binário (diferença ~0,7% no
+checksum). A conclusão do portal não depende disso (120 variantes
+descorrelacionadas concordam), mas qualquer uso futuro da réplica para
+perguntas *sensíveis à posição exata* de um objeto específico exige fechar
+essa diferença primeiro.
