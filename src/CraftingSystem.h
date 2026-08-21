@@ -36,7 +36,6 @@ struct CraftingSystem {
     // Crafting animation
     float craftTimer   = 0.f;
     bool  crafting     = false;
-    int   craftingIdx  = -1;
 
     // Mouse (coords ja virtualizadas pelo Game)
     Vector2 mousePos    = {-1, -1};

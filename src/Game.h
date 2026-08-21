@@ -18,6 +18,7 @@
 #include "Background.h"
 #include "LightSystem.h"
 #include "BotController.h"
+#include "EnemyDirector.h"
 #include "Companion.h"
 #include "BuildingSystem.h"
 #include "ShopSystem.h"
@@ -45,11 +46,15 @@ struct GroundEquipment {
 };
 
 struct DamageNumber {
-    Vector2     pos;
+    Vector2     pos;           // ancora NO MUNDO (nao se move; a subida vai em `rise`)
     float       value;
     Color       color;
     float       life   = 1.2f;
-    const char* prefix = "";   // "$" for credits, "+" for heals, "" for damage
+    // std::string, nao const char*: guardar o retorno de TextFormat() aqui era bug —
+    // raylib devolve ponteiro pra um buffer estatico rotativo (4 slots) que e
+    // sobrescrito em poucas chamadas, entao o texto virava outro.
+    std::string prefix;        // "$" creditos, "+" cura, "Madeira +" recurso, "" dano
+    float       rise   = 0.0f; // quanto ja subiu (px no 2D / altura no 3D)
 };
 
 // ─── Difficulty System ───────────────────────────────────────────────────────
@@ -83,6 +88,9 @@ public:
     Game();
     ~Game();
     void run();
+    unsigned worldSeed    = 0;      // 0 = aleatorio; >0 = mundo reprodutivel
+    float autoTestSeconds = 0.0f;   // >0 encerra o autoteste e grava o relatorio
+    bool  autoTestPassed  = true;   // resultado do portao de validacao (vira exit code)
     void runAutoTest(bool autoTest);
 
 private:
@@ -92,6 +100,19 @@ private:
     void spawnEnemy();
     void spawnBoss();
     void checkCollisions();
+    void drainLevelUps();   // converte player.unclaimedLevels em pontos/evolucoes pendentes
+    // Numeros flutuantes — COMPARTILHADO pelos 2 caminhos de render. No 3D projeta
+    // a posicao do mundo pra tela (em coords de mundo ficavam invisiveis no 3D).
+    void drawFloatingNumbers(bool project3D) const;
+    // Checar ANTES de chamar ensureVoxel: montar o std::function custa uma alocacao
+    // por entidade por frame, so pra sair no cache la dentro.
+    // ANIMACAO 3D: cada tipo gera VOX_POSES modelos, um por quadro do passo.
+    // Antes existia UM modelo congelado por tipo: o personagem so transladava,
+    // ou seja, DESLIZAVA pelo cenario em vez de andar.
+    static constexpr int VOX_POSES = 4;
+    static int  voxKey(int base, int pose) { return base * 8 + pose; }
+    bool hasVoxel(int key) const { return m_voxModels.count(key) != 0; }
+    bool hasVoxelPoses(int base) const { return m_voxModels.count(voxKey(base, VOX_POSES - 1)) != 0; }
     void updateItems(float dt);
     void updateXPOrbs(float dt);
     void updateProjectiles(float dt);
@@ -156,7 +177,8 @@ private:
     std::unordered_map<int, Model> m_voxModels;
     int      m_voxGenBudget = 0;   // limite de geracoes de voxel por frame (anti-engasgo)
     void     ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn);
-    void     drawVoxel(int key, Vector2 pos, float rotDeg);
+    void     drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase = 0.0f,
+                       bool moving = false);
 
     struct ChatBubble {
         std::string text;
@@ -189,6 +211,10 @@ private:
 
     // Combat timers & FX
     std::vector<DamageNumber> damageNumbers;
+    float companionHealAccum = 0.0f;
+    // Ambiente BASE do bioma atual, interpolado (a troca de regiao nao pisca)
+    Color m_ambBaseCol  = {206,212,226,255};
+    float m_ambBaseDark = 0.27f;   // cura do Healer acumulada p/ 1 numero a cada ~5 HP
     float meleeCooldown  = 0.0f;
     float hitFlashTimer  = 0.0f;
     float slowMoTimer    = 0.0f;
@@ -227,6 +253,9 @@ private:
     // ── Motor de Evolucao Infinita — novidade constante, nunca estagna ────────
     // Nivel de Ameaca: sobe com o tempo/kills, escala inimigos e recompensas.
     int   threatLevel    = 1;
+    // IA que EVOLUI durante a partida: observa como o jogador luta e responde
+    // na composicao do spawn e na tatica de grupo. Ver EnemyDirector.h.
+    EnemyDirector director;
     float threatTimer    = 0.0f;
     int   threatKillMark = 0;     // kills no inicio do nivel atual
     // Mutadores rotativos do mundo — efeitos globais que mudam a cada ciclo.
@@ -324,6 +353,32 @@ private:
 
     // Fullscreen render target (virtual 1280x720 always)
     RenderTexture2D gameTarget;
+
+    // ── POS-PROCESSAMENTO (bloom + tonemap) ──
+    // O frame inteiro (mundo + HUD) sai do gameTarget e passa por: brilho ->
+    // blur H -> blur V -> composicao com tonemap filmico. Se algum shader falhar
+    // em compilar, m_postFX fica false e a apresentacao volta ao caminho antigo
+    // (DrawTexturePro puro) — nunca tela preta.
+    Shader          m_shBright{}, m_shBlur{}, m_shGrade{};
+    RenderTexture2D m_bloomA{}, m_bloomB{};
+    bool            m_postFX = false;
+    int m_locThreshold = -1, m_locKnee = -1, m_locBlurDir = -1;
+    int m_locBloomTex = -1, m_locBloomStr = -1, m_locExposure = -1,
+        m_locSaturation = -1, m_locContrast = -1;
+    // Shader de ILUMINACAO do mundo 3D (direcional + ambiente + rim + nevoa).
+    // Sem ele todo poligono saia com a cor escrita, sem volume: papelao colorido.
+    Shader m_shWorld{};
+    bool   m_worldLit = false;
+    int    m_locLightDir = -1, m_locLightCol = -1, m_locAmbCol = -1, m_locCamPos = -1,
+           m_locFogCol = -1, m_locFogStart = -1, m_locFogEnd = -1, m_locRim = -1;
+    void   initWorldShader();
+    void   applyWorldShader(Model& m) const;   // liga o shader no material do modelo
+    void   updateWorldShaderUniforms();
+
+    void    drawGenericStructure(Vector2 pos, float sc) const;
+    void    initPostFX();
+    void    unloadPostFX();
+
     void    presentFrame() const;
     Vector2 virtualizeMousePos(Vector2 m) const;
 
@@ -350,6 +405,42 @@ private:
     // espalhadas por toda a area e sempre renderizadas (casas, lapides, lava, etc.)
     DarkWorld owDecor;
     bool      owDecorBuilt = false;
+
+    // ── FASES (mundo aberto) ─────────────────────────────────────────────────
+    // Cada fase e um MUNDO inteiro de um bioma so. Some o numero de abates da
+    // fase; ao bater a meta o PORTAL abre e leva ao proximo mundo com tela de
+    // transicao. E o que da a sensacao de "passei de fase" que andar nao dava.
+    int       owPhase        = 0;
+    int       owPhaseKills   = 0;
+    int       owPhaseGoal    = 20;
+    int       owKillsAtStart = 0;
+    bool      owPortalOpen   = false;
+    Vector2   owPortalPos    = { 0.0f, 0.0f };
+    float     owFadeTimer    = 0.0f;   // >0 = tela de transicao de fase
+    std::string owFadeText;
+    // A fase e um LUGAR com limite, nao um tapete infinito: barreira de energia
+    // no raio abaixo. Sem borda, "passar de fase" nao existe - o jogador so anda.
+    float     owPhaseRadius  = 3000.0f;
+    float     borderWarnTimer = 0.0f;   // anti-spam do aviso de barreira
+    bool      owBossPhase    = false;   // a cada 3 fases o portal so abre com o boss morto
+    bool      owBossDown     = false;
+    void      updatePhasePortal(float dt);
+    void      advanceOpenWorldPhase();
+    void      drawPhaseFade() const;
+    // Campanha vinda de content/phases.txt (dado, nao codigo). Se o arquivo nao
+    // existir cai numa tabela embutida, entao o jogo NUNCA deixa de abrir por
+    // causa de conteudo faltando.
+    struct PhaseDef {
+        ZoneID      zone   = ZoneID::LARuins;
+        int         goal   = 20;
+        bool        boss   = false;
+        float       radius = 3000.0f;
+        std::string title;
+    };
+    std::vector<PhaseDef> phaseDefs;
+    void            loadPhaseDefs();
+    const PhaseDef& phaseDef(int phase) const;
+    static ZoneID phaseZone(int phase);
     // Mundo infinito: cenário gerado por CHUNKS ao redor do player (auto-construção)
     std::set<long long> m_sceneryChunks;
     int  m_lastChunkX = -999999, m_lastChunkY = -999999;
@@ -414,6 +505,7 @@ private:
         int     role        = 0;      // NPCRole → modelo voxel + cor
         int     facing      = 1;
         FolkJob job         = FolkJob::Worker;
+        float   walkPhase   = 0.0f;   // fase do passo (avanca com o deslocamento)
         bool    atStation   = false;  // chegou no posto e está trabalhando/conversando
     };
     std::vector<CityFolk> cityFolk;

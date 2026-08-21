@@ -2,6 +2,78 @@
 #include "SpriteGen.h"
 #include "SpriteExtrude.h"
 bool g_renderPass3D = false;
+
+// ── ARQUITETURA POR BIOMA ────────────────────────────────────────────────────
+// Todas as fases usavam os MESMOS 4 modelos (casa/celeiro/castelo/silo): trocava
+// o chao e o ceu, mas a cidade era identica em Los Angeles, no cemiterio e no
+// inferno. Aqui cada bioma tem seu proprio conjunto de tipos de estrutura.
+//   0 casa   1 celeiro  7 castelo/predio  8 silo
+//  14 cripta 15 bunker  16 espira infernal 17 monolito 18 cabana 19 torre
+static const int* structuresFor(ZoneID z, int& outCount) {
+    // COERENCIA: castelo (7), poco/silo (8) e celeiro (1) sao MEDIEVAIS/RURAIS —
+    // nao entram numa cidade com asfalto e carro. Cidade usa predio moderno (20),
+    // casa (0) e bunker (15). O castelo sobrou so para a MANSAO, que e o unico
+    // lugar onde ele faz sentido.
+    // Nada de casa de telhado de telha (0 = house.obj, medieval) numa rua com
+    // asfalto e carro: era exatamente o que quebrava a coerencia da cidade.
+    static const int LA[]      = { 20, 20, 20, 15 };
+    static const int GHOST[]   = { 20, 20, 15, 15 };
+    static const int FARM[]    = { 1, 1, 0, 8, 18 };
+    static const int FOREST[]  = { 18, 18, 19, 1 };
+    static const int CEMIT[]   = { 14, 14, 19, 0 };
+    static const int BUNKER[]  = { 15, 15, 20 };
+    static const int CATAC[]   = { 14, 14, 19 };
+    static const int MANOR[]   = { 7, 14, 0, 19 };
+    static const int FORGE[]   = { 15, 20, 16 };
+    static const int INFERNO[] = { 16, 16, 14 };
+    static const int NEXUS[]   = { 17, 17, 16, 20 };
+    (void)0;
+    switch (z) {
+        case ZoneID::GhostCity:      outCount = 4; return GHOST;
+        case ZoneID::CursedFarm:     outCount = 5; return FARM;
+        case ZoneID::DarkForest:     outCount = 4; return FOREST;
+        case ZoneID::Cemetery:       outCount = 4; return CEMIT;
+        case ZoneID::Bunker:         outCount = 4; return BUNKER;
+        case ZoneID::Catacombs:      outCount = 3; return CATAC;
+        case ZoneID::AbandonedManor: outCount = 4; return MANOR;
+        case ZoneID::KronosForge:    outCount = 4; return FORGE;
+        case ZoneID::InfernoZone:    outCount = 4; return INFERNO;
+        case ZoneID::KronosNexus:    outCount = 4; return NEXUS;
+        case ZoneID::LARuins:
+        default:                     outCount = 5; return LA;
+    }
+}
+
+// Tinta das construcoes por bioma: o mesmo modelo lido como pedra clara em LA e
+// como pedra queimada no inferno ja muda a leitura da cidade inteira.
+static Color structureTintFor(ZoneID z) {
+    switch (z) {
+        case ZoneID::Cemetery:       return { 150, 158, 172, 255 };
+        case ZoneID::DarkForest:     return { 148, 156, 132, 255 };
+        case ZoneID::CursedFarm:     return { 198, 176, 132, 255 };
+        case ZoneID::Bunker:         return { 138, 150, 140, 255 };
+        case ZoneID::Catacombs:      return { 152, 140, 126, 255 };
+        case ZoneID::AbandonedManor: return { 158, 140, 162, 255 };
+        case ZoneID::KronosForge:    return { 186, 142, 110, 255 };
+        case ZoneID::InfernoZone:    return { 150,  96,  80, 255 };
+        case ZoneID::KronosNexus:    return { 130, 168, 196, 255 };
+        case ZoneID::GhostCity:      return { 160, 168, 180, 255 };
+        case ZoneID::LARuins:
+        default:                     return { 255, 255, 255, 255 };
+    }
+}
+
+// ── ESCALA DO MUNDO ──────────────────────────────────────────────────────────
+// Tudo ancorado no heroi: ~28 unidades de altura = 1,75 m, entao 1 metro ~ 16u.
+// Os valores antigos (casa 110u = 7 m na MAIOR dimensao) deixavam predio menor
+// que gente: a cidade lia como maquete e o personagem como um poste ao lado dela.
+static constexpr float FIT_HOUSE    = 175.0f;   // casa de 2 andares ~11 m
+static constexpr float FIT_BARRACKS = 190.0f;   // celeiro/galpao ~12 m
+static constexpr float FIT_CASTLE   = 340.0f;   // predio/castelo ~21 m
+static constexpr float FIT_TURRET   =  95.0f;
+static constexpr float FIT_MARKET   = 200.0f;
+static constexpr float FIT_WELL     = 130.0f;   // silo alto
+static constexpr float FIT_CAR      =  68.0f;   // carro ~4,2 m de comprimento
 #include <raylib.h>
 #include <raymath.h>
 #include "rlgl.h"
@@ -108,6 +180,8 @@ Game::Game() {
     SetTextureFilter(gameTarget.texture, TEXTURE_FILTER_POINT);
     tempEntityTarget = LoadRenderTexture(128, 128);
     SetTextureFilter(tempEntityTarget.texture, TEXTURE_FILTER_POINT);
+    initPostFX();       // bloom + tonemap
+    initWorldShader();  // luz direcional + rim + nevoa nos modelos 3D
     lightSystem.init(screenWidth, screenHeight);
 
     SpriteBank::get().init();   // gera os sprites pixel-art (precisa de contexto GL)
@@ -153,17 +227,23 @@ Game::Game() {
             float d = fmaxf(bb.max.y - bb.min.y, fmaxf(bb.max.x - bb.min.x, bb.max.z - bb.min.z));
             return (d > 0.001f) ? target / d : 1.0f;
         };
-        m_houseScale    = _fit(m_houseModel, 110.0f);
-        m_barracksScale = _fit(m_barracksModel, 90.0f);
-        m_castleScale   = _fit(m_castleModel, 155.0f);
-        m_turretScale   = _fit(m_turretModel, 75.0f);
-        m_marketScale   = _fit(m_marketModel, 130.0f);
-        m_wellScale     = _fit(m_wellModel, 55.0f);
-        m_carScale      = _fit(m_carModel, 40.0f);
+        m_houseScale    = _fit(m_houseModel,    FIT_HOUSE);
+        m_barracksScale = _fit(m_barracksModel, FIT_BARRACKS);
+        m_castleScale   = _fit(m_castleModel,   FIT_CASTLE);
+        m_turretScale   = _fit(m_turretModel,   FIT_TURRET);
+        m_marketScale   = _fit(m_marketModel,   FIT_MARKET);
+        m_wellScale     = _fit(m_wellModel,     FIT_WELL);
+        m_carScale      = _fit(m_carModel,      FIT_CAR);
     }
+    // Liga a iluminacao nos modelos de cenario (os voxel recebem ao serem gerados)
+    applyWorldShader(m_houseModel);    applyWorldShader(m_barracksModel);
+    applyWorldShader(m_castleModel);   applyWorldShader(m_turretModel);
+    applyWorldShader(m_marketModel);   applyWorldShader(m_wellModel);
+    applyWorldShader(m_carModel);
     m_modelsLoaded = true;
 
     audio.init();
+    loadPhaseDefs();   // campanha vem de content/phases.txt (editavel sem recompilar)
     buildQuests();
     buildNPCs();
     craftingSystem.buildRecipes();
@@ -180,6 +260,14 @@ Game::Game() {
     float cy = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
     player.position  = {cx, cy};
     safeZoneCenter   = {cx, cy};   // refugio fica no centro da regiao inicial
+    {   // fase 1 tambem sai da tabela (antes os valores viviam so no codigo)
+        const PhaseDef& p0 = phaseDef(0);
+        owPhaseGoal   = p0.goal;
+        owPhaseRadius = p0.radius;
+        owBossPhase   = p0.boss;
+        currentZone   = p0.zone;
+        currentRegion = p0.zone;
+    }
 
     camera.offset   = {screenWidth / 2.0f, screenHeight / 2.0f};
     camera.target   = player.position;
@@ -231,11 +319,127 @@ Game::~Game() {
     // Libera os modelos VOXEL gerados em runtime (eram leak de CPU+GPU).
     for (auto& kv : m_voxModels) if (kv.second.meshCount > 0) UnloadModel(kv.second);
     m_voxModels.clear();
+    unloadPostFX();
 
     CloseWindow();
 }
 
 // ── RenderTexture helpers ─────────────────────────────────────────────────────
+
+// --- Pos-processamento ------------------------------------------------------
+// Sem shader o jogo era 100% funcao fixa: cada pixel saia exatamente com a cor
+// desenhada, sem faixa dinamica. Dai a sensacao de "chapado e escuro" - luz forte
+// nao estourava e sombra nao tinha pe. Este passe da halo nas fontes de luz
+// (bloom) e curva filmica na imagem inteira (tonemap).
+void Game::initWorldShader() {
+    m_worldLit = false;
+    if (!FileExists("resources/shaders/world.fs")) return;
+    m_shWorld = LoadShader("resources/shaders/world.vs", "resources/shaders/world.fs");
+    if (!IsShaderValid(m_shWorld)) {
+        TraceLog(LOG_WARNING, "WORLDLIT: shader nao compilou - 3D segue sem luz");
+        return;
+    }
+    m_locLightDir  = GetShaderLocation(m_shWorld, "lightDir");
+    m_locLightCol  = GetShaderLocation(m_shWorld, "lightColor");
+    m_locAmbCol    = GetShaderLocation(m_shWorld, "ambientColor");
+    m_locCamPos    = GetShaderLocation(m_shWorld, "camPos");
+    m_locFogCol    = GetShaderLocation(m_shWorld, "fogColor");
+    m_locFogStart  = GetShaderLocation(m_shWorld, "fogStart");
+    m_locFogEnd    = GetShaderLocation(m_shWorld, "fogEnd");
+    m_locRim       = GetShaderLocation(m_shWorld, "rimStrength");
+    m_worldLit = true;
+    TraceLog(LOG_INFO, "WORLDLIT: iluminacao 3D ATIVA");
+}
+
+void Game::applyWorldShader(Model& m) const {
+    if (!m_worldLit || m.materialCount <= 0) return;
+    for (int i = 0; i < m.materialCount; ++i) m.materials[i].shader = m_shWorld;
+}
+
+void Game::updateWorldShaderUniforms() {
+    if (!m_worldLit) return;
+    // O sol gira com o ciclo do dia: sombra e luz mudam de lado ao longo da partida.
+    float ang = worldClock * 6.2831853f;
+    Vector3 ld = { -0.42f * cosf(ang) - 0.30f, -1.0f, -0.30f * sinf(ang) - 0.22f };
+    float lm = sqrtf(ld.x*ld.x + ld.y*ld.y + ld.z*ld.z);
+    ld = { ld.x/lm, ld.y/lm, ld.z/lm };
+
+    Color a = lightSystem.ambientColor;
+    float amb = 0.34f + (1.0f - lightSystem.ambientDark) * 0.30f;
+    Vector3 ambV = { a.r/255.0f*amb, a.g/255.0f*amb, a.b/255.0f*amb };
+    // luz direta puxa o matiz do ambiente, mas mais quente e mais forte de dia
+    float sunK = 0.42f + worldSun * 0.40f;
+    Vector3 lcV = { (a.r/255.0f*0.55f + 0.45f) * sunK,
+                    (a.g/255.0f*0.62f + 0.38f) * sunK,
+                    (a.b/255.0f*0.70f + 0.30f) * sunK };
+    Vector3 cam = camera3D.position;
+    Vector3 fog = { ambV.x * 0.85f, ambV.y * 0.85f, ambV.z * 0.95f };
+    float fs = 900.0f, fe = 2600.0f, rim = 0.30f;
+    SetShaderValue(m_shWorld, m_locLightDir, &ld,   SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld, m_locLightCol, &lcV,  SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld, m_locAmbCol,   &ambV, SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld, m_locCamPos,   &cam,  SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld, m_locFogCol,   &fog,  SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld, m_locFogStart, &fs,   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld, m_locFogEnd,   &fe,   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld, m_locRim,      &rim,  SHADER_UNIFORM_FLOAT);
+}
+
+void Game::initPostFX() {
+    m_postFX = false;
+    if (!FileExists("resources/shaders/grade.fs")) {
+        TraceLog(LOG_WARNING, "POSTFX: resources/shaders ausente - seguindo sem bloom");
+        return;
+    }
+    m_shBright = LoadShader(0, "resources/shaders/bloom_bright.fs");
+    m_shBlur   = LoadShader(0, "resources/shaders/blur.fs");
+    m_shGrade  = LoadShader(0, "resources/shaders/grade.fs");
+    if (!IsShaderValid(m_shBright) || !IsShaderValid(m_shBlur) || !IsShaderValid(m_shGrade)) {
+        TraceLog(LOG_WARNING, "POSTFX: shader nao compilou - seguindo sem bloom");
+        unloadPostFX();
+        return;
+    }
+    m_locThreshold  = GetShaderLocation(m_shBright, "threshold");
+    m_locKnee       = GetShaderLocation(m_shBright, "knee");
+    m_locBlurDir    = GetShaderLocation(m_shBlur,   "direction");
+    m_locBloomTex   = GetShaderLocation(m_shGrade,  "texture1");
+    m_locBloomStr   = GetShaderLocation(m_shGrade,  "bloomStrength");
+    m_locExposure   = GetShaderLocation(m_shGrade,  "exposure");
+    m_locSaturation = GetShaderLocation(m_shGrade,  "saturation");
+    m_locContrast   = GetShaderLocation(m_shGrade,  "contrast");
+
+    // 1/4 de resolucao: o borrao e largo de proposito, resolucao cheia so custaria
+    // fillrate. BILINEAR e o que faz o halo subir de escala liso, sem serrilha.
+    m_bloomA = LoadRenderTexture(screenWidth / 4, screenHeight / 4);
+    m_bloomB = LoadRenderTexture(screenWidth / 4, screenHeight / 4);
+    SetTextureFilter(m_bloomA.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(m_bloomB.texture, TEXTURE_FILTER_BILINEAR);
+
+    float thr = 0.62f, knee = 0.30f;
+    SetShaderValue(m_shBright, m_locThreshold, &thr,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shBright, m_locKnee,      &knee, SHADER_UNIFORM_FLOAT);
+    // Com tonemap no fim da cadeia a cena NAO precisa mais ser desenhada clara:
+    // exposicao perto de 1.0 + contraste alto = pretos com pe e ilhas de luz
+    // (o visual do genero), em vez do cinza chapado de antes.
+    float bs = 0.95f, ex = 1.06f, sat = 1.22f, con = 1.16f;
+    SetShaderValue(m_shGrade, m_locBloomStr,   &bs,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shGrade, m_locExposure,   &ex,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shGrade, m_locSaturation, &sat, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shGrade, m_locContrast,   &con, SHADER_UNIFORM_FLOAT);
+    m_postFX = true;
+    TraceLog(LOG_INFO, "POSTFX: bloom + tonemap ATIVO");
+}
+
+void Game::unloadPostFX() {
+    if (IsShaderValid(m_shBright)) UnloadShader(m_shBright);
+    if (IsShaderValid(m_shBlur))   UnloadShader(m_shBlur);
+    if (IsShaderValid(m_shGrade))  UnloadShader(m_shGrade);
+    m_shBright = {}; m_shBlur = {}; m_shGrade = {};
+    if (m_bloomA.id > 0) UnloadRenderTexture(m_bloomA);
+    if (m_bloomB.id > 0) UnloadRenderTexture(m_bloomB);
+    m_bloomA = {}; m_bloomB = {};
+    m_postFX = false;
+}
 
 void Game::presentFrame() const {
     int sw = GetScreenWidth(), sh = GetScreenHeight();
@@ -246,13 +450,64 @@ void Game::presentFrame() const {
     float drawH  = screenHeight * scale;
     float drawX  = (sw - drawW) * 0.5f;
     float drawY  = (sh - drawH) * 0.5f;
-    BeginDrawing();
-    ClearBackground(BLACK);
-    DrawTexturePro(gameTarget.texture,
-        {0.f, 0.f, (float)screenWidth, -(float)screenHeight},
-        {drawX, drawY, drawW, drawH},
-        {0, 0}, 0.0f, WHITE);
-    EndDrawing();
+    Rectangle srcFull = { 0.f, 0.f, (float)screenWidth, -(float)screenHeight };
+    Rectangle dstFull = { drawX, drawY, drawW, drawH };
+
+    if (m_postFX) {
+        // 1) BRILHO: extrai so os pixels acima do threshold, ja em 1/4 de res.
+        Rectangle bDst = { 0.f, 0.f, (float)m_bloomA.texture.width,
+                                     (float)m_bloomA.texture.height };
+        BeginTextureMode(m_bloomA);
+            ClearBackground(BLACK);
+            BeginShaderMode(m_shBright);
+                DrawTexturePro(gameTarget.texture, srcFull, bDst, {0,0}, 0.0f, WHITE);
+            EndShaderMode();
+        EndTextureMode();
+
+        // 2) BORRAO em duas passadas (separavel): horizontal A->B, vertical B->A.
+        Rectangle bSrc = { 0.f, 0.f, (float)m_bloomA.texture.width,
+                                    -(float)m_bloomA.texture.height };
+        Vector2 dirH = { 1.0f / (float)m_bloomA.texture.width, 0.0f };
+        Vector2 dirV = { 0.0f, 1.0f / (float)m_bloomA.texture.height };
+        BeginTextureMode(m_bloomB);
+            ClearBackground(BLACK);
+            SetShaderValue(m_shBlur, m_locBlurDir, &dirH, SHADER_UNIFORM_VEC2);
+            BeginShaderMode(m_shBlur);
+                DrawTexturePro(m_bloomA.texture, bSrc, bDst, {0,0}, 0.0f, WHITE);
+            EndShaderMode();
+        EndTextureMode();
+        BeginTextureMode(m_bloomA);
+            ClearBackground(BLACK);
+            SetShaderValue(m_shBlur, m_locBlurDir, &dirV, SHADER_UNIFORM_VEC2);
+            BeginShaderMode(m_shBlur);
+                DrawTexturePro(m_bloomB.texture, bSrc, bDst, {0,0}, 0.0f, WHITE);
+            EndShaderMode();
+        EndTextureMode();
+
+        // 3) COMPOSICAO: cena + halo, tonemap filmico, contraste e saturacao.
+        BeginDrawing();
+            ClearBackground(BLACK);
+            SetShaderValueTexture(m_shGrade, m_locBloomTex, m_bloomA.texture);
+            BeginShaderMode(m_shGrade);
+                DrawTexturePro(gameTarget.texture, srcFull, dstFull, {0,0}, 0.0f, WHITE);
+            EndShaderMode();
+        EndDrawing();
+    } else {
+        BeginDrawing();
+        ClearBackground(BLACK);
+        DrawTexturePro(gameTarget.texture, srcFull, dstFull, {0, 0}, 0.0f, WHITE);
+        EndDrawing();
+    }
+    // TEMP-SHOT: no autotest, salva um frame a cada 10s p/ inspecao visual.
+    // TEM que ser DEPOIS de EndDrawing — antes, o framebuffer ainda esta preto.
+    if (botController.autoTest) {
+        static double lastShot = 0.0; static int shotN = 0;
+        double now = GetTime();
+        if (now - lastShot > 10.0 && now > 8.0 && shotN < 10) {
+            lastShot = now;
+            TakeScreenshot(TextFormat("shot_%02d.png", shotN++));
+        }
+    }
 }
 
 Vector2 Game::virtualizeMousePos(Vector2 m) const {
@@ -809,12 +1064,10 @@ ZoneID Game::getRegionAt(Vector2 pos) const {
     // Bioma por POSIÇÃO — MESMA regra (período 2560 e owLayout 3x3 por módulo) que
     // Tilemap::render3D usa, para que INIMIGOS, ÁUDIO e ZONA concordem com o CHÃO
     // em TODO o mundo infinito (não só na área fixa central).
-    const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize); // 2560
-    int zx = (int)std::floor(pos.x / ZONE);
-    int zy = (int)std::floor(pos.y / ZONE);
-    int col = ((zx % Tilemap::OW_COLS) + Tilemap::OW_COLS) % Tilemap::OW_COLS;
-    int row = ((zy % Tilemap::OW_ROWS) + Tilemap::OW_ROWS) % Tilemap::OW_ROWS;
-    return tilemap.owLayout[row][col];
+    (void)pos;
+    // Uma FASE = um mundo inteiro. Trocar de mundo e pelo PORTAL (ver
+    // advanceOpenWorldPhase), nunca por atravessar uma linha invisivel no chao.
+    return currentZone;
 }
 
 // Popula TODAS as regioes do mundo aberto com cenario denso, espalhado por toda
@@ -834,8 +1087,19 @@ void Game::buildOpenWorldScenery() {
         return (float)((rng >> 8) & 0xFFFF) / 65535.0f; // 0..1
     };
 
+    // count e calibrado para a regiao ANTIGA de 2560x2560; escala por AREA pra
+    // densidade continuar a mesma quando o tamanho da regiao muda.
+    // O mundo da FASE termina na barreira: cenario fora dela so gastava memoria e
+    // ainda aparecia atras da parede de energia, denunciando que o mapa continua.
+    const float phaseLimit = owPhaseRadius + 140.0f;
+    auto insidePhase = [&](Vector2 p) {
+        float dx = p.x - safeZoneCenter.x, dy = p.y - safeZoneCenter.y;
+        return dx*dx + dy*dy <= phaseLimit * phaseLimit;
+    };
     auto place = [&](Rectangle b, int type, int count,
                      float minScale, float maxScale, float margin) {
+        float areaK = (b.width * b.height) / (2560.0f * 2560.0f);
+        count = (int)(count * areaK);
         for (int i = 0; i < count; ++i) {
             SceneryObject o;
             o.type     = type;
@@ -843,6 +1107,7 @@ void Game::buildOpenWorldScenery() {
                 b.x + margin + rnd() * (b.width  - 2 * margin),
                 b.y + margin + rnd() * (b.height - 2 * margin)
             };
+            if (!insidePhase(o.position)) continue;
             o.rotation = rnd() * 3.14159f;
             o.scale    = minScale + rnd() * (maxScale - minScale);
             // tint.r > 128 acende luzes (janelas/postes)
@@ -854,16 +1119,43 @@ void Game::buildOpenWorldScenery() {
     const float hubX = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f; // centro do hub (1ª zona)
     const float hubY = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
     std::vector<Vector2> placedB;   // estruturas já colocadas (anti-sobreposição)
-    auto isStruct = [](int t) { return t == 0 || t == 1 || t == 7 || t == 8 || t == 10; };
+    auto isStruct = [](int t) { return t == 0 || t == 1 || t == 7 || t == 8 || t == 10 ||
+                                       (t >= 14 && t <= 20); };
     // Coloca 1 objeto. Estruturas grandes: longe do hub + sem encostar em outra.
+    // Distancia minima entre estruturas PROPORCIONAL ao tamanho. Um valor fixo de
+    // 400u rejeitava quase todo lote de um predio de 60u de largura: a cidade saia
+    // com uma construcao a cada quarteirao e meio, ou seja, vazia.
+    auto spacingFor = [](int type) {
+        switch (type) {
+            case 7:  return 420.0f;   // castelo/mansao
+            case 1:  return 260.0f;   // celeiro
+            case 15: return 210.0f;   // bunker
+            case 20: return 320.0f;   // predio moderno
+            case 0:  return 180.0f;   // casa
+            case 8:  return 170.0f;   // silo
+            case 14: return 150.0f;   // cripta
+            case 18: return 150.0f;   // cabana
+            case 16: return 130.0f;   // espira
+            case 17: return 120.0f;   // monolito
+            case 19: return 110.0f;   // torre
+            default: return 200.0f;
+        }
+    };
     auto put1 = [&](int type, Vector2 pos, float sc) {
+        if (!insidePhase(pos)) return;
         if (isStruct(type)) {
             float hdx = pos.x - hubX, hdy = pos.y - hubY;
-            if (hdx*hdx + hdy*hdy < 360.0f * 360.0f) return;   // praça central (NPCs) livre                 // protege os NPCs do hub
-            for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < 300.0f*300.0f) return; }
+            if (hdx*hdx + hdy*hdy < 360.0f * 360.0f) return;   // praça central (NPCs) livre
+            float md = spacingFor(type);
+            for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < md*md) return; }
             placedB.push_back(pos);
         }
-        SceneryObject o; o.type = type; o.position = pos; o.rotation = rnd() * 3.14159f;
+        SceneryObject o; o.type = type; o.position = pos;
+        // Predio de cidade se ALINHA a rua (giro em multiplos de 90 graus). Predio
+        // torto no meio do quarteirao denuncia geracao aleatoria na hora.
+        bool aligned = (type == 20 || type == 15 || type == 0);
+        o.rotation = aligned ? (float)((int)(rnd() * 4.0f) % 4) * 1.5708f
+                             : rnd() * 3.14159f;
         o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
         owDecor.scenery.push_back(o);
     };
@@ -877,19 +1169,39 @@ void Game::buildOpenWorldScenery() {
         switch (r.zoneType) {
             case ZoneID::LARuins:    // Ruínas de LA — CIDADE: grade de prédios com praça central
             case ZoneID::GhostCity: {// Cidade fantasma
-                float gp   = 360.0f;                                            // espaçamento da grade (ruas)
+                float gp   = 950.0f;                    // quarteirao (fachada 280u + rua 210u)
                 float skip = (r.zoneType == ZoneID::GhostCity) ? 0.18f : 0.32f; // ruínas têm mais buracos
                 for (float gx = b.x + 220.0f; gx < b.x + b.width - 220.0f; gx += gp)
                     for (float gy = b.y + 220.0f; gy < b.y + b.height - 220.0f; gy += gp) {
                         if (rnd() < skip) continue;                            // lote vazio = praça/rua larga
-                        Vector2 bp = { gx + (rnd()-0.5f)*70.0f, gy + (rnd()-0.5f)*70.0f };
-                        // VARIA o prédio (não 5 castelos iguais): casa/celeiro/prédio/silo
-                        float tr = rnd();
-                        int bt = (tr < 0.34f) ? 7 : (tr < 0.64f) ? 1 : (tr < 0.88f) ? 0 : 8;
-                        put1(bt, bp, 0.9f + rnd()*0.8f);   // put1 respeita a praça do hub + anti-overlap
+                        // PERIMETRO do quarteirao ocupado: 3 construcoes por lado,
+                        // coladas na calcada, deixando o MIOLO como patio de entulho.
+                        // Assim a rua vira corredor entre massas construidas.
+                        int nk2 = 0; const int* kk2 = structuresFor(r.zoneType, nk2);
+                        const float EDGE = 350.0f;      // do centro do quarteirao ate a calcada
+                        for (int side = 0; side < 4; ++side) {
+                            for (int slot = 0; slot < 2; ++slot) {
+                                if (rnd() < 0.18f) continue;          // brecha = beco
+                                float along = (slot - 0.5f) * 300.0f + (rnd() - 0.5f) * 50.0f;
+                                Vector2 lot;
+                                if (side == 0)      lot = { gx + along, gy - EDGE };
+                                else if (side == 1) lot = { gx + along, gy + EDGE };
+                                else if (side == 2) lot = { gx - EDGE,  gy + along };
+                                else                lot = { gx + EDGE,  gy + along };
+                                put1(kk2[(int)(rnd() * nk2) % nk2], lot, 0.74f + rnd() * 0.26f);
+                            }
+                        }
+                        // miolo: entulho e carcacas (patio escuro, nao descampado)
+                        for (int ci = 0; ci < 3; ++ci)
+                            put1(21, { gx + (rnd() - 0.5f) * 430.0f,
+                                       gy + (rnd() - 0.5f) * 430.0f }, 1.0f + rnd() * 1.0f);
+                        // fogueira de sobreviventes de vez em quando (luz + cor)
+                        if (rnd() < 0.30f)
+                            put1(22, { gx + (rnd() - 0.5f) * 360.0f,
+                                       gy + (rnd() - 0.5f) * 360.0f }, 1.0f + rnd() * 0.5f);
                     }
                 place(b, 5, 20, 1.0f, 1.0f, 150);  // postes nas ruas
-                place(b, 6, 12, 1.0f, 1.0f, 150);  // carros abandonados
+                place(b, 6, 16, 1.0f, 1.0f, 150);  // carros abandonados (so cidade)
                 place(b, 2,  6, 0.8f, 1.2f, 150);  // árvores
             } break;
             case ZoneID::Bunker: {   // Bunker — compostos militares (estruturas+silos em linha)
@@ -941,8 +1253,10 @@ void Game::buildOpenWorldScenery() {
                 break;
         }
         // Vegetação rasteira densa em TODA zona — vida no chão (grama + detritos)
-        place(b, 11, 130, 0.6f, 1.7f, 20);  // grama
+        place(b, 11, 300, 0.7f, 1.25f, 20);  // grama: menor e MUITO mais densa
         place(b, 12,  36, 0.6f, 1.2f, 40);  // pedras/detritos
+        place(b, 13, 120, 0.8f, 2.4f, 20);  // manchas/rachaduras no chao
+        place(b, 21,  90, 0.7f, 1.6f, 30);  // ENTULHO: o mundo caiu, tem que ter escombro
     }
 
     // ── Colisao de cenario: estruturas grandes bloqueiam passagem (nao andar em
@@ -954,14 +1268,38 @@ void Game::buildOpenWorldScenery() {
         // Pegada de colisao por tipo (predios/casas grandes bloqueiam mais area).
         float rad = 0.0f;
         switch (o.type) {
-            case 0: case 1: case 7: rad = 70.0f + 30.0f * o.scale; break; // casa/celeiro/predio
-            case 8: case 9:         rad = 55.0f + 20.0f * o.scale; break; // silo/catacumba
-            case 6: case 10:        rad = 40.0f + 16.0f * o.scale; break; // carro/estatua
+            // pegada = fracao do tamanho REALMENTE desenhado (fit * escala do obj)
+            case 0:  rad = FIT_HOUSE    * o.scale * 0.46f; break; // casa
+            case 1:  rad = FIT_BARRACKS * o.scale * 0.46f; break; // celeiro
+            case 7:  rad = FIT_CASTLE   * o.scale * 0.40f; break; // predio/castelo
+            case 8:  rad = FIT_WELL     * o.scale * 0.42f; break; // silo
+            case 9:  rad = 70.0f * o.scale; break;                // catacumba
+            case 6:  rad = 78.0f * o.scale; break;                // veiculo (primitivas)
+            case 10: rad = 48.0f * o.scale; break;                // estatua
+            // estruturas proprias de bioma (cripta/bunker/espira/monolito/cabana/torre)
+            case 14: rad = 46.0f * o.scale; break;
+            case 15: rad = 58.0f * o.scale; break;
+            case 16: rad = 30.0f * o.scale; break;
+            case 17: rad = 28.0f * o.scale; break;
+            case 18: rad = 46.0f * o.scale; break;
+            case 19: rad = 26.0f * o.scale; break;
+            case 20: rad = 96.0f * o.scale; break;   // predio moderno (circulo inscrito)
+            case 21: continue;   // entulho: decoracao, NAO bloqueia (virava labirinto)
+            case 22: continue;   // fogueira: nao bloqueia
             default: continue;                                            // arvores/cercas/postes: atravessavel
         }
         tilemap.markSolidAt(o.position, rad);
     }
 
+    {   // MEDIDA: quantos objetos/estruturas o mundo fixo realmente gerou
+        int st = 0, gr = 0;
+        for (const auto& o : owDecor.scenery) {
+            if (o.type==0||o.type==1||o.type==7||o.type==8||o.type==10) ++st;
+            if (o.type==11) ++gr;
+        }
+        TraceLog(LOG_INFO, "SCENERY total=%d estruturas=%d grama=%d",
+                 (int)owDecor.scenery.size(), st, gr);
+    }
     owDecorBuilt       = true;
     setupResourceNodes();   // nós de coleta (madeira/pedra/ferro/prata/ouro)
     setupAnimals();         // vida selvagem (veado/coelho/javali/lobo/passaro)
@@ -1042,7 +1380,8 @@ void Game::updateCityFolk(float dt) {
             } else {
                 Vector2 s = { d.x/dist * f.speed * dt, d.y/dist * f.speed * dt };
                 Vector2 np = { f.position.x + s.x, f.position.y + s.y };
-                if (!isBlocked(np)) { f.position = np; f.facing = (s.x>=0)?1:-1; }
+                if (!isBlocked(np)) { f.position = np; f.facing = (s.x>=0)?1:-1;
+                                      f.walkPhase += dt * 7.0f; }   // passo anda com o civil
                 else { Vector2 tmp = f.target; f.target = f.home; f.home = tmp; }  // contorna: inverte rota
             }
             continue;
@@ -1051,7 +1390,8 @@ void Game::updateCityFolk(float dt) {
         if (dist > 16.0f) {                                    // indo para o posto
             Vector2 s = { d.x/dist * f.speed * dt, d.y/dist * f.speed * dt };
             Vector2 np = { f.position.x + s.x, f.position.y + s.y };
-            if (!isBlocked(np)) { f.position = np; f.facing = (s.x>=0)?1:-1; f.atStation = false; }
+            if (!isBlocked(np)) { f.position = np; f.facing = (s.x>=0)?1:-1; f.atStation = false;
+                                  f.walkPhase += dt * 7.0f; }
             else f.target = f.home;
         } else {                                               // CHEGOU → executa a TAREFA
             f.atStation = true; f.work += dt;
@@ -1128,6 +1468,11 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
         // Props pequenos espalhados; estruturas grandes em CLUSTERS (quarteirões,
         // vilas, compostos) só na bioma certa. Castelo/casa nunca solto fora de tema.
         auto put = [&](int type, Vector2 pos, float sc) {
+            {   // fora da barreira da fase nao existe mundo
+                float dx = pos.x - safeZoneCenter.x, dy = pos.y - safeZoneCenter.y;
+                float lim = owPhaseRadius + 140.0f;
+                if (dx*dx + dy*dy > lim*lim) return;
+            }
             SceneryObject o;
             o.type = type; o.position = pos; o.rotation = rnd() * 3.14159f;
             o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
@@ -1142,12 +1487,13 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
             if (tilemap.biomeAtWorld(pos.x, pos.y) != want) return;
             float hdx = pos.x - hubX, hdy = pos.y - hubY;
             if (hdx*hdx + hdy*hdy < 360.0f * 360.0f) return;   // praça central (NPCs) livre
-            for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < 300.0f*300.0f) return; }
+            for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < 400.0f*400.0f) return; }
             placedB.push_back(pos);
             put(type, pos, sc);
         };
 
-        add(11, 70, 0.6f, 1.7f);   // grama base (universal, sem colisão)
+        add(11, 165, 0.7f, 1.25f);   // grama base (universal, sem colisão)
+        add(13,  34, 0.8f, 2.4f);    // marcas no chao (mesma densidade do mundo fixo)
 
         // 1) Props pequenos espalhados pela bioma local (SEM prédios grandes aqui).
         for (int i = 0; i < 38; ++i) {
@@ -1184,8 +1530,11 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                         Vector2 bp = { seed.x + (c - cols * 0.5f) * sp + (rnd() - 0.5f) * 26.0f,
                                        seed.y + (r - rows * 0.5f) * sp + (rnd() - 0.5f) * 26.0f };
                         float tr = rnd();
-                        int bt = (tr < 0.34f) ? 7 : (tr < 0.64f) ? 1 : (tr < 0.88f) ? 0 : 8;
-                        putB(bt, bp, 0.9f + rnd() * 0.8f, bz);
+                        // tipos vindos do catalogo do BIOMA (cada fase tem outra cara)
+                        int nKinds = 0;
+                        const int* kinds = structuresFor(bz, nKinds);   // bioma do chunk
+                        int bt = kinds[(int)(tr * nKinds) % nKinds];
+                        putB(bt, bp, 0.85f + rnd() * 0.35f, bz);
                     }
                     for (int k = 0; k < 4; ++k)
                         put(5, { seed.x + (rnd() - 0.5f) * sp * cols, seed.y + (rnd() - 0.5f) * sp * rows }, 1.0f);
@@ -1238,8 +1587,10 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
         if (o.chunk == -1) continue;
         float rad = 0.0f;
         switch (o.type) {
-            case 0: case 1: case 7: rad = 70.0f + 30.0f * o.scale; break;
-            case 8:                 rad = 55.0f + 20.0f * o.scale; break;
+            case 0:  rad = FIT_HOUSE    * o.scale * 0.46f; break;
+            case 1:  rad = FIT_BARRACKS * o.scale * 0.46f; break;
+            case 7:  rad = FIT_CASTLE   * o.scale * 0.40f; break;
+            case 8:  rad = FIT_WELL     * o.scale * 0.42f; break;
             default: continue;
         }
         m_chunkSolids.push_back({ o.position.x, o.position.y, rad });
@@ -1297,8 +1648,12 @@ void Game::setupResourceNodes() {
     for (const auto& r : worldRegions) {
         Rectangle b = r.bounds;
         auto randPos = [&](float margin) -> Vector2 {
-            return { b.x + margin + (float)(rnd() % (int)(b.width  - 2*margin)),
-                     b.y + margin + (float)(rnd() % (int)(b.height - 2*margin)) };
+            // Guarda: com regiao menor que 2*margem o span virava 0/negativo e o
+            // `% span` era divisao por zero (UB / crash).
+            int spanW = (int)(b.width  - 2*margin); if (spanW < 1) spanW = 1;
+            int spanH = (int)(b.height - 2*margin); if (spanH < 1) spanH = 1;
+            return { b.x + margin + (float)(rnd() % spanW),
+                     b.y + margin + (float)(rnd() % spanH) };
         };
         // contagens por bioma
         int wood=8, stone=6, iron=3, silver=1, gold=1;
@@ -1342,7 +1697,12 @@ void Game::updateResourceGathering(float dt) {
     // ── MINERAÇÃO COM PICARETA: segura H perto do nó → bate em GOLPES (cadência) ──
     if (mineSwingCD   > 0.0f) mineSwingCD   -= dt;
     if (mineSwingAnim > 0.0f) mineSwingAnim -= dt * 4.5f;   // anim do golpe decai
-    if (nearResourceIdx >= 0 && (IsKeyDown(KEY_H) || (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && nearResourceIdx == mineFxIdx))) {
+    // O clique so podia CONTINUAR um golpe (exigia nearResourceIdx == mineFxIdx, e
+    // mineFxIdx so era escrito aqui dentro) — ou seja, nunca comecava. Agora inicia,
+    // desde que o botao nao esteja servindo a outra coisa (dialogo/construcao/RTS).
+    bool mouseFree = !dialogOpen && !buildingSystem.buildModeActive && !rtsDragging;
+    bool mineHeld  = IsKeyDown(KEY_H) || (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && mouseFree);
+    if (nearResourceIdx >= 0 && mineHeld) {
         mineFxIdx = nearResourceIdx;
         auto& n = resourceNodes[nearResourceIdx];
         // cadência da picareta: madeira rápida, metais lentos (picareta "pesa" mais)
@@ -1361,8 +1721,9 @@ void Game::updateResourceGathering(float dt) {
             if (got > n.amount) got = n.amount;
             playerResources[(int)n.type] += got;
             n.amount -= got;
+            // prefixo SEM o numero: o render ja concatena dn.value ("Madeira +" + "2").
             damageNumbers.push_back({{n.position.x, n.position.y - 10.0f}, (float)got, oc, 1.0f,
-                                     TextFormat("%s +%d", resourceName(n.type), got)});
+                                     std::string(resourceName(n.type)) + " +"});
             n.harvestProg = (n.maxAmount > 0) ? 1.0f - (float)n.amount / (float)n.maxAmount : 0.0f;
             if (n.amount <= 0) {                             // esgotou — ressurge depois
                 n.depleted = true; n.respawnTimer = 35.0f; n.harvestProg = 0.0f;
@@ -1909,11 +2270,13 @@ void Game::runAutoTest(bool autoTest) {
         if (openWorldMode) { tilemap.generateOpenWorld(); setupWorldRegions(); buildOpenWorldScenery(); currentRegion = currentZone; }
         else { tilemap.generate(currentZone); }
         setupZoneNPCs(currentZone);
+        // Sem isto o --autotest parava no MENU esperando um ENTER humano: o bot
+        // so roda depois que a partida comeca. "Skip menu" era so o comentario.
         inMainMenu = false;
-        render3D   = true;   // autoteste no modo 3D/2.5D isométrico completo
+        audio.stopMenuMusic();
         botController.active   = true;
         botController.autoTest = true;
-        botController.testDuration = 7200.0f; // 2 horas max
+        botController.testDuration = (autoTestSeconds > 0.0f) ? autoTestSeconds : 7200.0f;
         botController.addLog("=== AUTO-BOT TEST MODE ATIVADO ===");
         botController.addLog("Duracao maxima: 7200s (2h)");
         startNetwork();   // testa o cliente WebSocket (multiplayer)
@@ -1923,6 +2286,11 @@ void Game::runAutoTest(bool autoTest) {
     // After run() exits, write report if bot was active
     if (botController.active || autoTest) {
         botController.writeReport("C:\\Users\\ricar\\darknet-prototype\\bot_report.txt");
+        // PORTAO DE VALIDACAO: veredito no console; o exit code sai por main.cpp.
+        std::vector<std::string> why;
+        autoTestPassed = botController.passed(&why);
+        TraceLog(LOG_INFO, "VALIDACAO: %s", autoTestPassed ? "PASSOU" : "FALHOU");
+        for (const auto& w : why) TraceLog(LOG_WARNING, "VALIDACAO: %s", w.c_str());
     }
 }
 
@@ -2298,6 +2666,7 @@ void Game::startLoadedGame() {
     // Carrega o save e entra direto no jogo — SEM tela de dificuldade.
     // A dificuldade salva e mantida (so muda em Novo Jogo ou pelo menu de pause).
     if (SaveManager::exists()) SaveManager::load(player, quests, currentZone);
+    player.unclaimedLevels = 0;   // nivel veio do arquivo; nao e level-up novo
     if (openWorldMode) {
         tilemap.generateOpenWorld();
         setupWorldRegions();
@@ -2674,30 +3043,46 @@ void Game::update(float dt) {
         }
         if (darkZoneActive) {
             if (render3D) {
+                Color tCol; float tDark;
                 switch (currentZone) {
-                    case ZoneID::LARuins:       lightSystem.ambientColor = {212,196,165,255}; lightSystem.ambientDark = 0.28f; break;
-                    case ZoneID::Bunker:        lightSystem.ambientColor = {150,165,188,255}; lightSystem.ambientDark = 0.40f; break;
-                    case ZoneID::KronosForge:   lightSystem.ambientColor = {224,158,116,255}; lightSystem.ambientDark = 0.34f; break;
-                    case ZoneID::KronosNexus:   lightSystem.ambientColor = {150,202,222,255}; lightSystem.ambientDark = 0.36f; break;
-                    case ZoneID::Cemetery:      lightSystem.ambientColor = {138,158,212,255}; lightSystem.ambientDark = 0.48f; break;
-                    case ZoneID::CursedFarm:    lightSystem.ambientColor = {174,182,136,255}; lightSystem.ambientDark = 0.40f; break;
-                    case ZoneID::GhostCity:     lightSystem.ambientColor = {160,176,202,255}; lightSystem.ambientDark = 0.44f; break;
-                    case ZoneID::DarkForest:    lightSystem.ambientColor = {128,176,140,255}; lightSystem.ambientDark = 0.46f; break;
-                    case ZoneID::Catacombs:     lightSystem.ambientColor = {188,150,118,255}; lightSystem.ambientDark = 0.54f; break;
-                    case ZoneID::AbandonedManor:lightSystem.ambientColor = {180,156,200,255}; lightSystem.ambientDark = 0.48f; break;
-                    case ZoneID::InfernoZone:   lightSystem.ambientColor = {236,150, 98,255}; lightSystem.ambientDark = 0.28f; break;
-                    default:                    lightSystem.ambientColor = {190,196,212,255}; lightSystem.ambientDark = 0.34f; break;
+                    // ambientDark reduzido: a mascara e MULTIPLICATIVA e ja vinha
+                    // depois do fog do chao — os dois somados apagavam a cena.
+                    // Clima sombrio vem do MATIZ e do contraste, nao de apagar tudo.
+                    case ZoneID::LARuins:       tCol = {224,210,182,255}; tDark = 0.21f; break;
+                    case ZoneID::Bunker:        tCol = {166,181,204,255}; tDark = 0.31f; break;
+                    case ZoneID::KronosForge:   tCol = {236,172,130,255}; tDark = 0.27f; break;
+                    case ZoneID::KronosNexus:   tCol = {166,214,234,255}; tDark = 0.29f; break;
+                    case ZoneID::Cemetery:      tCol = {154,174,224,255}; tDark = 0.37f; break;
+                    case ZoneID::CursedFarm:    tCol = {190,198,152,255}; tDark = 0.31f; break;
+                    case ZoneID::GhostCity:     tCol = {176,192,216,255}; tDark = 0.35f; break;
+                    case ZoneID::DarkForest:    tCol = {144,192,156,255}; tDark = 0.36f; break;
+                    case ZoneID::Catacombs:     tCol = {202,166,134,255}; tDark = 0.42f; break;
+                    case ZoneID::AbandonedManor:tCol = {196,172,214,255}; tDark = 0.37f; break;
+                    case ZoneID::InfernoZone:   tCol = {248,166,114,255}; tDark = 0.23f; break;
+                    default:                    tCol = {206,212,226,255}; tDark = 0.27f; break;
                 }
+                // Interpola em ~1,5s em vez de trocar de uma vez: cruzar a fronteira
+                // de bioma vira transicao de luz, nao um corte seco de "outro mundo".
+                {
+                    float k = 1.0f - expf(-GetFrameTime() * 0.8f);
+                    m_ambBaseDark += (tDark - m_ambBaseDark) * k;
+                    m_ambBaseCol.r = (unsigned char)(m_ambBaseCol.r + (tCol.r - m_ambBaseCol.r) * k);
+                    m_ambBaseCol.g = (unsigned char)(m_ambBaseCol.g + (tCol.g - m_ambBaseCol.g) * k);
+                    m_ambBaseCol.b = (unsigned char)(m_ambBaseCol.b + (tCol.b - m_ambBaseCol.b) * k);
+                    lightSystem.ambientColor = m_ambBaseCol;
+                    lightSystem.ambientDark  = m_ambBaseDark;
+                }
+
                 // ── CICLO DIA/NOITE (mundo vivo): noite escura/azulada, dia claro ──
                 worldClock += GetFrameTime() / 420.0f;          // ciclo completo ~7 min
                 if (worldClock >= 1.0f) worldClock -= 1.0f;
                 float sun = sinf(worldClock * 6.2831853f - 1.5707963f) * 0.5f + 0.5f; // 0=noite,1=meio-dia
                 worldSun = sun;
-                lightSystem.ambientDark += (1.0f - sun) * 0.30f; // escurece à noite
-                if (lightSystem.ambientDark > 0.72f) lightSystem.ambientDark = 0.72f;
+                lightSystem.ambientDark += (1.0f - sun) * 0.20f; // escurece à noite
+                if (lightSystem.ambientDark > 0.52f) lightSystem.ambientDark = 0.52f;  // teto: noite legivel
                 {
                     Color d = lightSystem.ambientColor;
-                    Color n = { 70, 95, 165, 255 };              // azul noturno
+                    Color n = { 104, 132, 196, 255 };            // azul noturno (mais claro: luar, nao breu)
                     lightSystem.ambientColor = {
                         (unsigned char)(n.r + (int)((d.r - n.r) * sun)),
                         (unsigned char)(n.g + (int)((d.g - n.g) * sun)),
@@ -2774,18 +3159,17 @@ void Game::update(float dt) {
             currentRegion       = newRegion;
             currentZone         = newRegion;
             tilemap.currentZone = newRegion;
-            zoneNameTimer       = 4.0f;
             spawnInterval       = getZoneInfo(newRegion).spawnInterval / getDifficulty().spawnRateMult;
             audio.setZone(newRegion);
 
-            for (auto& r : worldRegions) {
-                if (r.zoneType == newRegion && !r.discovered) {
-                    r.discovered = true;
-                    ZoneInfo zi  = getZoneInfo(newRegion);
-                    showStoryBanner(zi.name.c_str(), zi.description.c_str(), 4.0f);
-                    break;
-                }
-            }
+            for (auto& r : worldRegions)
+                if (r.zoneType == newRegion && !r.discovered) { r.discovered = true; break; }
+
+            // Anuncio UNICO da regiao: a barra do topo. Antes isto tambem ligava
+            // zoneNameTimer e, na PRIMEIRA visita, o mesmo nome+descricao saia duas
+            // vezes ao mesmo tempo (barra no topo + texto gigante no meio da tela).
+            ZoneInfo zi = getZoneInfo(newRegion);
+            showStoryBanner(zi.name.c_str(), zi.description.c_str(), 4.0f);
 
             switch (newRegion) {
                 case ZoneID::Cemetery:
@@ -2896,8 +3280,8 @@ void Game::update(float dt) {
 
     // Damage numbers update
     for (auto& dn : damageNumbers) {
-        dn.pos.y -= 38.0f * dt;
-        dn.life  -= dt;
+        dn.rise += 38.0f * dt;   // sobe em `rise`; no 3D pos.y e o eixo NORTE do chao
+        dn.life -= dt;
     }
     damageNumbers.erase(
         std::remove_if(damageNumbers.begin(), damageNumbers.end(),
@@ -2993,10 +3377,17 @@ void Game::update(float dt) {
         }
     }
 
-    // Boss tambem nao surge dentro da zona segura
-    if (enemiesKilled >= bossSpawnThreshold && !bossSpawned && !inSafeZone(player.position)) {
+    // Boss tambem nao surge dentro da zona segura.
+    // Em FASE DE CHEFE o gatilho e a cota da fase: mata a cota -> o chefe aparece
+    // -> so entao o portal abre. Da comeco, meio e fim para a fase.
+    bool bossCue = openWorldMode
+        ? (owBossPhase && owPhaseKills >= owPhaseGoal)
+        : (enemiesKilled >= bossSpawnThreshold);
+    if (bossCue && !bossSpawned && !inSafeZone(player.position)) {
         spawnBoss();
         bossSpawned = true;
+        if (openWorldMode)
+            showStoryBanner("O CHEFE APARECEU", "Derrote-o para abrir o portal.", 4.5f);
     }
 
     // Auto-save
@@ -3004,9 +3395,16 @@ void Game::update(float dt) {
     if (saveTimer >= 30.0f) { autoSave(); saveTimer = 0.0f; }
 
     // Update enemies and collect shooting requests
+    int enemyIdx = 0;
     for (auto& enemy : enemies) {
         Vector2 prevPos = enemy.position;
-        enemy.update(dt, player.position);
+        // Ponto de aproximacao tatico: longe do jogador o inimigo vai pro flanco
+        // ou corta a retaguarda; colado, recebe a posicao REAL (senao a mira e o
+        // telegrafo de ataque apontariam para o lugar errado).
+        Vector2 aim = enemy.isBoss()
+                    ? player.position
+                    : director.approachPoint(enemyIdx++, enemy.position, player.position);
+        enemy.update(dt, aim);
 
         // Colisao com paredes — inimigos NAO atravessam mais paredes.
         // Desliza ao longo da parede (separacao por eixo) em vez de parar seco.
@@ -3234,6 +3632,26 @@ void Game::update(float dt) {
     updateItems(dt);
     updateXPOrbs(dt);
     checkCollisions();
+    drainLevelUps();      // credita os niveis ganhos neste frame (qualquer fonte)
+    // A IA aprende com ESTE frame: distancia, movimentacao, ritmo de abate e dano
+    // sofrido alimentam o diretor, que responde no spawn e na tatica.
+    director.observe(dt, player.position, player.health, player.maxHealth,
+                     enemiesKilled, (int)enemies.size());
+    updatePhasePortal(dt);
+    // ── LIMITE DA FASE ───────────────────────────────────────────────────────
+    if (openWorldMode && owFadeTimer <= 0.0f) {
+        Vector2 d = { player.position.x - safeZoneCenter.x, player.position.y - safeZoneCenter.y };
+        float dl = sqrtf(d.x*d.x + d.y*d.y);
+        if (dl > owPhaseRadius) {
+            player.position.x = safeZoneCenter.x + d.x / dl * owPhaseRadius;
+            player.position.y = safeZoneCenter.y + d.y / dl * owPhaseRadius;
+            if (borderWarnTimer <= 0.0f) {
+                borderWarnTimer = 2.0f;
+                triggerPlayerSpeech("Barreira de KRONOS. Nao da pra ir alem daqui.", 2.5f);
+            }
+        }
+        if (borderWarnTimer > 0.0f) borderWarnTimer -= dt;
+    }
     checkPortalTransition();
 
     // Grito de "estou morrendo" quando a vida fica critica (antes de morrer)
@@ -3802,11 +4220,23 @@ void Game::handleInput(float dt) {
             }
         }
 
-        // Pathfinding global do bot: fornece a consulta de colisao do mapa.
+        // Pathfinding do bot. A consulta antiga era so `tilemap.isWallAtPosition`:
+        // ignorava as estruturas de chunk (m_chunkSolids) E a barreira da fase, entao
+        // o BFS tracava rota atravessando predio e parede de energia. O bot encostava,
+        // era empurrado de volta e repetia - foram os 4 travamentos >10s que o portao
+        // de validacao acusou.
         if (!botController.wallQuery)
-            botController.wallQuery = [this](Vector2 p){ return tilemap.isWallAtPosition(p); };
-        // Centro do mapa para o escape de bordas (width/height em tiles * tileSize/2).
-        botController.worldCenter = { tilemap.width * 32.0f, tilemap.height * 32.0f };
+            botController.wallQuery = [this](Vector2 p) {
+                if (isBlocked(p)) return true;
+                float dx = p.x - safeZoneCenter.x, dy = p.y - safeZoneCenter.y;
+                float lim = owPhaseRadius - 60.0f;          // margem: nao colar na barreira
+                return openWorldMode && (dx*dx + dy*dy > lim*lim);
+            };
+        // Centro para o escape: o REFUGIO da fase. Antes apontava para o centro do
+        // mapa fixo (12288,12288), fora da barreira - o "escape" jogava o bot contra
+        // a parede em vez de tirar dele.
+        botController.worldCenter = safeZoneCenter;
+        botController.worldRadius = owPhaseRadius;   // o bot conhece o tamanho da fase
 
         // Portais de saida da zona — para o bot avancar de fase (AdvancePhase).
         std::vector<Vector2> portalPos;
@@ -4460,6 +4890,17 @@ void Game::spawnEnemy() {
         pos.y = safeZoneCenter.y + d.y / l * (safeZoneRadius + 140.0f);
     }
 
+    // Se o ponto continuar solido depois das tentativas, o inimigo nascia DENTRO
+    // de um predio e ficava presos la para sempre: com a cidade densa isso zerou
+    // o combate (0 abates em 80s com 30 inimigos vivos).
+    auto slideToFree = [&](Vector2 q) {
+        for (int st = 0; st < 14 && isBlocked(q); ++st) {
+            Vector2 d = { player.position.x - q.x, player.position.y - q.y };
+            float l = sqrtf(d.x*d.x + d.y*d.y); if (l < 1.0f) break;
+            q.x += d.x / l * 70.0f; q.y += d.y / l * 70.0f;
+        }
+        return q;
+    };
     int attempts = 0;
     while (tilemap.isWallAtPosition(pos) && attempts < 10) {
         angle = GetRandomValue(0, 360) * DEG2RAD;
@@ -4473,6 +4914,8 @@ void Game::spawnEnemy() {
         }
         attempts++;
     }
+
+    pos = slideToFree(pos);
 
     ZoneInfo info = getZoneInfo(currentZone);
     int roll = GetRandomValue(0, 100);
@@ -4531,34 +4974,56 @@ void Game::spawnEnemy() {
             break;
 
         // ── Fases Sombrias — dark zone spawn tables ────────────────────────────
-        case ZoneID::Cemetery:
-        case ZoneID::CursedFarm:
-            if      (roll > 94) type = EnemyType::ZombieLord;
-            else if (roll > 85) type = EnemyType::ZombieRager;
-            else if (roll > 72) type = EnemyType::PoltergeistBoss;
-            else if (roll > 58) type = EnemyType::Ghost;
-            else if (roll > 40) type = EnemyType::ZombieHorde;
+        // Cada fase tem sua PROPRIA fauna. Antes cemiterio/fazenda,
+        // cidade-fantasma/floresta e catacumba/mansao dividiam a mesma tabela: dois
+        // mundos diferentes com exatamente os mesmos bichos.
+        case ZoneID::CursedFarm:      // RURAL: horda de zumbis, quase nada etereo
+            if      (roll > 96) type = EnemyType::ZombieLord;
+            else if (roll > 82) type = EnemyType::ZombieRager;
+            else if (roll > 74) type = EnemyType::Ghost;
+            else if (roll > 44) type = EnemyType::ZombieHorde;
             else                type = EnemyType::Zombie;
             break;
-        case ZoneID::GhostCity:
-        case ZoneID::DarkForest:
-            if      (roll > 93) type = EnemyType::BansheeHowler;
-            else if (roll > 84) type = EnemyType::ShadowWraith;
-            else if (roll > 72) type = EnemyType::GhostElite;
-            else if (roll > 58) type = EnemyType::ZombieRager;
-            else if (roll > 42) type = EnemyType::Ghost;
+        case ZoneID::Cemetery:        // MORTOS-VIVOS + assombracoes saindo das covas
+            if      (roll > 93) type = EnemyType::ZombieLord;
+            else if (roll > 80) type = EnemyType::PoltergeistBoss;
+            else if (roll > 62) type = EnemyType::GhostElite;
+            else if (roll > 38) type = EnemyType::Ghost;
+            else if (roll > 20) type = EnemyType::ZombieRager;
             else                type = EnemyType::Zombie;
             break;
-        case ZoneID::Catacombs:
-        case ZoneID::AbandonedManor:
-            if      (roll > 92) type = EnemyType::ZombieLord;
+        case ZoneID::DarkForest:      // ESPECTRAL: o que caca na neblina
+            if      (roll > 92) type = EnemyType::BansheeHowler;
+            else if (roll > 76) type = EnemyType::ShadowWraith;
+            else if (roll > 55) type = EnemyType::Ghost;
+            else if (roll > 40) type = EnemyType::GhostElite;
+            else if (roll > 22) type = EnemyType::Zergling;
+            else                type = EnemyType::ZombieHorde;
+            break;
+        case ZoneID::GhostCity:       // URBANO: maquinas de KRONOS entre os espectros
+            if      (roll > 94) type = EnemyType::BansheeHowler;
             else if (roll > 84) type = EnemyType::ShadowWraith;
-            else if (roll > 76) type = EnemyType::BansheeHowler;
-            else if (roll > 64) type = EnemyType::GhostElite;
-            else if (roll > 50) type = EnemyType::ZombieRager;
-            else if (roll > 35) type = EnemyType::PoltergeistBoss;
-            else if (roll > 20) type = EnemyType::ZombieHorde;
+            else if (roll > 70) type = EnemyType::HunterDrone;
+            else if (roll > 56) type = EnemyType::Shooter;
+            else if (roll > 44) type = EnemyType::KronosSentry;
+            else if (roll > 24) type = EnemyType::Ghost;
+            else                type = EnemyType::Zombie;
+            break;
+        case ZoneID::Catacombs:       // SUBTERRANEO: morto-vivo pesado, sem maquina
+            if      (roll > 90) type = EnemyType::ZombieLord;
+            else if (roll > 78) type = EnemyType::UndeadEnforcer;
+            else if (roll > 62) type = EnemyType::ShadowWraith;
+            else if (roll > 44) type = EnemyType::ZombieRager;
+            else if (roll > 24) type = EnemyType::ZombieHorde;
             else                type = EnemyType::Ghost;
+            break;
+        case ZoneID::AbandonedManor:  // ASSOMBRACAO: poltergeist e banshee mandam
+            if      (roll > 88) type = EnemyType::PoltergeistBoss;
+            else if (roll > 72) type = EnemyType::BansheeHowler;
+            else if (roll > 54) type = EnemyType::GhostElite;
+            else if (roll > 34) type = EnemyType::ShadowWraith;
+            else if (roll > 16) type = EnemyType::Ghost;
+            else                type = EnemyType::ZombieRager;
             break;
 
         // ── Zona Inferno — aliens + zumbis em ambiente vulcanico ──────────────
@@ -4721,6 +5186,41 @@ void Game::updateCompanions(float dt) {
             }
         }
 
+        // ── Healer: cura continua enquanto o player esta no raio ──────────────
+        // O Companion so SINALIZA (wantsHeal/healAmount); aplicar e do Game — e isso
+        // nunca era lido, o que deixava Healer e LootDrone completamente inertes.
+        if (c.wantsHeal && !c.isDead() && c.healAmount > 0.0f) {
+            float before = player.health;
+            player.heal(c.healAmount);
+            companionHealAccum += player.health - before;
+            if (companionHealAccum >= 5.0f) {   // 1 numero a cada ~5 HP (nao 1 por frame)
+                damageNumbers.push_back({player.position, companionHealAccum,
+                                         {0,210,80,255}, 1.0f, "+"});
+                companionHealAccum = 0.0f;
+            }
+        }
+
+        // ── LootDrone: puxa itens/orbes proximos DELE ate o player ────────────
+        // Nao coleta direto: empurra pra dentro do raio do player e o pickup normal
+        // (checkCollisions) resolve — sem duplicar a logica de cada tipo de item.
+        if (c.wantsCollect && !c.isDead()) {
+            const float PULL = 460.0f;
+            for (auto& it : items) {
+                if (it.pickedUp || it.pickupDelay > 0.0f) continue;
+                if (Vector2Distance(c.position, it.position) > c.collectRadius) continue;
+                Vector2 d = Vector2Normalize(Vector2Subtract(player.position, it.position));
+                it.position.x += d.x * PULL * dt;
+                it.position.y += d.y * PULL * dt;
+            }
+            for (auto& o : xpOrbs) {
+                if (o.pickedUp) continue;
+                if (Vector2Distance(c.position, o.position) > c.collectRadius) continue;
+                Vector2 d = Vector2Normalize(Vector2Subtract(player.position, o.position));
+                o.position.x += d.x * PULL * dt;
+                o.position.y += d.y * PULL * dt;
+            }
+        }
+
         // Damage companions from enemies (melee contact)
         for (auto& e : enemies) {
             if (e.isDead() || c.isDead()) continue;
@@ -4876,6 +5376,184 @@ void Game::checkPortalTransition() {
     }
 }
 
+// Le content/phases.txt: "zona | abates | chefe | raio | titulo". Formato de
+// linha simples de proposito: sem dependencia de JSON e editavel por qualquer um.
+void Game::loadPhaseDefs() {
+    phaseDefs.clear();
+    static const struct { const char* n; ZoneID z; } NAMES[] = {
+        {"LARuins", ZoneID::LARuins}, {"CursedFarm", ZoneID::CursedFarm},
+        {"DarkForest", ZoneID::DarkForest}, {"Cemetery", ZoneID::Cemetery},
+        {"GhostCity", ZoneID::GhostCity}, {"Bunker", ZoneID::Bunker},
+        {"Catacombs", ZoneID::Catacombs}, {"AbandonedManor", ZoneID::AbandonedManor},
+        {"KronosForge", ZoneID::KronosForge}, {"InfernoZone", ZoneID::InfernoZone},
+        {"KronosNexus", ZoneID::KronosNexus},
+    };
+    const char* path = FileExists("content/phases.txt") ? "content/phases.txt"
+                     : (FileExists("../../content/phases.txt") ? "../../content/phases.txt" : nullptr);
+    if (path) {
+        char* txt = LoadFileText(path);
+        if (txt) {
+            std::stringstream ss(txt);
+            std::string line;
+            while (std::getline(ss, line)) {
+                if (line.empty() || line[0] == '#') continue;
+                std::vector<std::string> col;
+                size_t start = 0;
+                while (true) {
+                    size_t bar = line.find('|', start);
+                    std::string part = (bar == std::string::npos) ? line.substr(start)
+                                                                  : line.substr(start, bar - start);
+                    while (!part.empty() && (part.front() == ' ' || part.front() == '	')) part.erase(part.begin());
+                    while (!part.empty() && (part.back() == ' ' || part.back() == '' || part.back() == '	')) part.pop_back();
+                    col.push_back(part);
+                    if (bar == std::string::npos) break;
+                    start = bar + 1;
+                }
+                if (col.size() < 4) continue;
+                PhaseDef d;
+                d.zone = ZoneID::LARuins;
+                for (const auto& nz : NAMES) if (col[0] == nz.n) { d.zone = nz.z; break; }
+                d.goal   = atoi(col[1].c_str());
+                d.boss   = atoi(col[2].c_str()) != 0;
+                d.radius = (float)atof(col[3].c_str());
+                d.title  = (col.size() > 4) ? col[4] : getZoneInfo(d.zone).name;
+                if (d.goal   < 1)     d.goal   = 1;
+                if (d.radius < 900.0f) d.radius = 900.0f;   // fase minima jogavel
+                phaseDefs.push_back(d);
+            }
+            UnloadFileText(txt);
+        }
+    }
+    if (phaseDefs.empty()) {
+        TraceLog(LOG_WARNING, "FASES: content/phases.txt ausente/vazio - usando tabela embutida");
+        for (const auto& nz : NAMES) {
+            PhaseDef d; d.zone = nz.z; d.title = getZoneInfo(nz.z).name;
+            d.goal = 20 + (int)phaseDefs.size() * 8;
+            d.boss = ((int)phaseDefs.size() + 1) % 3 == 0;
+            d.radius = 3000.0f + phaseDefs.size() * 160.0f;
+            phaseDefs.push_back(d);
+        }
+    }
+    TraceLog(LOG_INFO, "FASES: %d carregadas", (int)phaseDefs.size());
+}
+
+const Game::PhaseDef& Game::phaseDef(int phase) const {
+    static PhaseDef fallback;
+    if (phaseDefs.empty()) return fallback;
+    if (phase < 0) phase = 0;
+    return phaseDefs[phase % (int)phaseDefs.size()];
+}
+
+// ── FASES do mundo aberto ────────────────────────────────────────────────────
+ZoneID Game::phaseZone(int phase) {   // compat: a ordem agora vem da tabela
+    static const ZoneID ORDER[] = {
+        ZoneID::LARuins, ZoneID::CursedFarm, ZoneID::DarkForest, ZoneID::Cemetery,
+        ZoneID::GhostCity, ZoneID::Bunker, ZoneID::Catacombs, ZoneID::AbandonedManor,
+        ZoneID::KronosForge, ZoneID::InfernoZone, ZoneID::KronosNexus
+    };
+    const int N = (int)(sizeof(ORDER) / sizeof(ORDER[0]));
+    if (phase < 0) phase = 0;
+    return ORDER[phase % N];
+}
+
+void Game::updatePhasePortal(float dt) {
+    if (!openWorldMode) return;
+    if (owFadeTimer > 0.0f) { owFadeTimer -= dt; return; }
+
+    owPhaseKills = enemiesKilled - owKillsAtStart;
+    // Fase de chefe: matar a cota NAO basta, o chefe tem que cair. E o que fecha
+    // a fase como uma fase, com clima e desfecho, em vez de uma cota de abates.
+    if (owBossPhase && !owBossDown && bossSpawned) {
+        bool alive = false;
+        for (const auto& e : enemies) if (e.isBoss() && !e.isDead()) { alive = true; break; }
+        if (!alive) {
+            owBossDown = true;
+            showStoryBanner("CHEFE ABATIDO", "O caminho para o proximo mundo esta livre.", 4.0f);
+        }
+    }
+    bool goalMet = (owPhaseKills >= owPhaseGoal) && (!owBossPhase || owBossDown);
+    if (!owPortalOpen && goalMet) {
+        owPortalOpen = true;
+        // portal nasce perto do refugio, sempre no mesmo rumo (o jogador acha)
+        owPortalPos = { safeZoneCenter.x + 620.0f, safeZoneCenter.y - 520.0f };
+        showStoryBanner("PORTAL ABERTO", "Va ate o portal para avancar de mundo.", 5.0f);
+        audio.playLevelUp();
+    }
+    if (owPortalOpen &&
+        Vector2Distance(player.position, owPortalPos) < 105.0f &&
+        (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_ENTER)))
+        advanceOpenWorldPhase();
+}
+
+void Game::advanceOpenWorldPhase() {
+    owPhase++;
+    const PhaseDef& pd = phaseDef(owPhase);
+    ZoneID dest = pd.zone;
+    currentZone         = dest;
+    currentRegion       = dest;
+    tilemap.currentZone = dest;
+
+    // limpa o mundo antigo por inteiro (senao sobra inimigo/loot/predio fantasma)
+    enemies.clear(); items.clear(); projectiles.clear(); enemyProjectiles.clear();
+    xpOrbs.clear(); groundEquips.clear(); damageNumbers.clear();
+    dialogOpen = false; nearNpcIndex = -1;
+    bossSpawned = false; spawnTimer = 0.0f;
+
+    tilemap.generateOpenWorld();
+    setupWorldRegions();
+    buildOpenWorldScenery();
+    setupZoneNPCs(dest);
+    audio.setZone(dest);
+    spawnInterval = getZoneInfo(dest).spawnInterval / getDifficulty().spawnRateMult;
+
+    player.position = safeZoneCenter;
+    owPortalOpen   = false;
+    owKillsAtStart = enemiesKilled;
+    owPhaseGoal    = pd.goal;       // tudo vem de content/phases.txt
+    owPhaseRadius  = pd.radius;
+    owBossPhase    = pd.boss;
+    owBossDown     = false;
+
+    // RECOMPENSA de fase: fechar um mundo tem que valer alguma coisa, senao o
+    // portal e so um corredor. Cura cheia + creditos + uma peca de equipamento.
+    player.health   = player.maxHealth;
+    int bonus       = 250 + owPhase * 150;
+    player.credits += bonus;
+    player.addXP(200 + owPhase * 120);
+    {
+        Equipment drop = EDB::randomForTier(1 + owPhase / 2);
+        if (!drop.isEmpty()) {
+            player.equipBag.push_back(drop);
+            triggerPlayerSpeech(TextFormat("Recompensa: %s", drop.name.c_str()), 3.5f);
+        }
+    }
+    damageNumbers.push_back({ player.position, (float)bonus, {255,210,0,255}, 1.6f, "$" });
+
+    ZoneInfo zi = getZoneInfo(dest);
+    owFadeText  = TextFormat("FASE %d  -  %s", owPhase + 1,
+                             pd.title.empty() ? zi.name.c_str() : pd.title.c_str());
+    owFadeTimer = 3.0f;
+}
+
+// Tela de transicao: preto entrando/saindo com o nome da fase. Sem isto a troca de
+// mundo era um corte seco e nao lia como progresso.
+void Game::drawPhaseFade() const {
+    if (owFadeTimer <= 0.0f) return;
+    float t = owFadeTimer / 2.6f;                       // 1 -> 0
+    float a = (t > 0.5f) ? (t - 0.5f) * 2.0f : t * 2.0f; // sobe e desce
+    a = 0.30f + a * 0.70f;
+    DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, a));
+    int tw = MeasureText(owFadeText.c_str(), 36);
+    DrawText(owFadeText.c_str(), screenWidth/2 - tw/2, screenHeight/2 - 26, 36,
+             ColorAlpha(Color{0,220,255,255}, a + 0.2f));
+    const char* obj = owBossPhase
+        ? TextFormat("OBJETIVO: %d abates e derrotar o CHEFE", owPhaseGoal)
+        : TextFormat("OBJETIVO: %d abates para abrir o portal", owPhaseGoal);
+    int ow2 = MeasureText(obj, 16);
+    DrawText(obj, screenWidth/2 - ow2/2, screenHeight/2 + 22, 16,
+             ColorAlpha(WHITE, a));
+}
+
 void Game::transitionToZone(ZoneID dest) {
     currentZone = dest;
     enemies.clear();
@@ -4977,6 +5655,64 @@ void Game::transitionToZone(ZoneID dest) {
 
 // ─── Collisions ──────────────────────────────────────────────────────────────
 
+// Unico ponto que converte niveis ganhos em pontos/evolucoes pendentes. Vale para
+// QUALQUER fonte de XP (orbe, quest, TechChip, item usado do inventario), inclusive
+// as que ficam dentro de Player e o Game nao enxerga.
+void Game::drawFloatingNumbers(bool project3D) const {
+    for (const auto& dn : damageNumbers) {
+        float alpha = std::min(dn.life / 0.45f, 1.0f);
+        Color c = ColorAlpha(dn.color, alpha);
+        // Fonte menor para nao poluir a tela perto do personagem
+        int fontSize = (dn.value >= 100.0f) ? 15 :
+                       (dn.value >= 50.0f)  ? 13 : 11;
+        const char* txt = TextFormat("%s%.0f", dn.prefix.c_str(), dn.value);
+        int tw = MeasureText(txt, fontSize);
+        Vector2 p;
+        if (project3D) {
+            // Sobe de verdade no eixo Y do mundo 3D e so entao vira coord de tela.
+            p = GetWorldToScreenEx({ dn.pos.x, 30.0f + dn.rise, dn.pos.y },
+                                   camera3D, screenWidth, screenHeight);
+        } else {
+            p = { dn.pos.x, dn.pos.y - dn.rise - 14.0f };
+        }
+        // Shadow for readability
+        DrawText(txt, (int)p.x - tw/2 + 1, (int)p.y + 1, fontSize, ColorAlpha(BLACK, 0.6f * alpha));
+        DrawText(txt, (int)p.x - tw/2,     (int)p.y,     fontSize, c);
+    }
+}
+
+void Game::drainLevelUps() {
+    int gained = player.unclaimedLevels;
+    if (gained <= 0) return;
+    player.unclaimedLevels = 0;
+
+    particles.spawnLevelUp(player.position);
+    audio.playLevelUp();
+    static const char* lvlLines[] = {
+        "Estou ficando mais forte.",
+        "Experiencia e a melhor arma.",
+        "KRONOS nao sabe o que vem ai.",
+        "Modulo de combate expandido.",
+        "Capacidade elevada. Missao continua."
+    };
+    triggerPlayerSpeech(lvlLines[player.level % 5], 3.0f);
+    // NAO trava o jogo — apenas acumula pontos e avisa o jogador.
+    // Ele escolhe quando quiser: tecla L (level up) / tecla K (evolucao).
+    levelUpAnimTimer   = 0.0f;
+    pendingNotifyPulse = 1.0f;
+
+    // Quantos dos niveis CRUZADOS sao de evolucao (conta cada um; subir 2 de uma
+    // vez passando por 10 e 11 da 1 evolucao + 1 ponto).
+    static const int EVO_LEVELS[] = {10, 25, 40, 60};
+    int evo = 0;
+    for (int l = player.level - gained + 1; l <= player.level; ++l)
+        for (int el : EVO_LEVELS) if (l == el) { ++evo; break; }
+
+    pendingEvolutions += evo;
+    pendingLevelUps   += (gained - evo);
+    if (evo > 0) triggerPlayerSpeech("EVOLUCAO disponivel! Pressione K para escolher.", 4.0f);
+}
+
 void Game::checkCollisions() {
     // Player projectiles vs enemies
     for (auto& proj : projectiles) {
@@ -4985,7 +5721,11 @@ void Game::checkCollisions() {
 
         for (auto& enemy : enemies) {
             if (enemy.isDead()) continue;   // nao desperdicar tiro em cadaver pendente
-            if (Vector2Distance(proj.position, enemy.position) <= enemy.radius + proj.radius) {
+            // ao quadrado: evita um sqrt por par projetil x inimigo (loop O(n*m) quente)
+            float ddx = proj.position.x - enemy.position.x;
+            float ddy = proj.position.y - enemy.position.y;
+            float rsum = enemy.radius + proj.radius;
+            if (ddx*ddx + ddy*ddy <= rsum*rsum) {
                 enemy.takeDamage(proj.damage);
                 particles.spawnHit(enemy.position, Color{0,255,255,255}, 6);
                 proj.active = false;
@@ -5107,32 +5847,7 @@ void Game::checkCollisions() {
             it->position.y += dir.y * pull * ftime;
         }
         if (dxp <= COLLECT_R) {
-            player.addXP(it->amount);
-            if (player.leveledUp) {
-                particles.spawnLevelUp(player.position);
-                audio.playLevelUp();
-                static const char* lvlLines[] = {
-                    "Estou ficando mais forte.",
-                    "Experiencia e a melhor arma.",
-                    "KRONOS nao sabe o que vem ai.",
-                    "Modulo de combate expandido.",
-                    "Capacidade elevada. Missao continua."
-                };
-                triggerPlayerSpeech(lvlLines[player.level % 5], 3.0f);
-                // NAO trava o jogo — apenas acumula pontos e avisa o jogador.
-                // Ele escolhe quando quiser: tecla L (level up) / tecla K (evolucao).
-                levelUpAnimTimer   = 0.0f;
-                pendingNotifyPulse = 1.0f;
-                static const int EVO_LEVELS[] = {10, 25, 40, 60};
-                bool isEvoLevel = false;
-                for (int el : EVO_LEVELS) if (player.level == el) { isEvoLevel = true; break; }
-                if (isEvoLevel) {
-                    pendingEvolutions++;
-                    triggerPlayerSpeech("EVOLUCAO disponivel! Pressione K para escolher.", 4.0f);
-                } else {
-                    pendingLevelUps++;
-                }
-            }
+            player.addXP(it->amount);   // o credito de level-up sai em drainLevelUps()
             it = xpOrbs.erase(it);
         } else {
             ++it;
@@ -5307,29 +6022,25 @@ void Game::drawStoryBanner() const {
     // Fade out last 1s
     if (storyBannerTimer < 1.0f) alpha = storyBannerTimer;
 
-    // Barra compacta no terco superior (nao cobre o centro do jogo)
-    int barY = screenHeight / 5;        // bem acima do personagem
-    int barH = 48;
-    DrawRectangle(0, barY, screenWidth, barH,
-                  ColorAlpha(BLACK, 0.78f * alpha));
-    DrawLineEx({0, (float)barY},
-               {(float)screenWidth, (float)barY},
-               2, ColorAlpha({0,200,255,255}, 0.6f * alpha));
-    DrawLineEx({0, (float)(barY + barH)},
-               {(float)screenWidth, (float)(barY + barH)},
-               2, ColorAlpha({0,200,255,255}, 0.6f * alpha));
-
-    // Chapter title
+    // Painel COMPACTO, do tamanho do texto. A versao antiga pintava uma barra
+    // preta de LARGURA TOTAL da tela: tapava o jogo inteiro numa faixa so pra
+    // mostrar duas linhas de texto.
     int tw = MeasureText(storyBannerText.c_str(), 20);
-    DrawText(storyBannerText.c_str(),
-             screenWidth/2 - tw/2, barY + 6, 20,
-             ColorAlpha({0,220,255,255}, alpha));
-
-    // Subtitle
     int sw = MeasureText(storyBannerSub.c_str(), 12);
-    DrawText(storyBannerSub.c_str(),
-             screenWidth/2 - sw/2, barY + 30, 12,
-             ColorAlpha(WHITE, alpha * 0.85f));
+    int panW = (tw > sw ? tw : sw) + 40;
+    int panH = storyBannerSub.empty() ? 34 : 52;
+    int panX = screenWidth / 2 - panW / 2;
+    int panY = screenHeight / 6;
+
+    DrawRectangle(panX, panY, panW, panH, ColorAlpha(BLACK, 0.62f * alpha));
+    DrawRectangleLinesEx({ (float)panX, (float)panY, (float)panW, (float)panH },
+                         1.5f, ColorAlpha(Color{0,200,255,255}, 0.5f * alpha));
+
+    DrawText(storyBannerText.c_str(), screenWidth/2 - tw/2, panY + 7, 20,
+             ColorAlpha({0,220,255,255}, alpha));
+    if (!storyBannerSub.empty())
+        DrawText(storyBannerSub.c_str(), screenWidth/2 - sw/2, panY + 33, 12,
+                 ColorAlpha(WHITE, alpha * 0.85f));
 }
 
 // ─── Render ──────────────────────────────────────────────────────────────────
@@ -5397,18 +6108,61 @@ void Game::drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function
 }
 
 void Game::ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn) {
+    // hasVoxel() ja filtrou no call site — aqui e so cinto de seguranca.
     if (m_voxModels.count(key)) return;
     if (m_voxGenBudget <= 0) return;   // amortiza: poucas geracoes por frame (anti-engasgo)
     m_voxGenBudget--;
     g_renderPass3D = true;
     Image img = SpriteExtrude::CaptureToImage(96, capPos, drawFn);
     g_renderPass3D = false;
-    m_voxModels[key] = SpriteExtrude::BuildVoxelModel(img, 1.6f, 6.0f);
+    // ESCALA — o unico lugar que define o tamanho de TODO personagem em 3D.
+    // A captura tem 96px e a malha e reamostrada pra 34 celulas, entao
+    // voxelSize = 2.82 reproduz EXATAMENTE o tamanho do sprite 2D em unidades de
+    // mundo (1px 2D = 1 unidade). 3.4 deixava o personagem 20% MAIOR que a arte
+    // 2D — perto da casa (110u) e do carro (40u) ele lia como gigante.
+    // 1.95 = ~70% da arte 2D: heroi com ~28u (0,45 tile), ~1/4 da casa.
+    const float VOX = 1.95f;    // tamanho do voxel (altura do personagem)
+    const float VOX_DEPTH = 11.0f;  // espessura: com 7.5 o corpo lia como tabua/poste
+    m_voxModels[key] = SpriteExtrude::BuildVoxelModel(img, VOX, VOX_DEPTH);
+    applyWorldShader(m_voxModels[key]);
+    {   // MEDIDA (nao chute): tamanho real do personagem em unidades de mundo,
+        // pra comparar com casa/carro. tile = 64u.
+        BoundingBox bb = GetModelBoundingBox(m_voxModels[key]);
+        TraceLog(LOG_INFO, "VOXSIZE key=%d  L=%.1f  A=%.1f  P=%.1f", key,
+                 bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z);
+    }
     UnloadImage(img);
 }
 
-void Game::drawVoxel(int key, Vector2 pos, float rotDeg) {
-    auto it = m_voxModels.find(key);
+// Construcao generica do jogador (tipos sem modelo .obj proprio). Era um CUBO
+// cinza com arestas - lia como placeholder de engine largado no cenario.
+void Game::drawGenericStructure(Vector2 pos, float sc) const {
+    float x = pos.x, z = pos.y;
+    const Color CONCRETE = {  96,  98, 104, 255 };
+    const Color METAL    = { 118, 122, 132, 255 };
+    const Color TRIM     = {  60, 132, 150, 255 };
+    DrawCylinderEx({ x, 0.08f, z }, { x, 0.09f, z }, 34.0f*sc, 34.0f*sc, 14,
+                   ColorAlpha(BLACK, 0.32f));                                    // contato
+    DrawCubeV({ x, 4.0f*sc,  z }, { 62.0f*sc,  8.0f*sc, 62.0f*sc }, CONCRETE);   // base
+    DrawCubeV({ x, 26.0f*sc, z }, { 50.0f*sc, 36.0f*sc, 50.0f*sc }, METAL);      // corpo
+    DrawCubeV({ x, 45.0f*sc, z }, { 56.0f*sc,  5.0f*sc, 56.0f*sc }, CONCRETE);   // beiral
+    DrawCubeV({ x, 26.0f*sc, z - 25.0f*sc }, { 22.0f*sc, 20.0f*sc, 2.0f*sc }, TRIM);
+    DrawCylinderEx({ x + 18.0f*sc, 47.0f*sc, z + 18.0f*sc },
+                   { x + 18.0f*sc, 76.0f*sc, z + 18.0f*sc }, 1.8f*sc, 1.0f*sc, 5, METAL);
+    DrawSphereEx({ x + 18.0f*sc, 78.0f*sc, z + 18.0f*sc }, 3.0f*sc, 5, 5,
+                 Color{ 255, 120, 60, 255 });
+}
+
+void Game::drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase, bool moving) {
+    // Quadro do passo pela fase da caminhada da PROPRIA entidade (nao pelo relogio):
+    // parado = pose 0, andando = ciclo de VOX_POSES quadros.
+    int pose = 0;
+    if (moving) {
+        float w = walkPhase * (float)VOX_POSES / (2.0f * PI);
+        pose = ((int)floorf(w) % VOX_POSES + VOX_POSES) % VOX_POSES;
+    }
+    auto it = m_voxModels.find(voxKey(base, pose));
+    if (it == m_voxModels.end()) it = m_voxModels.find(voxKey(base, 0));   // pose ainda nao gerada
     if (it == m_voxModels.end() || it->second.meshCount == 0) return;
     Model& mdl = it->second;
 
@@ -5426,26 +6180,108 @@ void Game::drawVoxel(int key, Vector2 pos, float rotDeg) {
     rlEnableDepthMask();
     mdl.transform = saved;
 
-    // Modelo 3D real (com leve bob de vida)
-    float bob = sinf((float)GetTime() * 2.4f + pos.x * 0.05f) * 1.2f;
-    DrawModelEx(mdl, { pos.x, bob, pos.y }, { 0.0f, 1.0f, 0.0f }, rotDeg, { 1.0f, 1.0f, 1.0f }, WHITE);
+    // Sombra de CONTATO: mancha curta EXATAMENTE sob os pes. A silhueta projetada
+    // acima da a direcao da luz; esta aqui e a que prega o personagem no chao.
+    DrawCylinderEx({ pos.x, 2.30f, pos.y }, { pos.x, 2.34f, pos.y },
+                   9.0f, 9.0f, 12, ColorAlpha(BLACK, 0.34f));
+
+    // "Respiro" em ESCALA, nunca em translacao: o bob antigo levantava o modelo
+    // inteiro (ate 1.2u) enquanto a sombra ficava parada no chao - era isso que
+    // fazia TODO personagem/NPC parecer flutuar. Agora os pes ficam colados e so
+    // o corpo estica ~1,5%. SINK afunda um tico pra nao sobrar fresta sob os pes.
+    float breath = 1.0f + sinf((float)GetTime() * 2.4f + pos.x * 0.05f) * 0.015f;
+    // Balanco do passo: o corpo sobe no meio da passada e desce no apoio. Some
+    // quando parado, entao nao volta a parecer que flutua.
+    float step = moving ? fabsf(sinf(walkPhase)) : 0.0f;
+    breath += step * 0.030f;
+    rotDeg  += moving ? sinf(walkPhase) * 3.0f : 0.0f;   // leve gingado
+    const float SINK = 0.6f;
+    Vector3 at = { pos.x, -SINK, pos.y };
+    // CONTORNO: mesma malha 6% maior, escura, desenhada ANTES. O modelo real
+    // cobre o miolo e sobra so uma borda - separa o personagem do cenario, que
+    // e o que faltava pra ele nao sumir no verde da floresta.
+    DrawModelEx(mdl, at, { 0.0f, 1.0f, 0.0f }, rotDeg,
+                { 1.06f, 1.05f * breath, 1.06f }, Color{ 10, 12, 18, 255 });
+    DrawModelEx(mdl, at, { 0.0f, 1.0f, 0.0f }, rotDeg, { 1.0f, breath, 1.0f }, WHITE);
 }
 
 void Game::renderWorld3D() {
     // PRE-PASS (sem FBO ativo): captura/voxeliza o sprite 2D em MODELO 3D real, por tipo.
     // Amortizado: no máx. m_voxGenBudget gerações por frame (evita engasgo ao entrar/explorar).
     m_voxGenBudget = 3;
-    ensureVoxel((int)player.charClass, player.position, [this](){ player.render(); });
-    for (auto& e : enemies)    ensureVoxel(100 + (int)e.type, e.position, [&e](){ e.render(); });
-    for (auto& n : npcs)       ensureVoxel(300 + (int)n.role, n.position, [&n](){ n.render(); });
-    for (auto& f : cityFolk)   ensureVoxel(300 + f.role, f.position, [&f](){ NPC t; t.role = (NPCRole)f.role; t.position = f.position; t.render(); });
-    for (auto& c : companions) if (c.active) ensureVoxel(500 + (int)c.type, c.position, [&c](){ c.render(); });
+    // Gera os QUADROS DO PASSO de cada tipo: o render 2D e chamado com a fase da
+    // caminhada forcada, entao cada pose sai com as pernas noutra posicao. Sem isto
+    // o 3D tinha um unico modelo estatico por tipo e todo mundo deslizava.
+    auto poseAngle = [](int pose) { return (float)pose * (PI * 0.5f); };
+    // chave do player = classe + APARENCIA: trocar de arma/armadura gera modelo novo
+    const int playerVoxBase = 1000 + (int)player.charClass * 1000 + player.visualSignature();
+    if (!hasVoxelPoses(playerVoxBase)) {
+        float sv = player.walkAnimTimer; bool mv = player.isMoving;
+        for (int po = 0; po < VOX_POSES; ++po) {
+            int k = voxKey(playerVoxBase, po);
+            if (hasVoxel(k)) continue;
+            player.walkAnimTimer = poseAngle(po); player.isMoving = true;
+            ensureVoxel(k, player.position, [this](){ player.render(); });
+        }
+        player.walkAnimTimer = sv; player.isMoving = mv;
+    }
+    for (auto& e : enemies) {
+        if (hasVoxelPoses(100 + (int)e.type)) continue;
+        float sv = e.walkAnimTimer;
+        for (int po = 0; po < VOX_POSES; ++po) {
+            int k = voxKey(100 + (int)e.type, po);
+            if (hasVoxel(k)) continue;
+            e.walkAnimTimer = poseAngle(po);
+            ensureVoxel(k, e.position, [&e](){ e.render(); });
+        }
+        e.walkAnimTimer = sv;
+    }
+    for (auto& n : npcs) {
+        if (hasVoxelPoses(300 + (int)n.role)) continue;
+        for (int po = 0; po < VOX_POSES; ++po) {
+            int k = voxKey(300 + (int)n.role, po);
+            if (hasVoxel(k)) continue;
+            ensureVoxel(k, n.position, [&n, po, &poseAngle](){
+                NPC t; t.role = n.role; t.color = n.color; t.position = n.position;
+                t.walkPhase = poseAngle(po); t.walking = true; t.render();
+            });
+        }
+    }
+    for (auto& f : cityFolk) {
+        if (hasVoxelPoses(300 + f.role)) continue;
+        for (int po = 0; po < VOX_POSES; ++po) {
+            int k = voxKey(300 + f.role, po);
+            if (hasVoxel(k)) continue;
+            ensureVoxel(k, f.position, [&f, po, &poseAngle](){
+                NPC t; t.role = (NPCRole)f.role; t.position = f.position;
+                t.walkPhase = poseAngle(po); t.walking = true; t.render();
+            });
+        }
+    }
+    for (auto& c : companions) {
+        if (!c.active || hasVoxelPoses(500 + (int)c.type)) continue;
+        float sv = c.walkTimer;
+        for (int po = 0; po < VOX_POSES; ++po) {
+            int k = voxKey(500 + (int)c.type, po);
+            if (hasVoxel(k)) continue;
+            c.walkTimer = poseAngle(po);
+            ensureVoxel(k, c.position, [&c](){ c.render(); });
+        }
+        c.walkTimer = sv;
+    }
 
     // Prepare light mask before drawing (uses screen-space projection of 3D lights)
     lightSystem.prepareMask3D(camera3D, screenWidth, screenHeight);
 
     BeginTextureMode(gameTarget);
-    ClearBackground(Color{10, 12, 20, 255});
+    {   // Ceu/horizonte tingido pela zona. Preto puro fazia o mundo parecer
+        // recortado e colado no vazio; a nevoa do shader morre nesta mesma cor.
+        Color a = lightSystem.ambientColor;
+        float k = 0.18f + (1.0f - lightSystem.ambientDark) * 0.16f;
+        ClearBackground(Color{ (unsigned char)(a.r * k), (unsigned char)(a.g * k),
+                               (unsigned char)(a.b * k * 1.15f), 255 });
+    }
+    updateWorldShaderUniforms();
 
     // ── 1. Modo 3D: Chão, Paredes, Sombras e Entidades (Billboards) ───────────
     rlSetClipPlanes(10.0, 4000.0);
@@ -5475,6 +6311,15 @@ void Game::renderWorld3D() {
                 float dx = obj.position.x - camera.target.x;
                 float dy = obj.position.y - camera.target.y;
                 if (dx < -1400 || dx > 1400 || dy < -1400 || dy > 1400) continue;
+                // LOD dos props pequenos. Grama tem 27 mil instancias no mundo; a
+                // ~1200 delas caiam dentro do corte antigo e cada uma custava 10
+                // primitivas = 12 mil draws por frame. Era isso que derrubava o FPS
+                // pra ~20 (render 51ms). Props pequenos morrem cedo e simplificam.
+                float d2cam = dx*dx + dy*dy;
+                bool  smallProp = (obj.type == 11 || obj.type == 12 || obj.type == 13 ||
+                                   obj.type == 21);
+                if (smallProp && d2cam > 950.0f*950.0f) continue;
+                bool  lodFar = d2cam > 560.0f*560.0f;
 
                 float w = 64.0f, h = 64.0f;
                 bool hasSprite = (sb.ready && obj.type >= 0 && obj.type < SpriteBank::NUM_SCENERY);
@@ -5486,26 +6331,111 @@ void Game::renderWorld3D() {
                     case 1: mdl = &m_barracksModel; mscale = m_barracksScale; break; // celeiro
                     case 7: mdl = &m_castleModel;   mscale = m_castleScale; break; // predio
                     case 8: mdl = &m_wellModel;     mscale = m_wellScale; break; // silo
-                    case 6: mdl = &m_carModel;      mscale = m_carScale; break; // carro
                     default: break;
                 }
                 if (mdl && m_modelsLoaded && mdl->meshCount > 0) {
                     float s = mscale * (obj.scale > 0.01f ? obj.scale : 1.0f);
+                    // SOMBRA PROJETADA do predio: mesma malha achatada em y=0 e
+                    // cisalhada pela direcao da luz (o truque usado nos personagens).
+                    // E o que da profundidade a uma cidade - sem ela os predios
+                    // parecem adesivos colados num chao chapado.
+                    // 3 elipses concentricas deslocadas na direcao da luz. A versao
+                    // anterior projetava a MALHA achatada e, num modelo caixote, saia
+                    // uma LAJE PRETA retangular no chao - pior que nao ter sombra.
+                    {
+                        float fr = 60.0f * obj.scale;
+                        switch (obj.type) {
+                            case 0: fr = FIT_HOUSE    * obj.scale * 0.46f; break;
+                            case 1: fr = FIT_BARRACKS * obj.scale * 0.46f; break;
+                            case 7: fr = FIT_CASTLE   * obj.scale * 0.40f; break;
+                            case 8: fr = FIT_WELL     * obj.scale * 0.42f; break;
+                            default: break;
+                        }
+                        float offX = fr * 0.30f, offZ = fr * 0.22f;
+                        const float rk[3] = { 1.06f, 0.78f, 0.50f };
+                        const float ak[3] = { 0.10f, 0.12f, 0.14f };
+                        rlDisableDepthMask();
+                        for (int sI = 0; sI < 3; ++sI)
+                            DrawCylinderEx({ obj.position.x + offX, 2.10f + sI*0.06f, obj.position.y + offZ },
+                                           { obj.position.x + offX, 2.14f + sI*0.06f, obj.position.y + offZ },
+                                           fr * rk[sI], fr * rk[sI], 18, ColorAlpha(BLACK, ak[sI]));
+                        rlEnableDepthMask();
+                    }
+                    // OCLUSAO: a camera olha de +Z, entao construcao com y de mundo
+                    // MAIOR que a do player fica na frente dele. Sumir atras de um
+                    // predio e perder o proprio personagem de vista - ARPG isometrico
+                    // resolve isso deixando o oclusor translucido.
+                    // TINTA por bioma: o mesmo modelo lido como pedra clara em LA e
+                    // como pedra queimada no inferno ja muda a cidade inteira.
+                    Color zt  = structureTintFor(tilemap.biomeAtWorld(obj.position.x, obj.position.y));
+                    float odx = fabsf(obj.position.x - player.position.x);
+                    float odz = obj.position.y - player.position.y;
+                    bool  occludes = (odz > 0.0f && odz < 620.0f && odx < 230.0f);
                     DrawModelEx(*mdl, { obj.position.x, 0.0f, obj.position.y }, { 0.0f, 1.0f, 0.0f },
-                                obj.rotation * RAD2DEG, { s, s, s }, WHITE);
+                                obj.rotation * RAD2DEG, { s, s, s },
+                                occludes ? ColorAlpha(zt, 0.30f) : zt);
                     w = s; h = s;
                 } else {
+                    // Fogueira acende luz de verdade (o bloom faz o resto)
+                    if (obj.type == 22)
+                        lightSystem.addTorchLight(obj.position);
                     // Props do cenario em PRIMITIVAS 3D (sem billboard "tabua de pe").
                     float sc = (obj.scale > 0.01f ? obj.scale : 1.0f);
                     float x = obj.position.x, zz = obj.position.y;
                     float H = 78.0f * sc, rr = 17.0f * sc;
                     w = rr * 2.0f; h = H;
                     switch (obj.type) {
-                        case 2: { // arvore: tronco conico + copa de esferas
-                            DrawCylinderEx({x,0,zz},{x,H*0.5f,zz}, rr*0.30f, rr*0.18f, 7, {78,54,30,255});
-                            DrawSphereEx({x, H*0.74f, zz}, rr*0.98f, 8, 8, {34,80,44,255});
-                            DrawSphereEx({x-rr*0.45f, H*0.58f, zz}, rr*0.66f, 8, 8, {26,62,36,255});
-                            DrawSphereEx({x+rr*0.45f, H*0.62f, zz+rr*0.2f}, rr*0.70f, 8, 8, {42,92,50,255});
+                        case 2: { // arvore: tronco + galhos + copa em massa de volumes
+                            // Antes eram 3 esferas concentricas = "bola verde no palito".
+                            // Agora: tronco que afina, 3 galhos saindo dele e uma copa
+                            // de 7 volumes irregulares com gradiente (claro em cima,
+                            // escuro embaixo) — le como massa de folhagem, nao como bola.
+                            unsigned hsh = (unsigned)(x * 0.7f) * 73856093u ^ (unsigned)(zz * 0.7f) * 19349663u;
+                            auto jit = [&](int k, float amp) {   // deslocamento estavel por arvore
+                                return (float)(((hsh >> (k * 3)) & 15) - 7) / 7.0f * amp;
+                            };
+                            // altura do tronco varia: floresta com so uma altura le como
+                            // stamp repetido. 0.44..0.72 do H do objeto.
+                            float TH = H * (0.44f + (float)((hsh >> 5) & 15) / 15.0f * 0.28f);
+                            DrawCylinderEx({x,0,zz}, {x, TH, zz}, rr*0.34f, rr*0.19f, 8, {84,58,34,255});
+                            DrawCylinderEx({x,0,zz}, {x, TH*0.30f, zz}, rr*0.42f, rr*0.34f, 8, {68,46,27,255}); // raiz/base
+                            for (int gI = 0; gI < 3; ++gI) {            // galhos
+                                float ga = gI * 2.094f + jit(gI, 1.0f);
+                                DrawCylinderEx({x, TH*0.72f, zz},
+                                               {x + cosf(ga)*rr*0.85f, TH*1.02f, zz + sinf(ga)*rr*0.85f},
+                                               rr*0.11f, rr*0.06f, 5, {74,52,30,255});
+                            }
+                            struct Puff { float ox, oy, oz, r; float k; };
+                            const Puff pf[7] = {
+                                { 0.00f, 1.00f,  0.00f, 1.00f, 1.00f },   // topo (mais claro)
+                                {-0.62f, 0.86f, -0.18f, 0.74f, 0.88f },
+                                { 0.60f, 0.88f,  0.16f, 0.78f, 0.94f },
+                                { 0.12f, 0.84f,  0.62f, 0.72f, 0.82f },
+                                {-0.20f, 0.82f, -0.60f, 0.70f, 0.76f },
+                                {-0.40f, 0.66f,  0.34f, 0.62f, 0.66f },   // base (mais escuro)
+                                { 0.42f, 0.64f, -0.30f, 0.60f, 0.62f },
+                            };
+                            // ESPECIE por hash: 3 paletas de folhagem. Um verde unico
+                            // pra floresta inteira le como textura repetida, nao mata.
+                            const Color SPECIES[3] = { {  74, 132,  58, 255 },   // verde escuro
+                                                       { 104, 156,  62, 255 },   // verde-oliva
+                                                       {  64, 116,  78, 255 } }; // verde frio
+                            const Color CANOPY = SPECIES[(hsh >> 17) % 3];
+                            // porte e densidade tambem variam por arvore
+                            float bulk = 0.86f + (float)((hsh >> 11) & 15) / 15.0f * 0.34f;
+                            float tone = 0.84f + (float)((hsh >> 21) & 15) / 15.0f * 0.30f;
+                            for (int pI = 0; pI < 7; ++pI) {
+                                const Puff& q = pf[pI];
+                                float k = q.k * tone;
+                                Color cc = { (unsigned char)fminf(255.0f, CANOPY.r * k),
+                                             (unsigned char)fminf(255.0f, CANOPY.g * k),
+                                             (unsigned char)fminf(255.0f, CANOPY.b * k), 255 };
+                                DrawSphereEx({ x  + (q.ox + jit(pI, 0.16f)) * rr * bulk,
+                                               TH + q.oy * rr * 0.92f,
+                                               zz + (q.oz + jit(pI + 4, 0.16f)) * rr * bulk },
+                                             rr * q.r * bulk, 7, 7, cc);   // 7 segmentos = facetado low-poly
+                            }
+                            h = TH + rr * 1.9f * bulk;
                         } break;
                         case 3: { // lapide: laje + topo curvo + base
                             DrawCubeV({x, H*0.32f, zz}, {rr*1.1f, H*0.55f, rr*0.35f}, {120,122,130,255});
@@ -5535,22 +6465,504 @@ void Game::renderWorld3D() {
                             DrawCapsule({x, H*0.25f, zz}, {x, H*0.74f, zz}, rr*0.45f, 8, 8, {150,150,158,255});
                             DrawSphereEx({x, H*0.84f, zz}, rr*0.42f, 8, 8, {150,150,158,255});
                         } break;
-                        case 11: { // grama: lâminas finas verdes com balanço de vento
-                            float gh = 20.0f * sc, gr = 11.0f * sc;
-                            float sway = sinf((float)GetTime() * 1.8f + x * 0.06f) * gh * 0.35f;
-                            Color gc = { 70, 150, 60, 255 };
-                            for (int bld = 0; bld < 5; ++bld) {
-                                float a = bld * 1.2566f;
-                                float ox = cosf(a) * gr * 0.4f, oz = sinf(a) * gr * 0.4f;
-                                DrawCylinderEx({ x+ox, 0, zz+oz }, { x+ox+sway, gh, zz+oz }, gr*0.10f, gr*0.02f, 4, gc);
-                            }
-                            w = gr; h = gh;
+                        case 14: { // CRIPTA / MAUSOLEU (cemiterio, catacumbas)
+                            float W = 68.0f * sc, D = 54.0f * sc, Hh = 66.0f * sc;
+                            Color stone = { 138, 140, 148, 255 };
+                            Color dark2 = {  92,  94, 102, 255 };
+                            rlPushMatrix(); rlTranslatef(x, 0.0f, zz);
+                            rlRotatef(obj.rotation * RAD2DEG, 0, 1, 0);
+                            DrawCube({0, 5.0f*sc, 0}, W*1.18f, 10.0f*sc, D*1.18f, dark2);
+                            DrawCube({0, Hh*0.5f, 0}, W, Hh, D, stone);
+                            DrawCylinderEx({-W*0.5f, Hh, 0}, {W*0.5f, Hh, 0}, D*0.62f, D*0.62f, 3, dark2);
+                            DrawCube({0, Hh*0.34f, -D*0.52f}, W*0.34f, Hh*0.62f, 4.0f*sc, {52,54,60,255});
+                            for (int cI = 0; cI < 2; ++cI)
+                                DrawCylinderEx({ (cI?1:-1)*W*0.40f, 0.0f, -D*0.5f },
+                                               { (cI?1:-1)*W*0.40f, Hh*0.92f, -D*0.5f },
+                                               6.0f*sc, 5.0f*sc, 7, stone);
+                            rlPopMatrix();
+                            w = W * 1.3f; h = Hh + D*0.6f;
                         } break;
-                        case 12: { // pedras/detritos: cluster baixo de esferas cinza
-                            float pr = 9.0f * sc;
-                            DrawSphereEx({ x, pr*0.5f, zz }, pr*0.6f, 6, 6, { 110,108,104,255 });
-                            DrawSphereEx({ x+pr*0.5f, pr*0.35f, zz+pr*0.3f }, pr*0.4f, 6, 6, { 95,93,90,255 });
-                            w = pr; h = pr;
+                        case 15: { // BUNKER de concreto (bunker, forja, cidade fantasma)
+                            float W = 96.0f * sc, D = 78.0f * sc, Hh = 42.0f * sc;
+                            Color conc  = { 120, 124, 118, 255 };
+                            Color dark2 = {  78,  82,  78, 255 };
+                            rlPushMatrix(); rlTranslatef(x, 0.0f, zz);
+                            rlRotatef(obj.rotation * RAD2DEG, 0, 1, 0);
+                            DrawCube({0, Hh*0.5f, 0}, W, Hh, D, conc);
+                            DrawCube({0, Hh + 6.0f*sc, 0}, W*0.82f, 12.0f*sc, D*0.82f, dark2);
+                            DrawCube({0, Hh*0.55f, -D*0.52f}, W*0.52f, 9.0f*sc, 5.0f*sc, {30,32,30,255});
+                            DrawCylinderEx({W*0.28f, Hh+12.0f*sc, D*0.22f},
+                                           {W*0.28f, Hh+52.0f*sc, D*0.22f}, 2.4f*sc, 1.2f*sc, 5, dark2);
+                            for (int sI = 0; sI < 3; ++sI)
+                                DrawCube({ (sI-1)*W*0.38f, 9.0f*sc, D*0.72f },
+                                         W*0.22f, 18.0f*sc, 12.0f*sc, dark2);
+                            rlPopMatrix();
+                            w = W * 1.2f; h = Hh + 60.0f*sc;
+                        } break;
+                        case 16: { // ESPIRA INFERNAL (inferno, forja)
+                            float R = 26.0f * sc, Hh = 190.0f * sc;
+                            Color rock = { 62, 44, 42, 255 };
+                            Color glow = { 226, 96, 40, 255 };
+                            float t2 = (float)GetTime();
+                            DrawCylinderEx({x, 0.0f, zz}, {x, Hh*0.45f, zz}, R, R*0.62f, 7, rock);
+                            DrawCylinderEx({x, Hh*0.45f, zz}, {x, Hh, zz}, R*0.60f, R*0.10f, 7, rock);
+                            for (int sI = 0; sI < 3; ++sI) {
+                                float a = sI * 2.094f + obj.rotation;
+                                DrawCylinderEx({x + cosf(a)*R*1.3f, 0.0f, zz + sinf(a)*R*1.3f},
+                                               {x + cosf(a)*R*0.9f, Hh*0.34f, zz + sinf(a)*R*0.9f},
+                                               R*0.34f, R*0.06f, 5, rock);
+                            }
+                            float pulse = 0.55f + 0.45f * sinf(t2 * 2.0f + x * 0.01f);
+                            DrawSphereEx({x, Hh*0.98f, zz}, R*0.38f, 7, 7, ColorAlpha(glow, pulse));
+                            DrawCylinderEx({x, Hh*0.5f, zz}, {x, Hh*0.92f, zz}, R*0.20f, R*0.06f, 6,
+                                           ColorAlpha(glow, 0.30f * pulse));
+                            w = R * 2.6f; h = Hh;
+                        } break;
+                        case 17: { // MONOLITO ALIENIGENA (nexus)
+                            float W = 34.0f * sc, Hh = 170.0f * sc;
+                            Color body2 = { 42, 58, 74, 255 };
+                            Color neon  = { 90, 220, 255, 255 };
+                            float t2 = (float)GetTime();
+                            rlPushMatrix(); rlTranslatef(x, 0.0f, zz);
+                            rlRotatef(obj.rotation * RAD2DEG, 0, 1, 0);
+                            DrawCube({0, Hh*0.5f, 0}, W, Hh, W*0.55f, body2);
+                            DrawCube({0, 6.0f*sc, 0}, W*1.6f, 12.0f*sc, W*1.2f, {32,42,54,255});
+                            for (int lI = 0; lI < 4; ++lI) {
+                                float k = 0.25f + lI * 0.20f;
+                                float pulse = 0.35f + 0.45f * sinf(t2 * 1.6f + lI * 1.3f);
+                                DrawCube({0, Hh*k, -W*0.30f}, W*0.70f, 5.0f*sc, 2.0f*sc,
+                                         ColorAlpha(neon, pulse));
+                            }
+                            rlPopMatrix();
+                            w = W * 2.0f; h = Hh;
+                        } break;
+                        case 18: { // CABANA DE MADEIRA (floresta, fazenda)
+                            float W = 74.0f * sc, D = 62.0f * sc, Hh = 46.0f * sc;
+                            Color wood  = { 104, 74, 46, 255 };
+                            Color roof2 = {  74, 58, 40, 255 };
+                            rlPushMatrix(); rlTranslatef(x, 0.0f, zz);
+                            rlRotatef(obj.rotation * RAD2DEG, 0, 1, 0);
+                            for (int lg = 0; lg < 4; ++lg)
+                                DrawCylinderEx({-W*0.5f, 9.0f*sc + lg*11.0f*sc, -D*0.5f},
+                                               { W*0.5f, 9.0f*sc + lg*11.0f*sc, -D*0.5f},
+                                               5.5f*sc, 5.5f*sc, 6, wood);
+                            DrawCube({0, Hh*0.5f, 0}, W, Hh, D, wood);
+                            DrawCylinderEx({-W*0.5f, Hh, 0}, {W*0.5f, Hh, 0}, D*0.60f, D*0.60f, 3, roof2);
+                            DrawCube({0, Hh*0.34f, -D*0.52f}, W*0.28f, Hh*0.60f, 3.0f*sc, {44,32,22,255});
+                            DrawCylinderEx({W*0.32f, Hh, D*0.20f}, {W*0.32f, Hh+34.0f*sc, D*0.20f},
+                                           6.0f*sc, 5.0f*sc, 6, {86,84,80,255});
+                            rlPopMatrix();
+                            w = W * 1.3f; h = Hh + D*0.6f;
+                        } break;
+                        case 19: { // TORRE DE VIGIA (universal: muda a silhueta da cidade)
+                            float R = 15.0f * sc, Hh = 132.0f * sc;
+                            Color post = { 96, 78, 56, 255 };
+                            Color top2 = { 74, 60, 44, 255 };
+                            for (int lI = 0; lI < 4; ++lI) {
+                                float a = lI * 1.5708f + obj.rotation;
+                                DrawCylinderEx({x + cosf(a)*R*1.5f, 0.0f, zz + sinf(a)*R*1.5f},
+                                               {x + cosf(a)*R*0.55f, Hh*0.78f, zz + sinf(a)*R*0.55f},
+                                               4.0f*sc, 3.0f*sc, 5, post);
+                            }
+                            DrawCube({x, Hh*0.82f, zz}, R*3.0f, 8.0f*sc, R*3.0f, top2);
+                            DrawCube({x, Hh*0.95f, zz}, R*2.6f, 20.0f*sc, R*2.6f, ColorAlpha(post, 0.85f));
+                            DrawCylinderEx({x, Hh, zz}, {x, Hh + 16.0f*sc, zz}, R*2.0f, 0.5f*sc, 4, top2);
+                            w = R * 3.4f; h = Hh + 20.0f*sc;
+                        } break;
+                        case 22: { // FOGUEIRA / barril em chamas: luz, cor e vida
+                            // Blizzard amarra COR a evento e usa luz para guiar o olho.
+                            // Cinza uniforme nao guia nada: a fogueira e ancora visual,
+                            // ponto de referencia e o unico calor da rua.
+                            unsigned hsh = (unsigned)(x * 0.8f) * 2246822519u ^ (unsigned)(zz * 0.8f) * 374761393u;
+                            float t2 = (float)GetTime() + (float)(hsh & 255) * 0.01f;
+                            float R  = 13.0f * sc;
+                            Color drum = { 96, 72, 52, 255 };
+                            // barril
+                            DrawCylinderEx({ x, 0.0f, zz }, { x, R * 1.5f, zz }, R, R * 0.96f, 10, drum);
+                            DrawCylinderEx({ x, R * 1.5f, zz }, { x, R * 1.56f, zz }, R * 1.06f, R * 1.06f, 10,
+                                           Color{ 68, 52, 38, 255 });
+                            // chama: 3 lambidas pulsando em alturas diferentes
+                            for (int fI = 0; fI < 3; ++fI) {
+                                float ph = t2 * (2.6f + fI * 0.7f) + fI * 2.1f;
+                                float hgt = R * (1.5f + 0.9f + 0.35f * sinf(ph));
+                                float wob = sinf(ph * 1.7f) * R * 0.18f;
+                                Color c1 = (fI == 0) ? Color{ 255, 210, 120, 235 }
+                                         : (fI == 1) ? Color{ 250, 140,  50, 205 }
+                                                     : Color{ 200,  70,  30, 170 };
+                                DrawCylinderEx({ x + wob * 0.3f, R * 1.5f, zz + wob * 0.2f },
+                                               { x + wob,        hgt,      zz + wob * 0.6f },
+                                               R * (0.62f - fI * 0.14f), R * 0.05f, 6, c1);
+                            }
+                            // brasa no chao + fumaca
+                            DrawCylinderEx({ x, 2.0f, zz }, { x, 2.2f, zz }, R * 1.5f, R * 1.5f, 12,
+                                           ColorAlpha(Color{ 255, 120, 40, 255 }, 0.14f));
+                            DrawSphereEx({ x + sinf(t2) * 4.0f, R * 3.6f, zz + cosf(t2 * 0.7f) * 3.0f },
+                                         R * 0.5f, 5, 5, ColorAlpha(Color{ 60, 58, 56, 255 }, 0.22f));
+                            w = R * 2.4f; h = R * 3.0f;
+                        } break;
+                        case 21: { // ENTULHO: laje partida, viga exposta, tijolo
+                            // Diablo enche o chao de destroco com volume. Chao limpo
+                            // entre predios e o que fazia a cidade parecer maquete.
+                            unsigned hsh = (unsigned)(x * 1.1f) * 2654435761u ^ (unsigned)(zz * 1.1f) * 668265263u;
+                            float R = 26.0f * sc;
+                            Color slab  = { 118, 114, 108, 255 };
+                            Color slab2 = {  92,  88,  84, 255 };
+                            Color rebar = { 122,  78,  48, 255 };
+                            // monte de lajes inclinadas
+                            for (int i = 0; i < (lodFar ? 2 : 5); ++i) {
+                                float a  = i * 1.257f + (float)((hsh >> (i * 3)) & 7) * 0.22f;
+                                float rd = R * (0.20f + (float)((hsh >> (i * 2)) & 7) / 7.0f * 0.62f);
+                                float sx = R * (0.42f + (float)((hsh >> i) & 3) * 0.12f);
+                                float sy = R * (0.16f + (float)((hsh >> (i + 4)) & 3) * 0.10f);
+                                rlPushMatrix();
+                                rlTranslatef(x + cosf(a) * rd, sy * 0.55f, zz + sinf(a) * rd);
+                                rlRotatef(a * RAD2DEG, 0.0f, 1.0f, 0.0f);
+                                rlRotatef(12.0f + (float)((hsh >> i) & 15), 0.0f, 0.0f, 1.0f);
+                                DrawCube({ 0.0f, 0.0f, 0.0f }, sx, sy, sx * 0.72f,
+                                         (i & 1) ? slab : slab2);
+                                rlPopMatrix();
+                            }
+                            // vergalhoes tortos saindo do monte
+                            for (int i = 0; i < 3; ++i) {
+                                float a = i * 2.0f + (float)((hsh >> (i * 5)) & 7) * 0.3f;
+                                DrawCylinderEx({ x + cosf(a) * R * 0.3f, 0.0f, zz + sinf(a) * R * 0.3f },
+                                               { x + cosf(a) * R * 0.7f, R * 0.85f, zz + sinf(a) * R * 0.5f },
+                                               1.2f * sc, 0.7f * sc, 4, rebar);
+                            }
+                            // cascalho miudo em volta
+                            for (int i = 0; i < (lodFar ? 0 : 6); ++i) {
+                                float a  = i * 1.047f + (float)((hsh >> (i + 2)) & 7) * 0.25f;
+                                float rd = R * (0.75f + (float)((hsh >> i) & 3) * 0.16f);
+                                DrawSphereEx({ x + cosf(a) * rd, 2.4f * sc, zz + sinf(a) * rd },
+                                             (2.0f + (float)((hsh >> i) & 3)) * sc, 5, 5, slab2);
+                            }
+                            w = R * 2.2f; h = R;
+                        } break;
+                        case 20: { // PREDIO MODERNO (cidade: LA, fantasma, forja, nexus)
+                            // Um castelo de torres nao tem o que fazer numa rua com
+                            // asfalto e carro. Predio de concreto com fileiras de
+                            // janela e caixa d'agua no topo: e isso que faz o lugar
+                            // ler como cidade destruida, e nao como cenario medieval.
+                            unsigned hsh = (unsigned)(x * 0.6f) * 374761393u ^ (unsigned)(zz * 0.6f) * 668265263u;
+                            int   floors = 3 + (int)(hsh % 4);            // 3..6 andares
+                            float FH     = 78.0f * sc;                    // pe-direito estilizado
+                            float W      = (250.0f + (float)((hsh >> 5) & 15) * 5.0f) * sc;   // ~3,8x o heroi
+                            float D      = (220.0f + (float)((hsh >> 9) & 15) * 4.0f) * sc;
+                            float Hh     = FH * floors;
+                            // PALETA por bioma (nao cinza universal): concreto quente
+                            // e ocre em LA, concreto frio na cidade fantasma, metal
+                            // queimado na forja. Cor amarrada ao lugar, como no D3.
+                            // MATERIAL por predio, nao um bege universal com +-15 de
+                            // variacao (era isso que fazia a cidade inteira ter a mesma
+                            // cor). Cada predio sorteia um material real da rua.
+                            ZoneID pz = tilemap.biomeAtWorld(x, zz);
+                            const Color MAT_CITY[6] = {
+                                { 148, 132, 104, 255 },   // reboco ocre
+                                { 122, 118, 112, 255 },   // concreto cinza
+                                { 132,  80,  62, 255 },   // tijolo vermelho
+                                {  86, 104, 118, 255 },   // torre de vidro azulada
+                                { 108,  96,  84, 255 },   // concreto sujo
+                                {  74,  78,  84, 255 },   // aco escuro
+                            };
+                            const Color MAT_GHOST[6] = {
+                                {  96, 104, 116, 255 }, {  78,  88, 100, 255 },
+                                { 110, 112, 118, 255 }, {  70,  84,  96, 255 },
+                                {  92,  90,  96, 255 }, {  62,  70,  80, 255 },
+                            };
+                            const Color MAT_FORGE[6] = {
+                                { 128,  96,  74, 255 }, { 146, 110,  70, 255 },
+                                { 104,  84,  70, 255 }, { 118,  78,  56, 255 },
+                                {  96,  86,  78, 255 }, { 140, 120,  86, 255 },
+                            };
+                            const Color* MAT = (pz == ZoneID::GhostCity)   ? MAT_GHOST
+                                             : (pz == ZoneID::KronosForge) ? MAT_FORGE
+                                             : MAT_CITY;
+                            Color base2 = MAT[(hsh >> 17) % 6];
+                            float wear  = 0.86f + (float)((hsh >> 21) & 15) / 15.0f * 0.28f;
+                            Color conc  = { (unsigned char)fminf(255.0f, base2.r * wear),
+                                            (unsigned char)fminf(255.0f, base2.g * wear),
+                                            (unsigned char)fminf(255.0f, base2.b * wear), 255 };
+                            Color dark2  = { (unsigned char)(conc.r * 0.72f),
+                                             (unsigned char)(conc.g * 0.72f),
+                                             (unsigned char)(conc.b * 0.72f), 255 };
+                            Color win    = { 44, 54, 64, 255 };
+                            bool  lit    = (obj.tint.r > 128);            // predio com luz acesa
+
+                            rlPushMatrix();
+                            rlTranslatef(x, 0.0f, zz);
+                            rlRotatef(obj.rotation * RAD2DEG, 0.0f, 1.0f, 0.0f);
+                            DrawCube({0.0f, 3.0f * sc, 0.0f}, W * 1.14f, 6.0f * sc, D * 1.14f, dark2); // calcada/base
+                            DrawCube({0.0f, Hh * 0.5f, 0.0f}, W, Hh, D, conc);                          // massa
+                            // fileiras de janela nas 4 faces (faixa por andar)
+                            for (int f = 0; f < floors; ++f) {
+                                float wy = FH * (f + 0.62f);
+                                Color wc = win;
+                                if (lit && ((hsh >> f) & 3) == 0) wc = Color{ 226, 198, 128, 255 };
+                                DrawCube({0.0f, wy, -D * 0.51f}, W * 0.76f, FH * 0.34f, 1.5f * sc, wc);
+                                DrawCube({0.0f, wy,  D * 0.51f}, W * 0.76f, FH * 0.34f, 1.5f * sc, wc);
+                                DrawCube({-W * 0.51f, wy, 0.0f}, 1.5f * sc, FH * 0.34f, D * 0.76f, wc);
+                                DrawCube({ W * 0.51f, wy, 0.0f}, 1.5f * sc, FH * 0.34f, D * 0.76f, wc);
+                            }
+                            // RUINA: 40% dos predios perdem o topo. Silhueta quebrada
+                            // e o que separa "cidade destruida" de "conjunto habitacional".
+                            bool ruined = ((hsh >> 12) % 100) < 40;
+                            if (ruined) {
+                                // laje partida: 3 pedacos irregulares no lugar do topo
+                                for (int rI = 0; rI < 3; ++rI) {
+                                    float rw2 = W * (0.24f + (float)((hsh >> (rI * 3)) & 7) / 7.0f * 0.30f);
+                                    float rh2 = FH * (0.30f + (float)((hsh >> rI) & 3) * 0.22f);
+                                    float rx2 = ((float)((hsh >> (rI * 4)) & 15) / 15.0f - 0.5f) * W * 0.6f;
+                                    float rz2 = ((float)((hsh >> (rI * 2)) & 15) / 15.0f - 0.5f) * D * 0.6f;
+                                    DrawCube({ rx2, Hh + rh2 * 0.5f, rz2 }, rw2, rh2, rw2 * 0.8f, conc);
+                                }
+                                // buraco na laje: da pra ver o andar de baixo
+                                DrawCube({ W * 0.10f, Hh - FH * 0.42f, -D * 0.10f },
+                                         W * 0.44f, FH * 0.10f, D * 0.44f,
+                                         Color{ (unsigned char)(conc.r * 0.42f),
+                                                (unsigned char)(conc.g * 0.42f),
+                                                (unsigned char)(conc.b * 0.46f), 255 });
+                                for (int pI = 0; pI < 3; ++pI)   // laje partida na borda do buraco
+                                    DrawCube({ W * (0.10f + (pI - 1) * 0.20f), Hh + 2.0f * sc,
+                                               -D * (0.10f + (pI - 1) * 0.16f) },
+                                             W * 0.16f, 5.0f * sc, D * 0.16f, dark2);
+                                // vigas expostas
+                                for (int rI = 0; rI < 2; ++rI)
+                                    DrawCylinderEx({ W * (rI ? 0.3f : -0.3f), Hh, D * 0.2f },
+                                                   { W * (rI ? 0.42f : -0.42f), Hh + FH * 0.7f, D * 0.1f },
+                                                   1.6f * sc, 1.0f * sc, 4, Color{ 122, 78, 48, 255 });
+                            } else {
+                                // ── LAJE COMPLETA ────────────────────────────────
+                                Color roofC = { (unsigned char)(conc.r * 0.80f),
+                                                (unsigned char)(conc.g * 0.82f),
+                                                (unsigned char)(conc.b * 0.86f), 255 };
+                                DrawCube({0.0f, Hh + 3.0f * sc, 0.0f}, W * 1.02f, 6.0f * sc, D * 1.02f, roofC);
+                                // platibanda (mureta) nas 4 bordas: da espessura ao topo
+                                float pb = 9.0f * sc;
+                                DrawCube({0.0f, Hh + pb * 0.5f + 6.0f * sc, -D * 0.51f}, W * 1.06f, pb, 6.0f * sc, dark2);
+                                DrawCube({0.0f, Hh + pb * 0.5f + 6.0f * sc,  D * 0.51f}, W * 1.06f, pb, 6.0f * sc, dark2);
+                                DrawCube({-W * 0.51f, Hh + pb * 0.5f + 6.0f * sc, 0.0f}, 6.0f * sc, pb, D * 1.06f, dark2);
+                                DrawCube({ W * 0.51f, Hh + pb * 0.5f + 6.0f * sc, 0.0f}, 6.0f * sc, pb, D * 1.06f, dark2);
+                                float ry2 = Hh + 8.0f * sc;
+                                // caixa d'agua sobre pes
+                                float tkx = W * 0.24f, tkz = -D * 0.20f, tkr = 17.0f * sc;
+                                for (int lI = 0; lI < 4; ++lI)
+                                    DrawCylinderEx({ tkx + ((lI & 1) ? tkr*0.6f : -tkr*0.6f), ry2,
+                                                     tkz + ((lI & 2) ? tkr*0.6f : -tkr*0.6f) },
+                                                   { tkx + ((lI & 1) ? tkr*0.6f : -tkr*0.6f), ry2 + 14.0f*sc,
+                                                     tkz + ((lI & 2) ? tkr*0.6f : -tkr*0.6f) },
+                                                   2.0f*sc, 2.0f*sc, 4, dark2);
+                                DrawCylinderEx({ tkx, ry2 + 14.0f*sc, tkz }, { tkx, ry2 + 40.0f*sc, tkz },
+                                               tkr, tkr * 0.96f, 10, Color{ 128, 118, 104, 255 });
+                                DrawCylinderEx({ tkx, ry2 + 40.0f*sc, tkz }, { tkx, ry2 + 44.0f*sc, tkz },
+                                               tkr * 1.08f, tkr * 0.5f, 10, dark2);
+                                // casa de maquinas / saida de escada
+                                DrawCube({ -W * 0.26f, ry2 + 15.0f * sc, D * 0.22f },
+                                         W * 0.26f, 30.0f * sc, D * 0.24f, conc);
+                                DrawCube({ -W * 0.26f, ry2 + 31.0f * sc, D * 0.22f },
+                                         W * 0.28f, 4.0f * sc, D * 0.26f, dark2);
+                                // condensadoras (caixas de ar-condicionado)
+                                for (int aI = 0; aI < 3; ++aI) {
+                                    float ax = (-0.30f + aI * 0.28f) * W;
+                                    DrawCube({ ax, ry2 + 6.0f * sc, -D * 0.30f },
+                                             20.0f * sc, 12.0f * sc, 16.0f * sc, Color{ 116, 116, 112, 255 });
+                                    DrawCylinderEx({ ax, ry2 + 12.0f * sc, -D * 0.30f },
+                                                   { ax, ry2 + 14.0f * sc, -D * 0.30f },
+                                                   6.0f * sc, 6.0f * sc, 8, dark2);
+                                }
+                                // dutos correndo pela laje
+                                DrawCylinderEx({ -W * 0.34f, ry2 + 4.0f * sc, -D * 0.06f },
+                                               {  W * 0.30f, ry2 + 4.0f * sc, -D * 0.06f },
+                                               3.4f * sc, 3.4f * sc, 6, Color{ 104, 100, 94, 255 });
+                                // entulho e manchas na laje
+                                for (int dI = 0; dI < 4; ++dI) {
+                                    float dx2 = ((float)((hsh >> (dI * 3)) & 15) / 15.0f - 0.5f) * W * 0.8f;
+                                    float dz2 = ((float)((hsh >> (dI * 2)) & 15) / 15.0f - 0.5f) * D * 0.8f;
+                                    DrawCube({ dx2, ry2 + 2.0f * sc, dz2 },
+                                             (8.0f + (float)((hsh >> dI) & 7)) * sc, 4.0f * sc,
+                                             (7.0f + (float)((hsh >> dI) & 5)) * sc, dark2);
+                                }
+                            }
+                            DrawCylinderEx({ W * 0.22f, Hh + 8.0f * sc,  D * 0.20f },
+                                           { W * 0.22f, Hh + 30.0f * sc, D * 0.20f },
+                                           9.0f * sc, 9.0f * sc, 8, dark2);
+                            DrawCylinderEx({ -W * 0.26f, Hh + 8.0f * sc, -D * 0.24f },
+                                           { -W * 0.26f, Hh + 46.0f * sc, -D * 0.24f },
+                                           1.8f * sc, 1.0f * sc, 5, dark2);
+                            rlPopMatrix();
+                            w = W * 1.2f; h = Hh + 46.0f * sc;
+                        } break;
+                        case 6: { // VEICULO: carro / van / caminhao
+                            // A primeira versao era literalmente caixa sobre caixa.
+                            // Carro nao le por volume, le por SILHUETA: capo baixo,
+                            // para-brisa inclinado, teto curto e recuado, para-lamas
+                            // salientes sobre as rodas. E isso que esta montado aqui.
+                            unsigned hsh = (unsigned)(x * 0.5f) * 2246822519u ^ (unsigned)(zz * 0.5f) * 3266489917u;
+                            int   kind = (int)(hsh % 3);                 // 0 carro 1 van 2 caminhao
+                            // 4,2 m de carro = 158u nesta regua; caminhao 7 m = 264u.
+                            float L    = (kind == 2 ? 264.0f : kind == 1 ? 196.0f : 158.0f) * sc;
+                            float WD   = (kind == 2 ?  84.0f :  68.0f) * sc;
+                            float wr   = 14.0f * sc;                     // pneu ~0,37 m
+                            const Color PAL[6] = { {168, 74, 62,255}, { 84,112,152,255},
+                                                   {138,140,146,255}, {110,124, 92,255},
+                                                   {176,158,104,255}, {104,106,112,255} };
+                            Color body = PAL[(hsh >> 7) % 6];
+                            float rust = 0.88f + (float)((hsh >> 13) & 7) / 7.0f * 0.16f;
+                            body = { (unsigned char)(body.r * rust), (unsigned char)(body.g * rust),
+                                     (unsigned char)(body.b * rust), 255 };
+                            Color dark  = { (unsigned char)(body.r * 0.62f), (unsigned char)(body.g * 0.62f),
+                                            (unsigned char)(body.b * 0.62f), 255 };
+                            Color glass = { 62, 78, 92, 255 };
+                            Color tire  = { 26, 26, 28, 255 };
+                            Color chrome= { 172, 176, 184, 255 };
+
+                            rlPushMatrix();
+                            rlTranslatef(x, 0.0f, zz);
+                            rlRotatef(obj.rotation * RAD2DEG, 0.0f, 1.0f, 0.0f);
+
+                            float sill = wr + 5.0f * sc;          // linha da soleira
+                            float bodyH = 15.0f * sc;             // altura da lataria
+                            float beltY = sill + bodyH;           // linha da cintura (base do vidro)
+
+                            // ── lataria: 3 secoes com larguras diferentes = ombro ──
+                            DrawCube({ 0.0f, sill + bodyH * 0.5f, 0.0f }, L * 0.74f, bodyH, WD, body);
+                            DrawCube({ -L * 0.40f, sill + bodyH * 0.42f, 0.0f },
+                                     L * 0.22f, bodyH * 0.82f, WD * 0.90f, body);          // traseira afunilada
+                            DrawCube({  L * 0.40f, sill + bodyH * 0.40f, 0.0f },
+                                     L * 0.22f, bodyH * 0.78f, WD * 0.88f, body);          // capo afunilado
+
+                            // ── cabine: teto recuado + vidros inclinados ──
+                            if (kind == 2) {   // caminhao: cabine na frente, bau atras
+                                DrawCube({ -L * 0.30f, beltY + 20.0f * sc, 0.0f },
+                                         L * 0.34f, 40.0f * sc, WD * 0.96f, body);         // bau
+                                DrawCube({  L * 0.26f, beltY + 13.0f * sc, 0.0f },
+                                         L * 0.26f, 26.0f * sc, WD * 0.86f, dark);         // cabine
+                                DrawCube({  L * 0.34f, beltY + 15.0f * sc, 0.0f },
+                                         L * 0.10f, 17.0f * sc, WD * 0.78f, glass);        // para-brisa
+                            } else {
+                                float roofH = (kind == 1 ? 26.0f : 18.0f) * sc;
+                                DrawCube({ -L * 0.04f, beltY + roofH * 0.5f, 0.0f },
+                                         L * 0.40f, roofH, WD * 0.80f, dark);              // teto
+                                // vidros: faixa continua um pouco mais estreita que o teto
+                                DrawCube({ -L * 0.04f, beltY + roofH * 0.62f, 0.0f },
+                                         L * 0.36f, roofH * 0.46f, WD * 0.84f, glass);
+                                // para-brisa e vidro traseiro INCLINADOS (rotacao em Z)
+                                rlPushMatrix();
+                                rlTranslatef(L * 0.19f, beltY + roofH * 0.42f, 0.0f);
+                                rlRotatef(-32.0f, 0.0f, 0.0f, 1.0f);
+                                DrawCube({ 0.0f, 0.0f, 0.0f }, L * 0.10f, roofH * 0.95f, WD * 0.80f, glass);
+                                rlPopMatrix();
+                                rlPushMatrix();
+                                rlTranslatef(-L * 0.26f, beltY + roofH * 0.40f, 0.0f);
+                                rlRotatef(30.0f, 0.0f, 0.0f, 1.0f);
+                                DrawCube({ 0.0f, 0.0f, 0.0f }, L * 0.09f, roofH * 0.85f, WD * 0.78f, glass);
+                                rlPopMatrix();
+                            }
+
+                            // ── para-lamas: arcos salientes sobre cada roda ──
+                            for (int wI = 0; wI < 4; ++wI) {
+                                float wx = (wI < 2 ? -L * 0.30f : L * 0.30f);
+                                float wz = ((wI & 1) ? -WD * 0.5f : WD * 0.5f);
+                                DrawCylinderEx({ wx, sill * 0.92f, wz - 3.0f * sc },
+                                               { wx, sill * 0.92f, wz + 3.0f * sc },
+                                               wr * 1.45f, wr * 1.45f, 10, dark);
+                                DrawCylinderEx({ wx, wr, wz - 5.0f * sc }, { wx, wr, wz + 5.0f * sc },
+                                               wr, wr, 10, tire);
+                                DrawCylinderEx({ wx, wr, wz - 5.6f * sc }, { wx, wr, wz + 5.6f * sc },
+                                               wr * 0.42f, wr * 0.42f, 8, chrome);          // calota
+                            }
+
+                            // ── faroies, lanternas e para-choques ──
+                            for (int sI = 0; sI < 2; ++sI) {
+                                float sz2 = (sI ? 1.0f : -1.0f) * WD * 0.30f;
+                                DrawSphereEx({ L * 0.49f, sill + bodyH * 0.55f, sz2 }, 3.4f * sc, 6, 6,
+                                             Color{ 236, 226, 190, 255 });
+                                DrawCube({ -L * 0.49f, sill + bodyH * 0.55f, sz2 },
+                                         2.5f * sc, 5.0f * sc, 8.0f * sc, Color{ 168, 46, 40, 255 });
+                            }
+                            DrawCube({  L * 0.50f, sill + bodyH * 0.18f, 0.0f },
+                                     4.0f * sc, 5.0f * sc, WD * 0.92f, chrome);
+                            DrawCube({ -L * 0.50f, sill + bodyH * 0.18f, 0.0f },
+                                     4.0f * sc, 5.0f * sc, WD * 0.92f, chrome);
+
+                            rlPopMatrix();
+                            w = L; h = beltY + 40.0f * sc;
+                        } break;
+                        case 13: { // MARCAS NO CHAO: riscos, trilhas e cascalho
+                            // A textura do piso tem 128px por tile de 64u: nessa
+                            // distancia de camera o mipmap come o detalhe e o chao
+                            // vira cinza chapado. Marcas em ESCALA DE MUNDO resolvem.
+                            // NADA de disco escuro grande: circulo cheio no chao le
+                            // como buraco/cratera, nao como sujeira.
+                            if (lodFar) break;   // marca de chao so aparece perto
+                            unsigned hsh = (unsigned)(x * 0.9f) * 2654435761u ^ (unsigned)(zz * 0.9f) * 2246822519u;
+                            float R = 17.0f * sc;
+                            rlDisableDepthMask();
+                            if (hsh & 1) {                      // riscos/trilhas finas
+                                for (int dI = 0; dI < 3; ++dI) {
+                                    float a   = obj.rotation + dI * 0.22f;
+                                    float len = R * (0.9f + (float)((hsh >> (dI*5)) & 7) / 7.0f * 0.5f);
+                                    float off = (dI - 1) * R * 0.28f;
+                                    float ox  = cosf(a) * len, oz = sinf(a) * len;
+                                    float px2 = x - sinf(a) * off, pz2 = zz + cosf(a) * off;
+                                    DrawCylinderEx({ px2-ox, 1.80f, pz2-oz }, { px2+ox, 1.83f, pz2+oz },
+                                                   1.4f*sc, 0.7f*sc, 4, ColorAlpha(Color{16,15,14,255}, 0.13f));
+                                }
+                            } else {                            // cascalho: pontos CLAROS, nao mancha escura
+                                for (int dI = 0; dI < 7; ++dI) {
+                                    float a  = dI * 0.897f + (float)((hsh >> (dI*3)) & 7) * 0.24f;
+                                    float rd = R * (0.25f + (float)((hsh >> (dI*2)) & 7) / 7.0f * 0.85f);
+                                    float ox = cosf(a) * rd, oz = sinf(a) * rd;
+                                    float pr = (1.6f + (float)((hsh >> dI) & 3) * 0.7f) * sc;
+                                    DrawCylinderEx({ x+ox, 1.80f, zz+oz }, { x+ox, 1.84f, zz+oz },
+                                                   pr, pr, 6, ColorAlpha(Color{176,172,162,255}, 0.16f));
+                                }
+                            }
+                            rlEnableDepthMask();
+                            w = R * 2.0f; h = 0.0f;
+                        } break;
+                        case 11: { // grama: tufo denso, alturas/tons variados, ancorado no chao
+                            // Antes: 5 laminas iguais, mesma altura, mesma cor, mesmo balanco —
+                            // lia como espetinhos 2D flutuando. Agora o tufo tem base escura
+                            // no chao, 9 laminas com altura/tom/fase proprios.
+                            float gh = 9.0f * sc, gr = 8.0f * sc;   // ~25% da altura do heroi (era 2x!)
+                            float t  = (float)GetTime();
+                            unsigned hsh = (unsigned)(x * 1.3f) * 374761393u ^ (unsigned)(zz * 1.3f) * 668265263u;
+                            // mancha de terra/raiz: cola o tufo no piso (sem ela ele "flutua")
+                            if (!lodFar)
+                                DrawCylinderEx({ x, 0.13f, zz }, { x, 0.16f, zz }, gr*0.95f, gr*0.95f, 9,
+                                               ColorAlpha(Color{ 38, 52, 28, 255 }, 0.55f));
+                            int blades = lodFar ? 4 : 9;   // LOD: longe nao da pra ver 9 laminas
+                            for (int bld = 0; bld < blades; ++bld) {
+                                float u  = (float)((hsh >> (bld * 2)) & 31) / 31.0f;   // 0..1 estavel
+                                float a  = bld * 0.698f + u * 0.9f;
+                                float rad = gr * (0.18f + u * 0.62f);
+                                float ox = cosf(a) * rad, oz = sinf(a) * rad;
+                                float bh = gh * (0.55f + u * 0.65f);                   // alturas diferentes
+                                float sway = sinf(t * 1.7f + x * 0.05f + bld * 0.8f) * bh * 0.26f;
+                                float k = 0.62f + u * 0.55f;                           // tons diferentes
+                                Color gc = { (unsigned char)(74 * k), (unsigned char)(152 * k),
+                                             (unsigned char)(58 * k), 255 };
+                                DrawCylinderEx({ x+ox, 0.0f, zz+oz },
+                                               { x+ox+sway, bh, zz+oz+sway*0.35f },
+                                               gr*0.085f, gr*0.012f, 3, gc);
+                            }
+                            w = gr * 2.0f; h = gh;
+                        } break;
+                        case 12: { // pedras/detritos: cluster facetado com tons variados
+                            float pr = 7.0f * sc;
+                            unsigned hsh = (unsigned)(x) * 2654435761u ^ (unsigned)(zz) * 40503u;
+                            const float px2[5] = { 0.0f,  0.62f, -0.55f,  0.30f, -0.28f };
+                            const float pz2[5] = { 0.0f,  0.30f,  0.22f, -0.58f, -0.40f };
+                            const float ps [5] = { 0.68f, 0.44f,  0.40f,  0.32f,  0.26f };
+                            for (int i = 0; i < (lodFar ? 2 : 5); ++i) {
+                                float k = 0.74f + (float)((hsh >> (i * 3)) & 7) / 7.0f * 0.44f;
+                                Color rc = { (unsigned char)(118 * k), (unsigned char)(116 * k),
+                                             (unsigned char)(112 * k), 255 };
+                                // 5 segmentos = facetas visiveis (pedra), nao bolinha lisa
+                                DrawSphereEx({ x + px2[i]*pr, pr*ps[i]*0.75f, zz + pz2[i]*pr },
+                                             pr*ps[i], 5, 5, rc);
+                            }
+                            w = pr*2.0f; h = pr;
                         } break;
                         default: if (hasSprite) { // fallback billboard so p/ tipos sem 3D
                             int variant = ((int)(obj.position.x*0.13f+obj.position.y*0.07f)) % SpriteBank::SCENERY_VARIANTS;
@@ -5563,8 +6975,20 @@ void Game::renderWorld3D() {
                     }
                 }
 
-                // Desenha plano horizontal de sombra
-                DrawPlane({ obj.position.x, 0.11f, obj.position.y }, { w * 0.88f, h * 0.17f }, ColorAlpha(BLACK, 0.40f));
+                // Sombra de contato: era um RETANGULO preto chapado (borda dura,
+                // formato errado). 3 discos concentricos com alpha decrescente dao
+                // penumbra e assentam o objeto no chao.
+                {
+                    float sr = w * 0.46f;
+                    if (sr > 1.0f && !(smallProp && lodFar)) {
+                        const float rk[3] = { 1.00f, 0.68f, 0.40f };
+                        const float ak[3] = { 0.13f, 0.15f, 0.17f };
+                        for (int sI = 0; sI < 3; ++sI)
+                            DrawCylinderEx({ obj.position.x, 2.20f + sI * 0.06f, obj.position.y },
+                                           { obj.position.x, 2.24f + sI * 0.06f, obj.position.y },
+                                           sr * rk[sI], sr * rk[sI], 14, ColorAlpha(BLACK, ak[sI]));
+                    }
+                }
 
                 // Poste de luz: cone/poça de luz amarela no chão
                 bool lights = (obj.tint.r > 128);
@@ -5615,8 +7039,64 @@ void Game::renderWorld3D() {
 
         // ── Desenho dos Billboards 3D Reais (com oclusão e depth buffer) ──
 
+        // ── BARREIRA DA FASE ──────────────────────────────────────────────────
+        // So o arco proximo do jogador e desenhado: a borda inteira seriam
+        // centenas de painentes fora de tela. Ela aparece de longe pra o jogador
+        // entender que o mundo da fase TEM fim - e o que faz virar "fase".
+        if (openWorldMode) {
+            Vector2 rel = { player.position.x - safeZoneCenter.x,
+                            player.position.y - safeZoneCenter.y };
+            float pd = sqrtf(rel.x*rel.x + rel.y*rel.y);
+            if (pd > owPhaseRadius - 1500.0f) {
+                float base = atan2f(rel.y, rel.x);
+                float tt   = (float)GetTime();
+                for (int i = -9; i <= 9; ++i) {
+                    float a  = base + i * 0.045f;
+                    float bx = safeZoneCenter.x + cosf(a) * owPhaseRadius;
+                    float bz = safeZoneCenter.y + sinf(a) * owPhaseRadius;
+                    float pulse = 0.16f + 0.10f * sinf(tt * 2.0f + i * 0.7f);
+                    // painel vertical de energia
+                    DrawCylinderEx({ bx, 0.0f, bz }, { bx, 210.0f, bz }, 26.0f, 20.0f, 6,
+                                   ColorAlpha(Color{ 70, 190, 255, 255 }, pulse));
+                    DrawCylinderEx({ bx, 0.0f, bz }, { bx, 8.0f, bz }, 30.0f, 30.0f, 8,
+                                   ColorAlpha(Color{ 140, 230, 255, 255 }, 0.35f));
+                }
+            }
+        }
+
+        // ── PORTAL DA FASE ────────────────────────────────────────────────────
+        if (openWorldMode && owPortalOpen) {
+            float px = owPortalPos.x, pz = owPortalPos.y;
+            float t  = (float)GetTime();
+            // base/plataforma
+            DrawCylinderEx({px, 0.10f, pz}, {px, 4.0f, pz}, 62.0f, 58.0f, 24,
+                           Color{38, 44, 58, 255});
+            // anel girando (3 aros inclinados)
+            for (int r = 0; r < 3; ++r) {
+                float rr = 46.0f - r * 7.0f;
+                float yy = 30.0f + r * 26.0f;
+                float ph = t * (1.1f + r * 0.35f);
+                for (int seg = 0; seg < 16; ++seg) {
+                    float a0 = seg * 0.3927f + ph, a1 = a0 + 0.28f;
+                    DrawCylinderEx({px + cosf(a0)*rr, yy + sinf(a0)*4.0f, pz + sinf(a0)*rr},
+                                   {px + cosf(a1)*rr, yy + sinf(a1)*4.0f, pz + sinf(a1)*rr},
+                                   3.2f, 3.2f, 5, Color{0, 220, 255, 255});
+                }
+            }
+            // coluna de energia
+            for (int c = 0; c < 5; ++c) {
+                float k = 1.0f - c * 0.17f;
+                float pulse = 0.6f + 0.4f * sinf(t * 3.0f + c);
+                DrawCylinderEx({px, 4.0f, pz}, {px, 4.0f + 150.0f * k, pz},
+                               34.0f * k, 10.0f * k, 14,
+                               ColorAlpha(Color{90, 210, 255, 255}, 0.16f * pulse));
+            }
+            lightSystem.addLight(owPortalPos, 300.0f, 0.9f, Color{80,210,255,255}, true);
+        }
+
         // Player — modelo 3D do PRÓPRIO personagem do jogo (render3D, não genérico)
-        drawVoxel((int)player.charClass, player.position, 0.0f);
+        drawVoxel(1000 + (int)player.charClass * 1000 + player.visualSignature(),
+                  player.position, 0.0f, player.walkAnimTimer, player.isMoving);
 
         // ── PICARETA: golpe animado quando minerando um nó perto ──
         if (mineFxIdx >= 0 && mineFxIdx < (int)resourceNodes.size() && !resourceNodes[mineFxIdx].depleted) {
@@ -5638,16 +7118,25 @@ void Game::renderWorld3D() {
             }
         }
 
+        // Culling de entidades — o caminho 2D sempre teve (inView); o 3D nao tinha
+        // NENHUM, e drawVoxel desenha 2x (silhueta de sombra + modelo). Mesmos
+        // limites usados pelos civis.
+        auto offScreen = [&](Vector2 p) {
+            return std::fabs(p.x - camera.target.x) > 1200.0f ||
+                   std::fabs(p.y - camera.target.y) > 800.0f;
+        };
+
         // NPCs — modelos 3D próprios do jogo
         for (auto& n : npcs) {
-            drawVoxel(300 + (int)n.role, n.position, 0.0f);
+            if (offScreen(n.position)) continue;
+            drawVoxel(300 + (int)n.role, n.position, 0.0f);   // NPC de posto: parado
         }
 
         // Civis da cidade (cada um na sua tarefa) — com culling pra perto da câmera
         for (auto& f : cityFolk) {
             if (std::fabs(f.position.x - camera.target.x) > 1200 ||
                 std::fabs(f.position.y - camera.target.y) > 800) continue;
-            drawVoxel(300 + f.role, f.position, 0.0f);
+            drawVoxel(300 + f.role, f.position, 0.0f, f.walkPhase, !f.atStation);
             // Trabalhador martelando: faísca pulsante (sinal de "fazendo algo")
             if (f.job == FolkJob::Worker && f.atStation) {
                 float ph = std::sin(f.work * 9.0f);
@@ -5661,16 +7150,19 @@ void Game::renderWorld3D() {
 
         // Companheiros — modelos 3D próprios do jogo
         for (auto& c : companions) {
-            if (c.active) drawVoxel(500 + (int)c.type, c.position, 0.0f);
+            if (!c.active || offScreen(c.position)) continue;
+            drawVoxel(500 + (int)c.type, c.position, 0.0f, c.walkTimer, true);
         }
 
         // Inimigos — modelos 3D próprios do jogo (cada tipo com sua silhueta)
         for (auto& e : enemies) {
-            drawVoxel(100 + (int)e.type, e.position, 0.0f);
+            if (offScreen(e.position)) continue;
+            drawVoxel(100 + (int)e.type, e.position, 0.0f, e.walkAnimTimer, true);
         }
 
         // Itens — modelos 3D próprios do jogo
         for (auto& it : items) {
+            if (offScreen(it.position)) continue;
             it.render3D();
         }
 
@@ -5803,19 +7295,43 @@ void Game::renderWorld3D() {
                         DrawCube({ b.position.x, 32.0f, b.position.y }, 64.0f, 64.0f, 64.0f, GRAY);
                     }
                 } else {
-                    DrawCube({ b.position.x, 24.0f, b.position.y }, 48.0f, 48.0f, 48.0f, Color{90,90,105,255}); DrawCubeWires({ b.position.x, 24.0f, b.position.y }, 48.0f, 48.0f, 48.0f, Color{150,150,170,255});
+                    drawGenericStructure(b.position, 1.0f);
                 }
             } else {
-                DrawCube({ b.position.x, 24.0f, b.position.y }, 48.0f, 48.0f, 48.0f, Color{90,90,105,255}); DrawCubeWires({ b.position.x, 24.0f, b.position.y }, 48.0f, 48.0f, 48.0f, Color{150,150,170,255});
+                drawGenericStructure(b.position, 1.0f);
             }
         }
+        // Tanque com escala e forma de tanque: 96u de casco contra 66u de heroi.
+        // Os 28u antigos faziam o "tanque" caber embaixo do braco do personagem.
         for (const auto& t : buildingSystem.tanks) {
             if (t.isDead()) continue;
-            DrawCylinderEx({t.position.x,0.12f,t.position.y},{t.position.x,0.13f,t.position.y},18.0f,18.0f,10,ColorAlpha(BLACK,0.34f)); DrawCubeV({t.position.x,7.0f,t.position.y},{28.0f,12.0f,20.0f},Color{70,90,70,255}); DrawCubeV({t.position.x,16.0f,t.position.y},{16.0f,8.0f,14.0f},Color{86,106,86,255}); DrawCylinderEx({t.position.x,16.0f,t.position.y},{t.position.x+26.0f,16.0f,t.position.y},2.2f,2.2f,6,Color{60,70,60,255});
+            const Color HULL = { 78, 96, 74, 255 };
+            const Color TRK  = { 44, 50, 44, 255 };
+            const Color TUR  = { 92, 112, 88, 255 };
+            float tx = t.position.x, tz = t.position.y;
+            DrawCylinderEx({tx, 0.12f, tz}, {tx, 0.13f, tz}, 46.0f, 40.0f, 16,
+                           ColorAlpha(BLACK, 0.34f));
+            DrawCylinderEx({tx, 0.14f, tz}, {tx, 0.15f, tz}, 20.0f, 16.0f, 14,
+                           ColorAlpha(Color{60, 230, 120, 255}, 0.30f));   // marca de aliado
+            for (int sI = 0; sI < 2; ++sI)                                  // esteiras
+                DrawCubeV({tx, 11.0f, tz + (sI ? 30.0f : -30.0f)}, {96.0f, 22.0f, 18.0f}, TRK);
+            DrawCubeV({tx, 20.0f, tz}, {92.0f, 20.0f, 62.0f}, HULL);        // casco
+            DrawCubeV({tx, 34.0f, tz}, {52.0f, 18.0f, 44.0f}, TUR);         // torre
+            DrawCylinderEx({tx + 20.0f, 36.0f, tz}, {tx + 74.0f, 36.0f, tz},
+                           5.0f, 4.0f, 8, TRK);                              // canhao
+            DrawSphereEx({tx - 14.0f, 46.0f, tz}, 5.0f, 6, 6, TUR);          // escotilha
         }
+        // Aliados usam o MESMO modelo dos NPCs (soldado). Antes eram uma capsula
+        // verde com uma bola bege por cabeca: um "pino" andando pelo cenario, sem
+        // nenhuma relacao com o resto da arte do jogo.
         for (const auto& s : buildingSystem.soldiers) {
             if (s.isDead()) continue;
-            DrawCylinderEx({s.position.x,0.12f,s.position.y},{s.position.x,0.13f,s.position.y},9.0f,9.0f,10,ColorAlpha(BLACK,0.32f)); DrawCapsule({s.position.x,5.0f,s.position.y},{s.position.x,26.0f,s.position.y},5.0f,8,8,Color{70,110,90,255}); DrawSphereEx({s.position.x,33.0f,s.position.y},5.5f,8,8,Color{200,170,140,255});
+            // anel verde no chao = marca de ALIADO (o modelo e o mesmo dos NPCs)
+            DrawCylinderEx({s.position.x, 0.12f, s.position.y},
+                           {s.position.x, 0.13f, s.position.y}, 15.0f, 12.0f, 14,
+                           ColorAlpha(Color{60, 230, 120, 255}, 0.35f));
+            drawVoxel(300 + (int)NPCRole::Soldier, s.position, 0.0f,
+                      (float)GetTime() * 6.0f + s.position.x * 0.05f, true);
         }
 
         // RTS Building Preview Ghost
@@ -6129,6 +7645,8 @@ void Game::renderWorld3D() {
 
     // (máscara de luz + vignette já aplicadas logo após EndMode3D — overlays acima ficam legíveis)
 
+    drawFloatingNumbers(true);   // dano/creditos/cura/recursos — NAO existiam no 3D
+
     // ── 3. Interface e HUD Final ─────────────────────────────────────────────
     drawUI();
     drawHudAndOverlays();   // recursos/ameaça + pause/levelup/evolução/loja/crafting/party (faltava no 3D!)
@@ -6328,21 +7846,8 @@ void Game::render() {
                    {moveTarget.x, moveTarget.y + 14}, 1.5f, ColorAlpha(tc, 0.6f));
     }
 
-    // Floating numbers (damage/credits/heals — world-space)
-    for (const auto& dn : damageNumbers) {
-        float alpha = std::min(dn.life / 0.45f, 1.0f);
-        Color c = ColorAlpha(dn.color, alpha);
-        // Fonte menor para nao poluir a tela perto do personagem
-        int fontSize = (dn.value >= 100.0f) ? 15 :
-                       (dn.value >= 50.0f)  ? 13 : 11;
-        const char* txt = TextFormat("%s%.0f", dn.prefix, dn.value);
-        int tw = MeasureText(txt, fontSize);
-        // Shadow for readability
-        DrawText(txt, (int)dn.pos.x - tw/2 + 1, (int)dn.pos.y - 14 + 1,
-                 fontSize, ColorAlpha(BLACK, 0.6f * alpha));
-        DrawText(txt, (int)dn.pos.x - tw/2,     (int)dn.pos.y - 14,
-                 fontSize, c);
-    }
+    // Floating numbers (damage/credits/heals) — mesma funcao usada pelo caminho 3D
+    drawFloatingNumbers(false);
 
     // (Balão de diálogo agora é desenhado em drawUI() — vale p/ 3D e 2D)
 
@@ -6529,7 +8034,19 @@ void Game::drawHudAndOverlays() {
                              1.0f, ColorAlpha(Color{0,230,160,255}, 0.7f));
         DrawText(si, screenWidth/2 - siw/2, 34, 16, ColorAlpha(Color{0,255,180,255}, pulse));
     }
+    // Progresso da FASE (abates ate o portal) — objetivo sempre visivel
+    if (openWorldMode) {
+        const char* pt = owPortalOpen
+            ? "PORTAL ABERTO - siga o marcador e pressione [E]"
+            : TextFormat("FASE %d  -  abates ate o portal: %d/%d",
+                         owPhase + 1, owPhaseKills, owPhaseGoal);
+        int pw = MeasureText(pt, 13);
+        DrawRectangle(screenWidth/2 - pw/2 - 8, 82, pw + 16, 20, ColorAlpha(BLACK, 0.55f));
+        DrawText(pt, screenWidth/2 - pw/2, 85, 13,
+                 owPortalOpen ? Color{0,255,180,255} : Color{200,206,220,255});
+    }
     drawStoryBanner();
+    drawPhaseFade();
     drawPlayerSpeech();
     if (paused) drawPauseMenu();
     if (showLevelUpScreen)   drawLevelUpScreen();
@@ -6916,7 +8433,9 @@ void Game::drawQuestHUD() const {
     int show = std::min(count, 3);
     int panH = 22 + show * rowH + 6;
     // py=70: starts below the top bar (0–26) + gap — no overlap with hint text
-    int px = screenWidth - panW - 8, py = 70;
+    // py=102: abaixo do HUD de AMEACA/mutador (y=56, ate 40px de altura). Com 70
+    // o painel nascia POR BAIXO dele e os dois textos se sobrepunham na tela.
+    int px = screenWidth - panW - 8, py = 102;
 
     // Panel background
     DrawRectangle(px, py, panW, panH, ColorAlpha(BLACK, 0.82f));
@@ -6945,8 +8464,10 @@ void Game::drawQuestHUD() const {
                              ColorAlpha(WHITE, 0.2f));
 
         // Progress text + NPC
-        const char* prog = q.getProgressText().c_str();
-        DrawText(prog, px + 8,  ry + 27, 11, ColorAlpha(WHITE, 0.85f));
+        // por VALOR: getProgressText() devolve std::string, entao o .c_str() de um
+        // temporario ja estava liberado quando o DrawText lia (texto virava lixo).
+        std::string prog = q.getProgressText();
+        DrawText(prog.c_str(), px + 8,  ry + 27, 11, ColorAlpha(WHITE, 0.85f));
         DrawText(q.npcOwner.c_str(), px + panW - MeasureText(q.npcOwner.c_str(),10) - 6,
                  ry + 27, 10, ColorAlpha(C_cyan, 0.7f));
 

@@ -1176,6 +1176,7 @@ void Player::levelUp() {
     health = maxHealth;
     leveledUp    = true;
     levelUpTimer = 2.5f;
+    unclaimedLevels++;   // o Game drena isto (conta TODOS os niveis, inclusive multiplos)
 
     // Level-up speech
     if (level % 10 == 0)
@@ -1223,6 +1224,21 @@ void Player::equipFromBag(int idx) {
     if (selectedBagEquip >= (int)equipBag.size())
         selectedBagEquip = std::max(0, (int)equipBag.size() - 1);
     applyEquipmentStats();
+}
+
+int Player::visualSignature() const {
+    auto h = [](const std::string& v, int seed) {
+        int acc = seed;
+        for (char c : v) acc = acc * 31 + (unsigned char)c;
+        return acc;
+    };
+    int sig = h(equippedWeapon.name, 7);
+    sig = h(equippedArmor.name,   sig);
+    sig = h(equippedImplant.name, sig);
+    sig = sig * 31 + equippedWeapon.upgradeLevel * 7 + equippedArmor.upgradeLevel * 13
+                   + equippedImplant.upgradeLevel * 17;
+    sig = sig * 31 + (int)cosmeticTint.r + (int)cosmeticTint.g * 3 + (int)cosmeticTint.b * 5;
+    return (sig & 0x7fffffff) % 997;
 }
 
 void Player::applyEquipmentStats() {

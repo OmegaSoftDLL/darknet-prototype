@@ -30,8 +30,11 @@ public:
     // Open world grid — 3×3 blocks of 40×40 tiles each
     static constexpr int OW_COLS    = 3;
     static constexpr int OW_ROWS    = 3;
-    static constexpr int OW_ZONE_W  = 40;
-    static constexpr int OW_ZONE_H  = 40;
+    // 128 tiles = 8192 unidades por regiao. Com 40 (2560u) o jogador atravessava
+    // uma REGIAO INTEIRA em ~10s e o mundo trocava de tema/nome o tempo todo -
+    // parecia teleporte, nao viagem.
+    static constexpr int OW_ZONE_W  = 128;
+    static constexpr int OW_ZONE_H  = 128;
 
     int width  = 40;
     int height = 40;

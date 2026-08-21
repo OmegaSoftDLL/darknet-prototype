@@ -41,12 +41,15 @@ inline void DrawScanlines(int screenW, int screenH) {
 
 // Vignette (bordas escuras) — sutil, sem faixas grossas cobrindo a visao do jogador
 inline void DrawVignette(int screenW, int screenH) {
-    int vTop = 70;   // faixas verticais bem mais finas e leves
-    int vSide = 110; // laterais podem ser um pouco maiores (menos intrusivas)
-    DrawRectangleGradientV(0, 0, screenW, vTop, ColorAlpha(BLACK, 0.32f), BLANK);
-    DrawRectangleGradientV(0, screenH - vTop, screenW, vTop, BLANK, ColorAlpha(BLACK, 0.32f));
-    DrawRectangleGradientH(0, 0, vSide, screenH, ColorAlpha(BLACK, 0.30f), BLANK);
-    DrawRectangleGradientH(screenW - vSide, 0, vSide, screenH, BLANK, ColorAlpha(BLACK, 0.30f));
+    // Enquadra sem apagar: e o TERCEIRO multiplicador escuro sobre a cena
+    // (depois do fog do chao e da mascara de luz). Faixas mais largas e MUITO
+    // mais suaves leem como enquadramento; as antigas leem como perda de imagem.
+    int vTop = 96;
+    int vSide = 150;
+    DrawRectangleGradientV(0, 0, screenW, vTop, ColorAlpha(BLACK, 0.20f), BLANK);
+    DrawRectangleGradientV(0, screenH - vTop, screenW, vTop, BLANK, ColorAlpha(BLACK, 0.20f));
+    DrawRectangleGradientH(0, 0, vSide, screenH, ColorAlpha(BLACK, 0.18f), BLANK);
+    DrawRectangleGradientH(screenW - vSide, 0, vSide, screenH, BLANK, ColorAlpha(BLACK, 0.18f));
 }
 
 // Barra de vida estilizada

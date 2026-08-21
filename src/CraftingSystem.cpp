@@ -460,7 +460,7 @@ void CraftingSystem::render(const std::vector<Item>& bag, int screenW, int scree
     if (crafting) {
         float pct   = 1.f - (craftTimer / 1.5f);
         float pulse = 0.5f + 0.5f*sinf(t*10.f);
-        DrawText("  FABRICANDO...", panX+12, botY+10, 18, ColorAlpha(Color{255,220,0,255},pulse));
+        DrawText("  FABRICADO!", panX+12, botY+10, 18, ColorAlpha(Color{255,220,0,255},pulse));
         int barW = panW - 24;
         DrawRectangle(panX+12, botY+30, barW, 8, ColorAlpha(Color{30,30,60,255},0.8f));
         DrawRectangle(panX+12, botY+30, (int)(barW*pct), 8, ColorAlpha(Color{0,200,255,255},0.9f));
@@ -500,7 +500,8 @@ bool CraftingSystem::tryCraft(std::vector<Item>& bag, Equipment& outEquip,
     }
     if (crafting) return false;
 
-    crafting = true; craftTimer = 1.5f; craftingIdx = recIdx;
+    // A barra abaixo e CONFIRMACAO (o item ja e seu neste instante), nao progresso.
+    crafting = true; craftTimer = 1.5f;
 
     const auto& r = recipes[recIdx];
     for (const auto& [itype,icount] : r.ingredients) {

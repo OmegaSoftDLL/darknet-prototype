@@ -282,6 +282,16 @@ void NPC::endDialogue() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Render legado
 // ─────────────────────────────────────────────────────────────────────────────
+// Pernas com PASSO: uma vai a frente enquanto a outra recua, e o quadril
+// desce um pouco no meio do ciclo. E o minimo pra leitura de caminhada.
+void NPC::drawLegsAnim(Color c, float w, float h, float yTop) const {
+    float s   = walking ? sinf(walkPhase) : 0.0f;
+    float dx  = s * 3.0f;                 // uma perna avanca, a outra volta
+    float dip = walking ? fabsf(s) * 1.5f : 0.0f;   // quadril desce no passo
+    DrawRectangleV({position.x - 7 - dx, position.y + yTop + dip}, {w, h - dip}, c);
+    DrawRectangleV({position.x + 1 + dx, position.y + yTop - dip*0.5f}, {w, h - dip*0.5f}, c);
+}
+
 void NPC::render() const {
     switch (role) {
         case NPCRole::Leader:       renderLeader();    break;
@@ -645,8 +655,7 @@ void NPC::renderDialogue(int screenW, int screenH) const {
 // Renders legados
 // ─────────────────────────────────────────────────────────────────────────────
 void NPC::renderSoldier() const {
-    DrawRectangleV({position.x-7, position.y+8}, {6, 14}, {30,80,30,255});
-    DrawRectangleV({position.x+1, position.y+8}, {6, 14}, {30,80,30,255});
+    drawLegsAnim({30,80,30,255}, 6.0f, 14.0f, 8.0f);
     DrawRectangleV({position.x-12, position.y-12}, {24, 22}, color);
     DrawRectangleV({position.x-7,  position.y-26}, {14, 16}, color);
     DrawRectangleV({position.x-8,  position.y-30}, {16, 8},  {30,100,30,255});
@@ -654,8 +663,7 @@ void NPC::renderSoldier() const {
 }
 
 void NPC::renderEngineer() const {
-    DrawRectangleV({position.x-7,  position.y+8},  {6, 14}, {40,80,140,255});
-    DrawRectangleV({position.x+1,  position.y+8},  {6, 14}, {40,80,140,255});
+    drawLegsAnim({40,80,140,255}, 6.0f, 14.0f, 8.0f);
     DrawRectangleV({position.x-12, position.y-12}, {24, 22}, color);
     DrawRectangleV({position.x-7,  position.y-26}, {14, 16}, {60,120,180,255});
     DrawRectangleV({position.x-6,  position.y-22}, {5, 4},   {0,200,255,255});
@@ -664,8 +672,7 @@ void NPC::renderEngineer() const {
 }
 
 void NPC::renderLeader() const {
-    DrawRectangleV({position.x-7,  position.y+8},  {6, 15},  {20,100,40,255});
-    DrawRectangleV({position.x+1,  position.y+8},  {6, 15},  {20,100,40,255});
+    drawLegsAnim({20,100,40,255}, 6.0f, 15.0f, 8.0f);
     DrawRectangleV({position.x-13, position.y-13}, {26, 24}, color);
     DrawRectangleV({position.x-10, position.y-11}, {20, 20}, {0,140,60,255});
     DrawRectangleV({position.x-8,  position.y-28}, {16, 18}, {20,100,40,255});
@@ -675,8 +682,7 @@ void NPC::renderLeader() const {
 }
 
 void NPC::renderScientist() const {
-    DrawRectangleV({position.x-6,  position.y+8},  {5, 13},  {200,200,200,255});
-    DrawRectangleV({position.x+1,  position.y+8},  {5, 13},  {200,200,200,255});
+    drawLegsAnim({200,200,200,255}, 5.0f, 13.0f, 8.0f);
     DrawRectangleV({position.x-12, position.y-12}, {24, 22}, {220,220,220,255});
     DrawRectangleV({position.x-7,  position.y-26}, {14, 16}, {180,150,100,255});
     DrawRectangleV({position.x-7,  position.y-22}, {6, 5},   {0,100,200,255});
@@ -685,8 +691,7 @@ void NPC::renderScientist() const {
 }
 
 void NPC::renderMerchant() const {
-    DrawRectangleV({position.x-7,  position.y+8},  {6, 14},  {100,60,20,255});
-    DrawRectangleV({position.x+1,  position.y+8},  {6, 14},  {100,60,20,255});
+    drawLegsAnim({100,60,20,255}, 6.0f, 14.0f, 8.0f);
     DrawRectangleV({position.x-13, position.y-14}, {26, 24}, color);
     DrawRectangleV({position.x-11, position.y-12}, {22, 20}, {200,140,0,200});
     DrawRectangleV({position.x-7,  position.y-28}, {14, 16}, {180,120,60,255});

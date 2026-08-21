@@ -95,6 +95,12 @@ public:
     void setup(NPCType t, const std::string& n, Vector2 pos);
     void update(float dt, Vector2 playerPos, bool playerInteract);
     void renderFull() const;                        // render novo detalhado
+    // Fase do passo (0..2pi) e se esta andando. O 2D desenhava as pernas em
+    // posicao FIXA, entao o modelo 3D (que e gerado a partir do 2D) tambem
+    // ficava congelado: o NPC deslizava pelo cenario em vez de caminhar.
+    float walkPhase = 0.0f;
+    bool  walking   = false;
+    void drawLegsAnim(Color c, float w, float h, float yTop) const;
     void render3D() const;                           // modelo 3D low-poly (humanoide)
     void renderDialogue(int screenW, int screenH) const;
     void advanceDialogue();

@@ -55,18 +55,21 @@ struct ZonePal { Color floorA, floorB, wallA, wallB; };
 
 static ZonePal zonePalette(int zone) {
     switch (zone) {
-        case 0:  return {{52,54,58,255},{44,46,50,255},{70,74,82,255},{50,54,60,255}};   // LARuins asfalto
-        case 1:  return {{40,48,44,255},{34,42,38,255},{60,72,64,255},{44,54,48,255}};   // Bunker
-        case 2:  return {{60,40,24,255},{50,34,20,255},{40,28,18,255},{30,20,12,255}};   // KronosForge
-        case 3:  return {{30,18,46,255},{22,12,38,255},{60,30,90,255},{40,18,64,255}};   // KronosNexus void
-        case 4:  return {{40,42,36,255},{32,34,28,255},{58,56,50,255},{42,40,36,255}};   // Cemetery terra
-        case 5:  return {{58,60,32,255},{48,52,26,255},{70,52,30,255},{52,38,22,255}};   // CursedFarm grama seca
-        case 6:  return {{46,48,54,255},{38,40,46,255},{60,62,70,255},{44,46,54,255}};   // GhostCity concreto
-        case 7:  return {{30,40,26,255},{24,34,20,255},{34,30,22,255},{24,22,16,255}};   // DarkForest
-        case 8:  return {{36,34,40,255},{28,26,32,255},{50,46,54,255},{36,32,40,255}};   // Catacombs
-        case 9:  return {{42,34,44,255},{34,26,36,255},{58,46,60,255},{42,32,46,255}};   // Manor
-        case 10: return {{70,28,16,255},{54,20,12,255},{40,18,12,255},{28,12,8,255}};    // Inferno rocha
-        default: return {{50,50,54,255},{42,42,46,255},{66,66,72,255},{48,48,52,255}};
+        // EXPOSICAO: os valores antigos (comentados a direita) ficavam em ~19% de
+        // luminancia e ainda apanhavam fog * mascara de luz * vignette = ~5% na tela.
+        // Subo a base e ABRO o delta floorA/floorB pra textura realmente ler.
+        case 0:  return {{112,116,124,255},{ 78, 81, 88,255},{134,140,152,255},{ 92, 97,107,255}};  // LARuins asfalto
+        case 1:  return {{ 86,102, 94,255},{ 60, 73, 67,255},{114,134,120,255},{ 80, 96, 86,255}};  // Bunker
+        case 2:  return {{126, 84, 50,255},{ 88, 58, 34,255},{ 90, 62, 40,255},{ 62, 42, 26,255}};  // KronosForge
+        case 3:  return {{ 68, 44,102,255},{ 44, 26, 74,255},{112, 60,158,255},{ 76, 38,116,255}};  // KronosNexus void
+        case 4:  return {{ 92, 96, 82,255},{ 62, 66, 55,255},{112,110, 98,255},{ 82, 80, 71,255}};  // Cemetery terra
+        case 5:  return {{124,128, 70,255},{ 88, 94, 48,255},{136,102, 58,255},{ 98, 72, 42,255}};  // CursedFarm grama seca
+        case 6:  return {{100,104,116,255},{ 70, 74, 85,255},{120,124,138,255},{ 86, 90,104,255}};  // GhostCity concreto
+        case 7:  return {{ 68, 92, 58,255},{ 44, 64, 38,255},{ 76, 66, 48,255},{ 52, 46, 34,255}};  // DarkForest
+        case 8:  return {{ 80, 76, 88,255},{ 54, 51, 61,255},{100, 92,108,255},{ 70, 64, 78,255}};  // Catacombs
+        case 9:  return {{ 92, 76, 96,255},{ 64, 51, 68,255},{114, 92,118,255},{ 82, 64, 88,255}};  // Manor
+        case 10: return {{142, 62, 36,255},{102, 40, 24,255},{ 88, 40, 26,255},{ 60, 26, 18,255}};  // Inferno rocha
+        default: return {{104,104,112,255},{ 74, 74, 81,255},{128,128,138,255},{ 92, 92,100,255}};
     }
 }
 
@@ -87,8 +90,12 @@ static Texture2D makeFloorTex(int zone) {
             int ix = (int)fxx, iy = (int)fyy; float txx = fxx - ix, tyy = fyy - iy;
             float blob = ng[iy][ix]   * (1-txx)*(1-tyy) + ng[iy][ix+1]   * txx*(1-tyy)
                        + ng[iy+1][ix] * (1-txx)*tyy     + ng[iy+1][ix+1] * txx*tyy;
+            // 2a oitava: detalhe fino por cima das manchas largas. Uma oitava so
+            // some no mipmap a essa distancia de camera e o piso vira liso.
+            float o2 = 0.5f + 0.5f * sinf(x * 0.49f) * cosf(y * 0.41f);
+            blob = blob * 0.72f + o2 * 0.28f;
             Color base = ColorLerp(p.floorB, p.floorA, blob);   // manchas entre 2 tons
-            float n    = 0.90f + frnd() * 0.16f;                 // grao fino
+            float n    = 0.86f + frnd() * 0.26f;                 // grao fino (mais contraste)
             ImageDrawPixel(&img, x, y, shade(base, n));
         }
     }

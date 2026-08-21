@@ -703,7 +703,7 @@ void BuildingSystem::renderArkBuilding(const Building& b) const {
     if (!b.built) {
         // Under construction scaffold
         DrawRectangleLinesEx({b.position.x - 36, b.position.y - 36, 72, 72}, 2.f, GRAY);
-        float prog = (int)(b.buildTimer * 72.f);
+        float prog = b.buildTimer * 72.f;   // era (int) num float: truncava e gerava C4244
         DrawRectangle((int)(b.position.x - 36), (int)(b.position.y + 28), (int)prog, 8, YELLOW);
         DrawText("Construindo...", (int)(b.position.x - 36), (int)(b.position.y - 50), 12, YELLOW);
         return;
