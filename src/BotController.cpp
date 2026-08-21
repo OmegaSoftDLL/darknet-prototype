@@ -235,6 +235,20 @@ Vector2 BotController::computeAntiWall(Vector2 desired, Vector2 currentPos, floa
 
 // ─── Report ──────────────────────────────────────────────────────────────────
 
+bool BotController::passed(std::vector<std::string>* reasons) const {
+    auto fail = [&](const std::string& why) { if (reasons) reasons->push_back(why); };
+    bool ok = true;
+    float avg = (fpsSamples > 0) ? (fpsAccum / fpsSamples) : 0.0f;
+    // Limiares deliberadamente FROUXOS: o portao pega quebra grave (crash,
+    // travamento, jogo que nao roda), nao briga por 2 fps.
+    if (avg < 45.0f)            { ok = false; fail(TextFormat("FPS medio %.0f < 45", avg)); }
+    if (longStuckEvents > 0)    { ok = false; fail(TextFormat("%d travamento(s) > 10s", longStuckEvents)); }
+    if (deathCount > 3)         { ok = false; fail(TextFormat("%d mortes seguidas", deathCount)); }
+    if (killCount == 0)         { ok = false; fail("nenhum inimigo abatido (combate quebrado?)"); }
+    if (totalDistance < 500.0f) { ok = false; fail("bot praticamente nao andou (movimento travado?)"); }
+    return ok;
+}
+
 void BotController::writeReport(const std::string& path) const {
     std::ofstream f(path);
     if (!f) return;
@@ -459,8 +473,13 @@ BotController::BotDecision BotController::update(
     quadrantTimer += dt;
     if (quadrantTimer > 3.0f) {
         quadrantTimer = 0.0f;
-        int qx = (playerPos.x > 1280.0f) ? 1 : 0;
-        int qy = (playerPos.y > 1280.0f) ? 1 : 0;
+        // Quadrante RELATIVO ao centro do mundo. O limiar fixo de 1280 vinha de um
+        // mapa de 2560; com a fase centrada em 4096 o bot ficava eternamente no
+        // mesmo quadrante e o relatorio acusava "preso num canto" sem estar.
+        float ccx = (worldCenter.x != 0.0f) ? worldCenter.x : 1280.0f;
+        float ccy = (worldCenter.y != 0.0f) ? worldCenter.y : 1280.0f;
+        int qx = (playerPos.x > ccx) ? 1 : 0;
+        int qy = (playerPos.y > ccy) ? 1 : 0;
         int quad = qy * 2 + qx;
         if (quad != lastQuadrant) {
             lastQuadrant = quad;
@@ -725,10 +744,21 @@ BotController::BotDecision BotController::update(
         if (exploreTimer > 3.0f || Vector2Distance(playerPos, botTarget) < 40.0f) {
             exploreTimer = 0.0f;
             float angle  = exploreStep * 0.7f;
-            float radius = 200.0f + exploreStep * 45.0f;
-            if (radius > 900.0f) { radius = 200.0f; exploreStep = 0; }
-            botTarget = {playerPos.x + std::cos(angle) * radius,
-                         playerPos.y + std::sin(angle) * radius};
+            // Raio ate 1800: com 900 o bot nunca saia da ZONA SEGURA (raio 1050),
+            // onde inimigo e empurrado pra fora. Resultado: 0 tiros, 0 abates - o
+            // portao de validacao pegou isso como "combate quebrado".
+            float radius = 300.0f + exploreStep * 90.0f;
+            if (radius > 1800.0f) { radius = 300.0f; exploreStep = 0; }
+            auto pick = [&](float a) {
+                return Vector2{ playerPos.x + std::cos(a) * radius,
+                                playerPos.y + std::sin(a) * radius };
+            };
+            botTarget = pick(angle);
+            // Alvo dentro de parede/barreira = anda ate encostar e trava. Gira o
+            // angulo procurando um ponto livre (puxar pro centro so prendia o bot
+            // em volta do refugio).
+            for (int tryI = 1; tryI < 8 && wallQuery && wallQuery(botTarget); ++tryI)
+                botTarget = pick(angle + tryI * 0.785f);
             exploreStep++;
         }
         // Skill 1 if any enemy spotted during exploration
@@ -750,14 +780,27 @@ BotController::BotDecision BotController::update(
     if (wallQuery) updateStuckTracking(playerPos, dt);
     escapeTimer -= dt;
     if (stuckTimer > 2.0f && escapeTimer <= 0.0f) {
-        Vector2 c = (worldCenter.x != 0.0f || worldCenter.y != 0.0f)
-                  ? worldCenter
-                  : Vector2{ playerPos.x, playerPos.y - 1.0f };
-        Vector2 n = safeNormalize({ c.x - playerPos.x, c.y - playerPos.y });
-        escapeTarget = { playerPos.x + n.x * 600.0f, playerPos.y + n.y * 600.0f };
-        escapeTimer  = 3.0f;
+        // O escape TEM que produzir viagem. Mandar para "o centro" era um laco
+        // infinito depois que o centro virou o proprio refugio onde o bot estava:
+        // ele chegava, parava, era considerado preso de novo e reescapava - 0
+        // abates em 100s com 30 inimigos vivos na tela.
+        // Agora: um ponto a meia distancia da borda da fase, num rumo LIVRE e
+        // longe de onde ele ja esta.
+        Vector2 c   = (worldCenter.x != 0.0f || worldCenter.y != 0.0f) ? worldCenter : playerPos;
+        float   ring = (worldRadius > 400.0f) ? worldRadius * 0.60f : 1400.0f;
+        Vector2 best = playerPos; float bestD = -1.0f;
+        for (int i = 0; i < 8; ++i) {
+            float a = (float)i * 0.785f + (float)GetRandomValue(0, 62) * 0.01f;
+            Vector2 cand = { c.x + std::cos(a) * ring, c.y + std::sin(a) * ring };
+            if (wallQuery && wallQuery(cand)) continue;
+            float dx = cand.x - playerPos.x, dy = cand.y - playerPos.y;
+            float d  = dx*dx + dy*dy;
+            if (d > bestD) { bestD = d; best = cand; }
+        }
+        escapeTarget = best;
+        escapeTimer  = 5.0f;
         cachedPath.clear();   // recalcula rota imediatamente para o escape
-        addLog("Escape de borda -> centro do mapa");
+        addLog(TextFormat("Escape -> (%.0f,%.0f)", best.x, best.y));
     }
     if (escapeTimer > 0.0f) botTarget = escapeTarget;
 

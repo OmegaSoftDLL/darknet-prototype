@@ -47,8 +47,11 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     };
     // Cubo com 6 faces SEPARADAS (verts duplicados) e SOMBREAMENTO POR FACE — dá
     // volume/relevo low-poly mesmo sem luz dinâmica (topo claro, base/laterais escuras).
+    // `faces` e um bitmask: 1=tras 2=frente 4=esq 8=dir 16=topo 32=base.
+    // Face colada num voxel vizinho opaco NUNCA e vista — emiti-la so gastava
+    // triangulo. Num sprite cheio isso corta ~60% da malha.
     auto addCube = [&](float cx, float cy, float cz,
-                       float sx, float sy, float sz, Color c) {
+                       float sx, float sy, float sz, Color c, unsigned faces) {
         float hx = sx * 0.5f, hy = sy * 0.5f, hz = sz * 0.5f;
         const float p[8][3] = {
             {cx-hx,cy-hy,cz-hz},{cx+hx,cy-hy,cz-hz},{cx+hx,cy+hy,cz-hz},{cx-hx,cy+hy,cz-hz},
@@ -67,21 +70,32 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
                 idx.push_back((unsigned short)(b + j));
             }
         };
-        face(0,1,2, 0,2,3, 0.58f,  0,0,-1);   // trás  (-Z)
-        face(4,6,5, 4,7,6, 0.95f,  0,0, 1);   // frente(+Z, encara a câmera) — mais clara
-        face(0,3,7, 0,7,4, 0.70f, -1,0, 0);   // esquerda (-X)
-        face(1,5,6, 1,6,2, 0.80f,  1,0, 0);   // direita  (+X)
-        face(3,2,6, 3,6,7, 1.00f,  0,1, 0);   // topo (+Y) — mais claro
-        face(0,4,5, 0,5,1, 0.48f,  0,-1,0);   // base (-Y) — mais escuro
+        if (faces & 1)  face(0,1,2, 0,2,3, 0.58f,  0,0,-1);   // trás  (-Z)
+        if (faces & 2)  face(4,6,5, 4,7,6, 0.95f,  0,0, 1);   // frente(+Z, encara a câmera) — mais clara
+        if (faces & 4)  face(0,3,7, 0,7,4, 0.70f, -1,0, 0);   // esquerda (-X)
+        if (faces & 8)  face(1,5,6, 1,6,2, 0.80f,  1,0, 0);   // direita  (+X)
+        if (faces & 16) face(3,2,6, 3,6,7, 1.00f,  0,1, 0);   // topo (+Y) — mais claro
+        if (faces & 32) face(0,4,5, 0,5,1, 0.48f,  0,-1,0);   // base (-Y) — mais escuro
     };
 
+    // Vizinho opaco = face escondida. Fora da imagem conta como vazio (a silhueta
+    // externa continua fechada). Frente/trás sempre entram: a profundidade e unica.
+    auto opaque = [&](int x, int y) {
+        if (x < 0 || y < 0 || x >= W || y >= H) return false;
+        return px[y * W + x].a >= 40;
+    };
     for (int y = 0; y < H; ++y)
         for (int x = 0; x < W; ++x) {
             Color c = px[y * W + x];
             if (c.a < 40) continue;                 // inclui semi-transparentes (fantasmas não somem)
+            unsigned faces = 1 | 2;                                  // trás + frente
+            if (!opaque(x - 1, y)) faces |= 4;                       // esquerda
+            if (!opaque(x + 1, y)) faces |= 8;                       // direita
+            if (!opaque(x, y - 1)) faces |= 16;                      // topo (y-1 = acima)
+            if (!opaque(x, y + 1)) faces |= 32;                      // base
             float wx = (x - W * 0.5f) * voxelSize;   // centrado em X
             float wy = (H - 1 - y)   * voxelSize;    // topo da imagem = alto; pés em Y=0
-            addCube(wx, wy, 0.0f, voxelSize, voxelSize, depth, c);
+            addCube(wx, wy, 0.0f, voxelSize, voxelSize, depth, c, faces);
         }
     UnloadImageColors(px);
     UnloadImage(img);

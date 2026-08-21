@@ -42,6 +42,7 @@ add_executable(darknet
     src/SaveManager.cpp
     src/Background.cpp
     src/BotController.cpp
+    src/EnemyDirector.cpp
     src/Companion.cpp
     src/BuildingSystem.cpp
     src/ShopSystem.cpp
@@ -68,6 +69,15 @@ endif()
 
 # Copia os recursos para o diretório do executável (Release/Debug) — assim o jogo
 # roda mesmo ao executar o .exe diretamente (não só do diretório do projeto).
+# content/ = conteudo em DADO (fases etc). Vai junto do exe para poder ser
+# editado sem recompilar - e a base do "motor que evolui sem tocar em C++".
+if (EXISTS "${CMAKE_SOURCE_DIR}/content")
+    add_custom_command(TARGET darknet POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_SOURCE_DIR}/content" "$<TARGET_FILE_DIR:darknet>/content"
+        COMMENT "Copiando content/ para o diretorio do executavel")
+endif()
+
 if (EXISTS "${CMAKE_SOURCE_DIR}/resources")
     add_custom_command(TARGET darknet POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

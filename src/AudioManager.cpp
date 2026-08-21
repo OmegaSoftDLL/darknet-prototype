@@ -140,6 +140,93 @@ static inline float oscw(int wave, float ph) {
 }
 
 // Estilo de cada zona (variacao do mesmo tema)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CADEIA DE DSP DA TRILHA
+// A sintese anterior somava osciladores crus e mandava direto pro WAV com um
+// unico tap de eco. Isso soa a chiptune de 1990: sem corpo nas graves, agudo
+// aspero e nenhum espaco. Aqui entram as tres coisas que separam "bip de jogo"
+// de trilha: FILTRO (tira o serrilhado do dente-de-serra), REVERB (poe a musica
+// numa sala) e SATURACAO suave (cola tudo num corpo so).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Filtro passa-baixa de 2 polos (Butterworth simplificado). O corte varia com o
+// tempo para dar movimento: e o "abrir e fechar" que faz a trilha respirar.
+static void lowpass2(std::vector<float>& x, int SR, float startHz, float endHz) {
+    float z1 = 0.0f, z2 = 0.0f;
+    int   N  = (int)x.size();
+    for (int i = 0; i < N; ++i) {
+        float t  = (N > 1) ? (float)i / (float)(N - 1) : 0.0f;
+        float fc = startHz + (endHz - startHz) * t;
+        if (fc < 60.0f)  fc = 60.0f;
+        if (fc > (float)SR * 0.45f) fc = (float)SR * 0.45f;
+        float c  = 1.0f / tanf(3.14159265f * fc / (float)SR);
+        float a0 = 1.0f / (1.0f + 1.4142f * c + c * c);
+        float a1 = 2.0f * a0;
+        float b1 = 2.0f * (1.0f - c * c) * a0;
+        float b2 = (1.0f - 1.4142f * c + c * c) * a0;
+        float in = x[i];
+        float out = a0 * in + a1 * z1 + a0 * z2 - b1 * z1 - b2 * z2;
+        z2 = z1; z1 = out;
+        x[i] = out;
+    }
+}
+
+// Reverb de Schroeder: 4 combs em paralelo + 2 allpass em serie. Barato e
+// suficiente para dar tamanho de sala/caverna conforme `room`.
+static void reverbSchroeder(std::vector<float>& x, int SR, float room, float wet) {
+    if (wet <= 0.0f) return;
+    const int N = (int)x.size();
+    std::vector<float> out(N, 0.0f);
+    const float combMs[4]  = { 29.7f, 37.1f, 41.1f, 43.7f };
+    const float combGain[4] = { 0.76f, 0.74f, 0.72f, 0.70f };
+    for (int c = 0; c < 4; ++c) {
+        int   d = (int)(combMs[c] * 0.001f * SR * (0.6f + room * 0.9f));
+        if (d < 1 || d >= N) continue;
+        float g = combGain[c] * (0.55f + room * 0.42f);
+        std::vector<float> buf(d, 0.0f);
+        int   idx = 0;
+        for (int i = 0; i < N; ++i) {
+            float y = buf[idx];
+            buf[idx] = x[i] + y * g;
+            idx = (idx + 1) % d;
+            out[i] += y * 0.25f;
+        }
+    }
+    const float apMs[2] = { 5.0f, 1.7f };
+    for (int a = 0; a < 2; ++a) {
+        int d = (int)(apMs[a] * 0.001f * SR);
+        if (d < 1 || d >= N) continue;
+        std::vector<float> buf(d, 0.0f);
+        int idx = 0;
+        const float g = 0.7f;
+        for (int i = 0; i < N; ++i) {
+            float bufOut = buf[idx];
+            float in     = out[i];
+            float y      = -g * in + bufOut;
+            buf[idx] = in + g * bufOut;
+            idx = (idx + 1) % d;
+            out[i] = y;
+        }
+    }
+    for (int i = 0; i < N; ++i) x[i] = x[i] * (1.0f - wet * 0.5f) + out[i] * wet;
+}
+
+// Compressor de pico simples: segura os transientes do bumbo para a trilha nao
+// "bombear" nem estourar quando varias camadas caem no mesmo tempo.
+static void softCompress(std::vector<float>& x, float thresh, float ratio) {
+    float env = 0.0f;
+    for (size_t i = 0; i < x.size(); ++i) {
+        float a = fabsf(x[i]);
+        env = (a > env) ? (env * 0.30f + a * 0.70f) : (env * 0.9995f);
+        if (env > thresh) {
+            float over = env - thresh;
+            float gain = (thresh + over / ratio) / env;
+            x[i] *= gain;
+        }
+    }
+}
+
 struct TrackStyle {
     float bpm        = 92.0f;
     int   transpose  = 0;      // semitons
@@ -156,6 +243,11 @@ struct TrackStyle {
     bool  leadOn     = true;
     float drive      = 0.0f;   // distorcao (inferno)
     float echo       = 0.25f;  // mix de eco
+    // Novos: e o que tira o som de "chiptune" e poe numa sala.
+    float cutoffHz   = 5200.0f; // corte do passa-baixa no fim da cadeia
+    float room       = 0.45f;   // tamanho da sala do reverb (0..1)
+    float wet        = 0.26f;   // quanto de reverb entra na mistura
+    float subAmp     = 0.16f;   // sub-grave senoidal sob o baixo
 };
 
 // Adiciona uma nota envelopada no mix (float), com anti-click (ataque/release)
@@ -176,8 +268,13 @@ static void addNote(std::vector<float>& mix, int SR, double startT, double durT,
         else if (tt > (float)durT - rel) env = ((float)durT - tt) / rel;
         else                          env = 1.0f;
         if (env < 0.0f) env = 0.0f;
+        // UNISSONO: 3 vozes levemente desafinadas. Uma so sai fina e sintetica;
+        // tres batendo entre si produzem o coro que da peso a trilha.
         float ph = freq * tt;
-        mix[idx] += oscw(wave, ph) * amp * env;
+        float v  = oscw(wave, ph)
+                 + oscw(wave, ph * 1.0035f) * 0.55f
+                 + oscw(wave, ph * 0.9968f) * 0.55f;
+        mix[idx] += v * 0.48f * amp * env;
     }
 }
 
@@ -318,12 +415,27 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
         }
     }
 
-    // Mix -> short com distorcao opcional (drive) e soft-clip
+    // ── Cadeia final: sub-grave -> compressor -> filtro -> reverb -> saturacao ──
+    // A ordem importa: filtrar DEPOIS de comprimir mantem o ataque do bumbo, e o
+    // reverb entra depois do filtro para nao devolver o agudo que acabou de sair.
+    if (st.subAmp > 0.0f) {
+        // sub senoidal seguindo o bumbo: e o que faz a trilha ter fundo em
+        // caixas de som de verdade, nao so no fone.
+        double barLen = (60.0 / st.bpm) * 4.0;
+        for (double t0 = 0.0; t0 < (double)N / SR; t0 += barLen) {
+            addNote(mix, SR, t0,               barLen * 0.45, 55.0f, st.subAmp, 0);
+            addNote(mix, SR, t0 + barLen * 0.5, barLen * 0.35, 55.0f, st.subAmp * 0.7f, 0);
+        }
+    }
+    softCompress(mix, 0.72f, 3.5f);
+    lowpass2(mix, SR, st.cutoffHz * 0.72f, st.cutoffHz);   // abre ao longo da faixa
+    reverbSchroeder(mix, SR, st.room, st.wet);
+
     std::vector<short> s(N, 0);
     for (int i = 0; i < N; ++i) {
         float v = mix[i];
         if (st.drive > 0.0f) v = tanhf(v * (1.0f + st.drive * 3.0f));
-        else                 v = tanhf(v * 0.9f);   // soft-clip suave
+        else                 v = tanhf(v * 1.05f);   // saturacao leve = cola
         s[i] = (short)(clamp1(v) * 26000.0f);
     }
 
@@ -343,7 +455,11 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
 std::vector<short> AudioManager::synthLARuins(int SR, int N) {
     // Ruinas de Avalon — synthwave desolado, batida media
     TrackStyle st; st.bpm = 84.0f; st.hardDrums = false;
+    // PERFIL ACUSTICO — cidade aberta e morta: brilho medio, sala grande
+    st.cutoffHz = 4200.0f; st.room = 0.62f; st.wet = 0.30f; st.subAmp = 0.18f;
     st.bassWave = 1; st.arpWave = 2; st.leadWave = 0; st.echo = 0.28f;
+    // LARuins: cidade morta ao ar livre — brilho medio, sala grande
+    st.cutoffHz = 4200.0f; st.room = 0.62f; st.wet = 0.30f; st.subAmp = 0.18f;
     return composeTrack(SR, N, st);
 
     std::vector<short> s(N, 0);
@@ -454,6 +570,8 @@ std::vector<short> AudioManager::synthLARuins(int SR, int N) {
 std::vector<short> AudioManager::synthBunker(int SR, int N) {
     // Bunker NEXUS — marcha de combate, bateria pesada
     { TrackStyle st; st.bpm = 124.0f; st.hardDrums = true; st.drive = 0.10f;
+    // PERFIL ACUSTICO — concreto fechado: abafado, grave pesado, pouco espaco
+    st.cutoffHz = 3000.0f; st.room = 0.30f; st.wet = 0.22f; st.subAmp = 0.24f;
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 1; st.echo = 0.20f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);
@@ -547,6 +665,8 @@ std::vector<short> AudioManager::synthBunker(int SR, int N) {
 std::vector<short> AudioManager::synthFactory(int SR, int N) {
     // Kronos Forge — industrial distorcido
     { TrackStyle st; st.bpm = 134.0f; st.hardDrums = true; st.drive = 0.40f;
+    // PERFIL ACUSTICO — forja industrial: metalico e seco, agudo aberto
+    st.cutoffHz = 6200.0f; st.room = 0.40f; st.wet = 0.20f; st.subAmp = 0.22f;
       st.bassWave = 1; st.arpWave = 1; st.leadWave = 1; st.echo = 0.18f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);
@@ -653,6 +773,8 @@ std::vector<short> AudioManager::synthFactory(int SR, int N) {
 std::vector<short> AudioManager::synthCore(int SR, int N) {
     // Nucleo KRONOS — epico e tenso, tema em destaque
     { TrackStyle st; st.bpm = 104.0f; st.hardDrums = true;
+    // PERFIL ACUSTICO — nucleo alienigena: cristalino, cauda longa
+    st.cutoffHz = 7000.0f; st.room = 0.75f; st.wet = 0.38f; st.subAmp = 0.20f;
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 1;
       st.leadAmp = 0.18f; st.padAmp = 0.11f; st.echo = 0.35f;
       return composeTrack(SR, N, st); }
@@ -767,6 +889,8 @@ std::vector<short> AudioManager::synthCore(int SR, int N) {
 std::vector<short> AudioManager::synthMenu(int SR, int N) {
     // ★ TEMA PRINCIPAL OFICIAL DO DARKNET ★ — synthwave epico Am–F–C–G
     { TrackStyle st; st.bpm = 92.0f; st.hardDrums = false;
+    // PERFIL ACUSTICO — menu: espacoso e limpo
+    st.cutoffHz = 5200.0f; st.room = 0.68f; st.wet = 0.34f; st.subAmp = 0.16f;
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 0;
       st.leadAmp = 0.19f; st.arpAmp = 0.11f; st.padAmp = 0.10f; st.echo = 0.30f;
       return composeTrack(SR, N, st); }
@@ -821,6 +945,8 @@ std::vector<short> AudioManager::synthMenu(int SR, int N) {
 std::vector<short> AudioManager::synthCemetery(int SR, int N) {
     // Cemiterio — assombrado, lento, sem bateria
     { TrackStyle st; st.bpm = 72.0f; st.drums = false; st.arpOn = false;
+    // PERFIL ACUSTICO — cemiterio: escuro, nevoa, reverb longo
+    st.cutoffHz = 2600.0f; st.room = 0.80f; st.wet = 0.42f; st.subAmp = 0.14f;
       st.padAmp = 0.13f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);
@@ -846,6 +972,8 @@ std::vector<short> AudioManager::synthCemetery(int SR, int N) {
 std::vector<short> AudioManager::synthCursedFarm(int SR, int N) {
     // Fazenda Maldita — folk-horror inquieto
     { TrackStyle st; st.bpm = 76.0f; st.drums = false; st.arpOn = true;
+    // PERFIL ACUSTICO — campo aberto ao anoitecer
+    st.cutoffHz = 3600.0f; st.room = 0.50f; st.wet = 0.26f; st.subAmp = 0.16f;
       st.arpAmp = 0.05f; st.leadAmp = 0.11f; st.leadWave = 0; st.echo = 0.36f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);
@@ -868,6 +996,8 @@ std::vector<short> AudioManager::synthCursedFarm(int SR, int N) {
 std::vector<short> AudioManager::synthGhostCity(int SR, int N) {
     // Cidade Fantasma — eco urbano assombrado
     { TrackStyle st; st.bpm = 80.0f; st.drums = false; st.arpOn = true;
+    // PERFIL ACUSTICO — ruas vazias: eco de predio
+    st.cutoffHz = 3200.0f; st.room = 0.72f; st.wet = 0.36f; st.subAmp = 0.16f;
       st.arpAmp = 0.06f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.44f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);
@@ -893,6 +1023,8 @@ std::vector<short> AudioManager::synthGhostCity(int SR, int N) {
 std::vector<short> AudioManager::synthDarkForest(int SR, int N) {
     // Floresta Negra — tensa, nevoa sonora
     { TrackStyle st; st.bpm = 70.0f; st.drums = false; st.arpOn = false;
+    // PERFIL ACUSTICO — floresta: folhagem come o agudo
+    st.cutoffHz = 2800.0f; st.room = 0.66f; st.wet = 0.34f; st.subAmp = 0.15f;
       st.padAmp = 0.13f; st.leadAmp = 0.10f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);
@@ -914,6 +1046,8 @@ std::vector<short> AudioManager::synthDarkForest(int SR, int N) {
 std::vector<short> AudioManager::synthCatacombs(int SR, int N) {
     // Catacumbas — profundo, eco de pedra
     { TrackStyle st; st.bpm = 66.0f; st.drums = false; st.arpOn = false;
+    // PERFIL ACUSTICO — caverna de pedra: o espaco mais longo do jogo
+    st.cutoffHz = 2200.0f; st.room = 0.88f; st.wet = 0.46f; st.subAmp = 0.18f;
       st.padAmp = 0.14f; st.leadAmp = 0.10f; st.leadWave = 0; st.echo = 0.46f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);
@@ -936,6 +1070,8 @@ std::vector<short> AudioManager::synthCatacombs(int SR, int N) {
 std::vector<short> AudioManager::synthManor(int SR, int N) {
     // Mansao das Sombras — gotico
     { TrackStyle st; st.bpm = 74.0f; st.drums = false; st.arpOn = true;
+    // PERFIL ACUSTICO — salao vazio de mansao
+    st.cutoffHz = 3000.0f; st.room = 0.70f; st.wet = 0.36f; st.subAmp = 0.15f;
       st.arpAmp = 0.05f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);
@@ -960,6 +1096,8 @@ std::vector<short> AudioManager::synthManor(int SR, int N) {
 std::vector<short> AudioManager::synthInferno(int SR, int N) {
     // Zona Inferno — intenso, distorcido, rapido
     { TrackStyle st; st.bpm = 150.0f; st.hardDrums = true; st.drive = 0.60f;
+    // PERFIL ACUSTICO — inferno: sujo, grave enorme, medio agressivo
+    st.cutoffHz = 5600.0f; st.room = 0.44f; st.wet = 0.24f; st.subAmp = 0.28f;
       st.bassWave = 1; st.arpWave = 1; st.leadWave = 1; st.echo = 0.16f;
       return composeTrack(SR, N, st); }
     std::vector<short> s(N, 0);

@@ -24,6 +24,14 @@ std::string SaveManager::slotPath(int slot) {
     return std::string("saves/darknet_slot") + std::to_string(slot) + ".txt";
 }
 
+// Consome ate o fim da linha ATUAL (inclusive o \n) sem tocar na proxima.
+// O antigo `fscanf(f," %255[^\n]",val)` tinha um ESPACO no formato: ele pulava o
+// \n e engolia a LINHA SEGUINTE inteira toda vez que caia numa chave desconhecida.
+static void skipRestOfLine(FILE* f) {
+    int c;
+    while ((c = fgetc(f)) != EOF && c != '\n') {}
+}
+
 // ─── Equipment resolution (unchanged from original) ──────────────────────────
 
 static Equipment resolveEquipByName(const char* name) {
@@ -135,8 +143,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     char dateBuf[256] = {};
 
     // Try to parse new format first
-    char key[64];
-    char val[256];
+    char key[64];   // (o antigo `val` sumiu junto com o fscanf que engolia a linha seguinte)
     bool hasCredits = false, hasEvolution = false;
     int   savedClass = -1;
     float bMax = 0, bDmg = 0, bSpd = 0, bRng = 0, bDef = 0;
@@ -170,22 +177,26 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"evolutionPath")==0){ int ep=0; fscanf(f," %d",&ep); player.evolutionPath=static_cast<EvolutionPath>(ep); hasEvolution=true; }
         else if (strcmp(key,"evolutionTier")==0){ fscanf(f," %d",&player.evolutionTier); }
         else if (strcmp(key,"weaponName")==0){
-            char buf[128]; fscanf(f," %127s",buf);
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
             auto eq = resolveEquipByName(buf);
             if (!eq.isEmpty()) player.equipItem(eq);
         }
         else if (strcmp(key,"armorName")==0){
-            char buf[128]; fscanf(f," %127s",buf);
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
             auto eq = resolveEquipByName(buf);
             if (!eq.isEmpty()) player.equipItem(eq);
         }
         else if (strcmp(key,"implantName")==0){
-            char buf[128]; fscanf(f," %127s",buf);
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
             auto eq = resolveEquipByName(buf);
             if (!eq.isEmpty()) player.equipItem(eq);
         }
         else if (strcmp(key,"questCount")==0){
             int qc=0; fscanf(f," %d",&qc);
+            // Save e texto puro e editavel: sem teto, um `questCount 2000000000`
+            // travava o jogo num loop de bilhoes de iteracoes.
+            if (qc < 0) qc = 0;
+            if (qc > 4096) qc = 4096;
             for (int i=0;i<qc;++i) {
                 char qid[64]; int cur=0,comp=0,rew=0;
                 fscanf(f," quest %63s %d %d %d",qid,&cur,&comp,&rew);
@@ -198,9 +209,13 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         }
         else if (strcmp(key,"inventory")==0){
             int invSz=0; fscanf(f," %d",&invSz);
+            if (invSz < 0) invSz = 0;
+            if (invSz > 4096) invSz = 4096;   // idem: teto contra save corrompido
             player.inventory.clear();
             for (int i=0;i<invSz;++i) {
                 int type=0; fscanf(f," %d",&type);
+                // enum fora de faixa vira lixo nos switch de render/uso
+                if (type < 0 || type > (int)ItemType::DragonSlayer) continue;
                 Item item = Item::createRandom(player.position);
                 item.type = static_cast<ItemType>(type);
                 item.pickedUp = true;
@@ -208,8 +223,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
             }
         }
         else {
-            // Skip unknown keys by reading rest of line
-            fscanf(f," %255[^\n]",val);
+            skipRestOfLine(f);   // pula so o resto DESTA linha (o formato antigo com espaco engolia a PROXIMA)
         }
     }
 
@@ -257,8 +271,8 @@ SaveSlotInfo SaveManager::getSlotInfo(int slot) {
         else if (strcmp(key,"totalKills")==0)  fscanf(f," %d",&info.totalKills);
         else if (strcmp(key,"zone")==0)        fscanf(f," %d",&info.currentZone);
         else if (strcmp(key,"playMinutes")==0) fscanf(f," %f",&info.playMinutes);
-        else if (strcmp(key,"saveDate")==0)    fscanf(f," %255[^\n]",val), info.saveDate=val;
-        else fscanf(f," %255[^\n]",val);
+        else if (strcmp(key,"saveDate")==0)    { fscanf(f," %255[^\n]",val); info.saveDate=val; }
+        else skipRestOfLine(f);
     }
     fclose(f);
     return info;

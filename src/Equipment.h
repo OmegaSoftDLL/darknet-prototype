@@ -50,4 +50,17 @@ namespace EDB {
     inline Equipment neuralLink()     { return {"Neural Link",        "Vel +40, XP x1.5",    EquipSlot::Implant, 40,  1.5f,{150,255,200,255},  2}; }
     inline Equipment quantumCore()    { return {"Quantum Core",       "Vel +80, XP x2.0",    EquipSlot::Implant, 80,  2.0f,{255,255,100,255},  3}; }
     inline Equipment adrenChip()      { return {"Adrenal Override",   "Vel +100, XP x1.8",   EquipSlot::Implant,100,  1.8f,{255,50,100,255},   3}; }
+
+    // Sorteio por TIER — usado pela recompensa de fim de fase. Mantido aqui pra
+    // ficar junto do catalogo: quem adicionar item novo ve este sorteio na hora.
+    inline Equipment randomForTier(int tier) {
+        if (tier < 1) tier = 1;
+        if (tier > 3) tier = 3;
+        Equipment t1[] = { pistolaPlas(), submetMilitar(), coleteMilitar(), chipVel() };
+        Equipment t2[] = { rifleEnergia(), armaduraAvan(), neuralLink() };
+        Equipment t3[] = { exoesqueleto(), nanoMalha(), quantumCore(), adrenChip() };
+        if (tier == 1) return t1[GetRandomValue(0, 3)];
+        if (tier == 2) return t2[GetRandomValue(0, 2)];
+        return t3[GetRandomValue(0, 3)];
+    }
 }

@@ -190,10 +190,13 @@ public:
     bool  canAttackPlayer(Vector2 playerPos) const;
     float attackIfReady(float dt, Vector2 playerPos);
 
+    // publico: o Game le a fase do passo pra escolher o QUADRO do modelo 3D e
+    // forca fases especificas ao gerar os quadros da caminhada.
+    float walkAnimTimer   = 0.0f;
+
 private:
     float attackCooldown  = 0.0f;
     float attackRate      = 1.0f;
-    float walkAnimTimer   = 0.0f;
     int   facing          = 1;
     float barrelAngle     = 0.0f; // for KronosSentry
     float roarTimer       = 0.0f; // OrcCibernetico — rugido boost timer

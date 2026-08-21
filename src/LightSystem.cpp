@@ -36,8 +36,8 @@ void LightSystem::addPlayerLight(Vector2 pos) {
     // scenery (houses, trees, etc.) even in the darkest zones.
     LightSource l;
     l.position  = pos;
-    l.radius    = 340.0f;
-    l.intensity = 0.82f;
+    l.radius    = 430.0f;
+    l.intensity = 0.72f;   // larga e fraca: clareia o entorno sem virar holofote
     l.color     = {255, 226, 180, 255};   // tom quente (clima Diablo)
     l.flicker   = false;
     lights.insert(lights.begin(), l); // always index 0
@@ -111,11 +111,11 @@ void LightSystem::prepareMask(Camera2D camera) {
 
         // Soft gradient: 14 concentric circles from outer to inner
         // Inner circles are brighter; outer circles fade to 0.
-        const int steps = 14;
+        const int steps = 30;
         for (int s = steps; s >= 0; s--) {
             float t      = (float)s / (float)steps;     // 1.0 = inner, 0.0 = outer
             float r      = l.radius * (float)(steps - s + 1) / (float)(steps + 1);
-            float bright = l.intensity * t * t * 0.38f;         // quadratic falloff
+            float bright = l.intensity * t * t * t * 0.30f;     // queda cubica, pico baixo
             Color c = {
                 (unsigned char)((float)l.color.r * bright),
                 (unsigned char)((float)l.color.g * bright),
@@ -144,28 +144,35 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
     for (const auto& l : lights) {
         if (!l.active) continue;
 
-        // Project center and edge to screen space to get center position and perspective-scaled radius
-        Vector3 pos3D = { l.position.x, 8.0f, l.position.y };
+        // A luz cai no CHAO, entao a poca e uma ELIPSE em perspectiva - nao um
+        // circulo. Projetar so o raio em X e desenhar circulo era o que fazia cada
+        // lampada (e o proprio heroi) virar um "sol" chapado colado na tela.
+        // Projeto duas bordas: +X da o semieixo horizontal, +Z o vertical.
+        Vector3 pos3D   = { l.position.x, 0.0f, l.position.y };
         Vector2 centerS = GetWorldToScreenEx(pos3D, camera3D, screenW, screenH);
-        
-        Vector3 edge3D = { l.position.x + l.radius, 8.0f, l.position.y };
-        Vector2 edgeS = GetWorldToScreenEx(edge3D, camera3D, screenW, screenH);
-        
-        float projRadius = Vector2Distance(centerS, edgeS);
+        Vector2 edgeX   = GetWorldToScreenEx({ l.position.x + l.radius, 0.0f, l.position.y },
+                                             camera3D, screenW, screenH);
+        Vector2 edgeZ   = GetWorldToScreenEx({ l.position.x, 0.0f, l.position.y + l.radius },
+                                             camera3D, screenW, screenH);
+        float rx = Vector2Distance(centerS, edgeX);
+        float ry = Vector2Distance(centerS, edgeZ);   // achatado pela inclinacao da camera
+        if (rx < 1.0f || ry < 1.0f) continue;
 
-        // Soft gradient: concentric circles
-        const int steps = 14;
+        // 30 aneis com pico BAIXO: o degrade fica continuo (14 aneis fortes
+        // desenhavam faixas visiveis) e a borda morre em zero, sem circulo duro.
+        const int steps = 30;
         for (int s = steps; s >= 0; s--) {
-            float t      = (float)s / (float)steps;     // 1.0 = inner, 0.0 = outer
-            float r      = projRadius * (float)(steps - s + 1) / (float)(steps + 1);
-            float bright = l.intensity * t * t * 0.38f;         // quadratic falloff
+            float t  = (float)s / (float)steps;        // 1.0 = centro, 0.0 = borda
+            float k  = (float)(steps - s + 1) / (float)(steps + 1);
+            float ff = t * t * t;                      // queda cubica: centro concentrado
+            float bright = l.intensity * ff * 0.30f;
             Color c = {
                 (unsigned char)((float)l.color.r * bright),
                 (unsigned char)((float)l.color.g * bright),
                 (unsigned char)((float)l.color.b * bright),
                 (unsigned char)(bright * 255.0f)
             };
-            DrawCircleV(centerS, r, c);
+            DrawEllipse((int)centerS.x, (int)centerS.y, rx * k, ry * k, c);
         }
     }
 

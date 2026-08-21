@@ -1,0 +1,24 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# FASES DO DARKNET — conteudo em DADO, nao em codigo.
+# Editar este arquivo muda a campanha SEM recompilar: e o que permite o jogo
+# evoluir por IA (ou por voce) sem tocar em C++.
+#
+# formato:  zona | abates | chefe(0/1) | raio | titulo
+#
+# zona:    LARuins CursedFarm DarkForest Cemetery GhostCity Bunker
+#          Catacombs AbandonedManor KronosForge InfernoZone KronosNexus
+# abates:  quantos inimigos abrir o portal exige
+# chefe:   1 = o portal so abre depois de derrotar o chefe da fase
+# raio:    tamanho do mundo da fase (unidades a partir do refugio)
+# ─────────────────────────────────────────────────────────────────────────────
+LARuins        | 20  | 0 | 3000 | Ruinas de Los Angeles
+CursedFarm     | 28  | 0 | 3160 | Fazenda Amaldicoada
+DarkForest     | 36  | 1 | 3320 | Floresta Negra
+Cemetery       | 44  | 0 | 3480 | Cemiterio dos Caidos
+GhostCity      | 52  | 0 | 3640 | Cidade Fantasma
+Bunker         | 60  | 1 | 3800 | Bunker NEXUS
+Catacombs      | 68  | 0 | 3960 | Catacumbas
+AbandonedManor | 76  | 0 | 4120 | Mansao Abandonada
+KronosForge    | 84  | 1 | 4280 | A Forja de KRONOS
+InfernoZone    | 92  | 0 | 4440 | Zona Inferno
+KronosNexus    | 100 | 1 | 4600 | Nucleo KRONOS

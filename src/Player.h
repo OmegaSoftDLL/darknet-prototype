@@ -83,6 +83,11 @@ public:
     int  selectedBagEquip = 0;
     void equipFromBag(int idx);   // troca o item da bolsa pelo equipado do slot
 
+    // Assinatura da APARENCIA (arma/armadura/implante/tinta). O modelo 3D e gerado
+    // a partir do sprite 2D e fica CACHEADO: sem incluir isto na chave do cache, o
+    // personagem continuava com o visual antigo depois de trocar de equipamento.
+    int visualSignature() const;
+
     // ── Cosméticos (atualizados pelo Game: loja comum + skins premium de Gems) ──
     bool  hasCosmeticTint = false;          // tinta comprada com creditos
     Color cosmeticTint    = {255,255,255,255};
@@ -127,8 +132,14 @@ public:
     float walkAnimTimer = 0.0f;
     bool  isMoving      = false;
     int   facing        = 1;
-    bool  leveledUp     = false;
+    bool  leveledUp     = false;   // SO efeito visual (fica true por levelUpTimer)
     float levelUpTimer  = 0.0f;
+    // Niveis ganhos que o Game ainda nao contabilizou. Contador (nao flag): o
+    // Game drena 1x por frame. Antes o Game usava `leveledUp` como gatilho de
+    // borda — mas ela fica true por 2.5s, entao cada orbe de XP colhido nessa
+    // janela dava um level-up/evolucao DE GRACA. E subir 2 niveis de uma vez
+    // (addXP grande) so dava 1 ponto.
+    int   unclaimedLevels = 0;
     std::string lastPassive;
 
     // Player speech / dialogue
@@ -175,7 +186,7 @@ public:
     bool  handleInventoryMouse(Vector2 vmouse, bool leftClick, bool rightClick);
     bool  tryUpgradeEquip(int slot);
     void  heal(float amount);
-    void  addXP(int amount);
+    void  addXP(int amount);   // acumula em unclaimedLevels
     void  takeDamage(float amount);
     void  increaseBaseMaxHP(float amount);
     void  equipItem(const Equipment& equip);

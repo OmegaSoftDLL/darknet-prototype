@@ -70,6 +70,11 @@ public:
     void addLog(const std::string& msg);
     void writeReport(const std::string& path) const;
 
+    // PORTAO DE VALIDACAO: transforma o relatorio em pass/fail. Sem isto qualquer
+    // mudanca (minha ou de outro agente) podia quebrar o jogo sem ninguem notar
+    // ate abrir e jogar. `reasons` recebe o motivo de cada reprovacao.
+    bool passed(std::vector<std::string>* reasons = nullptr) const;
+
     // Sensores de parede — Game preenche antes de update() a partir do tilemap.
     // Indices: 0=E 1=NE 2=N 3=NW 4=W 5=SW 6=S 7=SE (igual k8DirAngles)
     bool blockedDir[8] = {false,false,false,false,false,false,false,false};
@@ -82,6 +87,7 @@ public:
     // Centro do mapa (preenchido pelo Game) — destino de escape quando o bot fica
     // preso numa borda/barreira do mundo aberto. {0,0} = nao definido.
     Vector2 worldCenter = {0, 0};
+    float   worldRadius = 0.0f;   // raio jogavel da fase (0 = desconhecido)
 
     // ── Telemetry ─────────────────────────────────────────────────────────────
     int   frameCount        = 0;

@@ -1142,8 +1142,11 @@ void Enemy::render() const {
                    ColorAlpha(WHITE, (evolveFlash/0.8f)*0.45f));
 
     // Ground shadow (depth illusion for all types)
-    DrawEllipse((int)position.x, (int)(position.y + radius * 0.75f),
-                radius * 1.1f, radius * 0.32f, ColorAlpha(BLACK, 0.35f));
+    // NAO no passe 3D: a captura vira MALHA, entao a elipse do chao virava um
+    // disco escuro VERTICAL sob os pes - o inimigo parecia flutuar sobre ele.
+    if (!g_renderPass3D)
+        DrawEllipse((int)position.x, (int)(position.y + radius * 0.75f),
+                    radius * 1.1f, radius * 0.32f, ColorAlpha(BLACK, 0.35f));
 
     bool  flash   = hitFlashTimer > 0.0f;
     Color flash_c = ColorAlpha(WHITE, 0.85f);
@@ -1497,8 +1500,9 @@ void Enemy::render() const {
 }
 
 void Enemy::renderMorphX() const {
-    DrawEllipse((int)position.x, (int)(position.y + radius * 0.7f),
-                radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK, 0.32f));
+    if (!g_renderPass3D)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+        DrawEllipse((int)position.x, (int)(position.y + radius * 0.7f),
+                    radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK, 0.32f));
     float pulse = std::sin(walkAnimTimer * 3.0f) * 2.0f;
     Color silver = {(unsigned char)(180 + (int)(pulse*3)), (unsigned char)(190 + (int)(pulse*3)), (unsigned char)(200 + (int)(pulse*3)), 255};
     Color silverDark = {120, 130, 140, 255};
@@ -1861,7 +1865,8 @@ void Enemy::renderZergling() const {
     Color acidGreen = {50,200,0,255};
     Color darkGreen = {20,90,0,255};
 
-    DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK,0.35f));
+    if (!g_renderPass3D)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+        DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK,0.35f));
     DrawCircleV(position, radius + 8.0f + spd*2.0f, ColorAlpha(acidGreen, 0.15f));
 
     for (int i = 1; i <= 3; ++i)
@@ -1901,7 +1906,8 @@ void Enemy::renderHydra() const {
     Color darkGreen = {0,120,30,255};
     Color spitGlow  = {80,255,80,255};
 
-    DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK,0.35f));
+    if (!g_renderPass3D)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+        DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK,0.35f));
     DrawCircleV(position, radius + 10.0f, ColorAlpha(acidGreen, 0.12f));
 
     for (int i = 0; i < 3; ++i) {
@@ -1955,7 +1961,8 @@ void Enemy::renderBroodmother() const {
     Color darkGreen  = {20,70,0,255};
     Color phase2Col  = (bossPhase==2) ? Color{60,180,0,255} : bodyColor;
 
-    DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.2f, radius * 0.32f, ColorAlpha(BLACK,0.4f));
+    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+        DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.2f, radius * 0.32f, ColorAlpha(BLACK,0.4f));
     DrawCircleV(position, radius + 14.0f + pulse*4.0f, ColorAlpha(acidGreen, 0.14f));
     DrawCircleV(position, radius +  8.0f + pulse*2.0f, ColorAlpha(acidGreen, 0.20f));
 
@@ -2022,7 +2029,8 @@ void Enemy::renderAlienBoss() const {
     Color purpleGlow = {200,0,255,255};
     Color boneWhite  = {200,210,180,255};
 
-    DrawEllipse((int)px, (int)(py + radius * 0.75f), radius * 1.3f, radius * 0.36f, ColorAlpha(BLACK,0.45f));
+    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+        DrawEllipse((int)px, (int)(py + radius * 0.75f), radius * 1.3f, radius * 0.36f, ColorAlpha(BLACK,0.45f));
 
     if (bossPhase == 2) {
         float rage = 0.5f + 0.5f * pulse;
@@ -2129,7 +2137,8 @@ void Enemy::renderOmegaBoss() const {
     Color boneWhite   = {210, 200, 190, 255};
 
     // Ground shadow
-    DrawEllipse((int)px,(int)(py+radius*0.8f),radius*1.4f,radius*0.38f,ColorAlpha(BLACK,0.5f));
+    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+        DrawEllipse((int)px,(int)(py+radius*0.8f),radius*1.4f,radius*0.38f,ColorAlpha(BLACK,0.5f));
 
     // Outer aura rings — pulsing
     float auraR = radius + 30.0f + pulse*8.0f;
@@ -2962,7 +2971,8 @@ void Enemy::renderZombie() const {
     DrawEllipse((int)px, (int)(py + 20*sc), 14.0f*sc, 4.0f*sc, ColorAlpha(bloodRed, 0.35f));
 
     // Shadow
-    DrawEllipse((int)px, (int)(py + 18*sc), 16.0f*sc, 4.5f*sc, ColorAlpha(BLACK, 0.30f));
+    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+        DrawEllipse((int)px, (int)(py + 18*sc), 16.0f*sc, 4.5f*sc, ColorAlpha(BLACK, 0.30f));
 
     // Legs — uneven shamble
     DrawRectangle((int)(px - 6*sc),  (int)(py + leg + 8*sc),  (int)(6*sc), (int)(14*sc), skinDark);
@@ -3017,7 +3027,8 @@ void Enemy::renderZombieRager() const {
         DrawCircleLines((int)px, (int)py, radius + 10 + pulse*4, ColorAlpha({255,50,0,255}, 0.4f + pulse*0.3f));
     }
 
-    DrawEllipse((int)px, (int)(py + 20), 16.0f, 4.5f, ColorAlpha(BLACK, 0.32f));
+    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+        DrawEllipse((int)px, (int)(py + 20), 16.0f, 4.5f, ColorAlpha(BLACK, 0.32f));
 
     // Legs
     DrawRectangle((int)(px - 8), (int)(py + leg + 8), 8, 16, skinD);
@@ -3065,7 +3076,8 @@ void Enemy::renderZombieLord() const {
     DrawCircleV(position, aurR, ColorAlpha(glowG, 0.06f + pulse*0.04f));
     DrawCircleLines((int)px, (int)py, aurR - 5, ColorAlpha(glowG, 0.25f + pulse*0.15f));
 
-    DrawEllipse((int)px, (int)(py + 40), 30.0f, 8.0f, ColorAlpha(BLACK, 0.40f));
+    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+        DrawEllipse((int)px, (int)(py + 40), 30.0f, 8.0f, ColorAlpha(BLACK, 0.40f));
 
     // Robe/mantle (triangle behind)
     DrawTriangle({px - 24.0f, py + 30.0f}, {px + 24.0f, py + 30.0f}, {px, py - 48.0f},
@@ -3223,7 +3235,8 @@ void Enemy::renderBansheeHowler() const {
         }
     }
 
-    DrawEllipse((int)px, (int)(py + 20), 14.0f, 4.0f, ColorAlpha(BLACK, 0.28f));
+    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+        DrawEllipse((int)px, (int)(py + 20), 14.0f, 4.0f, ColorAlpha(BLACK, 0.28f));
 
     // Legs — skeletal
     DrawRectangle((int)(px - 5), (int)(py + 8), 4, 16, {150, 140, 160, 200});
