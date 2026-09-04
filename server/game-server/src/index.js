@@ -1,17 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // DARKNET — CYBER STATION (servidor do jogo)
 // Auth (JWT) + loja premium (gems) + Stripe (pagamento real) + inventário +
-// sincronização em tempo real (WebSocket) + matchmaking por salas.
+// sincronização em tempo real (WebSocket autenticado) + matchmaking por salas.
 //
 // Pagamentos: a ÚNICA fonte de verdade para creditar gems é o WEBHOOK assinado do
 // Stripe (checkout.session.completed / payment_intent.succeeded). O cliente NUNCA
-// credita gems por conta própria.
+// credita gems por conta própria. O webhook é idempotente (provider_ref único).
 //
-// Configuração por ambiente (todas opcionais — sem elas roda em modo dev/local):
+// Configuração por ambiente:
 //   PORT                 porta HTTP/WS (default 9000)
-//   JWT_SECRET           segredo dos tokens (OBRIGATORIO em producao; sem ele,
-//                        um segredo aleatorio e gerado a cada boot e os tokens
-//                        existentes sao invalidados no restart)
+//   JWT_SECRET           segredo dos tokens (FALHA em docker-compose sem ele via
+//                        ${JWT_SECRET:?}; sem env roda em dev com segredo aleatório
+//                        por boot — os tokens existentes são invalidados no restart)
 //   STRIPE_SECRET_KEY    habilita Stripe real (Checkout Session)
 //   STRIPE_WEBHOOK_SECRET valida a assinatura do webhook
 //   PUBLIC_URL           base p/ success/cancel do Checkout (default http://localhost:8080,
@@ -19,6 +19,12 @@
 //                        de retorno do Stripe apontam para a porta interna errada)
 //   DATABASE_URL         habilita persistência em Postgres (senão, memória)
 //   ALLOW_DEV_GRANT=1    habilita POST /store/dev-grant-gems (APENAS testes locais)
+//
+// WebSocket: o upgrade só é aceito com JWT válido no header Authorization
+// (`Authorization: Bearer <token>`), enviado no handshake pelo cliente. A
+// identidade (peer/chat) VEM DO TOKEN, nunca do corpo da mensagem — não há spoof
+// de id. Além disso: heartbeat 30s (expulsa clientes mortos), rate limit por
+// conexão (120 msgs/s) e corpos de mensagem limitados (4 KiB).
 // ─────────────────────────────────────────────────────────────────────────────
 import express from "express";
 import { WebSocketServer } from "ws";
@@ -29,6 +35,7 @@ import crypto from "crypto";
 const PORT       = process.env.PORT || 9000;
 // Sem JWT_SECRET, gera um segredo aleatorio por boot. Nunca um default fixo:
 // um "dev-secret" conhecido permitiria FORJAR tokens de qualquer jogador.
+// Em produção o docker-compose falha antes de subir sem JWT_SECRET definido.
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(48).toString("hex");
 if (!process.env.JWT_SECRET) {
   console.warn("[auth] JWT_SECRET nao definido — segredo aleatorio gerado para ESTA execucao. " +
@@ -36,7 +43,39 @@ if (!process.env.JWT_SECRET) {
 }
 // Default: porta pública do gateway nginx (8080), NÃO a porta interna do app (9000).
 // Sem o proxy (dev direto no Node), defina PUBLIC_URL=http://localhost:9000.
+// Em producao atrás de TLS no gateway, use https:// e ajuste a porta.
 const PUBLIC_URL = process.env.PUBLIC_URL || "http://localhost:8080";
+
+// ── Saneamento de input (nunca confie no cliente) ────────────────────────────
+const cleanName = (s) =>
+  String(s ?? "").replace(/[^\x20-\x7e]/g, "").trim().slice(0, 24) || "Operador";
+
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+
+// Posição de mundo: finita e dentro de um intervalo plausível do mapa.
+const coord = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? clamp(Math.round(n * 10) / 10, -100000, 100000) : 0;
+};
+const uint = (v, lo = 0, hi = 0xffffffff) => {
+  const n = Number.isInteger(v) ? v : parseInt(String(v), 10);
+  return (Number.isInteger(n) && n >= lo && n <= hi) ? n : lo;
+};
+
+// ── Rate limit simples em memória (janela fixa por IP+rota) ──────────────────
+const rateHits = new Map();
+function rateLimit(ms, max) {
+  return (req, res, next) => {
+    const key = (req.ip || req.socket.remoteAddress || "?") + req.path;
+    const now = Date.now();
+    let e = rateHits.get(key);
+    if (!e || now - e.t > ms) { e = { t: now, n: 0 }; rateHits.set(key, e); }
+    e.n++;
+    if (e.n > max) return res.status(429).json({ error: "muitas requisicoes (limite de taxa)" });
+    next();
+  };
+}
+setInterval(() => rateHits.clear(), 60_000).unref();
 
 // ── Stripe (carregado dinamicamente só se houver chave) ──────────────────────
 let stripe = null;
@@ -82,6 +121,8 @@ if (process.env.DATABASE_URL) {
       provider TEXT NOT NULL, provider_ref TEXT NOT NULL, pack_id TEXT NOT NULL,
       amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'BRL',
       status TEXT NOT NULL DEFAULT 'pending', created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS transactions_provider_ref_idx
+      ON transactions(provider, provider_ref)`);
     await pool.query(`CREATE TABLE IF NOT EXISTS progress (
       account TEXT PRIMARY KEY REFERENCES accounts(id),
       level INTEGER NOT NULL DEFAULT 1,
@@ -171,10 +212,17 @@ async function getPlayerProgress(accountId) {
 }
 
 async function savePlayerProgress(accountId, data) {
-  const level = data.level || 1;
-  const credits = data.credits || 0;
-  const charClass = data.char_class || 0;
-  const saveJson = data.save_json || {};
+  const level = uint(data.level, 1, 9999);
+  const credits = uint(data.credits, 0, 2000000000);
+  const charClass = uint(data.char_class, 0, 63);
+  let saveJson = {};
+  if (data.save_json && typeof data.save_json === "object" && !Array.isArray(data.save_json)) {
+    const s = JSON.stringify(data.save_json);
+    if (s.length <= 100000) saveJson = data.save_json;
+    else console.warn("[progress] save_json excede 100KB — ignorado");
+  } else if (typeof data.save_json === "string" && data.save_json.length <= 100000) {
+    try { saveJson = JSON.parse(data.save_json); } catch { /* tag inválida vira {} */ }
+  }
 
   if (pool) {
     await pool.query(
@@ -205,6 +253,8 @@ async function creditGems(userId, amount) {
 }
 
 const app = express();
+// Atrás do gateway nginx, usa X-Forwarded-For p/ rate limit por IP real.
+app.set("trust proxy", true);
 
 // ── Catálogo da loja ─────────────────────────────────────────────────────────
 const STORE = {
@@ -227,6 +277,10 @@ const STORE = {
 // assinatura. Por isso ele é montado ANTES do express.json() global.
 const server = http.createServer(app);
 
+// Idempotência do webhook: mesmo provider_ref processado só credita UMA vez
+// (Stripe reenvia eventos; alguns podem chegar duplicados por retry).
+const webhookSeen = new Set(); // dedupe em memória (modo dev sem Postgres)
+
 app.post("/store/webhook", express.raw({ type: "*/*" }), async (req, res) => {
   let event;
   if (stripe && process.env.STRIPE_WEBHOOK_SECRET) {
@@ -247,15 +301,31 @@ app.post("/store/webhook", express.raw({ type: "*/*" }), async (req, res) => {
         event.type === "payment_intent.succeeded") {
       const obj  = event.data.object;
       const meta = obj.metadata || {};
-      if (meta.userId && meta.gems) {
-        await creditGems(meta.userId, parseInt(meta.gems, 10));
+      const ref  = obj.id || "";
+      if (meta.userId && meta.gems && ref) {
+        // Guards anti-duplicidade: checa se o provider_ref já foi processado.
+        if (pool) {
+          const dup = await pool.query(
+            "SELECT 1 FROM transactions WHERE provider='stripe' AND provider_ref=$1", [ref]);
+          if (dup.rows.length) {
+            console.log(`[webhook] ${ref} ja processado — ignorando duplicata`);
+            return res.json({ received: true, duplicate: true });
+          }
+        } else if (webhookSeen.has(ref)) {
+          console.log(`[webhook] ${ref} ja processado (memoria) — ignorando duplicata`);
+          return res.json({ received: true, duplicate: true });
+        }
+        webhookSeen.add(ref);
+
+        const gems = Math.min(parseInt(meta.gems, 10) || 0, 1000000000);
+        await creditGems(meta.userId, gems);
         // Registro de transacao (auditoria de pagamento) no esquema normalizado.
         if (pool) {
           try {
             await pool.query(
               `INSERT INTO transactions(account,provider,provider_ref,pack_id,amount_cents,currency,status)
                VALUES($1,'stripe',$2,$3,$4,$5,'paid')`,
-              [meta.userId, obj.id || "", meta.packId || "",
+              [meta.userId, ref, meta.packId || "",
                obj.amount_total || obj.amount || 0, (obj.currency || "brl").toUpperCase()]);
           } catch (e) { console.warn("[webhook] falha ao registrar transacao:", e.message); }
         }
@@ -271,13 +341,16 @@ app.post("/store/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 app.use(express.json());
 
 // ── Auth (stub — em produção: OAuth / e-mail+senha com hash) ─────────────────
-app.post("/auth/login", async (req, res) => {
-  const { name } = req.body || {};
-  const id = "u_" + Math.random().toString(36).slice(2, 10);
-  await getPlayer(id, name || "Operador");
-  console.log(`[auth] login: ${name || "Operador"} -> ${id}`);
-  const token = jwt.sign({ id }, JWT_SECRET, { expiresIn: "30d" });
-  res.json({ token, id });
+// Com rate limit: 20 logins/min por IP (mitiga abuso de criação de contas).
+app.post("/auth/login", rateLimit(60_000, 20), async (req, res) => {
+  const name = cleanName(String((req.body || {}).name));
+  const id = "u_" + crypto.randomBytes(6).toString("hex");
+  await getPlayer(id, name);
+  console.log(`[auth] login: ${name} -> ${id}`);
+  // O token carrega id E nome — o servidor usa ESTES p/ identificar peers/chat
+  // (o nome vindoo do JSON do cliente nunca é confiável).
+  const token = jwt.sign({ id, name }, JWT_SECRET, { expiresIn: "30d" });
+  res.json({ token, id, name });
 });
 
 function auth(req, res, next) {
@@ -293,7 +366,7 @@ app.get("/store", (_req, res) => res.json(STORE));
 
 // Comprar GEMS com dinheiro real -> cria Stripe Checkout Session e devolve a URL.
 // Os gems só são creditados pelo WEBHOOK quando o pagamento for confirmado.
-app.post("/store/buy-gems", auth, async (req, res) => {
+app.post("/store/buy-gems", rateLimit(60_000, 30), auth, async (req, res) => {
   const pack = STORE.gemPacks.find(p => p.id === (req.body || {}).packId);
   if (!pack) return res.status(400).json({ error: "pacote invalido" });
 
@@ -329,7 +402,7 @@ app.post("/store/buy-gems", auth, async (req, res) => {
 });
 
 // Gastar gems em item — servidor valida saldo (NUNCA confiar no cliente).
-app.post("/store/buy-item", auth, async (req, res) => {
+app.post("/store/buy-item", rateLimit(60_000, 30), auth, async (req, res) => {
   const p = await getPlayer(req.user.id);
   const item = STORE.items.find(i => i.id === (req.body || {}).itemId);
   if (!item) return res.status(400).json({ error: "item invalido" });
@@ -342,8 +415,8 @@ app.post("/store/buy-item", auth, async (req, res) => {
 
 // DEV-ONLY: credita gems sem pagamento, para testar o fluxo localmente.
 if (process.env.ALLOW_DEV_GRANT === "1") {
-  app.post("/store/dev-grant-gems", auth, async (req, res) => {
-    const amount = Math.max(0, parseInt((req.body || {}).amount, 10) || 0);
+  app.post("/store/dev-grant-gems", rateLimit(60_000, 10), auth, async (req, res) => {
+    const amount = uint(req.body && req.body.amount, 0, 1000000);
     const gems = await creditGems(req.user.id, amount);
     res.json({ ok: true, gems });
   });
@@ -362,7 +435,7 @@ app.get("/progress", auth, async (req, res) => {
   }
 });
 
-app.post("/progress", auth, async (req, res) => {
+app.post("/progress", rateLimit(60_000, 60), auth, async (req, res) => {
   try {
     const { level, credits, char_class, save_json } = req.body || {};
     await savePlayerProgress(req.user.id, { level, credits, char_class, save_json });
@@ -372,6 +445,7 @@ app.post("/progress", auth, async (req, res) => {
     res.status(500).json({ error: "falha ao salvar progresso" });
   }
 });
+
 app.get("/healthz", (_req, res) => res.json({
   ok: true, service: "cyber-station",
   stripe: !!stripe, db: pool ? "postgres" : "memory",
@@ -380,34 +454,87 @@ app.get("/store/success", (_req, res) => res.send("Pagamento concluido! Volte ao
 app.get("/store/cancel",  (_req, res) => res.send("Pagamento cancelado."));
 
 // ── Realtime: sincronização de jogadores + matchmaking por salas ─────────────
-const wss = new WebSocketServer({ server, path: "/ws" });
+// Autenticado no UPGRADE (header Authorization). Com noServer, todo upgrade que
+// não passar no jwt.verify é recusado com 401 antes mesmo de abrir o socket.
+const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 
-wss.on("connection", (ws) => {
-  ws.roomId = "lobby";
-  console.log("[ws] cliente conectado");
+const WS_HEARTBEAT_MS     = 30_000; // a cada 30s envia ping; sem pong -> expulsa
+const WS_MAX_MSG_PER_SEC  = 120;    // acima disso a mensagem é descartada (dropa)
+
+server.on("upgrade", (req, socket, head) => {
+  if (!req.url || !req.url.startsWith("/ws")) { socket.destroy(); return; }
+  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  let user = null;
+  if (token) {
+    try { user = jwt.verify(token, JWT_SECRET); } catch { /* token invalido/vencido */ }
+  }
+  if (!user) {
+    socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req, user));
+});
+
+wss.on("connection", (ws, _req, user) => {
+  ws.isAlive   = true;
+  ws.user      = user;   // identidade do JWT — fonte da verdade p/ peer/chat
+  ws.roomId    = "lobby";
+  ws.msgWindow = Date.now();
+  ws.msgCount  = 0;
+  console.log(`[ws] cliente conectado (${user.id})`);
+
   joinRoom(ws, "lobby");
+
+  ws.on("pong", () => { ws.isAlive = true; });
+  ws.on("error", () => {}); // erro de malha TCP não derruba o processo
+
   ws.on("message", (buf) => {
+    if (buf.length > 4096) return;                    // corpo além do saneamento
+    const now = Date.now();
+    if (now - ws.msgWindow >= 1000) { ws.msgWindow = now; ws.msgCount = 0; }
+    if (++ws.msgCount > WS_MAX_MSG_PER_SEC) return;   // flood -> descarta
+
     let msg; try { msg = JSON.parse(buf.toString()); } catch { return; }
-    switch (msg.t) {
-      case "join":  joinRoom(ws, msg.room || "lobby"); break;
-      case "state": // posição/ação -> retransmite p/ a sala (inclui classe e nome)
+    switch (msg && msg.t) {
+      case "join": {
+        const room = String(msg.room || "lobby").replace(/[^\w-]/g, "").slice(0, 32) || "lobby";
+        joinRoom(ws, room);
+        break;
+      }
+      case "state": // posição/ação -> retransmite p/ a sala (id vem do TOKEN)
         broadcast(ws.roomId,
-          { t: "peer", id: msg.id, x: msg.x, y: msg.y, a: msg.a, c: msg.c, n: msg.n }, ws);
+          { t: "peer", id: ws.user.id, x: coord(msg.x), y: coord(msg.y),
+            a: String(msg.a || "i").slice(0, 4), c: uint(msg.c, 0, 5),
+            n: ws.user.name || ws.user.id }, ws);
         break;
       case "chat":
-        broadcast(ws.roomId, { t: "chat", id: msg.id, text: String(msg.text).slice(0, 200) });
+        const text = String(msg.text || "").slice(0, 200).replace(/[\r\n]/g, " ");
+        if (text.trim()) broadcast(ws.roomId, { t: "chat", id: ws.user.id, text }, ws);
         break;
       case "edeath":  // inimigo abatido -> retransmite p/ a sala (evita "fantasmas")
-        broadcast(ws.roomId, { t: "edeath", id: msg.id }, ws);
+        // Cooperativo LAN: qualquer jogador autenticado é host das entidades que
+        // viu. id = id da ENTIDADE do inimigo (não é identidade de jogador).
+        broadcast(ws.roomId, { t: "edeath", id: uint(msg.id) }, ws);
         break;
       case "espawn":  // inimigo spawnado (host autoritativo) -> demais clientes espelham
         broadcast(ws.roomId,
-          { t: "espawn", id: msg.id, et: msg.et, x: msg.x, y: msg.y }, ws);
+          { t: "espawn", id: uint(msg.id), et: uint(msg.et), x: coord(msg.x), y: coord(msg.y) }, ws);
         break;
     }
   });
   ws.on("close", () => leaveRoom(ws));
 });
+
+// Heartbeat do servidor: cliente que não responde pong em ~30s é expulso.
+const heartbeat = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (!ws.isAlive) { leaveRoom(ws); ws.terminate(); continue; }
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, WS_HEARTBEAT_MS);
+heartbeat.unref();
 
 const rooms = new Map();
 function joinRoom(ws, roomId) {

@@ -30,9 +30,15 @@ services:
     environment:
       PORT: "9000"
       DATABASE_URL: "postgres://darknet:darknet@db:5432/darknet"
-      JWT_SECRET: "${JWT_SECRET:-troque-em-producao}"
+      # OBRIGATÓRIO: sem JWT_SECRET o compose ABORTA (aclaração explícita em vez
+      # de subir com segredo conhecido em texto). Gere um com:
+      #   openssl rand -hex 48
+      # Nunca use um default fixo — um "dev-secret" conhecido permite forjar
+      # tokens de qualquer jogador. Defina em .env (ou exporte no shell).
+      JWT_SECRET: "${JWT_SECRET:?defina JWT_SECRET no ambiente/.env (ex.: openssl rand -hex 48)}"
       # URL pública usada nos success/cancel do Stripe Checkout — porta do
-      # gateway (8080), não a interna do app (9000).
+      # gateway (8080), não a interna do app (9000). No ambiente com TLS no
+      # gateway, use https:// (ex.: https://darknet.seudominio.com).
       PUBLIC_URL: "${PUBLIC_URL:-http://localhost:8080}"
       # Pagamentos: preencha com SUA conta Stripe (NUNCA commitar chaves reais)
       STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"

@@ -529,9 +529,11 @@ private:
 
     // ── Multiplayer em tempo real (NetClient — WebSocket) ─────────────────────
     NetClient net;
-    uint32_t  netId     = 0;
-    bool      netActive = false;
+    uint32_t  netId       = 0;
+    bool      netActive   = false;
+    bool      netPending_ = false;   // aguardando o login (JWT) p/ iniciar o WS
     void      startNetwork();
+    void      pollStartNetwork();    // inicia o WS assim que o JWT chegar
     void      renderRemotePlayers() const;
 
     // ── Grupo / Aliança (party multiplayer) ───────────────────────────────────

@@ -6,13 +6,39 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <cstdlib>
 
 // ─── Multiplayer LAN (NetClient) ─────────────────────────────────────────────
 
+// URL do WebSocket: por padrão direto no game-server local (dev). Em produção
+// aponte DARKNET_WS_URL para o gateway (ex.: ws://darknet.seudominio.com/ws).
+static std::string wsUrl() {
+    const char* u = getenv("DARKNET_WS_URL");
+    return (u && *u) ? u : "ws://127.0.0.1:9000/ws";
+}
+
 void Game::startNetwork() {
-    if (netActive) return;
-    netId     = (uint32_t)GetRandomValue(1, 2000000000);
-    netActive = net.init(Player::className(player.charClass), netId);
+    if (netActive || netPending_) return;
+    netId  = (uint32_t)GetRandomValue(1, 2000000000);
+    // O servidor de agora exige JWT válido no handshake WS. O token vem do
+    // login da loja (StoreClient). Se ainda não logou, enfileira o início —
+    // pollStartNetwork() dispara assim que o login concluir (via updateParty).
+    if (store.loggedIn()) {
+        const std::string u = wsUrl();
+        netActive = net.init(Player::className(player.charClass), netId,
+                             u.c_str(), store.token().c_str());
+    } else {
+        startStore();          // garante o login em andamento
+        netPending_ = true;
+    }
+}
+
+void Game::pollStartNetwork() {
+    if (netActive || !netPending_ || !store.loggedIn()) return;
+    netPending_ = false;
+    const std::string u = wsUrl();
+    netActive = net.init(Player::className(player.charClass), netId,
+                         u.c_str(), store.token().c_str());
 }
 
 void Game::renderRemotePlayers() const {
@@ -39,6 +65,7 @@ void Game::renderRemotePlayers() const {
 // ─── Grupo / Aliança (party multiplayer) ─────────────────────────────────────
 
 void Game::updateParty() {
+    pollStartNetwork();   // inicia o WS assim que o login (JWT) concluir
     if (chatActive) return;
     if (IsKeyPressed(KEY_O)) { partyPanel = !partyPanel; partyInput.clear(); }
     if (!partyPanel) return;

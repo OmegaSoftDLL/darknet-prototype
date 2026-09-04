@@ -14,10 +14,13 @@ struct HttpResponse {
 namespace HttpClient {
     // host ex.: "127.0.0.1", port ex.: 9000, path ex.: "/store".
     // bearer: token JWT (sem "Bearer "); vazio = sem Authorization.
+    // useTls=true => WinHTTP fala HTTPS (WINHTTP_FLAG_SECURE, ex.: gateway de
+    // produção). Use SOMENTE com URL https:// e certificado válido.
     HttpResponse get (const std::string& host, int port, const std::string& path,
-                      const std::string& bearer = "");
+                      const std::string& bearer = "", bool useTls = false);
     HttpResponse post(const std::string& host, int port, const std::string& path,
-                      const std::string& jsonBody, const std::string& bearer = "");
+                      const std::string& jsonBody, const std::string& bearer = "",
+                      bool useTls = false);
 
     // Abre uma URL no navegador padrão do sistema (Stripe Checkout).
     void openBrowser(const std::string& url);
