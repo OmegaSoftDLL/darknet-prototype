@@ -9,7 +9,9 @@
 //
 // Configuração por ambiente (todas opcionais — sem elas roda em modo dev/local):
 //   PORT                 porta HTTP/WS (default 9000)
-//   JWT_SECRET           segredo dos tokens (default dev-secret)
+//   JWT_SECRET           segredo dos tokens (OBRIGATORIO em producao; sem ele,
+//                        um segredo aleatorio e gerado a cada boot e os tokens
+//                        existentes sao invalidados no restart)
 //   STRIPE_SECRET_KEY    habilita Stripe real (Checkout Session)
 //   STRIPE_WEBHOOK_SECRET valida a assinatura do webhook
 //   PUBLIC_URL           base p/ success/cancel do Checkout (default http://localhost:8080,
@@ -22,9 +24,16 @@ import express from "express";
 import { WebSocketServer } from "ws";
 import http from "http";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 const PORT       = process.env.PORT || 9000;
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
+// Sem JWT_SECRET, gera um segredo aleatorio por boot. Nunca um default fixo:
+// um "dev-secret" conhecido permitiria FORJAR tokens de qualquer jogador.
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(48).toString("hex");
+if (!process.env.JWT_SECRET) {
+  console.warn("[auth] JWT_SECRET nao definido — segredo aleatorio gerado para ESTA execucao. " +
+               "Reiniciar o servidor invalida os tokens atuais. Defina JWT_SECRET em producao.");
+}
 // Default: porta pública do gateway nginx (8080), NÃO a porta interna do app (9000).
 // Sem o proxy (dev direto no Node), defina PUBLIC_URL=http://localhost:9000.
 const PUBLIC_URL = process.env.PUBLIC_URL || "http://localhost:8080";

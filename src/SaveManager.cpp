@@ -191,6 +191,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"xp")==0)       { fscanf(f," %d",&player.xp); }
         else if (strcmp(key,"xpToNext")==0) { fscanf(f," %d",&player.xpToNextLevel); }
         else if (strcmp(key,"credits")==0)  { fscanf(f," %d",&player.credits); hasCredits=true; }
+        else if (strcmp(key,"totalKills")==0){ fscanf(f," %d",&player.totalKills); }
         else if (strcmp(key,"zone")==0)     { fscanf(f," %d",&zoneInt); zone=static_cast<ZoneID>(zoneInt); }
         else if (strcmp(key,"evolutionPath")==0){ int ep=0; fscanf(f," %d",&ep); player.evolutionPath=static_cast<EvolutionPath>(ep); hasEvolution=true; }
         else if (strcmp(key,"evolutionTier")==0){ fscanf(f," %d",&player.evolutionTier); }

@@ -89,6 +89,11 @@ add_executable(darknet_tests
     src/CraftingSystem.cpp
     src/Enemy.cpp
     src/SpriteGen.cpp     # SpriteBank, referenciado por Enemy::render (nao executado)
+    src/SaveManager.cpp   # save/load roundtrip (V5 + legado V4) — regras puras de arquivo
+    src/Player.cpp        # usado por SaveManager::load (equipItem/applyClass/loadSavedProgress)
+    src/Item.cpp          # Item::createRandom no load de inventario
+    src/Quest.cpp         # construcao/update de quests nos testes
+    src/Skill.cpp         # Player::update/useSkill referenciam Skill
 )
 target_include_directories(darknet_tests PRIVATE src third_party)
 target_link_libraries(darknet_tests PRIVATE raylib)

@@ -107,3 +107,35 @@ A segunda passada confirmou **FECHADOS** os 9 achados da auditoria 1 (medição:
 ## A5. Estado do repositório
 
 Conforme nota da auditoria 2 (§7): todo o trabalho está **não commitado** (34 arquivos M + novos). **Recomenda-se commitar** — este é o melhor estado que o projeto já teve, e um `git checkout` acidental o apagaria.
+
+---
+
+# ADENDO — Ciclo 3: auditoria completa com correções (2026-09-04)
+
+| | |
+|---|---|
+| **Em resposta a** | Auditoria completa executada em 2026-09-04 (build, ctest, validate, runtime, git, servidor) |
+| **Recomendações aplicadas** | Todos os achados críticos + estruturais com correção objetiva |
+
+## C1. Achados corrigidos
+
+| Sev. | Achado | Status | O que foi feito |
+|---|---|---|---|
+| 🔴 | Repositório não compila se clonado: 11 `Game_*.cpp` + `tests/` + `third_party/` untracked, CMakeLists os referenciava, 35 arquivos modificados e 1 commit a frente sem push | **Fechado** | Commit `06b7940` com tudo (53 arquivos). Repositório volta a ser auto-contido e clonável. |
+| 🟠 | JWT com default hardcoded `dev-secret` (tokens forjáveis) | **Fechado** | Sem `JWT_SECRET`, gera segredo aleatório por boot (`crypto.randomBytes`) + warn; nunca default fixo. |
+| 🟡 | Save/load sem cobertura — e com bug real | **Fechado** | Teste roundtrip V5 + legado V4 adicionado ao `darknet_tests` (12 casos / 109 asserções, release+debug). O teste **expôs bug**: `totalKills` era gravado e mostrado no menu de slots, mas **nunca restaurado no Player** no load → correção em `SaveManager::load`. |
+| 🟡 | Higiene de repo | **Fechado** | `.gitignore` agora cobre `autotest_*.log`, `validate_seed*.log`, `shot_*.png`, `screenshot*.png`. |
+
+## C2. Validação pós-correção (2026-09-04)
+
+- `cmake --build` Debug e Release: **exit 0** nos dois.
+- `darknet_tests.exe`: **12/12 casos, 109/109 asserções** (era 10/73).
+- CTest: **1/1 passado**.
+- `node --check` (game-server): **OK**.
+- `git status`: limpo após commit.
+
+## C3. Ainda não coberto (declarado — sem correção objetiva nesta passada)
+
+- Fases 5–11 em execução (runs chegam à 4ª; bioma urbano posterior por análise de código).
+- Save/load roundtrip pleno no jogo (multiplayer/loja/backend com servidor ativo) — o que foi validado é unitário + build + syntax.
+- Áudio e gameplay exigem julgamento humano.
