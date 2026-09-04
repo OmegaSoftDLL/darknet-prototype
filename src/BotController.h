@@ -32,9 +32,9 @@ public:
         bool    shouldUseSkill4   = false;
         bool    shouldUseSkill5   = false;
         bool    shouldUseSkill6   = false;
-        bool    shouldPickupItem  = false;  // press E to pick up item
         int     nearestEnemyIdx   = -1;
         Vector2 nearestEnemyPos   = {0, 0};  // for skill aiming
+        bool    shouldUsePortal   = false;   // bot quer acionar o portal de fase (equivale a tecla E)
         bool    shouldQuit        = false;
         BotState currentState     = BotState::Explore;
     };
@@ -70,6 +70,10 @@ public:
     void addLog(const std::string& msg);
     void writeReport(const std::string& path) const;
 
+    // Reset COMPLETO entre partidas (telemetria, estado, timers, rota cacheada).
+    // Preserva active/autoTest/testDuration — chamado por Game::restartRun.
+    void reset();
+
     // PORTAO DE VALIDACAO: transforma o relatorio em pass/fail. Sem isto qualquer
     // mudanca (minha ou de outro agente) podia quebrar o jogo sem ninguem notar
     // ate abrir e jogar. `reasons` recebe o motivo de cada reprovacao.
@@ -88,6 +92,17 @@ public:
     // preso numa borda/barreira do mundo aberto. {0,0} = nao definido.
     Vector2 worldCenter = {0, 0};
     float   worldRadius = 0.0f;   // raio jogavel da fase (0 = desconhecido)
+
+    // Zona segura (refugio) — preenchida pelo Game. Inimigos so spawnam FORA
+    // dela, entao o bot precisa sair dai para encontrar combate (0 = desconhecida).
+    Vector2 safeZoneCenter = {0, 0};
+    float   safeZoneRadius = 0.0f;
+
+    // Portal de FASE do mundo aberto — preenchido pelo Game a cada frame
+    // (owPortalPos/owPortalOpen). Sem isto o bot nao sabia para onde ir quando o
+    // portal abria: recebia so tilemap.portals (sistema antigo, vazio no OW).
+    Vector2 owPortalPos  = {0, 0};
+    bool    owPortalOpen = false;
     // Celula alcancavel mais LONGE do bot na ultima BFS. E o unico destino que
     // se pode prometer que produz deslocamento quando ele esta encurralado.
     // janela de medicao do 'preso' (ver updateStuckTracking)
@@ -101,7 +116,7 @@ public:
     int   frameCount        = 0;
     int   meleeHits         = 0;
     int   skillsFired       = 0;
-    int   itemsCollected    = 0;   // items actually picked up (within 20px)
+    int   itemsCollected    = 0;   // itens realmente coletados (incrementado pelo Game)
     int   itemsChased       = 0;   // items moved toward
     int   killCount         = 0;
     int   damageEvents      = 0;
@@ -135,6 +150,12 @@ public:
     float fpsLowValue     = 9999.0f;
     float peakUpdateMs    = 0.0f; // pior tempo de update()
     float peakRenderMs    = 0.0f; // pior tempo de render()
+    // Janela de quarentena do FPS: apos um frame de CARGA (dt > 0,25s — worldgen
+    // de partida/fase), o GetFPS() do raylib fica envenenado por ~0,5s (media
+    // movel de 30 amostras) e reporta FPS ~6 com o jogo rodando a 60. Durante a
+    // quarentena as amostras de FPS sao ignoradas: o "FPS minimo" mede GAMEPLAY,
+    // nao tela de loading.
+    float fpsQuarantine   = 0.0f;
 
 private:
     // State machine
@@ -167,6 +188,10 @@ private:
     // Exploration spiral
     float     exploreTimer  = 0.0f;
     int       exploreStep   = 0;
+    float     exploreSafeZoneTimer = 0.0f; // tempo preso DENTRO da zona segura
+
+    // Engage melee (~1.5s fechando distancia direto, sem recuo nem orbita)
+    float     engageTimer   = 0.0f;
 
     // Area tracking
     int       lastQuadrant  = -1;

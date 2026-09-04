@@ -179,7 +179,6 @@ public:
 
     void  update(float dt, Vector2 target);
     void  render() const;
-    void  render3D() const;   // modelo 3D low-poly (sem cubos)
     void  takeDamage(float amount);
     void  applyKnockback(Vector2 dir, float force);
     void  makeElite(int mod);   // elevate to elite variant

@@ -12,7 +12,9 @@
 //   JWT_SECRET           segredo dos tokens (default dev-secret)
 //   STRIPE_SECRET_KEY    habilita Stripe real (Checkout Session)
 //   STRIPE_WEBHOOK_SECRET valida a assinatura do webhook
-//   PUBLIC_URL           base p/ success/cancel do Checkout (default http://localhost:9000)
+//   PUBLIC_URL           base p/ success/cancel do Checkout (default http://localhost:8080,
+//                        porta pública do gateway nginx — atrás de proxy, SEM ela os URLs
+//                        de retorno do Stripe apontam para a porta interna errada)
 //   DATABASE_URL         habilita persistência em Postgres (senão, memória)
 //   ALLOW_DEV_GRANT=1    habilita POST /store/dev-grant-gems (APENAS testes locais)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,7 +25,9 @@ import jwt from "jsonwebtoken";
 
 const PORT       = process.env.PORT || 9000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
-const PUBLIC_URL = process.env.PUBLIC_URL || `http://localhost:${PORT}`;
+// Default: porta pública do gateway nginx (8080), NÃO a porta interna do app (9000).
+// Sem o proxy (dev direto no Node), defina PUBLIC_URL=http://localhost:9000.
+const PUBLIC_URL = process.env.PUBLIC_URL || "http://localhost:8080";
 
 // ── Stripe (carregado dinamicamente só se houver chave) ──────────────────────
 let stripe = null;
@@ -45,8 +49,8 @@ if (process.env.DATABASE_URL) {
   try {
     const pg = await import("pg");
     pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL });
-    // Esquema normalizado (consistente com server/db/init.sql) — accounts + inventory
-    // + transactions. Nada de tabela "players" ad-hoc: usamos a arquitetura de producao.
+    // Esquema normalizado — FONTE ÚNICA DE VERDADE do DDL (CREATE TABLE IF NOT EXISTS
+    // garante o schema mesmo sem o server/db/init.sql, que só roda no 1º boot do volume).
     await pool.query(`CREATE TABLE IF NOT EXISTS accounts (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE, pass_hash TEXT,
       gems INTEGER NOT NULL DEFAULT 0, inv_slots INTEGER NOT NULL DEFAULT 40,
@@ -54,6 +58,16 @@ if (process.env.DATABASE_URL) {
     await pool.query(`CREATE TABLE IF NOT EXISTS inventory (
       id BIGSERIAL PRIMARY KEY, account TEXT REFERENCES accounts(id),
       item_id TEXT NOT NULL, qty INTEGER NOT NULL DEFAULT 1)`);
+    // Migração idempotente: bancos antigos guardavam 1 linha por item (qty=1).
+    // Consolida duplicatas em qty para poder criar o índice único (account,item_id).
+    await pool.query(`UPDATE inventory i SET qty = s.total FROM (
+      SELECT account, item_id, COUNT(*)::int AS total
+      FROM inventory GROUP BY account, item_id) s
+      WHERE i.account = s.account AND i.item_id = s.item_id`);
+    await pool.query(`DELETE FROM inventory a USING inventory b
+      WHERE a.account = b.account AND a.item_id = b.item_id AND a.id > b.id`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS inventory_account_item_uq
+      ON inventory(account, item_id)`);
     await pool.query(`CREATE TABLE IF NOT EXISTS transactions (
       id BIGSERIAL PRIMARY KEY, account TEXT REFERENCES accounts(id),
       provider TEXT NOT NULL, provider_ref TEXT NOT NULL, pack_id TEXT NOT NULL,
@@ -81,9 +95,12 @@ async function getPlayer(id, name = "Operador") {
       await pool.query("INSERT INTO accounts(id,name,gems) VALUES($1,$2,0)", [id, name]);
       return { id, name, gems: 0, inventory: [] };
     }
-    const inv = await pool.query("SELECT item_id FROM inventory WHERE account=$1", [id]);
+    // Expande qty: o inventário em memória é uma lista plana de item_ids.
+    const inv = await pool.query("SELECT item_id, qty FROM inventory WHERE account=$1", [id]);
     const p = acc.rows[0];
-    return { id: p.id, name: p.name, gems: p.gems, inventory: inv.rows.map(r => r.item_id) };
+    const inventory = [];
+    for (const r of inv.rows) for (let i = 0; i < r.qty; i++) inventory.push(r.item_id);
+    return { id: p.id, name: p.name, gems: p.gems, inventory };
   }
   if (!memPlayers.has(id)) memPlayers.set(id, { id, name, gems: 0, inventory: [] });
   return memPlayers.get(id);
@@ -92,10 +109,21 @@ async function getPlayer(id, name = "Operador") {
 async function savePlayer(p) {
   if (pool) {
     await pool.query("UPDATE accounts SET name=$2, gems=$3 WHERE id=$1", [p.id, p.name, p.gems]);
-    // Sincroniza inventario (lista simples de item_ids) na tabela normalizada.
-    await pool.query("DELETE FROM inventory WHERE account=$1", [p.id]);
-    for (const itemId of p.inventory)
-      await pool.query("INSERT INTO inventory(account,item_id,qty) VALUES($1,$2,1)", [p.id, itemId]);
+    // Sincroniza inventario agregando a lista plana de item_ids na coluna qty:
+    // 1 linha por (account,item_id) — sem DELETE+re-INSERT de tudo a cada compra.
+    const counts = {};
+    for (const itemId of p.inventory) counts[itemId] = (counts[itemId] || 0) + 1;
+    const itemIds = Object.keys(counts);
+    // Remove itens que saíram do inventário (com lista vazia, apaga tudo da conta).
+    await pool.query(
+      "DELETE FROM inventory WHERE account=$1 AND item_id <> ALL($2::text[])",
+      [p.id, itemIds]);
+    for (const itemId of itemIds) {
+      await pool.query(
+        `INSERT INTO inventory(account,item_id,qty) VALUES($1,$2,$3)
+         ON CONFLICT (account,item_id) DO UPDATE SET qty = EXCLUDED.qty`,
+        [p.id, itemId, counts[itemId]]);
+    }
   } else {
     memPlayers.set(p.id, p);
   }

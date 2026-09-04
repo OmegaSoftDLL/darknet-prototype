@@ -4,7 +4,7 @@
 #include <raymath.h>
 #include <cmath>
 #include <algorithm>
-extern bool g_renderPass3D;
+extern bool g_voxelCapture;
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -12,6 +12,10 @@ extern bool g_renderPass3D;
 
 // Contador para distribuir companheiros em "vagas" de formacao distintas
 static int s_companionSpawnIndex = 0;
+
+void Companion::resetSpawnIndex() {
+    s_companionSpawnIndex = 0;
+}
 
 // ─── Constructor ─────────────────────────────────────────────────────────────
 
@@ -356,7 +360,7 @@ void Companion::render() const {
     if (!active) return;
     if (isDead()) {
         Color deadCol = {80,80,80,180};
-        if (!g_renderPass3D) {
+        if (!g_voxelCapture) {
             DrawEllipse((int)position.x, (int)position.y + 6, radius*1.8f, radius*0.6f, deadCol);
         }
         float pct = deadTimer / deadDuration; int bw = 36;
@@ -377,221 +381,6 @@ void Companion::render() const {
         case CompanionType::LootDrone: renderDrone({255,210,60,255});  break;
     }
     renderEmote();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Render 3D low-poly por tipo — somente primitivas arredondadas
-//   Mapeamento: X3D = position.x, Z3D = position.y, Y = altura (pes em Y=0)
-// ─────────────────────────────────────────────────────────────────────────────
-void Companion::render3D() const {
-    if (!active) return;
-
-    const float X = position.x;
-    const float Z = position.y;
-
-    if (isDead()) {
-        // corpo caido: capsula horizontal rente ao chao
-        Color deadCol = { 90, 90, 95, 255 };
-        DrawCapsule({ X - radius, 2.5f, Z }, { X + radius, 2.5f, Z }, 3.0f, 8, 4, deadCol);
-        DrawSphere({ X + radius, 3.0f, Z }, 3.5f, deadCol);
-        return;
-    }
-
-    bool fl = hitFlash > 0.f && ((int)(hitFlash * 20.f) % 2 == 0);
-    const float f = (float)facing;     // orienta arma/cabeca/escudo no eixo X
-    // Camera olha de +Z (sul) e de cima -> tracos do "rosto" voltam p/ +Z.
-
-    switch (type) {
-        // ── MARCO VEIL — sharpshooter humano: jaqueta marrom, calca oliva,
-        //    capacete militar e rifle longo (fiel ao render() 2D) ────────────
-        case CompanionType::MarcoVeil: {
-            Color jacket = fl ? WHITE : Color{ 100, 75, 40, 255 };
-            Color pants  = fl ? WHITE : Color{ 55, 70, 35, 255 };
-            Color skin   = fl ? WHITE : Color{ 200, 160, 120, 255 };
-            Color helmet = fl ? WHITE : Color{ 60, 55, 35, 255 };
-            float sw = std::sin(walkTimer * 8.f) * 4.f;
-            // pernas (calca oliva)
-            DrawCapsule({ X - 5, 1, Z - sw }, { X - 4, 22, Z }, 4.0f, 8, 6, pants);
-            DrawCapsule({ X + 5, 1, Z + sw }, { X + 4, 22, Z }, 4.0f, 8, 6, pants);
-            // tronco (jaqueta)
-            DrawCapsule({ X, 22, Z }, { X, 40, Z }, 7.0f, 10, 8, jacket);
-            // bandoleira no peito (acento escuro voltado p/ camera)
-            DrawCapsule({ X - 5, 38, Z + 5 }, { X + 5, 27, Z + 6 }, 1.5f, 6, 4, Color{ 40, 33, 18, 255 });
-            // bracos (mangas da jaqueta)
-            DrawCapsule({ X - 8, 39, Z + sw * 0.5f }, { X - 9, 24, Z + sw }, 3.0f, 8, 6, jacket);
-            DrawCapsule({ X + 8, 39, Z - sw * 0.5f }, { X + 9, 24, Z - sw }, 3.0f, 8, 6, jacket);
-            // pescoco + cabeca
-            DrawCapsule({ X, 40, Z }, { X, 44, Z }, 2.6f, 8, 6, skin);
-            DrawSphere({ X, 49, Z }, 5.5f, skin);
-            // capacete (calota cobrindo o cranio, recuada) + aba frontal
-            DrawSphere({ X - f * 1.0f, 53.0f, Z - 1.0f }, 4.9f, helmet);
-            DrawCapsule({ X - 5, 52.5f, Z + 3 }, { X + 5, 52.5f, Z + 3 }, 1.1f, 6, 4, helmet);
-            // olhos
-            DrawSphere({ X - 2, 49.5f, Z + 4.2f }, 0.8f, Color{ 30, 30, 30, 255 });
-            DrawSphere({ X + 2, 49.5f, Z + 4.2f }, 0.8f, Color{ 30, 30, 30, 255 });
-            // rifle longo de precisao (na direcao facing) + luneta
-            DrawCylinderEx({ X + f * 8, 26, Z }, { X + f * 31, 28, Z }, 1.6f, 1.0f, 8, Color{ 70, 70, 70, 255 });
-            DrawSphere({ X + f * 31, 28, Z }, 1.2f, Color{ 50, 50, 50, 255 });
-            DrawSphere({ X + f * 15, 30.0f, Z }, 1.4f, Color{ 40, 40, 45, 255 });
-            break;
-        }
-
-        // ── STEEL — robo tanque: corpo barril metalico largo, ombreiras,
-        //    punhos, sulcos no peito e olhos azuis brilhantes ────────────────
-        case CompanionType::Steel: {
-            Color metal = fl ? WHITE : Color{ 160, 160, 165, 255 };
-            Color dark  = fl ? WHITE : Color{ 80, 80, 88, 255 };
-            Color joint = fl ? WHITE : Color{ 110, 110, 118, 255 };
-            Color eye   = Color{ 0, 150, 255, 255 };
-            float sw = std::sin(walkTimer * 5.f) * 3.f;
-            // pernas grossas + joelhos + pes
-            DrawCapsule({ X - 6, 1, Z - sw }, { X - 6, 20, Z }, 5.0f, 8, 6, metal);
-            DrawCapsule({ X + 6, 1, Z + sw }, { X + 6, 20, Z }, 5.0f, 8, 6, metal);
-            DrawSphere({ X - 6, 11, Z }, 3.0f, joint);
-            DrawSphere({ X + 6, 11, Z }, 3.0f, joint);
-            DrawCapsule({ X - 7, 2, Z - 3 }, { X - 7, 2, Z + 4 }, 2.6f, 8, 4, dark);
-            DrawCapsule({ X + 7, 2, Z - 3 }, { X + 7, 2, Z + 4 }, 2.6f, 8, 4, dark);
-            // tronco barril (cilindro largo, peito mais largo)
-            DrawCylinderEx({ X, 20, Z }, { X, 42, Z }, 9.0f, 10.0f, 14, metal);
-            // sulcos no peito (3 faixas escuras voltadas p/ camera)
-            DrawCapsule({ X - 7, 38, Z + 8 }, { X + 7, 38, Z + 8 }, 1.5f, 6, 4, dark);
-            DrawCapsule({ X - 7, 33, Z + 9 }, { X + 7, 33, Z + 9 }, 1.5f, 6, 4, dark);
-            DrawCapsule({ X - 7, 28, Z + 8 }, { X + 7, 28, Z + 8 }, 1.5f, 6, 4, dark);
-            // ombreiras
-            DrawSphere({ X - 11, 41, Z }, 5.0f, metal);
-            DrawSphere({ X + 11, 41, Z }, 5.0f, metal);
-            // bracos + punhos
-            DrawCapsule({ X - 12, 41, Z + sw * 0.4f }, { X - 14, 22, Z + sw }, 4.0f, 8, 6, metal);
-            DrawCapsule({ X + 12, 41, Z - sw * 0.4f }, { X + 14, 22, Z - sw }, 4.0f, 8, 6, metal);
-            DrawSphere({ X - 14, 21, Z + sw }, 3.6f, dark);
-            DrawSphere({ X + 14, 21, Z - sw }, 3.6f, dark);
-            // cabeca + visor + olhos azuis
-            DrawSphere({ X, 48, Z }, 5.5f, metal);
-            DrawCapsule({ X - 4, 48, Z + 4 }, { X + 4, 48, Z + 4 }, 1.8f, 8, 4, dark);
-            DrawSphere({ X - 2.4f, 48.5f, Z + 5.2f }, 1.4f, eye);
-            DrawSphere({ X + 2.4f, 48.5f, Z + 5.2f }, 1.4f, eye);
-            if (taunting)
-                DrawSphereWires({ X, 24, Z }, radius + 10.0f, 8, 8,
-                                ColorAlpha(Color{ 0, 180, 255, 255 }, 0.35f));
-            break;
-        }
-
-        // ── REX — cao robotico quadrupede: corpo horizontal, 4 patas em trote,
-        //    focinho, orelhas pontudas, sensor verde e cauda erguida ──────────
-        case CompanionType::Rex: {
-            Color body   = fl ? WHITE : Color{ 60, 65, 70, 255 };
-            Color leg    = fl ? WHITE : Color{ 80, 85, 90, 255 };
-            Color sensor = Color{ 0, 255, 180, 255 };
-            float bodyY = 11.0f;
-            float g = std::sin(walkTimer * 12.f) * 3.0f;   // trote (diagonais opostas)
-            // corpo horizontal ao longo de X (cauda atras, cabeca a frente)
-            DrawCapsule({ X - 9, bodyY, Z }, { X + 9, bodyY, Z }, 5.0f, 10, 6, body);
-            // 4 patas finas (pe em Y=0)
-            DrawCapsule({ X - 6 + g, 0, Z - 4 }, { X - 6, bodyY, Z - 4 }, 1.9f, 6, 4, leg);
-            DrawCapsule({ X - 6 - g, 0, Z + 4 }, { X - 6, bodyY, Z + 4 }, 1.9f, 6, 4, leg);
-            DrawCapsule({ X + 6 - g, 0, Z - 4 }, { X + 6, bodyY, Z - 4 }, 1.9f, 6, 4, leg);
-            DrawCapsule({ X + 6 + g, 0, Z + 4 }, { X + 6, bodyY, Z + 4 }, 1.9f, 6, 4, leg);
-            // pescoco + cabeca a frente
-            DrawCapsule({ X + f * 8, bodyY + 1, Z }, { X + f * 12, bodyY + 3, Z }, 3.0f, 8, 5, body);
-            DrawSphere({ X + f * 13, bodyY + 4, Z }, 4.0f, body);
-            // focinho
-            DrawCylinderEx({ X + f * 14, bodyY + 3, Z }, { X + f * 18, bodyY + 2.5f, Z }, 2.0f, 1.2f, 8, body);
-            // orelhas pontudas (cones)
-            DrawCylinderEx({ X + f * 11, bodyY + 7, Z - 2.5f }, { X + f * 11, bodyY + 11, Z - 2.5f }, 1.5f, 0.2f, 6, leg);
-            DrawCylinderEx({ X + f * 11, bodyY + 7, Z + 2.5f }, { X + f * 11, bodyY + 11, Z + 2.5f }, 1.5f, 0.2f, 6, leg);
-            // sensor/olho verde (voltado p/ camera)
-            DrawSphere({ X + f * 15, bodyY + 4, Z + 2.0f }, 1.6f, sensor);
-            DrawSphere({ X + f * 15, bodyY + 4, Z + 2.0f }, 0.8f, WHITE);
-            // cauda erguida atras
-            DrawCapsule({ X - f * 9, bodyY, Z }, { X - f * 15, bodyY + 6, Z }, 1.6f, 6, 4, leg);
-            if (isRushing)
-                DrawSphereWires({ X, bodyY, Z }, radius + 5.0f, 8, 8, ColorAlpha(sensor, 0.5f));
-            break;
-        }
-
-        // ── SNIPER (VIPER) — humano encapuzado: manto verde, olho vermelho,
-        //    rifle muito longo com luneta vermelha ────────────────────────────
-        case CompanionType::Sniper: {
-            Color bodyC = fl ? WHITE : Color{ 40, 50, 60, 255 };
-            Color cloak = fl ? WHITE : Color{ 30, 60, 50, 255 };
-            Color skin  = fl ? WHITE : Color{ 200, 160, 120, 255 };
-            Color hood  = fl ? WHITE : Color{ 25, 45, 38, 255 };
-            Color scope = Color{ 255, 80, 60, 255 };
-            float sw = std::sin(walkTimer * 7.f) * 3.f;
-            DrawCapsule({ X - 4, 1, Z - sw }, { X - 4, 22, Z }, 3.4f, 8, 6, bodyC);
-            DrawCapsule({ X + 4, 1, Z + sw }, { X + 4, 22, Z }, 3.4f, 8, 6, bodyC);
-            // manto (cilindro alargando p/ baixo)
-            DrawCylinderEx({ X, 14, Z }, { X, 40, Z }, 7.5f, 5.0f, 10, cloak);
-            DrawCapsule({ X - 7, 39, Z + sw * 0.4f }, { X - 8, 24, Z + sw }, 2.6f, 8, 5, cloak);
-            DrawCapsule({ X + 7, 39, Z - sw * 0.4f }, { X + 8, 24, Z - sw }, 2.6f, 8, 5, cloak);
-            DrawCapsule({ X, 40, Z }, { X, 43, Z }, 2.3f, 6, 4, skin);
-            DrawSphere({ X, 48, Z }, 5.0f, skin);
-            // capuz (cobre a cabeca, recuado) + olho/scanner vermelho saliente
-            DrawSphere({ X - f * 1.0f, 50.0f, Z - 1.5f }, 5.2f, hood);
-            DrawSphere({ X + f * 5.0f, 48.5f, Z + 2.0f }, 1.2f, scope);
-            // rifle de precisao muito longo + luneta
-            DrawCylinderEx({ X + f * 7, 26, Z }, { X + f * 34, 29, Z }, 1.4f, 0.8f, 8, Color{ 40, 40, 45, 255 });
-            DrawSphere({ X + f * 16, 30.5f, Z }, 1.6f, scope);
-            break;
-        }
-
-        // ── GUARDIAN (ATLAS) — tanque pesado azulado com grande escudo frontal
-        case CompanionType::Guardian: {
-            Color metal     = fl ? WHITE : Color{ 120, 130, 150, 255 };
-            Color dark      = fl ? WHITE : Color{ 60, 70, 90, 255 };
-            Color eye       = Color{ 0, 200, 255, 255 };
-            Color shield    = Color{ 90, 110, 140, 255 };
-            Color shieldRim = Color{ 150, 180, 220, 255 };
-            float sw = std::sin(walkTimer * 4.f) * 2.5f;
-            DrawCapsule({ X - 6, 1, Z - sw }, { X - 6, 20, Z }, 5.0f, 8, 6, metal);
-            DrawCapsule({ X + 6, 1, Z + sw }, { X + 6, 20, Z }, 5.0f, 8, 6, metal);
-            DrawSphere({ X - 6, 11, Z }, 3.0f, dark);
-            DrawSphere({ X + 6, 11, Z }, 3.0f, dark);
-            DrawCylinderEx({ X, 20, Z }, { X, 44, Z }, 9.0f, 10.5f, 14, metal);
-            DrawCapsule({ X - 8, 41, Z + 8 }, { X + 8, 41, Z + 8 }, 1.6f, 6, 4, dark);
-            DrawSphere({ X - 12, 43, Z }, 5.0f, metal);
-            DrawSphere({ X + 12, 43, Z }, 5.0f, metal);
-            DrawCapsule({ X - 13, 43, Z + sw * 0.4f }, { X - 14, 24, Z + sw }, 4.0f, 8, 6, metal);
-            DrawCapsule({ X + 13, 43, Z - sw * 0.4f }, { X + 14, 24, Z - sw }, 4.0f, 8, 6, metal);
-            DrawSphere({ X, 50, Z }, 5.5f, metal);
-            DrawCapsule({ X - 3, 50, Z + 4 }, { X + 3, 50, Z + 4 }, 1.7f, 8, 4, dark);
-            DrawSphere({ X - 2.2f, 50.5f, Z + 5.0f }, 1.3f, eye);
-            DrawSphere({ X + 2.2f, 50.5f, Z + 5.0f }, 1.3f, eye);
-            // escudo redondo grande a frente (disco): aro + face + umbo
-            DrawCylinderEx({ X + f * 14.0f, 20, Z }, { X + f * 15.5f, 20, Z }, 13.5f, 13.5f, 18, shieldRim);
-            DrawCylinderEx({ X + f * 15.5f, 20, Z }, { X + f * 17.5f, 20, Z }, 12.0f, 12.0f, 18, shield);
-            DrawSphere({ X + f * 18.0f, 20, Z }, 3.0f, shieldRim);
-            if (taunting)
-                DrawSphereWires({ X, 24, Z }, radius + 12.0f, 8, 8,
-                                ColorAlpha(Color{ 0, 180, 255, 255 }, 0.45f));
-            break;
-        }
-
-        // ── HEALER / LOOTDRONE — dron flutuante: esfera, nucleo brilhante,
-        //    antena e 2 rotores em disco ──────────────────────────────────────
-        case CompanionType::Healer:
-        case CompanionType::LootDrone: {
-            Color tint  = (type == CompanionType::Healer)
-                              ? Color{ 80, 255, 140, 255 }
-                              : Color{ 255, 210, 60, 255 };
-            Color shell = fl ? WHITE : Color{ 70, 75, 85, 255 };
-            float hover = std::sin(walkTimer * 6.f) * 2.0f;
-            float cy = 22.0f + hover;
-            DrawSphere({ X, cy, Z }, 5.0f, shell);
-            DrawSphere({ X, cy, Z + 3.6f }, 2.0f, tint);          // lente/nucleo frontal
-            DrawCylinderEx({ X, cy + 4, Z }, { X, cy + 8, Z }, 0.5f, 0.2f, 6, shell); // antena
-            DrawSphere({ X, cy + 8.5f, Z }, 1.0f, tint);
-            for (int i = 0; i < 2; ++i) {
-                float ax = (i == 0 ? -8.0f : 8.0f);
-                DrawCylinderEx({ X, cy + 1, Z }, { X + ax, cy + 2, Z }, 0.8f, 0.8f, 6, shell);
-                DrawCylinderEx({ X + ax, cy + 2.4f, Z }, { X + ax, cy + 2.9f, Z }, 3.0f, 3.0f, 10,
-                               ColorAlpha(WHITE, 0.5f));   // rotor (disco)
-            }
-            DrawSphereWires({ X, cy, Z }, radius + 4.0f + std::sin(walkTimer * 3.f) * 2.0f,
-                            6, 6, ColorAlpha(tint, 0.3f)); // feixe de cura/coleta
-            break;
-        }
-    }
 }
 
 void Companion::renderMarcoVeil() const {
@@ -690,7 +479,7 @@ void Companion::renderDrone(Color tint) const {
     float hover = std::sin(walkTimer*6.f)*3.f;        // flutua
     int cy = py - 6 + (int)hover;
     // sombra (flutuando -> sombra menor embaixo)
-    if (!g_renderPass3D) {
+    if (!g_voxelCapture) {
         DrawEllipse(px, py+10, 8.0f, 3.0f, ColorAlpha(BLACK,0.3f));
     }
     // rotores

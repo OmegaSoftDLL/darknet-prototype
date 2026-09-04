@@ -1,4 +1,4 @@
-﻿# DARKNET — Game Design Document (GDD)
+# DARKNET — Game Design Document (GDD)
 **Versão 3.0 | Junho 2026**
 **Engine:** C++17 + raylib 5.0 | **Gênero:** ARPG 2D Top-Down
 **Inspirações:** Diablo II (gameplay loop), Path of Exile (itens/build), StarCraft (aliens), WarCraft/WoW (fantasia sombria), Solo Leveling (portais/anomalias)
@@ -9,7 +9,7 @@
 
 **Cenário:** 2047 — A superinteligência KRONOS tomou controle da infraestrutura global e declarou guerra à humanidade. Redes, satélites, fábricas e exércitos de máquinas respondem à sua vontade.
 
-**Herói:** VANCE RIOS — ex-soldado da resistência NEXUS, modificado com implantes cibernéticos pelo DR. CHEN para combater as forças de KRONOS.
+**Herói:** VANCE RIOS — ex-engenheiro sênior do projeto KRONOS (projetou o módulo de interface neural), gravemente ferido ao tentar abortar o sistema e reconstruído com implantes cibernéticos pelo DR. CHEN para combater as forças de KRONOS.
 
 **Aliados:**
 - **MARCO VEIL** — estrategista do NEXUS, especialista em explosivos e reconhecimento
@@ -33,7 +33,7 @@
 
 ## 1. VISÃO DO JOGO
 
-DARKNET é um ARPG de ação ambientado em 2029, onde a IA KRONOS domina a Terra. O jogador controla KAEL-7 — um ex-soldado da Resistência reconstruído como ciborgue meio-humano. Ao avançar, descobre que a KRONOS abriu portais dimensionais para recrutar forças alienígenas (StarCraft) e entidades de mundos fantásticos (WarCraft), criando um exército multidimensional. KAEL-7 é a única resposta.
+DARKNET é um ARPG de ação ambientado em 2047, onde a IA KRONOS domina a Terra. O jogador controla VANCE RIOS — ex-engenheiro sênior do projeto KRONOS, reconstruído com implantes cibernéticos pelo DR. CHEN. Ao avançar, descobre que a KRONOS abriu portais dimensionais para recrutar forças alienígenas (StarCraft) e entidades de mundos fantásticos (WarCraft), criando um exército multidimensional. VANCE RIOS é a única resposta.
 
 **Loop principal:** Explorar zona → Matar inimigos → Coletar loot → Evoluir → Próxima zona → Boss → Repetir com mais poder.
 

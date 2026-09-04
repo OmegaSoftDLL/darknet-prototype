@@ -1,10 +1,10 @@
 # Darknet Prototype
 
-Protótipo mínimo de ARPG top-down em C++, inspirado em Diablo e Path of Exile.
+ARPG em C++ com renderização 3D isométrica (2.5D), inspirado em Diablo e Path of Exile.
 
 ## Funcionalidades atuais
 
-- Janela com renderização 2D via raylib
+- Janela com renderização 3D isométrica (2.5D) via raylib — ativada por padrão (`render3D = true` em `src/Game.h`); as entidades são voxelizadas a partir da arte 2D procedural (`ensureVoxel`/`drawVoxel` via `src/SpriteExtrude.cpp`)
 - Player se movimenta com WASD
 - Câmera segue o player
 - Inimigos nascem periodicamente e perseguem o player

@@ -34,6 +34,20 @@ void BotController::addLog(const std::string& msg) {
     if ((int)log.size() > 20) log.erase(log.begin());
 }
 
+// Reset COMPLETO entre partidas: telemetria, maquina de estados, timers, rota
+// cacheada e sensores. Preserva active/autoTest/testDuration para o autotest
+// continuar rodando na nova partida. (toggle() so fazia um reset parcial, e os
+// timers/contadores antigos vazavam de uma partida para a outra.)
+void BotController::reset() {
+    bool  keepActive   = active;
+    bool  keepAutoTest = autoTest;
+    float keepDuration = testDuration;
+    *this = BotController();
+    active       = keepActive;
+    autoTest     = keepAutoTest;
+    testDuration = keepDuration;
+}
+
 int BotController::countEnemiesInRadius(const std::vector<Vector2>& positions,
                                          Vector2 center, float radius) const {
     int count = 0;
@@ -239,7 +253,8 @@ Vector2 BotController::computeAntiWall(Vector2 desired, Vector2 currentPos, floa
     // concavos (cantos) em vez de insistir na mesma direcao.
     float stuckBias = 0.0f;
     if (stuckTimer > 0.5f) {
-        stuckEvents += (stuckTimer < 0.5f + dt) ? 1 : 0;
+        // (a contagem de stuckEvents mora em updateStuckTracking — aqui era
+        // codigo morto que nunca incrementava)
         // gira a preferencia ~90 graus conforme o tempo preso aumenta
         stuckBias = (stuckEscapeDir > 0 ? 1.0f : -1.0f) * (float)(M_PI * 0.5);
         // alterna o lado de fuga a cada ~1.5s preso
@@ -272,6 +287,10 @@ bool BotController::passed(std::vector<std::string>* reasons) const {
     if (deathCount > 3)         { ok = false; fail(TextFormat("%d mortes seguidas", deathCount)); }
     if (killCount == 0)         { ok = false; fail("nenhum inimigo abatido (combate quebrado?)"); }
     if (totalDistance < 500.0f) { ok = false; fail("bot praticamente nao andou (movimento travado?)"); }
+    // Blinda a conquista do ciclo (avanco de fase pelo portal) contra regressao
+    // silenciosa: run longo sem NENHUMA zona avancada = mecanica central quebrada.
+    if (testDuration >= 180.0f && zonesVisited == 0)
+        { ok = false; fail("nenhuma zona avancada em run >= 180s (portal/fase regrediu?)"); }
     return ok;
 }
 
@@ -432,7 +451,13 @@ BotController::BotDecision BotController::update(
     }
 
     // ── FPS tracking ──────────────────────────────────────────────────────────
-    if (currentFPS > 0.0f) {
+    // Um frame de CARGA (worldgen de partida/fase, dt > 0,25s) envenena a media
+    // movel do GetFPS() por ~0,5s: o relatorio acusava "FPS minimo 6" com o jogo
+    // a 60 — era o frame de loading entrando na janela. Quarentena de 1s apos
+    // qualquer frame desses; so se mede FPS de gameplay.
+    if (dt > 0.25f) fpsQuarantine = 1.0f;
+    else if (fpsQuarantine > 0.0f) fpsQuarantine -= dt;
+    if (currentFPS > 0.0f && fpsQuarantine <= 0.0f) {
         fpsAccum += currentFPS; fpsSamples++;
         if (currentFPS < minFPS) minFPS = currentFPS;
         if (currentFPS > maxFPS) maxFPS = currentFPS;
@@ -553,7 +578,6 @@ BotController::BotDecision BotController::update(
     // Item collection: pick up items within 150px (reduced from 300px to focus on nearby loot)
     bool  hasItem    = nearestItemIdx >= 0 && nearestItemDist < 150.0f;
     bool  hasPortal  = !portalPositions.empty();
-    int   nearbyEnemyCount200 = countEnemiesInRadius(enemyPositions, playerPos, 200.0f);
     int   nearbyEnemyCount300 = countEnemiesInRadius(enemyPositions, playerPos, 300.0f);
 
     // ── Clear timer (for phase advance) ──────────────────────────────────────
@@ -573,29 +597,38 @@ BotController::BotDecision BotController::update(
     if (hpPct < 0.25f && hasEnemy) {
         newState = BotState::FleeFromDanger;
     }
-    // Priority 2: Collect item within 150px if not in heavy combat
+    // Priority 2 (mundo aberto): portal de FASE aberto — avancar de mundo so
+    // perde para a fuga de morte iminente. Inimigos continuam spawnando, entao
+    // esperar "zona limpa" (clearTimer) significava NUNCA ir ao portal.
+    else if (owPortalOpen) {
+        newState = BotState::AdvancePhase;
+    }
+    // Priority 3: Collect item within 150px if not in heavy combat
     else if (hasItem && nearbyEnemyCount300 < 3) {
         newState = BotState::CollectItem;
     }
-    // Priority 3: Attack nearest enemy
+    // Priority 4: Attack nearest enemy
     else if (hasEnemy) {
         newState = BotState::AttackEnemy;
     }
-    // Priority 4: Anomaly portal open nearby
+    // Priority 5: Anomaly portal open nearby
     else if (openAnomalyPortals > 0) {
         newState = BotState::ClosePortal;
     }
-    // Priority 5: Advance phase after zone clear (5s with no enemies/items)
+    // Priority 6: Advance phase after zone clear (5s with no enemies/items)
     else if (clearTimer > 5.0f && hasPortal) {
         newState = BotState::AdvancePhase;
     }
-    // Priority 6: Explore
+    // Priority 7: Explore
     else {
         newState = BotState::Explore;
     }
 
     if (newState != botState) {
         botState = newState;
+        // itemsChased conta TRANSICOES para coleta, nao frames (antes inflava
+        // a taxa de "perseguidos" e escondia a falha real de coleta).
+        if (botState == BotState::CollectItem) itemsChased++;
         const char* labels[] = {"FUGINDO","COLETANDO","ATACANDO","FECHA PORTAL","AVANCANDO FASE","EXPLORANDO"};
         addLog(TextFormat(">> %s", labels[(int)botState]));
         lastLoggedMode = (int)botState;
@@ -619,18 +652,15 @@ BotController::BotDecision BotController::update(
                      playerPos.y + fleeDir.y * 400.0f};
 
         // Barreira (skill 5): use when HP < 25% — primary defensive skill
+        // (contagem de disparo fica no Game, apos a confirmacao isReady())
         if (skillsReady[4] && skillTimer <= 0.0f) {
             dec.shouldUseSkill5 = true;
-            skillsFired++;
-            skillUsageCounts[4]++;
             skillTimer = 0.5f;
             addLog("Barreira ativada (HP critico)");
         }
         // Sobrecarga (skill 4): use when HP < 50% to gain speed/power
         if (skillsReady[3] && hpPct < 0.50f && skillTimer <= 0.0f) {
             dec.shouldUseSkill4 = true;
-            skillsFired++;
-            skillUsageCounts[3]++;
             skillTimer = 0.5f;
         }
         break;
@@ -638,23 +668,18 @@ BotController::BotDecision BotController::update(
 
     // ── Collect item ─────────────────────────────────────────────────────────
     case BotState::CollectItem: {
+        // A coleta real e AUTOMATICA no Game (raio ~player.radius+52, com
+        // magnetismo a 230px) — o contador itemsCollected e incrementado la,
+        // quando o item sai do vetor. Contar aqui por proximidade (<20px)
+        // nunca disparava: o item sumia antes.
         botTarget = itemPositions[nearestItemIdx];
-        itemsChased++;
-
-        // When very close (20px), trigger E key to pick up
-        if (nearestItemDist < 20.0f) {
-            dec.shouldPickupItem = true;
-            itemsCollected++;
-            addLog(TextFormat("Item coletado em (%.0f,%.0f)",
-                              itemPositions[nearestItemIdx].x,
-                              itemPositions[nearestItemIdx].y));
-        }
         break;
     }
 
     // ── Attack enemy ─────────────────────────────────────────────────────────
     case BotState::AttackEnemy: {
         Vector2 ePos = enemyPositions[nearestEnemyIdx];
+        engageTimer -= dt;
 
         if (nearestEnemyDist <= playerRange * 0.9f) {
             if (attackTimer <= 0.0f) {
@@ -662,49 +687,48 @@ BotController::BotDecision BotController::update(
                 attackTimer = 0.38f;
                 meleeHits++;
             }
+            botTarget  = ePos;
+            engageTimer = 0.0f;   // conectou — encerra o engage
+        } else if (nearestEnemyDist < 150.0f || engageTimer > 0.0f) {
+            // ENGAGE (~1.5s): fecha distancia DIRETO no inimigo, sem recuo nem
+            // orbita. Antes o bot RECUAVA 200px quando dist<150 e orbitava a
+            // 220px no resto — com o melee a 90px de alcance, a distancia nunca
+            // fechava ("Ataques melee: 0" no relatorio).
+            if (engageTimer <= 0.0f) engageTimer = 1.5f;
             botTarget = ePos;
-        } else if (nearestEnemyDist < 150.0f) {
-            // Too close for shooter build — back off
-            Vector2 away = safeNormalize({playerPos.x - ePos.x, playerPos.y - ePos.y});
-            botTarget = {playerPos.x + away.x * 200.0f, playerPos.y + away.y * 200.0f};
         } else {
-            // Orbit at ~220px shooting distance
+            // Orbita COLADA (~80px) para o alcance do melee fechar — a orbita a
+            // 220px mantinha o bot longe demais para atacar.
             botTarget = {
-                ePos.x + std::cos(orbitAngle) * orbitRadius,
-                ePos.y + std::sin(orbitAngle) * orbitRadius
+                ePos.x + std::cos(orbitAngle) * 80.0f,
+                ePos.y + std::sin(orbitAngle) * 80.0f
             };
         }
 
         // ── Strategic skill usage ─────────────────────────────────────────────
+        // (contagem skillsFired/skillUsageCounts fica no Game, apos isReady())
         if (skillTimer <= 0.0f) {
-            // Skill 2 (EMP): use when >3 enemies within 200px
-            if (skillsReady[1] && nearbyEnemyCount200 > 3) {
+            // Skill 2 (EMP): use when >=2 enemies within 250px
+            if (skillsReady[1] && countEnemiesInRadius(enemyPositions, playerPos, 250.0f) >= 2) {
                 dec.shouldUseSkill2 = true;
-                skillsFired++;
-                skillUsageCounts[1]++;
                 skillTimer = 0.5f;
-                addLog(TextFormat("EMP disparado (%d inimigos em 200px)", nearbyEnemyCount200));
+                addLog(TextFormat("EMP disparado (%d inimigos em 250px)",
+                                  countEnemiesInRadius(enemyPositions, playerPos, 250.0f)));
             }
-            // Skill 3 (Granada): use when >2 enemies within 150px
-            else if (skillsReady[2] && countEnemiesInRadius(enemyPositions, playerPos, 150.0f) > 2) {
+            // Skill 3 (Granada): use when >=2 enemies within 200px
+            else if (skillsReady[2] && countEnemiesInRadius(enemyPositions, playerPos, 200.0f) >= 2) {
                 dec.shouldUseSkill3 = true;
-                skillsFired++;
-                skillUsageCounts[2]++;
                 skillTimer = 0.5f;
                 addLog("Granada lancada (cluster de inimigos)");
             }
             // Skill 6 (Rajada): use when enemy within 100px
             else if (skillsReady[5] && nearestEnemyDist < 100.0f) {
                 dec.shouldUseSkill6 = true;
-                skillsFired++;
-                skillUsageCounts[5]++;
                 skillTimer = 0.5f;
             }
             // Skill 1 (Laser): single enemy in range as fallback
             else if (skillsReady[0] && nearestEnemyDist < 500.0f) {
                 dec.shouldUseSkill1 = true;
-                skillsFired++;
-                skillUsageCounts[0]++;
                 skillTimer = 0.5f;
             }
         }
@@ -712,16 +736,12 @@ BotController::BotDecision BotController::update(
         // Skill 4 (Sobrecarga): use when HP < 50% (damage boost + survivability)
         if (skillsReady[3] && hpPct < 0.50f) {
             dec.shouldUseSkill4 = true;
-            skillsFired++;
-            skillUsageCounts[3]++;
             addLog("Sobrecarga ativada (HP<50%)");
         }
 
         // Skill 5 (Barreira): use when HP < 25% even during combat
         if (skillsReady[4] && hpPct < 0.25f && skillTimer <= 0.0f) {
             dec.shouldUseSkill5 = true;
-            skillsFired++;
-            skillUsageCounts[4]++;
             skillTimer = 0.5f;
             addLog("Barreira ativada (HP<25% em combate)");
         }
@@ -735,8 +755,6 @@ BotController::BotDecision BotController::update(
         else         botTarget = {playerPos.x, playerPos.y};
         if (skillsReady[0] && skillTimer <= 0.0f) {
             dec.shouldUseSkill1 = true;
-            skillsFired++;
-            skillUsageCounts[0]++;
             skillTimer = 0.5f;
         }
         if (attackTimer <= 0.0f) {
@@ -748,6 +766,19 @@ BotController::BotDecision BotController::update(
 
     // ── Advance to next zone ─────────────────────────────────────────────────
     case BotState::AdvancePhase: {
+        // Mundo aberto: o alvo e o portal de FASE (owPortalPos). Os portais de
+        // zona do tilemap sao o sistema antigo — vazio no mundo aberto. A menos
+        // de 100u o bot pede o avanco: o Game trata shouldUsePortal como tecla E.
+        if (owPortalOpen) {
+            botTarget = owPortalPos;
+            float owDist = Vector2Distance(playerPos, owPortalPos);
+            if (owDist < 100.0f) dec.shouldUsePortal = true;
+            if (logicTimer <= 0.0f) {
+                addLog(TextFormat("Indo ao portal de fase dist=%.0f", owDist));
+                logicTimer = 3.0f;
+            }
+            break;
+        }
         botTarget  = nearestPortalPos;
         clearTimer = 0.0f; // reset so we don't loop
 
@@ -767,31 +798,53 @@ BotController::BotDecision BotController::update(
     // ── Explore (spiral) ─────────────────────────────────────────────────────
     case BotState::Explore: {
         exploreTimer += dt;
+
+        // ZONA SEGURA: inimigos so spawnam FORA dela (Game empurra qualquer um
+        // para fora do raio). O passeio aleatorio centrado no player mantinha o
+        // bot eternamente no refugio — 0 inimigos vistos, 0 abates. Se ficar
+        // >3s dentro da zona, o proximo alvo e FORCADO para fora dela.
+        bool insideSafe = false;
+        if (safeZoneRadius > 0.0f) {
+            insideSafe = Vector2Distance(playerPos, safeZoneCenter) < safeZoneRadius;
+            if (insideSafe) exploreSafeZoneTimer += dt;
+            else            exploreSafeZoneTimer = 0.0f;
+        }
+
         if (exploreTimer > 3.0f || Vector2Distance(playerPos, botTarget) < 40.0f) {
             exploreTimer = 0.0f;
-            float angle  = exploreStep * 0.7f;
-            // Raio ate 1800: com 900 o bot nunca saia da ZONA SEGURA (raio 1050),
-            // onde inimigo e empurrado pra fora. Resultado: 0 tiros, 0 abates - o
-            // portao de validacao pegou isso como "combate quebrado".
-            float radius = 300.0f + exploreStep * 90.0f;
-            if (radius > 1800.0f) { radius = 300.0f; exploreStep = 0; }
-            auto pick = [&](float a) {
-                return Vector2{ playerPos.x + std::cos(a) * radius,
-                                playerPos.y + std::sin(a) * radius };
-            };
-            botTarget = pick(angle);
-            // Alvo dentro de parede/barreira = anda ate encostar e trava. Gira o
-            // angulo procurando um ponto livre (puxar pro centro so prendia o bot
-            // em volta do refugio).
-            for (int tryI = 1; tryI < 8 && wallQuery && wallQuery(botTarget); ++tryI)
-                botTarget = pick(angle + tryI * 0.785f);
-            exploreStep++;
+
+            if (exploreSafeZoneTimer > 3.0f && safeZoneRadius > 0.0f) {
+                // Fora da zona segura: angulo aleatorio, raio alem do refugio,
+                // medido a partir do CENTRO da zona (nao do player).
+                exploreSafeZoneTimer = 0.0f;
+                float a = (float)GetRandomValue(0, 359) * DEG2RAD;
+                float r = safeZoneRadius + 300.0f + (float)GetRandomValue(0, 900);
+                botTarget = { safeZoneCenter.x + std::cos(a) * r,
+                              safeZoneCenter.y + std::sin(a) * r };
+                addLog("Saindo da zona segura para cacar");
+            } else {
+                float angle  = exploreStep * 0.7f;
+                // Raio ate 1800: com 900 o bot nunca saia da ZONA SEGURA (raio 1050),
+                // onde inimigo e empurrado pra fora. Resultado: 0 tiros, 0 abates - o
+                // portao de validacao pegou isso como "combate quebrado".
+                float radius = 300.0f + exploreStep * 90.0f;
+                if (radius > 1800.0f) { radius = 300.0f; exploreStep = 0; }
+                auto pick = [&](float a) {
+                    return Vector2{ playerPos.x + std::cos(a) * radius,
+                                    playerPos.y + std::sin(a) * radius };
+                };
+                botTarget = pick(angle);
+                // Alvo dentro de parede/barreira = anda ate encostar e trava. Gira o
+                // angulo procurando um ponto livre (puxar pro centro so prendia o bot
+                // em volta do refugio).
+                for (int tryI = 1; tryI < 8 && wallQuery && wallQuery(botTarget); ++tryI)
+                    botTarget = pick(angle + tryI * 0.785f);
+                exploreStep++;
+            }
         }
         // Skill 1 if any enemy spotted during exploration
         if (skillsReady[0] && hasEnemy && nearestEnemyDist < 400.0f && skillTimer <= 0.0f) {
             dec.shouldUseSkill1 = true;
-            skillsFired++;
-            skillUsageCounts[0]++;
             skillTimer = 0.5f;
         }
         break;
@@ -814,11 +867,17 @@ BotController::BotDecision BotController::update(
         // longe de onde ele ja esta.
         Vector2 c   = (worldCenter.x != 0.0f || worldCenter.y != 0.0f) ? worldCenter : playerPos;
         float   ring = (worldRadius > 400.0f) ? worldRadius * 0.60f : 1400.0f;
+        // Sem inimigos ha muito tempo = o bot precisa de COMBATE. Nesse caso o
+        // escape NAO pode puxar de volta para o refugio: inimigos so existem
+        // fora da zona segura, entao candidatos dentro dela sao rejeitados.
+        bool needCombat = enemyPositions.empty();
         Vector2 best = playerPos; float bestD = -1.0f;
         for (int i = 0; i < 8; ++i) {
             float a = (float)i * 0.785f + (float)GetRandomValue(0, 62) * 0.01f;
             Vector2 cand = { c.x + std::cos(a) * ring, c.y + std::sin(a) * ring };
             if (wallQuery && wallQuery(cand)) continue;
+            if (needCombat && safeZoneRadius > 0.0f &&
+                Vector2Distance(cand, safeZoneCenter) < safeZoneRadius + 150.0f) continue;
             float dx = cand.x - playerPos.x, dy = cand.y - playerPos.y;
             float d  = dx*dx + dy*dy;
             if (d > bestD) { bestD = d; best = cand; }

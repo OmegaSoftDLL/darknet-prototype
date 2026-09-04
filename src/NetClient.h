@@ -19,6 +19,7 @@
 #include <mutex>
 #include <atomic>
 #include <deque>
+#include <chrono>
 
 struct NetPeer {
     uint32_t id        = 0;
@@ -83,6 +84,9 @@ private:
     uint32_t myId_       = 0;
     char     myName_[24] = {0};
     float    sendAccum_  = 0.0f;
+    // Throttle do sendState (era um static de funcao — compartilhado entre
+    // instancias e sem reset no shutdown/init).
+    std::chrono::steady_clock::time_point lastSend_ = std::chrono::steady_clock::now();
 
     // URL alvo
     std::string host_ = "127.0.0.1";

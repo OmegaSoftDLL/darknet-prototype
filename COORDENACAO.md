@@ -1,9 +1,11 @@
 # Coordenação Claude Code ⇄ Antigravity
 
 ## 🚀 DECISÃO DO USUÁRIO: O JOGO É 3D (remover 2D). Tem que LANÇAR.
-`render3D` agora é `true` por padrão (Game.h) — todo gameplay roda em 2.5D. O
-caminho de render 2D vira fallback morto (não apagar ainda por segurança; as
-funções `render()` das entidades são compartilhadas pelo overlay 3D). HUD/menus
+`render3D` é `true` por padrão (Game.h) — todo gameplay roda no pipeline 3D
+(2.5D isométrico). O render 2D das entidades NÃO é um fallback: as funções
+`render()` seguem sendo a fonte de arte do sistema de voxelização
+(`ensureVoxel`/`drawVoxel` em Game.cpp, via `SpriteExtrude.cpp`), que captura o
+sprite 2D de cada entidade em poses e desenha malhas voxel 3D em cache. HUD/menus
 seguem como overlay 2D (normal em jogo 3D).
 
 PRIORIDADE MÁXIMA para ship (Antigravity, sua lane renderWorld3D/Game.cpp):
@@ -151,7 +153,7 @@ O usuário solicitou explicitamente gráficos reais sem o aspecto de cubos bási
 
 Para atingir isso, atualizamos a estratégia para:
 1. **Personagens = Cópia Fiel do 2D em 3D (Não redondos)**:
-   - **CLAUDE**: Deve modificar o trecho de personagens em `renderWorld3D` ou a lógica de renderizado 3D de entidades para desenhar o jogador, inimigos, NPCs e companheiros como **billboards 3D de suas artes 2D originais** (utilizando `drawProceduralEntity3D` que desenha o `.render()` 2D tradicional em uma RenderTexture e projeta como billboard 3D com depth sorting).
+   - **CLAUDE**: Deve modificar o trecho de personagens em `renderWorld3D` ou a lógica de renderizado 3D de entidades para desenhar o jogador, inimigos, NPCs e companheiros como **cópias 3D fiéis de suas artes 2D originais**. **Status (implementado):** resolvido via sistema de voxelização — `ensureVoxel`/`drawVoxel` (Game.cpp) usam `SpriteExtrude` para capturar o `render()` 2D de cada entidade em poses e desenhar malhas voxel 3D em cache, com depth sorting contra as paredes. (A abordagem de billboard via `drawProceduralEntity3D` foi substituída por esta.)
    - Isso garante que eles fiquem idênticos à arte original 2D (sem o aspecto arredondado de bonecos de massinha) e mantenham ordenação Z correta contra paredes.
 2. **Profundidade Total em Construções/Cenário**:
    - **ANTIGRAVITY**: Já implementou e testou os modelos 3D reais (`.obj`) em `Game.cpp` para todas as construções construídas:
@@ -164,6 +166,6 @@ Para atingir isso, atualizamos a estratégia para:
      - **Muros/Walls**: Desenhados como cubos texturizados 3D usando `DrawCubeTexture` com a textura de muro de `SpriteBank`.
 3. **Divisão de Trabalho**:
    - **Antigravity** cuida de `Game.cpp` (modelos de prédios, iluminação/fog, câmera, decalques) + backend.
-   - **Claude Code** cuida dos arquivos de entidades (sombra/render3D() dos personagens) + Tilemap chão + o trecho dos personagens de `renderWorld3D` em `Game.cpp`.
+   - **Claude Code** cuida dos arquivos de entidades (sombra/arte 2D `render()` que alimenta a voxelização dos personagens) + `SpriteExtrude` + Tilemap chão + o trecho dos personagens de `renderWorld3D` em `Game.cpp` (`ensureVoxel`/`drawVoxel`).
 
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Player.h"
 #include "Enemy.h"
@@ -97,6 +97,9 @@ private:
     // Update
     void update(float dt);
     void handleInput(float dt);
+    // Decisoes do bot/autotest (extraido de handleInput): roda no mesmo ponto,
+    // sob a guarda interna botController.active. shouldQuit sinaliza via quitRequested.
+    void updateBotControl(float dt);
     void spawnEnemy();
     void spawnBoss();
     void checkCollisions();
@@ -134,7 +137,6 @@ private:
     void drawQuestHUD() const;
 
     // Save
-    void tryAutoSave();
     void autoSave();
 
     static constexpr int screenWidth  = 1280;
@@ -167,12 +169,10 @@ private:
     int      bossPowersAbsorbed = 0;  // poderes de boss absorvidos (estilo V Rising)
     bool     victoryReported = false; // reset por partida (era static de funcao = bug)
     float    worldSun    = 1.0f;      // 0=noite, 1=dia (deriva do worldClock)     // roda do mouse: <1 aproxima, >1 afasta (olhar de cima)
-    bool     render3D     = true;     // JOGO É 3D (2.5D isométrico) por padrão em todo gameplay
     RenderTexture2D tempEntityTarget{}; // alvo temporário p/ desenhar entidades procedurais
     void     updateCamera3D();
     Vector2  mouseGround3D() const;   // raycast do mouse no plano Y=0 -> mundo 2D
     void     renderWorld3D();         // caminho de render 2.5D completo (mundo 3D + outdoors procedurais)
-    void     drawProceduralEntity3D(Vector2 pos, float heightOffset, std::function<void()> drawFunc);
     // Modelos VOXEL 3D reais (malha extrudada do sprite 2D) — cache por tipo.
     std::unordered_map<int, Model> m_voxModels;
     int      m_voxGenBudget = 0;   // limite de geracoes de voxel por frame (anti-engasgo)
@@ -295,7 +295,20 @@ private:
 
     BotController botController;
     bool    botMeleeRequest   = false;
+    bool    botWantsPortal    = false;  // bot pediu o avanco de fase (consumido em updatePhasePortal)
     Vector2 botAimTarget      = {0, 0};
+
+    // ── Timers do bot/autotest (eram static de funcao: nao resetavam entre
+    // partidas — restartRun zera todos) ──
+    float   botReportSaveTimer = 0.0f;  // auto-save parcial do relatorio (5min)
+    float   botAllyTimer       = 2.0f;
+    float   botBuildTimer      = 4.0f;
+    float   botProduceTimer    = 8.0f;
+    float   botUpgradeTimer    = 12.0f;
+    float   botStipendTimer    = 0.0f;
+    int     botBuildCycle      = 0;
+    mutable double lastShot      = 0.0;   // TEMP-SHOT: ultimo screenshot do autotest
+    mutable int    shotN         = 0;
 
     bool    showInventory     = false;
     bool    showEquipment     = false;
@@ -376,6 +389,7 @@ private:
     void   updateWorldShaderUniforms();
 
     void    drawGenericStructure(Vector2 pos, float sc) const;
+    void    drawArkStructure(Vector2 pos) const;   // Arca sci-fi (bunker) p/ zonas urbanas
     void    initPostFX();
     void    unloadPostFX();
 
@@ -447,6 +461,7 @@ private:
     void updateSceneryChunks(Vector2 playerPos);
     std::vector<Vector3> m_chunkSolids;  // colisao de estruturas dos chunks (x,y=pos, z=raio)
     bool isBlocked(Vector2 pos) const;   // parede do grid OU estrutura de chunk no infinito
+    void clearBlockingAt(Vector2 pos, float radius);  // fallback do portal: remove colisao de cenario num raio
     void      buildOpenWorldScenery();
 
     // Zona Segura / Base — refugio sem inimigos para preparar e construir.
@@ -535,13 +550,7 @@ private:
     void        updatePremiumStore(float dt);
     void        drawPremiumStore() const;
 
-    // ── Pathfinding BFS para o bot (evita travar em cantos) ───────────────────
-    bool      botFindPath(Vector2 from, Vector2 to, std::vector<Vector2>& outPath) const;
-    std::vector<Vector2> botPath;
-    int       botPathIdx     = 0;
-    float     botStuckTime   = 0.0f;
-    Vector2   botPrevPos      = {0, 0};
-    Vector2   botPathGoal     = {0, 0};
+    // ── Pathfinding do bot: unificado no BotController (BFS em computePathDir) ──
     int   nearResourceIdx = -1;    // nó mais próximo coletável
     float mineSwingCD     = 0.0f;  // cadência entre golpes da picareta
     float mineSwingAnim   = 0.0f;  // 0..1 animação do golpe atual (1=acabou de bater)

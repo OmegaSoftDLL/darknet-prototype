@@ -1,6 +1,7 @@
-﻿#include "Tilemap.h"
+#include "Tilemap.h"
 #include "SpriteGen.h"
 #include "rlgl.h"
+#include <raymath.h>
 #include <cmath>
 #include <algorithm>
 
@@ -1225,6 +1226,22 @@ void Tilemap::markSolidAt(Vector2 worldPos, float radius) {
         }
 }
 
+// Espelho de markSolidAt: DESMARCA solidos de cenario num raio (mantem paredes).
+// Usado so como fallback da garantia do portal — ver updatePhasePortal.
+void Tilemap::clearSolidAt(Vector2 worldPos, float radius) {
+    int tx = (int)(worldPos.x / tileSize);
+    int ty = (int)(worldPos.y / tileSize);
+    int r  = std::max(1, (int)std::ceil(radius / tileSize));
+    float r2 = radius * radius;
+    for (int y = ty - r; y <= ty + r; ++y)
+        for (int x = tx - r; x <= tx + r; ++x) {
+            if (x < 0 || x >= width || y < 0 || y >= height) continue;
+            float cx = (x + 0.5f) * tileSize - worldPos.x;
+            float cy = (y + 0.5f) * tileSize - worldPos.y;
+            if (cx * cx + cy * cy <= r2) tiles[y][x].solid = false;
+        }
+}
+
 void Tilemap::clearSolidFlags() {
     for (auto& row : tiles)
         for (auto& t : row)
@@ -1311,7 +1328,26 @@ static Color shade(Color c, float f) {
     return { cl(c.r * f), cl(c.g * f), cl(c.b * f), c.a };
 }
 
-void Tilemap::render3D(Vector2 camTarget) const {
+// Teste esfera × frustum em espaco de VIEW (raylib: frente = -Z), para tiles no
+// chao (y=0). A janela 53x53 e QUADRADA ao redor do alvo, mas o cone de 30° da
+// camera cobre bem menos que isso — isto corta os quads fora da tela antes de
+// emitir vertice algum.
+static bool floorTileVisible(const Matrix& view, const Camera3D& cam, float aspect,
+                             float wx, float wz, float radius) {
+    float vz = view.m2*wx + view.m10*wz + view.m14;
+    float dist = -vz;                                    // >0 = na frente
+    if (dist < -radius) return false;                    // totalmente atras
+    if (dist < 20.0f) return true;                       // colado na camera: aprova
+    float vx = view.m0*wx + view.m8*wz  + view.m12;
+    float vy = view.m1*wx + view.m9*wz  + view.m13;
+    float tanH = tanf(cam.fovy * 0.5f * (float)DEG2RAD);
+    float limY = dist * tanH + radius;
+    if (vy < -limY || vy > limY) return false;
+    float limX = dist * tanH * aspect + radius;
+    return vx >= -limX && vx <= limX;
+}
+
+void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) const {
     const float TS = (float)tileSize;
     const int   R  = 26; // raio da janela visível em tiles
     int ctx = (int)(camTarget.x / TS);
@@ -1320,6 +1356,23 @@ void Tilemap::render3D(Vector2 camTarget) const {
     int x1 = openWorld ? ctx + R : std::min(width  - 1, ctx + R);
     int y0 = openWorld ? cty - R : std::max(0, cty - R);
     int y1 = openWorld ? cty + R : std::min(height - 1, cty + R);
+
+    SpriteBank& sb = SpriteBank::get();
+    ZoneID z = currentZone;
+    Color base = biomeFloorColor(z);
+
+    // Frustum da camera 3D (matriz de view), calculado 1x por frame.
+    const Matrix floorView = MatrixLookAt(cam3D.position, cam3D.target, cam3D.up);
+
+    // BATCH UNICO do piso: TODOS os tiles usam a MESMA textura (bioma atual),
+    // entao um rlBegin/rlEnd so emite os ~2.800 quads de uma vez — antes eram
+    // 2.809 rlSetTexture + rlBegin/rlEnd individuais por frame. O rlgl divide o
+    // batch internamente (mantendo estado) se o buffer encher, entao e seguro.
+    if (sb.ready) {
+        rlSetTexture(sb.tileFloor[(int)z].id);
+        rlBegin(RL_QUADS);
+        rlNormal3f(0.0f, 1.0f, 0.0f);
+    }
 
     for (int y = y0; y <= y1; ++y) {
         for (int x = x0; x <= x1; ++x) {
@@ -1333,8 +1386,7 @@ void Tilemap::render3D(Vector2 camTarget) const {
             // mundo trocava de tema debaixo dos pes do jogador enquanto ele andava -
             // nao existia sensacao de "passei de fase", so um mosaico continuo.
             // Agora se muda de mundo pelo PORTAL, nao caminhando.
-            ZoneID z = currentZone;
-            Color base = biomeFloorColor(z);
+            // (z/base/SpriteBank foram hoistados pra fora do loop: sao invariantes)
 
             // Variação determinística por tile (textura de terreno, sem cinza liso)
             unsigned int h = (unsigned int)(x * 73856093) ^ (unsigned int)(y * 19349663);
@@ -1352,8 +1404,10 @@ void Tilemap::render3D(Vector2 camTarget) const {
             Color floorColor = shade(base, n);
             if (tt == TileType::BrokenFloor) floorColor = shade(base, 0.55f);
             if (tt == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
-            SpriteBank& sb = SpriteBank::get();
             if (sb.ready) {
+                // Frustum culling por tile: fora do cone da camera, nem calcula cor.
+                if (!floorTileVisible(floorView, cam3D, aspect,
+                                      rx + TS * 0.5f, ry + TS * 0.5f, TS * 1.5f)) continue;
                 // Piso: UV por POSIÇÃO DO MUNDO → textura contínua/seamless entre tiles
                 // (sem grade artificial). Textura é tileável (wrap REPEAT).
                 // `n` = grao por tile; `macro` = manchas largas (~14 tiles) que
@@ -1380,19 +1434,14 @@ void Tilemap::render3D(Vector2 camTarget) const {
                              (unsigned char)fminf(255.0f, gg2 + (lum - gg2) * DESAT),
                              (unsigned char)fminf(255.0f, bb2 + (lum - bb2) * DESAT), 255 };
                 if (tt == TileType::BrokenFloor) ft = shade(WHITE, 0.62f * fog * macro);
-                Texture2D ftex = sb.tileFloor[(int)z];
                 const float SPAN = 192.0f;   // 1 repetição = 3 tiles
                 float u0 = rx / SPAN, u1 = (rx + TS) / SPAN;
                 float v0 = ry / SPAN, v1 = (ry + TS) / SPAN;
-                rlSetTexture(ftex.id);
-                rlBegin(RL_QUADS);
                 rlColor4ub(ft.r, ft.g, ft.b, 255);
-                rlNormal3f(0.0f, 1.0f, 0.0f);
                 rlTexCoord2f(u0, v0); rlVertex3f(rx,      0.02f, ry);
                 rlTexCoord2f(u0, v1); rlVertex3f(rx,      0.02f, ry + TS);
                 rlTexCoord2f(u1, v1); rlVertex3f(rx + TS, 0.02f, ry + TS);
                 rlTexCoord2f(u1, v0); rlVertex3f(rx + TS, 0.02f, ry);
-                rlEnd();
             } else {
                 // Fallback para piso sólido
                 DrawPlane(floorCtr, { TS, TS }, shade(base, 0.45f));
@@ -1400,17 +1449,36 @@ void Tilemap::render3D(Vector2 camTarget) const {
                 DrawPlane(tileTop, { TS - 5.0f, TS - 5.0f }, floorColor);
             }
 
-            // Paredes (tipo Wall ou cenário sólido) = cubos com volume texturizados
-            if (inB && tt == TileType::Wall) {
+            // Paredes (tipo Wall ou cenário sólido) = cubos com volume texturizados.
+            // Com textura ficam para o SEGUNDO loop, depois do rlEnd() do piso —
+            // nao da pra desenhar cubo com um rlBegin de quads aberto.
+            if (!sb.ready && inB && tt == TileType::Wall) {
                 const float WALL_H = openWorld ? TS * 0.8f : TS * 1.6f;
                 Vector3 c = { rx + TS * 0.5f, WALL_H * 0.5f, ry + TS * 0.5f };
-                if (sb.ready) {
-                    DrawCubeTexture(sb.tileWall[(int)z], c, TS, WALL_H, TS, shade(WHITE, fog));
-                } else {
-                    Color wc = shade(base, 1.6f);
-                    DrawCube(c, TS, WALL_H, TS, wc);
-                    DrawCubeWires(c, TS, WALL_H, TS, shade(base, 2.0f));
-                }
+                Color wc = shade(base, 1.6f);
+                DrawCube(c, TS, WALL_H, TS, wc);
+                DrawCubeWires(c, TS, WALL_H, TS, shade(base, 2.0f));
+            }
+        }
+    }
+    if (sb.ready) {
+        rlEnd();
+        rlSetTexture(rlGetTextureIdDefault());
+        // Segundo loop: so paredes (poucas), cada uma um DrawCubeTexture proprio.
+        for (int y = y0; y <= y1; ++y) {
+            for (int x = x0; x <= x1; ++x) {
+                if (!(x >= 0 && x < width && y >= 0 && y < height)) continue;
+                if (tiles[y][x].type != TileType::Wall) continue;
+                float rx = x * TS, ry = y * TS;
+                if (!floorTileVisible(floorView, cam3D, aspect,
+                                      rx + TS * 0.5f, ry + TS * 0.5f, TS * 1.5f)) continue;
+                float fdx = (float)(x - ctx), fdy = (float)(y - cty);
+                float fdist = sqrtf(fdx*fdx + fdy*fdy);
+                float fog = 1.0f - (fdist - R * 0.62f) / (R * 0.38f);
+                if (fog < 0.58f) fog = 0.58f; if (fog > 1.0f) fog = 1.0f;
+                const float WALL_H = openWorld ? TS * 0.8f : TS * 1.6f;
+                Vector3 c = { rx + TS * 0.5f, WALL_H * 0.5f, ry + TS * 0.5f };
+                DrawCubeTexture(sb.tileWall[(int)z], c, TS, WALL_H, TS, shade(WHITE, fog));
             }
         }
     }

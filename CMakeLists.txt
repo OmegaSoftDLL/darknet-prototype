@@ -26,6 +26,17 @@ add_executable(darknet
     src/main.cpp
     src/Game.cpp
     src/Game_Menus.cpp
+    src/Game_Shaders.cpp
+    src/Game_Network.cpp
+    src/Game_PremiumStore.cpp
+    src/Game_Resources.cpp
+    src/Game_Evolution.cpp
+    src/Game_QuestsNPC.cpp
+    src/Game_Phases.cpp
+    src/Game_Spawn.cpp
+    src/Game_WorldGen.cpp
+    src/Game_HUD.cpp
+    src/Game_Bot.cpp
     src/SpriteExtrude.cpp
     src/Player.cpp
     src/Enemy.cpp
@@ -60,12 +71,31 @@ add_executable(darknet
     src/StoreClient.cpp
 )
 
-target_include_directories(darknet PRIVATE src)
+target_include_directories(darknet PRIVATE src third_party)
 target_link_libraries(darknet PRIVATE raylib)
 
 if (WIN32)
     target_link_libraries(darknet PRIVATE winmm ws2_32 winhttp shell32)
 endif()
+
+# ── Testes unitarios (doctest, vendored em third_party/doctest) ──────────────
+# Compila APENAS os .cpp das classes testadas (regras puras) — nao o jogo
+# inteiro. Linka raylib porque Enemy/CraftingSystem chamam funcoes da raylib
+# nos renders (nunca executados nos testes; nenhuma janela e aberta).
+enable_testing()
+add_executable(darknet_tests
+    tests/test_main.cpp
+    tests/test_cases.cpp
+    src/CraftingSystem.cpp
+    src/Enemy.cpp
+    src/SpriteGen.cpp     # SpriteBank, referenciado por Enemy::render (nao executado)
+)
+target_include_directories(darknet_tests PRIVATE src third_party)
+target_link_libraries(darknet_tests PRIVATE raylib)
+if (WIN32)
+    target_link_libraries(darknet_tests PRIVATE winmm)
+endif()
+add_test(NAME darknet_tests COMMAND darknet_tests)
 
 # Copia os recursos para o diretório do executável (Release/Debug) — assim o jogo
 # roda mesmo ao executar o .exe diretamente (não só do diretório do projeto).

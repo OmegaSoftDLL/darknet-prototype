@@ -1,4 +1,4 @@
-﻿#include "ShopSystem.h"
+#include "ShopSystem.h"
 #include <raylib.h>
 #include <cmath>
 
@@ -20,8 +20,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 300;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Pistola Plasma", "Dano +15, Alc +20",
-                          EquipSlot::Weapon, 15, 20, {0,200,255,255}, 1};
+        si.equip       = EDB::pistolaPlas();
         si.color       = {0, 200, 255, 255};
         items.push_back(si);
     }
@@ -32,8 +31,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 650;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Rifle de Energia", "Dano +35, Alc +40",
-                          EquipSlot::Weapon, 35, 40, {0,255,150,255}, 2};
+        si.equip       = EDB::rifleEnergia();
         si.color       = {0, 255, 150, 255};
         items.push_back(si);
     }
@@ -44,8 +42,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 900;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Canhao EMP", "Dano +70, Alc +60",
-                          EquipSlot::Weapon, 70, 60, {255,200,0,255}, 3};
+        si.equip       = EDB::canhaoEMP();
         si.color       = {255, 200, 0, 255};
         items.push_back(si);
     }
@@ -56,8 +53,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 1200;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Shotgun Plasma", "Dano +55, Alc -10",
-                          EquipSlot::Weapon, 55, -10, {255,150,0,255}, 2};
+        si.equip       = EDB::shotgunPlasma();
         si.color       = {255, 150, 0, 255};
         items.push_back(si);
     }
@@ -70,8 +66,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 400;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Colete Militar", "+50 HP, Def 5%",
-                          EquipSlot::Armor, 50, 5, {120,120,120,255}, 1};
+        si.equip       = EDB::coleteMilitar();
         si.color       = {120, 120, 120, 255};
         items.push_back(si);
     }
@@ -82,8 +77,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 800;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Armadura Avancada", "+120 HP, Def 15%",
-                          EquipSlot::Armor, 120, 15, {100,150,220,255}, 2};
+        si.equip       = EDB::armaduraAvan();
         si.color       = {100, 150, 220, 255};
         items.push_back(si);
     }
@@ -94,8 +88,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 1500;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Exoesqueleto Titan", "+250 HP, Def 30%",
-                          EquipSlot::Armor, 250, 30, {200,200,255,255}, 3};
+        si.equip       = EDB::exoesqueleto();
         si.color       = {200, 200, 255, 255};
         items.push_back(si);
     }
@@ -108,8 +101,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 350;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Neural Link", "Vel +40, XP x1.5",
-                          EquipSlot::Implant, 40, 1.5f, {150,255,200,255}, 2};
+        si.equip       = EDB::neuralLink();
         si.color       = {150, 255, 200, 255};
         items.push_back(si);
     }
@@ -120,8 +112,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 600;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Chip de Velocidade", "Vel +60",
-                          EquipSlot::Implant, 60, 0, {255,100,255,255}, 1};
+        si.equip       = EDB::chipVel();
         si.color       = {255, 100, 255, 255};
         items.push_back(si);
     }
@@ -132,8 +123,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         si.price       = 1100;
         si.isEquipment = true;
         si.isCosmetic  = false;
-        si.equip       = {"Quantum Core", "Vel +80, XP x2.0",
-                          EquipSlot::Implant, 80, 2.0f, {255,255,100,255}, 3};
+        si.equip       = EDB::quantumCore();
         si.color       = {255, 255, 100, 255};
         items.push_back(si);
     }

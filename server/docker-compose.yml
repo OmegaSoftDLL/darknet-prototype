@@ -1,7 +1,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # DARKNET — CYBER STATION (servidor do jogo)
-# Orquestra os containers do backend: gateway, game-server, banco e cache.
+# Orquestra os containers do backend: gateway, game-server e banco.
 #   docker compose up -d
+#
+# NOTA: não há container Redis. O matchmaking/salas são um Map em memória no
+# game-server (suficiente para o estágio atual). Reintroduza Redis (serviço
+# `cache` + REDIS_URL) apenas quando houver necessidade real: sessões
+# distribuídas ou múltiplas instâncias do game-server atrás de load balancer.
 # ─────────────────────────────────────────────────────────────────────────────
 version: "3.9"
 
@@ -25,14 +30,15 @@ services:
     environment:
       PORT: "9000"
       DATABASE_URL: "postgres://darknet:darknet@db:5432/darknet"
-      REDIS_URL: "redis://cache:6379"
       JWT_SECRET: "${JWT_SECRET:-troque-em-producao}"
+      # URL pública usada nos success/cancel do Stripe Checkout — porta do
+      # gateway (8080), não a interna do app (9000).
+      PUBLIC_URL: "${PUBLIC_URL:-http://localhost:8080}"
       # Pagamentos: preencha com SUA conta Stripe (NUNCA commitar chaves reais)
       STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
       STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
     depends_on:
       - db
-      - cache
     restart: unless-stopped
 
   # Banco de dados: contas, inventário, transações, progresso
@@ -46,12 +52,6 @@ services:
     volumes:
       - dbdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    restart: unless-stopped
-
-  # Cache / sessões / salas de matchmaking em tempo real
-  cache:
-    image: redis:7-alpine
-    container_name: cyber-cache
     restart: unless-stopped
 
 volumes:

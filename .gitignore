@@ -13,6 +13,13 @@ server/game-server/server.log.err
 # Relatorios do bot (gerados em runtime)
 bot_report*.txt
 test_report.txt
+autotest_*.log
+validate_seed*.log
+validate.log
+
+# Screenshots do autotest (gerados em runtime)
+shot_*.png
+screenshot*.png
 
 # Saves (dados de runtime)
 *.sav

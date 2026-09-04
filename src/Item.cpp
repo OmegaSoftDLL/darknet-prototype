@@ -4,7 +4,7 @@
 #include <cmath>
 #include <algorithm>
 
-extern bool g_renderPass3D;
+extern bool g_voxelCapture;
 
 Item Item::createRandom(Vector2 pos) {
     int roll = GetRandomValue(0, 5);
@@ -383,7 +383,7 @@ void Item::render() const {
     int iy             = (int)pos.y;
 
     // ---- Ground shadow ------------------------------------------------
-    if (!g_renderPass3D) {
+    if (!g_voxelCapture) {
         DrawCircleV({pos.x, pos.y + 2.0f}, radius * 1.1f, ColorAlpha({0,0,0,255}, 0.35f * alpha));
     }
 

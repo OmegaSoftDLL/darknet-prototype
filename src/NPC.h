@@ -101,7 +101,6 @@ public:
     float walkPhase = 0.0f;
     bool  walking   = false;
     void drawLegsAnim(Color c, float w, float h, float yTop) const;
-    void render3D() const;                           // modelo 3D low-poly (humanoide)
     void renderDialogue(int screenW, int screenH) const;
     void advanceDialogue();
     void startDialogue(const std::string& treeId = "");

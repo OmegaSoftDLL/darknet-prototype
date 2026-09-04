@@ -1,8 +1,8 @@
-﻿#include "Player.h"
+#include "Player.h"
 #include "Effects.h"
 #include <cmath>
 #include <string>
-extern bool g_renderPass3D;
+extern bool g_voxelCapture;
 
 Player::Player() {
     // Habilidades balanceadas: basico rapido/baixo dano, controle medio, burst alto/cd longo
@@ -229,7 +229,7 @@ void Player::render() const {
     DrawCircleLines((int)px, (int)py, attackRange, ColorAlpha(C_neon, 0.07f));
 
     // Ground shadow â€" fixed at feet level (not affected by body dip), com squash
-    if (!g_renderPass3D) {
+    if (!g_voxelCapture) {
         DrawEllipse((int)position.x, (int)(position.y + 51.0f), shadowW, shadowH, ColorAlpha(BLACK, shadowA));
     }
 
@@ -1238,6 +1238,10 @@ int Player::visualSignature() const {
     sig = sig * 31 + equippedWeapon.upgradeLevel * 7 + equippedArmor.upgradeLevel * 13
                    + equippedImplant.upgradeLevel * 17;
     sig = sig * 31 + (int)cosmeticTint.r + (int)cosmeticTint.g * 3 + (int)cosmeticTint.b * 5;
+    // Skins premium (Gems) tambem mudam a aparencia — sem isto o modelo 3D ficava
+    // com o visual antigo cacheado depois da compra.
+    sig = sig * 31 + (hasCosmeticTint ? 1 : 0) + (skinNeon ? 2 : 0)
+                   + (skinDragon ? 4 : 0) + (petDrone ? 8 : 0);
     return (sig & 0x7fffffff) % 997;
 }
 
@@ -1391,285 +1395,4 @@ void Player::onEnterZone(int zoneId) {
     int idx = zoneId;
     if (idx < 0 || idx > 10) idx = 3;
     say(zoneSpeeches[idx], 3.0f, {0, 220, 255, 255});
-}
-
-
-// ── Render 3D low-poly do jogador ───────────────────────────────────────────
-// Humanoide montado SO com primitivas arredondadas (sem cubos).
-// Mapeamento: X3D = position.x, Z3D = position.y (o "y" 2D vira profundidade),
-// e Y e a ALTURA (pes em Y=0, cabeca por volta de Y=46-52). O pulo soma jumpZ.
-void Player::render3D() const {
-    // Mundo: X3D=position.x, Z3D=position.y, Y=altura (pes em Y=0).
-    // Cada classe tem silhueta/cores proprias — FIEL ao render() 2D.
-    // O eixo Z separa as metades "esquerda" (-Z) e "direita" (+Z) do corpo
-    // (ex.: ciborgue do Soldado), e o eixo X (sinal f) aponta a frente/arma.
-    const float px = position.x;
-    const float pz = position.y;
-    const float f  = (float)facing;
-    const float base = jumpZ;                 // pulo levanta o corpo inteiro
-
-    // Passada (legs/arms) a partir da animacao de caminhada.
-    const float swing = isMoving ? std::sin(walkAnimTimer * 9.0f) * 5.0f : 0.0f;
-
-    const Color ac = accentNow();             // accent (muda com overload/escudo)
-
-    // Cor do tronco recebe a tinta cosmetica (somente o tronco).
-    Color torsoCol = classPrimary;
-    if (hasCosmeticTint) {
-        torsoCol.r = (unsigned char)(torsoCol.r * cosmeticTint.r / 255);
-        torsoCol.g = (unsigned char)(torsoCol.g * cosmeticTint.g / 255);
-        torsoCol.b = (unsigned char)(torsoCol.b * cosmeticTint.b / 255);
-    }
-    // Arma reflete equippedWeapon.color.
-    const Color gun = !equippedWeapon.isEmpty() ? equippedWeapon.color : ac;
-
-    // Helpers de primitivas ARREDONDADAS (low-poly p/ performance).
-    auto cap  = [](Vector3 a, Vector3 b, float r, Color c){ DrawCapsule(a, b, r, 8, 6, c); };
-    auto sph  = [](Vector3 p, float r, Color c){ DrawSphereEx(p, r, 8, 8, c); };
-    auto cyl  = [](Vector3 a, Vector3 b, float r0, float r1, Color c){ DrawCylinderEx(a, b, r0, r1, 8, c); };
-    auto glow = [](Vector3 p, float r, Color c){
-        DrawSphereEx(p, r * 1.7f, 6, 6, ColorAlpha(c, 0.35f));
-        DrawSphereEx(p, r, 8, 8, c);
-    };
-
-    // Sombra no chao (disco fino) — encolhe ao pular.
-    {
-        float sr = 9.0f / (1.0f + base * 0.03f);
-        DrawCylinderEx({px, 0.08f, pz}, {px, 0.16f, pz}, sr, sr, 12, ColorAlpha(BLACK, 0.30f));
-    }
-
-    switch (charClass) {
-
-    // ── GUERREIRA — esguia, rabo de cavalo, duas pistolas ──────────────────────
-    case CharacterClass::Guerreira: {
-        Color body=torsoCol, bodyLt=classSecondary, skin=classSkin;
-        Color hair={40,25,20,255}, trim=classTrim, boots={30,30,40,255};
-        Color wcol = !equippedWeapon.isEmpty() ? equippedWeapon.color : trim;
-        // Pernas esguias + botas
-        cap({px+swing,base+3,pz-3},{px,base+18,pz-3},2.6f,bodyLt);
-        cap({px-swing,base+3,pz+3},{px,base+18,pz+3},2.6f,bodyLt);
-        sph({px+swing,base+2.0f,pz-3},2.6f,boots);
-        sph({px-swing,base+2.0f,pz+3},2.6f,boots);
-        // Quadril + tronco com cintura fina
-        cap({px,base+17,pz-3},{px,base+17,pz+3},3.0f,body);
-        cap({px,base+18,pz},{px,base+35,pz},3.8f,body);
-        cap({px,base+27,pz},{px,base+34,pz},2.4f,bodyLt);                 // peito destaque
-        cap({px,base+20,pz-3},{px,base+20,pz+3},3.0f,{20,20,30,255});     // cinto
-        // Ombros + bracos (pele)
-        sph({px,base+34,pz-4},2.6f,skin);
-        sph({px,base+34,pz+4},2.6f,skin);
-        cap({px,base+33,pz-4},{px+f*5,base+25,pz-4},2.2f,skin);
-        cap({px,base+33,pz+4},{px+f*7,base+26,pz+4},2.2f,skin);
-        // Cabeca + franja + rabo de cavalo
-        sph({px,base+43,pz},4.4f,skin);
-        sph({px-f*1.6f,base+45,pz},4.6f,hair);
-        cap({px-f*3,base+45,pz},{px-f*7,base+36,pz},2.0f,hair);
-        sph({px+f*3.4f,base+43.5f,pz-1.5f},0.7f,ac);                      // olhos
-        sph({px+f*3.4f,base+43.5f,pz+1.5f},0.7f,ac);
-        // Duas pistolas (uma em cada mao)
-        cyl({px+f*7,base+26,pz+4},{px+f*13,base+26,pz+4},1.2f,1.0f,wcol);
-        cyl({px+f*5,base+25,pz-4},{px+f*11,base+25,pz-4},1.2f,1.0f,wcol);
-        glow({px+f*13,base+26,pz+4},1.1f,ac);
-        glow({px+f*11,base+25,pz-4},1.0f,ac);
-        break;
-    }
-
-    // ── ROBO DE COMBATE — chassi cilindrico pesado, reator, visor unico ────────
-    case CharacterClass::Robo: {
-        Color metal=torsoCol, metalLt=classSecondary, trim=classTrim, dark={20,20,25,255};
-        Color wcol = !equippedWeapon.isEmpty() ? equippedWeapon.color : trim;
-        // Pernas pesadas hidraulicas + pes
-        cap({px+swing*0.5f,base+3,pz-4},{px-1,base+20,pz-4},5.0f,metal);
-        cap({px-swing*0.5f,base+3,pz+4},{px+1,base+20,pz+4},5.0f,metal);
-        sph({px+swing*0.5f,base+2.0f,pz-4},4.0f,dark);
-        sph({px-swing*0.5f,base+2.0f,pz+4},4.0f,dark);
-        // Chassi robusto (cilindro) + nucleo claro
-        cyl({px,base+18,pz},{px,base+40,pz},9.0f,8.0f,metal);
-        cyl({px,base+22,pz},{px,base+38,pz},6.5f,6.0f,metalLt);
-        sph({px+f*4,base+36,pz-6},1.0f,trim); sph({px+f*4,base+36,pz+6},1.0f,trim);
-        sph({px+f*5,base+24,pz-6},1.0f,trim); sph({px+f*5,base+24,pz+6},1.0f,trim);
-        glow({px+f*6,base+30,pz},2.6f,ac);                               // reator
-        // Ombros enormes + bracos blocados + canhao/garra
-        sph({px,base+38,pz-9},4.2f,metal); sph({px,base+38,pz+9},4.2f,metal);
-        cap({px,base+37,pz-9},{px+f*2,base+20,pz-9},3.8f,metal);
-        cap({px,base+37,pz+9},{px+f*2,base+20,pz+9},3.8f,metal);
-        cyl({px+f*2,base+20,pz-9},{px+f*6,base+18,pz-9},3.0f,2.6f,trim);
-        cyl({px+f*2,base+20,pz+9},{px+f*6,base+18,pz+9},3.0f,2.6f,trim);
-        // Cabeca caixa (capsula larga) + visor varrendo
-        cap({px,base+45,pz-4},{px,base+45,pz+4},4.6f,metalLt);
-        cyl({px+f*3.6f,base+45,pz-4.5f},{px+f*3.6f,base+45,pz+4.5f},1.0f,1.0f,ac);
-        // Antena
-        cyl({px,base+49,pz},{px,base+56,pz},0.6f,0.3f,trim);
-        glow({px,base+57,pz},1.2f,ac);
-        // Arma pesada
-        cyl({px+f*9,base+27,pz+9},{px+f*24,base+27,pz+9},3.2f,2.6f,trim);
-        glow({px+f*25,base+27,pz+9},2.0f,wcol);
-        break;
-    }
-
-    // ── MAGO — tunica/capuz cone, barba branca, cajado com cristal ─────────────
-    case CharacterClass::Mago: {
-        Color robe=torsoCol, robeLt=classSecondary, trim=classTrim;
-        Color wood={90,60,30,255}, beard={230,230,235,255};
-        Color crystal = !equippedWeapon.isEmpty() ? equippedWeapon.color : ac;
-        // Tunica longa (cone) esconde as pernas + barra decorada
-        cyl({px,base+0,pz},{px,base+30,pz},9.0f,4.0f,robe);
-        cyl({px,base+1,pz},{px,base+3,pz},9.3f,9.0f,trim);
-        // Tronco + mangas
-        cap({px,base+28,pz},{px,base+38,pz},4.6f,robe);
-        cap({px,base+37,pz-5},{px+f*3,base+26,pz-5},2.4f,robeLt);
-        cap({px,base+37,pz+5},{px+f*6,base+26,pz+5},2.4f,robeLt);
-        // Capuz (cone) e rosto sombreado a frente
-        cyl({px,base+40,pz},{px,base+54,pz},6.0f,0.4f,robe);
-        sph({px+f*3.0f,base+44,pz},3.2f,{30,25,45,255});
-        sph({px+f*5.0f,base+44.5f,pz-1.5f},0.7f,ac);
-        sph({px+f*5.0f,base+44.5f,pz+1.5f},0.7f,ac);
-        cyl({px+f*3.0f,base+44,pz},{px+f*2.0f,base+37,pz},2.4f,0.4f,beard); // barba
-        // Cajado + cristal brilhante
-        cyl({px+f*8,base+0,pz},{px+f*8,base+42,pz},0.9f,0.9f,wood);
-        glow({px+f*8,base+43,pz},2.4f,crystal);
-        break;
-    }
-
-    // ── BRUXA — vestido cone, chapeu pontudo, capa, varinha ────────────────────
-    case CharacterClass::Bruxa: {
-        Color dress=torsoCol, dressLt=classSecondary, skin=classSkin, trim=classTrim;
-        Color hair={30,20,30,255};
-        Color wcol = !equippedWeapon.isEmpty() ? equippedWeapon.color : ac;
-        // Saia (cone) + barra
-        cyl({px,base+0,pz},{px,base+22,pz},8.0f,3.5f,dress);
-        cyl({px,base+1,pz},{px,base+3,pz},8.2f,8.0f,trim);
-        // Tronco + cinto + bracos
-        cap({px,base+20,pz},{px,base+34,pz},4.2f,dress);
-        cap({px,base+22,pz-3},{px,base+22,pz+3},3.4f,trim);
-        cap({px,base+33,pz-4},{px+f*3,base+25,pz-4},2.2f,dressLt);
-        cap({px,base+33,pz+4},{px+f*7,base+26,pz+4},2.2f,dressLt);
-        // Capa esvoacante atras (-f)
-        cap({px-f*3,base+33,pz},{px-f*9,base+8,pz},4.0f,ColorAlpha(dress,0.85f));
-        // Cabeca + cabelo lateral + olhos
-        sph({px,base+41,pz},4.2f,skin);
-        cap({px,base+40,pz-4},{px,base+34,pz-4},1.8f,hair);
-        cap({px,base+40,pz+4},{px,base+34,pz+4},1.8f,hair);
-        sph({px+f*3.2f,base+41.5f,pz-1.5f},0.7f,ac);
-        sph({px+f*3.2f,base+41.5f,pz+1.5f},0.7f,ac);
-        // CHAPEU PONTUDO (aba + cone + fita + ponta brilhante)
-        cyl({px,base+45,pz},{px,base+46.5f,pz},7.0f,7.0f,{20,10,30,255});
-        cyl({px,base+46,pz},{px,base+60,pz},5.0f,0.4f,dress);
-        cyl({px,base+46.5f,pz},{px,base+48,pz},5.1f,4.8f,trim);
-        glow({px,base+60,pz},1.3f,ac);
-        // Varinha
-        cyl({px+f*7,base+26,pz+4},{px+f*15,base+27,pz+4},0.7f,0.6f,{120,90,50,255});
-        glow({px+f*16,base+27,pz+4},1.6f,wcol);
-        break;
-    }
-
-    // ── HOMEM-FERA — pelos, postura curvada, focinho, orelhas, garras ──────────
-    case CharacterClass::HomemFera: {
-        Color fur=torsoCol, furLt=classSecondary;
-        Color claw = !equippedWeapon.isEmpty() ? equippedWeapon.color : Color{235,235,240,255};
-        // Pernas musculosas + patas + garras dos pes
-        cap({px+swing,base+3,pz-4},{px-1,base+17,pz-4},3.4f,fur);
-        cap({px-swing,base+3,pz+4},{px+1,base+17,pz+4},3.4f,fur);
-        sph({px+swing,base+2.5f,pz-4},3.2f,furLt);
-        sph({px-swing,base+2.5f,pz+4},3.2f,furLt);
-        for (int i=0;i<3;i++) {
-            float zc = pz-4+(i-1)*1.3f, zc2 = pz+4+(i-1)*1.3f;
-            cyl({px+swing+f*2.5f,base+1.5f,zc},{px+swing+f*4.5f,base+0.2f,zc},0.5f,0.1f,claw);
-            cyl({px-swing+f*2.5f,base+1.5f,zc2},{px-swing+f*4.5f,base+0.2f,zc2},0.5f,0.1f,claw);
-        }
-        // Tronco largo inclinado p/ frente (postura curvada) + peito
-        cap({px,base+16,pz},{px+f*2,base+34,pz},7.0f,fur);
-        cap({px+f*1,base+20,pz},{px+f*2,base+32,pz},4.0f,furLt);
-        // Ombros + bracos grossos
-        sph({px,base+33,pz-6},3.8f,fur); sph({px,base+33,pz+6},3.8f,fur);
-        cap({px,base+33,pz-6},{px+f*4,base+18,pz-6},3.2f,fur);
-        cap({px,base+33,pz+6},{px+f*4,base+18,pz+6},3.2f,fur);
-        // GARRAS nas maos
-        for (int i=0;i<3;i++) {
-            cyl({px+f*4,base+17,pz-6+(i-1)*1.5f},{px+f*7,base+14,pz-6+(i-1)*1.5f},0.6f,0.1f,claw);
-            cyl({px+f*4,base+17,pz+6+(i-1)*1.5f},{px+f*7,base+14,pz+6+(i-1)*1.5f},0.6f,0.1f,claw);
-        }
-        // Cabeca de fera: focinho + nariz + orelhas + olhos ferozes + presas
-        sph({px+f*2,base+39,pz},5.0f,fur);
-        cyl({px+f*4,base+38,pz},{px+f*9,base+37,pz},2.6f,1.2f,furLt);
-        sph({px+f*9,base+37,pz},1.0f,{15,10,8,255});
-        cyl({px+f*1,base+43,pz-3},{px+f*0.5f,base+49,pz-4},1.8f,0.2f,fur);
-        cyl({px+f*1,base+43,pz+3},{px+f*0.5f,base+49,pz+4},1.8f,0.2f,fur);
-        glow({px+f*5,base+40,pz-2},1.0f,ac);
-        glow({px+f*5,base+40,pz+2},1.0f,ac);
-        cyl({px+f*7,base+36,pz-1},{px+f*7,base+34,pz-1},0.5f,0.1f,{235,235,240,255});
-        cyl({px+f*7,base+36,pz+1},{px+f*7,base+34,pz+1},0.5f,0.1f,{235,235,240,255});
-        break;
-    }
-
-    // ── SOLDADO CIBORGUE (default) ─────────────────────────────────────────────
-    //   Metade maquina (-Z, azul/chrome, olho VERMELHO) / metade humana (+Z,
-    //   jaqueta + pele, olho humano). Ombros prata/chrome. Braco direito humano.
-    default: {
-        Color C_plate  = torsoCol;            // corpo azul (tronco, tingivel)
-        Color C_plateLt= classSecondary;
-        Color C_servo  = {25,35,80,255};
-        Color C_chrome = {160,170,185,255};   // ombros/juntas prata/chrome
-        Color C_skin   = classSkin;
-        Color C_jacket = {50,60,45,255};
-        Color C_jackLt = {70,85,60,255};
-        Color C_dark   = {12,14,22,255};
-        Color C_red    = isOverloaded() ? Color{255,130,0,255} : Color{220,20,0,255};
-
-        // Pernas: esquerda (-Z) mecanica azul/chrome; direita (+Z) humana
-        cap({px+swing,base+3,pz-4},{px,base+20,pz-4},4.0f,C_plate);
-        sph({px,base+11,pz-4},2.6f,C_chrome);                            // joelho
-        sph({px+swing,base+2.5f,pz-4},3.0f,C_chrome);                    // bota blindada
-        cap({px-swing,base+3,pz+4},{px,base+20,pz+4},4.0f,C_jacket);     // calca escura
-        sph({px,base+11,pz+4},2.4f,C_chrome);
-        sph({px-swing,base+2.5f,pz+4},3.0f,C_servo);
-        // Pelvis: metade maquina / metade jaqueta
-        cap({px,base+18,pz-4},{px,base+18,pz-0.5f},4.2f,C_servo);
-        cap({px,base+18,pz+0.5f},{px,base+18,pz+4},4.2f,C_jacket);
-        // Tronco dividido (maquina -Z / humano +Z) + linha divisoria + nucleo
-        cap({px,base+20,pz-2.6f},{px,base+38,pz-2.6f},5.0f,C_plate);
-        cap({px,base+22,pz-2.6f},{px,base+36,pz-2.6f},2.2f,C_plateLt);
-        cap({px,base+20,pz+2.6f},{px,base+38,pz+2.6f},5.0f,C_jacket);
-        cap({px,base+22,pz+2.6f},{px,base+34,pz+2.6f},2.0f,C_jackLt);
-        sph({px+f*3.0f,base+27,pz+3.5f},1.4f,C_skin);                    // pele exposta
-        cap({px,base+20,pz},{px,base+38,pz},1.0f,C_dark);               // costura central
-        glow({px+f*3.5f,base+30,pz},1.6f,ac);                           // nucleo bionico
-        // Ombros prata/chrome (ambos)
-        sph({px,base+37,pz-6},3.6f,C_chrome);
-        sph({px,base+37,pz+6},3.6f,C_chrome);
-        // Braco esquerdo MECANICO (-Z) com garra
-        cap({px,base+36,pz-6},{px+f*3,base+23,pz-7},2.8f,C_servo);
-        cap({px+f*1.5f,base+30,pz-6.5f},{px+f*3,base+24,pz-7},2.0f,C_plate);
-        sph({px+f*3,base+22,pz-7},2.0f,C_chrome);
-        cyl({px+f*3,base+22,pz-7},{px+f*5,base+19,pz-8},0.7f,0.2f,C_chrome);
-        cyl({px+f*3,base+22,pz-7},{px+f*6,base+22,pz-6},0.7f,0.2f,C_chrome);
-        // Braco direito HUMANO (+Z) com antebraco de pele
-        cap({px,base+36,pz+6},{px+f*8,base+25,pz+5},2.8f,C_jacket);
-        cap({px+f*5,base+28,pz+5},{px+f*9,base+24,pz+5},2.2f,C_skin);
-        // Pescoco (maquina/humano)
-        cap({px,base+38,pz-1},{px,base+43,pz-1},2.0f,C_servo);
-        cap({px,base+38,pz+1},{px,base+43,pz+1},2.0f,C_skin);
-        // Cabeca meio-maquina (-Z) / meio-humana (+Z)
-        sph({px,base+48,pz+1.5f},5.0f,C_skin);
-        sph({px,base+48,pz-2.5f},4.4f,C_plate);
-        sph({px,base+48,pz-3.5f},2.6f,C_servo);
-        // Olho VERMELHO a esquerda (maquina)
-        glow({px+f*4.2f,base+49,pz-3.0f},1.4f,C_red);
-        sph({px+f*5.0f,base+49,pz-3.0f},0.6f,WHITE);
-        // Olho humano a direita
-        sph({px+f*4.4f,base+49,pz+3.0f},1.1f,{30,40,90,255});
-        sph({px+f*5.1f,base+49,pz+3.2f},0.45f,{10,12,30,255});
-        // Antena (lado maquina) com ponta neon
-        cyl({px-f*1.0f,base+52,pz-3},{px-f*1.0f,base+58,pz-3},0.5f,0.3f,C_chrome);
-        glow({px-f*1.0f,base+59,pz-3},1.1f,ac);
-        // RIFLE na mao direita (reflete cor da arma)
-        cyl({px+f*9,base+24,pz+5},{px+f*20,base+25,pz+5},1.9f,1.6f,C_chrome);
-        cyl({px+f*11,base+25,pz+5},{px+f*16,base+25,pz+5},2.2f,2.2f,C_dark);  // receiver
-        cyl({px+f*20,base+25,pz+5},{px+f*31,base+25,pz+5},1.0f,0.8f,C_servo); // cano
-        sph({px+f*13,base+27,pz+5},1.0f,C_chrome);                           // mira
-        sph({px+f*13,base+25.5f,pz+5},0.9f,ColorAlpha(gun,0.9f));            // detalhe arma
-        glow({px+f*31,base+25,pz+5},1.4f,gun);                              // boca de fogo
-        break;
-    }
-    }
 }

@@ -1,4 +1,4 @@
-﻿#include "SaveManager.h"
+#include "SaveManager.h"
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -32,8 +32,10 @@ static void skipRestOfLine(FILE* f) {
     while ((c = fgetc(f)) != EOF && c != '\n') {}
 }
 
-// ─── Equipment resolution (unchanged from original) ──────────────────────────
+// ─── Equipment resolution ─────────────────────────────────────────────────────
 
+// LEGADO (saves V4 e anteriores): equipamento era salvo pelo NOME DE EXIBICAO —
+// renomear um item quebrava saves antigos. Mantido so como fallback de load.
 static Equipment resolveEquipByName(const char* name) {
     if (strcmp(name,"none")==0) return {};
     if (strcmp(name,"Pistola Plasma")==0)     return EDB::pistolaPlas();
@@ -46,6 +48,22 @@ static Equipment resolveEquipByName(const char* name) {
     if (strcmp(name,"Neural Link")==0)        return EDB::neuralLink();
     if (strcmp(name,"Quantum Core")==0)       return EDB::quantumCore();
     return {};
+}
+
+// Formato atual (V5): resolve pelo ID estavel. Se o ID nao consta no catalogo
+// (save antigo editado, ou equipamento craftado salvo pelo nome), tenta o nome.
+static Equipment resolveEquipById(const char* id) {
+    if (strcmp(id,"none")==0) return {};
+    Equipment eq = EDB::byId(id);
+    if (!eq.isEmpty()) return eq;
+    return resolveEquipByName(id);
+}
+
+// O que vai para o save: o ID estavel; se o equipamento nao tem ID (craftado
+// fora do catalogo EDB), salva o nome — o load cai no fallback legado.
+static const char* equipSaveToken(const Equipment& eq) {
+    if (eq.isEmpty()) return "none";
+    return eq.id.empty() ? eq.name.c_str() : eq.id.c_str();
 }
 
 // ─── Save ────────────────────────────────────────────────────────────────────
@@ -104,10 +122,10 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
     fprintf(f, "difficultyLevel %d\n", difficultyLevel);
     fprintf(f, "playMinutes %f\n",   playMinutes);
 
-    // Equipment
-    fprintf(f, "weaponName %s\n",  player.equippedWeapon.isEmpty()  ? "none" : player.equippedWeapon.name.c_str());
-    fprintf(f, "armorName %s\n",   player.equippedArmor.isEmpty()   ? "none" : player.equippedArmor.name.c_str());
-    fprintf(f, "implantName %s\n", player.equippedImplant.isEmpty() ? "none" : player.equippedImplant.name.c_str());
+    // Equipment (V5: ID estavel; saves V4 tinham weaponName/armorName/implantName)
+    fprintf(f, "weaponId %s\n",  equipSaveToken(player.equippedWeapon));
+    fprintf(f, "armorId %s\n",   equipSaveToken(player.equippedArmor));
+    fprintf(f, "implantId %s\n", equipSaveToken(player.equippedImplant));
 
     // Quests
     fprintf(f, "questCount %d\n", (int)quests.size());
@@ -176,17 +194,32 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"zone")==0)     { fscanf(f," %d",&zoneInt); zone=static_cast<ZoneID>(zoneInt); }
         else if (strcmp(key,"evolutionPath")==0){ int ep=0; fscanf(f," %d",&ep); player.evolutionPath=static_cast<EvolutionPath>(ep); hasEvolution=true; }
         else if (strcmp(key,"evolutionTier")==0){ fscanf(f," %d",&player.evolutionTier); }
-        else if (strcmp(key,"weaponName")==0){
+        else if (strcmp(key,"weaponId")==0){
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);
+            auto eq = resolveEquipById(buf);
+            if (!eq.isEmpty()) player.equipItem(eq);
+        }
+        else if (strcmp(key,"armorId")==0){
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);
+            auto eq = resolveEquipById(buf);
+            if (!eq.isEmpty()) player.equipItem(eq);
+        }
+        else if (strcmp(key,"implantId")==0){
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);
+            auto eq = resolveEquipById(buf);
+            if (!eq.isEmpty()) player.equipItem(eq);
+        }
+        else if (strcmp(key,"weaponName")==0){   // legado V4: nome de exibicao
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
             auto eq = resolveEquipByName(buf);
             if (!eq.isEmpty()) player.equipItem(eq);
         }
-        else if (strcmp(key,"armorName")==0){
+        else if (strcmp(key,"armorName")==0){   // legado V4
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
             auto eq = resolveEquipByName(buf);
             if (!eq.isEmpty()) player.equipItem(eq);
         }
-        else if (strcmp(key,"implantName")==0){
+        else if (strcmp(key,"implantName")==0){   // legado V4
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
             auto eq = resolveEquipByName(buf);
             if (!eq.isEmpty()) player.equipItem(eq);

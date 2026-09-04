@@ -10,12 +10,30 @@ docker compose up -d --build
 # API:  http://localhost:8080/api/healthz
 # WS :  ws://localhost:8080/ws
 ```
-Containers: **gateway** (nginx) · **game-server** (Node) · **db** (Postgres) · **cache** (Redis).
+Containers: **gateway** (nginx, porta pública 8080) · **game-server** (Node, porta interna 9000) · **db** (Postgres).
+
+## Endpoints (via gateway: `http://localhost:8080/api/...`; direto no Node: `http://localhost:9000/...`)
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| POST | `/auth/login` | Login stub (nome) → retorna `{ token, id }` (JWT) |
+| GET | `/store` | Catálogo da loja (pacotes de gems + itens) |
+| POST | `/store/buy-gems` | Cria Stripe Checkout Session → `{ url }` (auth) |
+| POST | `/store/buy-item` | Compra item com gems, validado no servidor (auth) |
+| POST | `/store/webhook` | Webhook assinado do Stripe — ÚNICA fonte que credita gems |
+| POST | `/store/dev-grant-gems` | DEV ONLY: credita gems sem pagamento (requer `ALLOW_DEV_GRANT=1`) |
+| GET | `/me` | Perfil: gems + inventário (auth) |
+| GET/POST | `/progress` | Lê/grava progresso da conta (level, credits, save_json) (auth) |
+| GET | `/healthz` | Health check (status do Stripe e do banco) |
+| GET | `/store/success`, `/store/cancel` | Páginas de retorno do Stripe Checkout |
+| WS | `/ws` | Realtime: sincronização de jogadores, chat, salas (matchmaking em memória) |
 
 ## O que JÁ está pronto (esqueleto funcional)
-- `game-server`: REST (`/auth/login`, `/store`, `/store/buy-item`, `/me`) + **WebSocket** (`/ws`)
-  com sincronização de posição entre jogadores, chat e salas (matchmaking simples).
-- Banco com tabelas de contas, inventário, transações e progresso.
+- `game-server`: REST (tabela acima) + **WebSocket** (`/ws`) com sincronização de
+  posição entre jogadores, chat e salas (matchmaking simples em memória).
+- Banco com tabelas de contas, inventário (com `qty` agregado por item), transações
+  e progresso. **DDL canônico no `game-server/src/index.js`** (`CREATE TABLE IF NOT
+  EXISTS` em todo boot); `db/init.sql` é apenas um apontador.
 - Catálogo da loja: pacotes de **gems** (R$) e itens (cosméticos/boosts) comprados com gems.
 - Modelo **free-to-play**: jogo grátis; receita por gems (cosméticos + conveniência).
 
