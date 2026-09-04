@@ -37,8 +37,11 @@ public:
     bool enabled = false;
 
     // Inicia a thread de rede apontando para wsUrl (default ws://127.0.0.1:9000/ws).
+    // authToken: JWT enviado no header Authorization do handshake (o servidor
+    // recusa o upgrade com 401 sem token válido). opcional só p/ testes off.
     // Retorna true se a thread subiu (a conexao em si ocorre em segundo plano).
-    bool init(const char* myName, uint32_t myId, const char* wsUrl = nullptr);
+    bool init(const char* myName, uint32_t myId, const char* wsUrl = nullptr,
+              const char* authToken = nullptr);
     void shutdown();
 
     // Enfileira o estado local. Throttle interno (~10x/s); pode chamar todo frame.
@@ -93,6 +96,7 @@ private:
     int         port_ = 9000;
     std::string path_ = "/ws";
     std::string room_ = "lobby";   // sala/party atual (protegida por mtx_)
+    std::string token_;            // JWT p/ header Authorization no handshake
 
     // ── Implementação da thread (NetClient.cpp) ───────────────────────────────
     void netThreadMain();

@@ -115,14 +115,21 @@ NetClient::~NetClient() { shutdown(); }
 
 // ─── API pública ─────────────────────────────────────────────────────────────
 
-bool NetClient::init(const char* myName, uint32_t myId, const char* wsUrl) {
+bool NetClient::init(const char* myName, uint32_t myId, const char* wsUrl, const char* authToken) {
     myId_ = myId;
     std::memset(myName_, 0, sizeof(myName_));
     if (myName) std::strncpy(myName_, myName, sizeof(myName_) - 1);
+    if (authToken) token_ = authToken;
 
     // Parse simples de ws://host:port/path
     if (wsUrl && *wsUrl) {
         std::string u = wsUrl;
+        // wss:// (TLS em WebSocket) não é suportado aqui: o NetClient é Winsock
+        // puro sem TLS. Se a URL pedir wss, recusa o init sem abrir thread.
+        if (u.rfind("wss://", 0) == 0) {
+            enabled = false;
+            return false;
+        }
         size_t s = u.find("://");
         if (s != std::string::npos) u = u.substr(s + 3);
         size_t slash = u.find('/');
@@ -267,16 +274,22 @@ void NetClient::netThreadMain() {
         unsigned char keyBytes[16];
         for (int i = 0; i < 16; ++i) keyBytes[i] = (unsigned char)(rand() & 0xff);
         std::string key = base64(keyBytes, 16);
-        char req[512];
-        std::snprintf(req, sizeof(req),
+        // JWT no header Authorization: o servidor valida no UPGRADE e recusa
+        // com 401 (sem token valido o socket nem abre). Nunca no corpo JSON.
+        std::string authHeader;
+        if (!token_.empty()) authHeader = "Authorization: Bearer " + token_ + "\r\n";
+        char req[1024];
+        int reqLen = std::snprintf(req, sizeof(req),
             "GET %s HTTP/1.1\r\n"
             "Host: %s:%d\r\n"
             "Upgrade: websocket\r\n"
             "Connection: Upgrade\r\n"
+            "%s"
             "Sec-WebSocket-Key: %s\r\n"
             "Sec-WebSocket-Version: 13\r\n\r\n",
-            path_.c_str(), host_.c_str(), port_, key.c_str());
-        if (!sendAll(s, req, (int)std::strlen(req))) { closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue; }
+            path_.c_str(), host_.c_str(), port_, authHeader.c_str(), key.c_str());
+        if (reqLen <= 0 || reqLen >= (int)sizeof(req)) reqLen = (int)std::strlen(req);
+        if (!sendAll(s, req, reqLen)) { closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue; }
 
         // lê resposta até \r\n\r\n
         std::string resp;

@@ -61,14 +61,18 @@ bool StoreClient::ownsItem(const std::string& id) const {
     for (const auto& i : inventory_) if (i == id) return true;
     return false;
 }
+std::string StoreClient::token() const {
+    std::lock_guard<std::mutex> lk(mtx_); return token_;
+}
 
 // ── login: POST /auth/login {name} -> {token,id} ─────────────────────────────
 void StoreClient::loginAsync(const std::string& name) {
     std::string h = host; int p = port; std::string nm = name;
+    bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, nm]() {
+    std::thread([this, h, p, tls, pre, nm]() {
         std::string body = std::string("{\"name\":\"") + nm + "\"}";
-        HttpResponse r = HttpClient::post(h, p, "/auth/login", body);
+        HttpResponse r = HttpClient::post(h, p, pre + "/auth/login", body, "", tls);
         if (r.status == 200) {
             nlohmann::json j = jParse(r.body);
             std::string tok = jStr(j, "token"), id = jStr(j, "id");
@@ -76,7 +80,7 @@ void StoreClient::loginAsync(const std::string& name) {
             logged_ = true;
             setMsg("Conectado a Cyber Station");
             // Logo apos o login, busca o saldo de gems / inventario.
-            HttpResponse me = HttpClient::get(h, p, "/me", tok);
+            HttpResponse me = HttpClient::get(h, p, pre + "/me", tok, tls);
             if (me.status == 200) {
                 double g = jNum(jParse(me.body), "gems");
                 std::lock_guard<std::mutex> lk(mtx_); gems_ = (int)g;
@@ -92,9 +96,10 @@ void StoreClient::loginAsync(const std::string& name) {
 // ── catálogo: GET /store -> {gemPacks:[...], items:[...]} ─────────────────────
 void StoreClient::fetchStoreAsync() {
     std::string h = host; int p = port;
+    bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p]() {
-        HttpResponse r = HttpClient::get(h, p, "/store");
+    std::thread([this, h, p, tls, pre]() {
+        HttpResponse r = HttpClient::get(h, p, pre + "/store", "", tls);
         if (r.status == 200) {
             std::vector<PremiumItem> its;
             std::vector<GemPack>     pks;
@@ -133,9 +138,10 @@ void StoreClient::refreshAsync() {
     if (!logged_.load()) return;
     std::string h = host; int p = port; std::string tok;
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
+    bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, tok]() {
-        HttpResponse r = HttpClient::get(h, p, "/me", tok);
+    std::thread([this, h, p, tls, pre, tok]() {
+        HttpResponse r = HttpClient::get(h, p, pre + "/me", tok, tls);
         if (r.status == 200) {
             nlohmann::json j = jParse(r.body);
             double g = jNum(j, "gems");
@@ -152,10 +158,11 @@ void StoreClient::buyItemAsync(const std::string& itemId) {
     if (busy_.exchange(true)) return;
     std::string h = host; int p = port; std::string tok, id = itemId;
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
+    bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, tok, id]() {
+    std::thread([this, h, p, tls, pre, tok, id]() {
         std::string body = std::string("{\"itemId\":\"") + id + "\"}";
-        HttpResponse r = HttpClient::post(h, p, "/store/buy-item", body, tok);
+        HttpResponse r = HttpClient::post(h, p, pre + "/store/buy-item", body, tok, tls);
         if (r.status == 200) {
             nlohmann::json j = jParse(r.body);
             double g = jNum(j, "gems");
@@ -178,10 +185,11 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
     if (busy_.exchange(true)) return;
     std::string h = host; int p = port; std::string tok, id = packId;
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
+    bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, tok, id]() {
+    std::thread([this, h, p, tls, pre, tok, id]() {
         std::string body = std::string("{\"packId\":\"") + id + "\"}";
-        HttpResponse r = HttpClient::post(h, p, "/store/buy-gems", body, tok);
+        HttpResponse r = HttpClient::post(h, p, pre + "/store/buy-gems", body, tok, tls);
         if (r.status == 200) {
             std::string url = jStr(jParse(r.body), "url");
             if (!url.empty()) {

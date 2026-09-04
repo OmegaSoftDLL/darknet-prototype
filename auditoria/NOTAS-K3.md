@@ -139,3 +139,40 @@ Conforme nota da auditoria 2 (§7): todo o trabalho está **não commitado** (34
 - Fases 5–11 em execução (runs chegam à 4ª; bioma urbano posterior por análise de código).
 - Save/load roundtrip pleno no jogo (multiplayer/loja/backend com servidor ativo) — o que foi validado é unitário + build + syntax.
 - Áudio e gameplay exigem julgamento humano.
+
+---
+
+# ADENDO — Ciclo 4: backend TLS + netcode seguro (2026-09-04)
+
+| | |
+|---|---|
+| **Em resposta a** | Plano "deixar incrível" — bloco escolhido pelo dono: **TLS + netcode backend** |
+| **Escopo** | Endurecimento de segurança do servidor + reparo da rota de rede do cliente |
+
+## D1. O que foi feito
+
+| Sev. | Tema | O que foi feito |
+|---|---|---|
+| 🔴 | JWT re-exposto (default público anulava o fix do Ciclo 3) | `docker-compose.yml`: `JWT_SECRET: "${JWT_SECRET:?defina...}"` — **fail-fast**; sem default fixo conhecido. |
+| 🔴 | WS sem autenticação (qualquer conexão entrava na sala) | Upgrade só aceito com JWT válido no header `Authorization` (400 em `ws` v8: `noServer` + evento `upgrade`; sem token → **401 antes de abrir o socket**). |
+| 🟠 | Spoof de identidade (peer/chat usavam `id`/`nome` do JSON) | Servidor passa a derivar identidade **do token** (`ws.user`), nunca do corpo; coordenadas saneadas/clamped; nome do peer vem do JWT. |
+| 🟠 | Cliente falava direto em `:9000`, ignorando o gateway | `StoreClient`: prefixo `/api` + TLS opcional via env `DARKNET_API_URL`; `NetClient` envia o JWT no handshake; `startNetwork` aguarda o login antes de conectar. |
+| 🟠 | Sem TLS na REST | `HttpClient.cpp` ganha `WINHTTP_FLAG_SECURE` (https só com certificado válido); gateway com bloco HTTPS pronto (443 → cobre `/api` e `/ws`, realtime vira `wss://`). |
+| 🟡 | Sem heartbeat / flood / limites | Heartbeat 30s do servidor (expulsa inativos), 120 msgs/s por conexão, payload ≤4 KiB por mensagem, `maxPayload` 1 MiB. |
+| 🟡 | REST sem rate limit / validação | Limite por IP (login 20/min, loja 30/min, progress 60/min) + `trust proxy`; nome saneado (≤24, sem controle); `save_json` ≤100 KB; dev-grant ≥0 ≤1M. |
+| 🟡 | Webhook Stripe sem idempotência | Crédito único por `provider_ref` (checagem em `transactions` + dedupe em memória no modo dev) — retry/duplicata não credita 2×. |
+
+## D2. Validação pós-correção (2026-09-04)
+
+- `node --check` (game-server): **OK**.
+- Build Debug e Release: **exit 0** nos dois (targets `darknet` e `darknet_tests`).
+- `darknet_tests.exe`: **12/12 casos, 109/109 asserções**.
+- **Smoke test funcional com servidor real (memória)**: 13/13 PASS — login + token + nome saneado, `/me` 401 sem token, rate limit → 429, WS sem token rejeitado (401), WS com token conecta, **anti-spoof** (id 999 forjado → id real do token), coordenadas saneadas, conexão sobrevive a flood.
+- `validate.sh 120 7` e `validate.sh 120 20260821`: **APROVADO** nas duas.
+- `git push origin master`: Ciclos anteriores (até `38bb85f`) **enviados**.
+
+## D3. Ainda não coberto (declarado)
+
+- **`wss://` no cliente**: `NetClient` é Winsock puro sem TLS — recusa URLs `wss://` antes de abrir thread (documentado no código). O gateway já serve `/ws` sob TLS quando o bloco 443 é ativado; migrar o cliente para WSS exige TLS (Schannel/OpenSSL) no socket.
+- **Auth real** (trocar o stub `/auth/login` por OAuth ou e-mail+senha com hash) — fora do escopo deste ciclo.
+- Fases 5–11 em execução e áudio (julgamento humano) — seguem como no Ciclo 3.

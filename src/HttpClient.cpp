@@ -20,7 +20,7 @@ std::wstring widen(const std::string& s) {
 
 HttpResponse request(const std::string& method, const std::string& host, int port,
                      const std::string& path, const std::string& body,
-                     const std::string& bearer) {
+                     const std::string& bearer, bool useTls) {
     HttpResponse out;
     HINTERNET hSession = WinHttpOpen(L"DarknetClient/1.0",
                                      WINHTTP_ACCESS_TYPE_NO_PROXY,
@@ -35,9 +35,13 @@ HttpResponse request(const std::string& method, const std::string& host, int por
 
     std::wstring wmethod = widen(method);
     std::wstring wpath   = widen(path);
+    // WINHTTP_FLAG_SECURE => https (validação de certificado do Windows).
+    // Sem ele, conexão em texto puro. Chamar com useTls=true apenas quando a
+    // URL de API for https:// (ex.: gateway de produção com certificado real).
+    DWORD flags = useTls ? WINHTTP_FLAG_SECURE : 0;
     HINTERNET hRequest = WinHttpOpenRequest(hConnect, wmethod.c_str(), wpath.c_str(),
                                             nullptr, WINHTTP_NO_REFERER,
-                                            WINHTTP_DEFAULT_ACCEPT_TYPES, 0); // HTTP (sem TLS p/ localhost)
+                                            WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
     if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return out; }
 
     std::wstring headers = L"Content-Type: application/json\r\n";
@@ -75,13 +79,13 @@ HttpResponse request(const std::string& method, const std::string& host, int por
 namespace HttpClient {
 
 HttpResponse get(const std::string& host, int port, const std::string& path,
-                 const std::string& bearer) {
-    return request("GET", host, port, path, "", bearer);
+                 const std::string& bearer, bool useTls) {
+    return request("GET", host, port, path, "", bearer, useTls);
 }
 
 HttpResponse post(const std::string& host, int port, const std::string& path,
-                  const std::string& jsonBody, const std::string& bearer) {
-    return request("POST", host, port, path, jsonBody, bearer);
+                  const std::string& jsonBody, const std::string& bearer, bool useTls) {
+    return request("POST", host, port, path, jsonBody, bearer, useTls);
 }
 
 void openBrowser(const std::string& url) {

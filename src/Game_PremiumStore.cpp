@@ -3,14 +3,39 @@
 #include "Game.h"
 #include <raylib.h>
 #include <string>
+#include <cstdlib>
 
 // ─── Loja Premium (Gems / Stripe via backend Node) ───────────────────────────
+
+// Endpoint da API REST. Default: direto no game-server local (dev, porta 9000,
+// sem TLS). Em produção aponte DARKNET_API_URL para o gateway nginx — o cliente
+// passa a usar o prefixo /api (o nginx re-mapeia /api/* -> game-server) e TLS
+// quando a URL for https://. O WebSocket usa DARKNET_WS_URL (ver Game_Network).
+static void applyApiConfig(StoreClient& store) {
+    const char* raw = getenv("DARKNET_API_URL");
+    if (!raw || !*raw) return;   // default: dev local direto
+    std::string u = raw;
+    const bool tls = (u.rfind("https://", 0) == 0);
+    if (!tls && u.rfind("http://", 0) != 0) return;
+    std::string rest = u.substr(u.find("://") + 3);
+    std::string path = "/";
+    size_t slash = rest.find('/');
+    if (slash != std::string::npos) { path = rest.substr(slash); rest = rest.substr(0, slash); }
+    size_t colon = rest.find(':');
+    std::string host; int port = tls ? 443 : 80;
+    if (colon == std::string::npos) host = rest;
+    else { host = rest.substr(0, colon); port = std::atoi(rest.c_str() + colon + 1); }
+    if (host.empty()) return;
+    store.host   = host;
+    store.port   = port;
+    store.useTls = tls;
+    store.apiPrefix = (path == "/" ? "" : path) + "/api";
+}
 
 void Game::startStore() {
     if (storeStarted) return;
     storeStarted = true;
-    store.host = "127.0.0.1";
-    store.port = 9000;
+    applyApiConfig(store);
     store.loginAsync(Player::className(player.charClass)); // login -> token + saldo
     store.fetchStoreAsync();                                // catalogo de itens/packs
 }

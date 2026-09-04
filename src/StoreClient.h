@@ -16,10 +16,18 @@ struct GemPack     { std::string id; int gems = 0; double priceBRL = 0.0; };
 
 class StoreClient {
 public:
-    std::string host = "127.0.0.1";
-    int         port = 9000;
+    std::string host      = "127.0.0.1";
+    int         port      = 9000;
+    // Prefixo de rota quando a API fica atrás do gateway nginx (/api/* -> /api).
+    // Vazio = conexão direta no game-server (dev local). Configurado pelo jogo
+    // via DARKNET_API_URL (ex.: "https://darknet.seudominio.com" -> /api + TLS).
+    std::string apiPrefix = "";
+    bool        useTls    = false;   // HTTPS (WinHTTP) na API configurada
 
     ~StoreClient();   // espera threads de rede em voo (evita use-after-free no shutdown)
+
+    // Token JWT obtido no login (usado também pelo NetClient no handshake WS).
+    std::string token() const;
 
     // Todas assíncronas (disparam thread de fundo, retornam imediatamente).
     void loginAsync(const std::string& name);   // POST /auth/login -> token+id
