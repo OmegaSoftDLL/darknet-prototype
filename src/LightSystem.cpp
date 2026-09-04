@@ -1,4 +1,4 @@
-﻿#include "LightSystem.h"
+#include "LightSystem.h"
 #include <cmath>
 #include <algorithm>
 #include <raymath.h>
@@ -7,12 +7,50 @@
 
 void LightSystem::init(int w, int h) {
     maskW = w; maskH = h;
-    lightMask = LoadRenderTexture(w, h);
+    // Mascara em MEIA resolucao: luz suave borrada por natureza, entao o upscale
+    // bilinear e imperceptivel — e o custo de fill da mascara cai ~4x.
+    lightMask = LoadRenderTexture(w / 2, h / 2);
     SetTextureFilter(lightMask.texture, TEXTURE_FILTER_BILINEAR);
+
+    // GLOW radial pre-gerado: substitui os 31 aneis concentricos por luz por UMA
+    // quad texturizada. O perfil de alpha reproduz EXATAMENTE a soma dos aneis
+    // antigos: no blend aditivo (src*srcA) cada anel contribuia cor*bright^2,
+    // entao P(f) = soma dos (0.30*t^3)^2 dos aneis que cobrem a fracao f do raio.
+    {
+        const int GS = 256;
+        const int steps = 30;
+        float lut[GS + 1] = {};
+        for (int s = 0; s <= steps; ++s) {
+            float t = (float)s / (float)steps;
+            float k = (float)(steps - s + 1) / (float)(steps + 1); // fracao do raio do anel
+            float b = 0.30f * t * t * t;                           // bright do anel (intensity=1)
+            int lim = (int)(k * GS + 0.5f);
+            if (lim > GS) lim = GS;
+            for (int i = 0; i <= lim; ++i) lut[i] += b * b;
+        }
+        glowPeak = lut[0];
+        Image img = GenImageColor(GS, GS, BLANK);
+        Color* px = (Color*)img.data;   // GenImageColor sai em R8G8B8A8
+        for (int y = 0; y < GS; ++y) {
+            for (int x = 0; x < GS; ++x) {
+                float fx = ((float)x + 0.5f - GS * 0.5f) / (GS * 0.5f);
+                float fy = ((float)y + 0.5f - GS * 0.5f) / (GS * 0.5f);
+                float f  = sqrtf(fx * fx + fy * fy);
+                float a  = 0.0f;
+                if (f < 1.0f) a = lut[(int)(f * GS)] / glowPeak;
+                px[y * GS + x] = { 255, 255, 255, (unsigned char)(a * 255.0f + 0.5f) };
+            }
+        }
+        glowTex = LoadTextureFromImage(img);
+        SetTextureFilter(glowTex, TEXTURE_FILTER_BILINEAR);
+        SetTextureWrap(glowTex, TEXTURE_WRAP_CLAMP);
+        UnloadImage(img);
+    }
 }
 
 void LightSystem::shutdown() {
     if (maskW > 0) UnloadRenderTexture(lightMask);
+    if (glowTex.id > 0) UnloadTexture(glowTex);
 }
 
 void LightSystem::clear() {
@@ -34,10 +72,12 @@ void LightSystem::addLight(Vector2 pos, float radius, float intensity, Color col
 void LightSystem::addPlayerLight(Vector2 pos) {
     // Always slot 0 — large warm bubble so the player always sees nearby
     // scenery (houses, trees, etc.) even in the darkest zones.
+    // Alcance/intensidade MINIMOS garantidos: a noite fechada nunca esconde o
+    // proprio heroi nem os inimigos em volta dele (auditoria 2, legibilidade).
     LightSource l;
     l.position  = pos;
-    l.radius    = 430.0f;
-    l.intensity = 0.72f;   // larga e fraca: clareia o entorno sem virar holofote
+    l.radius    = 480.0f;
+    l.intensity = 0.82f;   // larga e fraca: clareia o entorno sem virar holofote
     l.color     = {255, 226, 180, 255};   // tom quente (clima Diablo)
     l.flicker   = false;
     lights.insert(lights.begin(), l); // always index 0
@@ -101,7 +141,15 @@ void LightSystem::prepareMask(Camera2D camera) {
     BeginTextureMode(lightMask);
     // Fill with ambient darkness
     float amb = 1.0f - ambientDark;
+    // PISO de ambiente: a mascara e MULTIPLICATIVA — abaixo de ~0.33 de
+    // luminosidade cenario e atores viram preto puro (auditoria 2). O clima
+    // sombrio fica no MATIZ (ambientColor noturno), nao em apagar a cena.
+    if (amb < 0.64f) amb = 0.64f;
     ClearBackground({ (unsigned char)(amb*ambientColor.r), (unsigned char)(amb*ambientColor.g), (unsigned char)(amb*ambientColor.b), 255 });
+
+    // Mascara em meia resolucao: escala a camera para o alvo menor.
+    const float ms = (float)lightMask.texture.width / (float)maskW;
+    camera.offset.x *= ms; camera.offset.y *= ms; camera.zoom *= ms;
 
     BeginMode2D(camera);
     BeginBlendMode(BLEND_ADDITIVE);
@@ -109,21 +157,14 @@ void LightSystem::prepareMask(Camera2D camera) {
     for (const auto& l : lights) {
         if (!l.active) continue;
 
-        // Soft gradient: 14 concentric circles from outer to inner
-        // Inner circles are brighter; outer circles fade to 0.
-        const int steps = 30;
-        for (int s = steps; s >= 0; s--) {
-            float t      = (float)s / (float)steps;     // 1.0 = inner, 0.0 = outer
-            float r      = l.radius * (float)(steps - s + 1) / (float)(steps + 1);
-            float bright = l.intensity * t * t * t * 0.30f;     // queda cubica, pico baixo
-            Color c = {
-                (unsigned char)((float)l.color.r * bright),
-                (unsigned char)((float)l.color.g * bright),
-                (unsigned char)((float)l.color.b * bright),
-                (unsigned char)(bright * 255.0f)
-            };
-            DrawCircleV(l.position, r, c);
-        }
+        // UMA quad com o glow radial pre-gerado (mesmo perfil dos 31 circulos).
+        unsigned char ta = (unsigned char)fminf(255.0f, l.intensity * l.intensity * glowPeak * 255.0f);
+        Color tint = { l.color.r, l.color.g, l.color.b, ta };
+        float r = l.radius;
+        DrawTexturePro(glowTex,
+                       { 0.0f, 0.0f, (float)glowTex.width, (float)glowTex.height },
+                       { l.position.x - r, l.position.y - r, r * 2.0f, r * 2.0f },
+                       { 0.0f, 0.0f }, 0.0f, tint);
     }
 
     EndBlendMode();
@@ -137,9 +178,15 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
     BeginTextureMode(lightMask);
     // Fill with ambient darkness
     float amb = 1.0f - ambientDark;
+    // PISO de ambiente (mesmo do prepareMask 2D): noite NUNCA apaga a cena —
+    // ~0.33 de luminosidade minima pra silhueta de cenario e atores lerem.
+    if (amb < 0.64f) amb = 0.64f;
     ClearBackground({ (unsigned char)(amb*ambientColor.r), (unsigned char)(amb*ambientColor.g), (unsigned char)(amb*ambientColor.b), 255 });
 
     BeginBlendMode(BLEND_ADDITIVE);
+
+    // Mascara em meia resolucao: projeta em coordenadas de tela cheia e escala.
+    const float ms = (float)lightMask.texture.width / (float)screenW;
 
     for (const auto& l : lights) {
         if (!l.active) continue;
@@ -154,26 +201,20 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
                                              camera3D, screenW, screenH);
         Vector2 edgeZ   = GetWorldToScreenEx({ l.position.x, 0.0f, l.position.y + l.radius },
                                              camera3D, screenW, screenH);
-        float rx = Vector2Distance(centerS, edgeX);
-        float ry = Vector2Distance(centerS, edgeZ);   // achatado pela inclinacao da camera
+        float cx = centerS.x * ms, cy = centerS.y * ms;
+        float rx = Vector2Distance(centerS, edgeX) * ms;
+        float ry = Vector2Distance(centerS, edgeZ) * ms;   // achatado pela inclinacao da camera
         if (rx < 1.0f || ry < 1.0f) continue;
 
-        // 30 aneis com pico BAIXO: o degrade fica continuo (14 aneis fortes
-        // desenhavam faixas visiveis) e a borda morre em zero, sem circulo duro.
-        const int steps = 30;
-        for (int s = steps; s >= 0; s--) {
-            float t  = (float)s / (float)steps;        // 1.0 = centro, 0.0 = borda
-            float k  = (float)(steps - s + 1) / (float)(steps + 1);
-            float ff = t * t * t;                      // queda cubica: centro concentrado
-            float bright = l.intensity * ff * 0.30f;
-            Color c = {
-                (unsigned char)((float)l.color.r * bright),
-                (unsigned char)((float)l.color.g * bright),
-                (unsigned char)((float)l.color.b * bright),
-                (unsigned char)(bright * 255.0f)
-            };
-            DrawEllipse((int)centerS.x, (int)centerS.y, rx * k, ry * k, c);
-        }
+        // UMA quad com o glow radial pre-gerado no lugar de 31 elipses: mesmo
+        // perfil de brilho acumulado (ver init), ~31x menos draw calls por luz.
+        // A quad esticada em rx/ry diferentes vira a elipse em perspectiva.
+        unsigned char ta = (unsigned char)fminf(255.0f, l.intensity * l.intensity * glowPeak * 255.0f);
+        Color tint = { l.color.r, l.color.g, l.color.b, ta };
+        DrawTexturePro(glowTex,
+                       { 0.0f, 0.0f, (float)glowTex.width, (float)glowTex.height },
+                       { cx - rx, cy - ry, rx * 2.0f, ry * 2.0f },
+                       { 0.0f, 0.0f }, 0.0f, tint);
     }
 
     EndBlendMode();
@@ -185,11 +226,12 @@ void LightSystem::applyMask() const {
 
     // Draw the lightMask over the current render target using MULTIPLY
     // Where mask is black → darkens (shadows); where mask is white → unchanged
+    // A mascara e renderizada em meia resolucao e esticada aqui (bilinear).
     BeginBlendMode(BLEND_MULTIPLIED);
     DrawTexturePro(
         lightMask.texture,
-        { 0.0f, 0.0f, (float)maskW, -(float)maskH },   // flip Y (RenderTexture is upside-down)
-        { 0.0f, 0.0f, (float)maskW,  (float)maskH },
+        { 0.0f, 0.0f, (float)lightMask.texture.width, -(float)lightMask.texture.height }, // flip Y
+        { 0.0f, 0.0f, (float)maskW,                       (float)maskH },
         { 0.0f, 0.0f }, 0.0f, WHITE
     );
     EndBlendMode();

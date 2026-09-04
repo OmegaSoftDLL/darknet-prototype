@@ -12,7 +12,7 @@
 # raio:    tamanho do mundo da fase (unidades a partir do refugio)
 # ─────────────────────────────────────────────────────────────────────────────
 LARuins        | 20  | 0 | 3000 | Ruinas de Los Angeles
-CursedFarm     | 28  | 0 | 3160 | Fazenda Amaldicoada
+CursedFarm     | 28  | 0 | 3160 | Fazenda Maldita
 DarkForest     | 36  | 1 | 3320 | Floresta Negra
 Cemetery       | 44  | 0 | 3480 | Cemiterio dos Caidos
 GhostCity      | 52  | 0 | 3640 | Cidade Fantasma

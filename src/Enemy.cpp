@@ -1,11 +1,11 @@
-﻿#include "Enemy.h"
+#include "Enemy.h"
 #include "Effects.h"
 #include "SpriteGen.h"
 #include <raymath.h>
 #include <cmath>
 #include <algorithm>
 
-extern bool g_renderPass3D;
+extern bool g_voxelCapture;
 
 Enemy::Enemy(Vector2 startPos, EnemyType t, bool minion)
     : position(startPos), type(t), isMinion(minion) {
@@ -1039,7 +1039,7 @@ void Enemy::render() const {
         // Sombra no chao — só fantasmas/wraiths flutuam; zumbis andam no chao
         bool floaty = isFloating();
         float bobF  = floaty ? std::sin(gt * 2.0f + position.x * 0.05f) * 4.0f : 0.0f;
-        if (!g_renderPass3D) {
+        if (!g_voxelCapture) {
             DrawEllipse((int)position.x, (int)(position.y + radius * 0.9f),
                         radius * (floaty ? 0.7f : 0.95f), radius * 0.3f,
                         ColorAlpha(BLACK, floaty ? 0.25f : 0.4f));
@@ -1060,7 +1060,7 @@ void Enemy::render() const {
         DrawTexturePro(tx, {0,0,(float)tx.width,(float)tx.height},
                        {position.x - w/2, feetY - h, w, h}, {0,0}, 0.0f, tint);
 
-        if (!g_renderPass3D) {
+        if (!g_voxelCapture) {
             // Aura/tag de elite
             if (isElite) {
                 float puls = 0.5f + 0.5f * std::sin(elitePulse);
@@ -1144,7 +1144,7 @@ void Enemy::render() const {
     // Ground shadow (depth illusion for all types)
     // NAO no passe 3D: a captura vira MALHA, entao a elipse do chao virava um
     // disco escuro VERTICAL sob os pes - o inimigo parecia flutuar sobre ele.
-    if (!g_renderPass3D)
+    if (!g_voxelCapture)
         DrawEllipse((int)position.x, (int)(position.y + radius * 0.75f),
                     radius * 1.1f, radius * 0.32f, ColorAlpha(BLACK, 0.35f));
 
@@ -1500,7 +1500,7 @@ void Enemy::render() const {
 }
 
 void Enemy::renderMorphX() const {
-    if (!g_renderPass3D)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+    if (!g_voxelCapture)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
         DrawEllipse((int)position.x, (int)(position.y + radius * 0.7f),
                     radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK, 0.32f));
     float pulse = std::sin(walkAnimTimer * 3.0f) * 2.0f;
@@ -1865,7 +1865,7 @@ void Enemy::renderZergling() const {
     Color acidGreen = {50,200,0,255};
     Color darkGreen = {20,90,0,255};
 
-    if (!g_renderPass3D)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+    if (!g_voxelCapture)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
         DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK,0.35f));
     DrawCircleV(position, radius + 8.0f + spd*2.0f, ColorAlpha(acidGreen, 0.15f));
 
@@ -1906,7 +1906,7 @@ void Enemy::renderHydra() const {
     Color darkGreen = {0,120,30,255};
     Color spitGlow  = {80,255,80,255};
 
-    if (!g_renderPass3D)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+    if (!g_voxelCapture)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
         DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK,0.35f));
     DrawCircleV(position, radius + 10.0f, ColorAlpha(acidGreen, 0.12f));
 
@@ -1961,7 +1961,7 @@ void Enemy::renderBroodmother() const {
     Color darkGreen  = {20,70,0,255};
     Color phase2Col  = (bossPhase==2) ? Color{60,180,0,255} : bodyColor;
 
-    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
         DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.2f, radius * 0.32f, ColorAlpha(BLACK,0.4f));
     DrawCircleV(position, radius + 14.0f + pulse*4.0f, ColorAlpha(acidGreen, 0.14f));
     DrawCircleV(position, radius +  8.0f + pulse*2.0f, ColorAlpha(acidGreen, 0.20f));
@@ -2029,7 +2029,7 @@ void Enemy::renderAlienBoss() const {
     Color purpleGlow = {200,0,255,255};
     Color boneWhite  = {200,210,180,255};
 
-    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
         DrawEllipse((int)px, (int)(py + radius * 0.75f), radius * 1.3f, radius * 0.36f, ColorAlpha(BLACK,0.45f));
 
     if (bossPhase == 2) {
@@ -2137,7 +2137,7 @@ void Enemy::renderOmegaBoss() const {
     Color boneWhite   = {210, 200, 190, 255};
 
     // Ground shadow
-    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
         DrawEllipse((int)px,(int)(py+radius*0.8f),radius*1.4f,radius*0.38f,ColorAlpha(BLACK,0.5f));
 
     // Outer aura rings — pulsing
@@ -2971,7 +2971,7 @@ void Enemy::renderZombie() const {
     DrawEllipse((int)px, (int)(py + 20*sc), 14.0f*sc, 4.0f*sc, ColorAlpha(bloodRed, 0.35f));
 
     // Shadow
-    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
         DrawEllipse((int)px, (int)(py + 18*sc), 16.0f*sc, 4.5f*sc, ColorAlpha(BLACK, 0.30f));
 
     // Legs — uneven shamble
@@ -3027,7 +3027,7 @@ void Enemy::renderZombieRager() const {
         DrawCircleLines((int)px, (int)py, radius + 10 + pulse*4, ColorAlpha({255,50,0,255}, 0.4f + pulse*0.3f));
     }
 
-    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
         DrawEllipse((int)px, (int)(py + 20), 16.0f, 4.5f, ColorAlpha(BLACK, 0.32f));
 
     // Legs
@@ -3076,7 +3076,7 @@ void Enemy::renderZombieLord() const {
     DrawCircleV(position, aurR, ColorAlpha(glowG, 0.06f + pulse*0.04f));
     DrawCircleLines((int)px, (int)py, aurR - 5, ColorAlpha(glowG, 0.25f + pulse*0.15f));
 
-    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
         DrawEllipse((int)px, (int)(py + 40), 30.0f, 8.0f, ColorAlpha(BLACK, 0.40f));
 
     // Robe/mantle (triangle behind)
@@ -3235,7 +3235,7 @@ void Enemy::renderBansheeHowler() const {
         }
     }
 
-    if (!g_renderPass3D)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
         DrawEllipse((int)px, (int)(py + 20), 14.0f, 4.0f, ColorAlpha(BLACK, 0.28f));
 
     // Legs — skeletal
@@ -3278,417 +3278,3 @@ void Enemy::renderBansheeHowler() const {
     DrawHealthBar({px, py - radius - 16}, hpPct, barW, 4, hpc);
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// render3D() — modelo 3D low-poly (SEM CUBOS). Apenas primitivas arredondadas:
-// DrawSphere / DrawSphereEx / DrawCapsule / DrawCylinderEx.
-// Mapeamento de mundo: X3D = position.x, Z3D = position.y, Y = altura (base Y=0).
-// Tamanho escalado por `radius`. Silhuetas agrupadas por categoria:
-//   FLY      — incorporeos/voadores (Ghost, Wraith, Banshee, Bat, FrostWyrm...)
-//   DRONE    — voadores mecanicos (HunterDrone, CorrupterDrone)
-//   SPIDER   — insectoides/alienigenas (Zergling, Hydra, Broodmother, AlienBoss...)
-//   BRUTE    — golens/tanques/bosses pesados (Boss, VoidColossus, Orc, Tank...)
-//   TURRET   — torres estacionarias (KronosSentry, SiegeCrawler)
-//   HUMANOID — fallback bipede (zumbis, paladinos, samurais, scouts...)
-// ─────────────────────────────────────────────────────────────────────────────
-void Enemy::render3D() const {
-    const float x   = position.x;
-    const float z   = position.y;
-    const float r   = fmaxf(radius, 15.0f); // piso de tamanho (nao achatar de cima)
-    const float t   = aliveTimer;          // anima discretamente (bob/orbita/passada)
-    const float TAU = 6.28318530718f;
-    const float fx  = (float)facing;       // lado esquerdo/direito (eixo X)
-
-    auto V    = [](float vx, float vy, float vz) -> Vector3 { return Vector3{ vx, vy, vz }; };
-    auto sph  = [&](float sx, float sy, float sz, float rad, Color col){ DrawSphereEx(V(sx,sy,sz), rad, 8, 8, col); };
-    auto limb = [&](Vector3 a, Vector3 b, float rad, Color col){ DrawCapsule(a, b, rad, 6, 5, col); };
-
-    Color c  = bodyColor;
-    Color cd = ColorBrightness(bodyColor, -0.35f);    // tom escuro (membros)
-    Color cl = ColorBrightness(bodyColor,  0.28f);    // tom claro  (cabeca/luz)
-
-    // ── Cor dos olhos fiel ao 2D, por familia ─────────────────────────────────
-    Color eye = Color{ 255, 70, 50, 255 };            // padrao: sensor vermelho (maquinas)
-    switch (type) {
-        case EnemyType::Zombie: case EnemyType::ZombieHorde:
-            eye = Color{235,235,220,255}; break;       // olhos brancos podres
-        case EnemyType::ZombieRager:
-            eye = hasRaged ? Color{255,50,0,255} : Color{235,235,220,255}; break;
-        case EnemyType::ZombieLord:
-            eye = (bossPhase>=2) ? Color{220,0,255,255} : Color{0,255,60,255}; break;
-        case EnemyType::Broodmother: case EnemyType::AlienBoss:
-            eye = Color{220,255,0,255}; break;         // varios olhos amarelos
-        case EnemyType::PaladinCorrompido:
-            eye = Color{200,80,255,255}; break;
-        case EnemyType::Ghost: case EnemyType::GhostElite:
-            eye = Color{20,30,60,255}; break;          // vazios escuros
-        case EnemyType::ShadowWraith: case EnemyType::VoidStalker:
-            eye = Color{210,0,40,255}; break;
-        case EnemyType::BansheeHowler:
-            eye = Color{255,240,200,255}; break;
-        case EnemyType::Hydra:       case EnemyType::Shooter:
-        case EnemyType::Sniper:      case EnemyType::GhostSniper:
-        case EnemyType::Necromancer: case EnemyType::LichKnight:
-        case EnemyType::PlagueDoctor:case EnemyType::AcidSpitter:
-        case EnemyType::ChaosSpawn:  case EnemyType::OmegaBoss:
-            eye = projectileColor; break;              // olhos brilham na cor do tiro
-        default: break;
-    }
-
-    enum Cat { SPECTRAL, WINGED, SERPENT, DRONE, SPIDER, TURRET, BLOB, BRUTE, HUMANOID } cat = HUMANOID;
-    switch (type) {
-        case EnemyType::Ghost:        case EnemyType::GhostElite:
-        case EnemyType::ShadowWraith: case EnemyType::BansheeHowler:
-        case EnemyType::PoltergeistBoss:
-            cat = SPECTRAL; break;
-        case EnemyType::CrimsonBat:   case EnemyType::DarkMatter:
-            cat = WINGED; break;
-        case EnemyType::Hydra:        case EnemyType::AbyssalEel:
-        case EnemyType::FrostWyrm:    case EnemyType::Leviathan:
-            cat = SERPENT; break;
-        case EnemyType::HunterDrone:  case EnemyType::CorrupterDrone:
-            cat = DRONE; break;
-        case EnemyType::Zergling:     case EnemyType::Broodmother:
-        case EnemyType::AlienBoss:    case EnemyType::OmegaBoss:
-        case EnemyType::NeuralParasite:
-            cat = SPIDER; break;
-        case EnemyType::KronosSentry: case EnemyType::SiegeCrawler:
-            cat = TURRET; break;
-        case EnemyType::MorphX:
-            cat = BLOB; break;
-        case EnemyType::Boss:           case EnemyType::Tank:
-        case EnemyType::OrcCibernetico: case EnemyType::VoidColossus:
-        case EnemyType::MoltenGolem:    case EnemyType::IronGuard:
-        case EnemyType::VolcanicTitan:  case EnemyType::InfernoHerald:
-            cat = BRUTE; break;
-        default:
-            cat = HUMANOID; break;
-    }
-
-    switch (cat) {
-
-    case SPECTRAL: {
-        // Incorporeo: flutua, corpo translucido. Wraith fica rasteiro e achatado.
-        float hov = r * (type==EnemyType::ShadowWraith ? 0.6f : 1.35f)
-                  + sinf(t * 2.0f) * r * 0.16f;
-        Vector3 core = V(x, hov + r * 0.85f, z);
-        float a = isInvisible ? 0.20f : 0.62f;         // quase some quando invisivel
-
-        if (type == EnemyType::ShadowWraith) {
-            // Sombra achatada (disco) + particulas escuras + olhos vermelhos.
-            DrawCylinderEx(V(x,hov-r*0.2f,z), V(x,hov+r*0.35f,z), r*1.1f, r*0.55f, 12,
-                           ColorAlpha(c, 0.9f));
-            sph(x, hov+r*0.2f, z, r*0.55f, ColorAlpha(cl, 0.85f));
-            for (int i=0;i<4;++i){ float wa=t*2.0f+i*1.571f;
-                sph(x+cosf(wa)*r*0.75f, hov+r*0.1f, z+sinf(wa)*r*0.75f, r*0.14f, ColorAlpha(cd,0.7f)); }
-            sph(x-r*0.28f, hov+r*0.35f, z+r*0.5f, r*0.13f, eye);
-            sph(x+r*0.28f, hov+r*0.35f, z+r*0.5f, r*0.13f, eye);
-            break;
-        }
-
-        // Corpo etereo + cauda afunilando (cone arredondado).
-        DrawSphereEx(core, r*0.92f, 8, 8, ColorAlpha(cl, a*0.9f));
-        DrawCylinderEx(V(x, hov - r*0.5f, z), core, r*0.10f, r*0.82f, 9, ColorAlpha(c, a*0.75f));
-
-        if (type == EnemyType::BansheeHowler) {
-            // Cabelo esvoacante (capsulas radiando do topo) + boca aberta gritando.
-            for (int i=0;i<6;++i){ float ha=(i-2.5f)*0.42f;
-                limb(V(x, core.y+r*0.6f, z),
-                     V(x+sinf(ha)*r*1.1f, core.y+r*1.3f+sinf(t+i)*r*0.15f, z-cosf(ha)*r*0.6f),
-                     r*0.06f, ColorAlpha(cd, 0.85f)); }
-            sph(x, core.y-r*0.25f, z+r*0.55f, r*0.18f, Color{15,8,18,255});
-            if (shootCooldown < 0.5f && shootCooldown > 0.0f)   // ondas sonoras
-                DrawCylinderEx(V(x,hov,z), V(x,hov+r*0.05f,z), r*1.8f, r*1.9f, 14,
-                               ColorAlpha(Color{255,235,190,255}, 0.18f));
-        }
-        if (type == EnemyType::PoltergeistBoss) {
-            // Tentaculos de energia orbitando.
-            for (int i=0;i<6;++i){ float ta=t*1.8f+i*1.047f; float tl=r*(1.2f+0.25f*sinf(t*3.0f+i));
-                limb(V(x+cosf(ta)*r*0.5f, core.y, z+sinf(ta)*r*0.5f),
-                     V(x+cosf(ta)*tl, core.y+sinf(t*2.0f+i)*r*0.3f, z+sinf(ta)*tl),
-                     r*0.08f, ColorAlpha(cd, a)); }
-        }
-        sph(x-r*0.30f, core.y+r*0.10f, z+r*0.55f, r*0.15f, eye);
-        sph(x+r*0.30f, core.y+r*0.10f, z+r*0.55f, r*0.15f, eye);
-        break;
-    }
-
-    case WINGED: {
-        float hov = r*1.7f + sinf(t*2.0f)*r*0.25f;
-        Vector3 body = V(x,hov,z);
-        if (type == EnemyType::DarkMatter) {
-            // Nucleo escuro + 3 fragmentos orbitando (split em 3 ao morrer).
-            DrawSphereEx(body, r*0.7f, 8, 8, c);
-            for (int i=0;i<3;++i){ float fa=t*2.5f+i*2.094f;
-                sph(x+cosf(fa)*r*1.2f, hov+sinf(t*2.0f+i)*r*0.3f, z+sinf(fa)*r*1.2f, r*0.34f, cl); }
-            sph(x, hov+r*0.1f, z+r*0.5f, r*0.16f, eye);
-            break;
-        }
-        // Morcego: corpo pequeno + asas batendo.
-        float flap = sinf(t*12.0f)*r*0.7f;
-        DrawSphereEx(body, r*0.6f, 8, 8, c);
-        limb(body, V(x-r*1.7f, hov+flap, z-r*0.2f), r*0.09f, cd);
-        limb(body, V(x+r*1.7f, hov+flap, z-r*0.2f), r*0.09f, cd);
-        sph(x-r*0.18f, hov+r*0.2f, z+r*0.45f, r*0.10f, eye);
-        sph(x+r*0.18f, hov+r*0.2f, z+r*0.45f, r*0.10f, eye);
-        break;
-    }
-
-    case SERPENT: {
-        // Corpo em cadeia de capsulas (S sinuoso) + cabeca a frente.
-        int   seg    = isBoss() ? 7 : 5;
-        bool  flies  = (type==EnemyType::FrostWyrm);
-        bool  emerge = (type==EnemyType::AbyssalEel);
-        float baseY  = flies ? r*1.6f : r*0.5f;
-        Vector3 prev = V(x, emerge?0.0f:baseY, z - r*1.0f);
-        Vector3 headPos = prev;
-        for (int i=0;i<seg;++i){
-            float u    = (float)i/(float)(seg-1);
-            float segR = r*(0.85f - 0.45f*u);                 // afunila ate a cabeca
-            float wob  = sinf(t*3.0f + i*0.7f)*r*0.55f;
-            float yy   = baseY + sinf(u*3.14159f)*r*1.1f + (emerge ? u*r*1.6f : 0.0f);
-            Vector3 cur = V(x+wob, yy, z - r*1.0f + u*r*2.6f);
-            if (i>0) DrawCapsule(prev, cur, segR, 8, 6, (i>=seg-2)?cl:c);
-            prev = cur; headPos = cur;
-        }
-        DrawSphereEx(headPos, r*0.6f, 9, 9, cl);
-        if (flies) {  // asas de gelo
-            limb(headPos, V(headPos.x-r*1.6f, headPos.y+r*0.6f, headPos.z-r*0.8f), r*0.10f, ColorAlpha(c,0.7f));
-            limb(headPos, V(headPos.x+r*1.6f, headPos.y+r*0.6f, headPos.z-r*0.8f), r*0.10f, ColorAlpha(c,0.7f));
-        }
-        sph(headPos.x-r*0.22f, headPos.y+r*0.12f, headPos.z+r*0.32f, r*0.13f, eye);
-        sph(headPos.x+r*0.22f, headPos.y+r*0.12f, headPos.z+r*0.32f, r*0.13f, eye);
-        break;
-    }
-
-    case DRONE: {
-        float hov = r * 1.6f + sinf(t * 3.0f) * r * 0.12f;
-        Vector3 hull = V(x, hov, z);
-        DrawSphereEx(hull, r * 0.62f, 8, 8, c);                       // casco
-        DrawCylinderEx(V(x, hov - r*0.10f, z), V(x, hov + r*0.10f, z),
-                       r * 1.0f, r * 1.0f, 12, cd);                   // disco/anel
-        for (int i = 0; i < 4; ++i) {                                 // rotores
-            float a  = (float)i / 4.0f * TAU + t * 5.0f;
-            sph(x + cosf(a)*r*1.0f, hov, z + sinf(a)*r*1.0f, r*0.18f, cl);
-        }
-        // Canhao inferior + sensor frontal.
-        DrawCylinderEx(V(x, hov-r*0.1f, z+r*0.2f), V(x, hov-r*0.7f, z+r*0.2f), r*0.16f, r*0.10f, 8, cd);
-        sph(x, hov, z + r*0.55f, r*0.20f, eye);
-        break;
-    }
-
-    case SPIDER: {
-        bool  big   = (type == EnemyType::Broodmother || isBoss());
-        int   nLegs = big ? 8 : 6;
-        float bodyY = r * 0.85f;
-        Vector3 body = V(x, bodyY, z);
-        DrawSphereEx(body, r * 0.90f, 9, 9, c);                       // abdomen
-        Vector3 head = V(x, bodyY + r*0.10f, z + r*0.85f);
-        DrawSphereEx(head, r * 0.55f, 8, 8, cd);                      // cefalotorax
-        for (int i = 0; i < nLegs; ++i) {                             // pernas radiais bipartidas
-            float a   = ((float)i / nLegs) * TAU + 0.3f;
-            float dx  = cosf(a), dz = sinf(a);
-            float wob = sinf(t * 6.0f + i) * 0.10f;
-            Vector3 knee = V(x + dx*r*1.0f, bodyY + r*0.55f + wob*r, z + dz*r*1.0f);
-            Vector3 foot = V(x + dx*r*1.7f, 0.0f, z + dz*r*1.7f);
-            DrawCapsule(body, knee, r*0.12f, 5, 4, cd);
-            DrawCapsule(knee, foot, r*0.10f, 5, 4, cd);
-        }
-        if (type == EnemyType::Zergling) {
-            // Garras-foice projetadas a frente (traco marcante do zergling).
-            limb(V(x-r*0.5f, bodyY+r*0.2f, z+r*0.4f), V(x-r*0.8f, bodyY+r*1.1f, z+r*1.6f), r*0.10f, cl);
-            limb(V(x+r*0.5f, bodyY+r*0.2f, z+r*0.4f), V(x+r*0.8f, bodyY+r*1.1f, z+r*1.6f), r*0.10f, cl);
-        }
-        if (big) {  // mandibulas/presas frontais
-            limb(head, V(x-r*0.4f, bodyY*0.3f, head.z+r*0.6f), r*0.10f, cl);
-            limb(head, V(x+r*0.4f, bodyY*0.3f, head.z+r*0.6f), r*0.10f, cl);
-            if (type==EnemyType::AlienBoss || type==EnemyType::OmegaBoss)   // crista de cranio
-                DrawCylinderEx(V(head.x, head.y+r*0.3f, head.z),
-                               V(head.x, head.y+r*1.4f, head.z-r*0.3f), r*0.30f, r*0.02f, 8, cd);
-        }
-        if (type == EnemyType::OmegaBoss) {  // canhoes de ombro hibridos
-            for (int s=-1;s<=1;s+=2){
-                Vector3 shh=V(x+s*r*0.8f, bodyY+r*0.6f, z);
-                DrawCylinderEx(shh, V(x+s*r*1.2f, bodyY+r*0.6f, z+r*0.9f), r*0.18f, r*0.12f, 8, cd);
-                sph(x+s*r*1.2f, bodyY+r*0.6f, z+r*0.9f, r*0.14f, eye);
-            }
-        }
-        // Olhos (par central + extras nos bosses).
-        sph(x - r*0.18f, head.y + r*0.15f, head.z + r*0.30f, r*0.12f, eye);
-        sph(x + r*0.18f, head.y + r*0.15f, head.z + r*0.30f, r*0.12f, eye);
-        if (big) {
-            sph(x - r*0.34f, head.y + r*0.05f, head.z + r*0.22f, r*0.08f, eye);
-            sph(x + r*0.34f, head.y + r*0.05f, head.z + r*0.22f, r*0.08f, eye);
-        }
-        break;
-    }
-
-    case TURRET: {
-        bool  siege = (type == EnemyType::SiegeCrawler);
-        float baseR = siege ? r*1.2f : r*1.0f;
-        DrawCylinderEx(V(x, 0, z), V(x, r*0.6f, z), baseR, r*0.7f, 10, cd);   // base conica
-        Vector3 dome = V(x, r*0.95f, z);
-        DrawSphereEx(dome, r*0.70f, 9, 9, c);                                  // domo
-        float barR = siege ? r*0.26f : r*0.16f;
-        DrawCylinderEx(dome, V(x, r*0.95f, z + r*(siege?2.0f:1.6f)), barR, barR*0.7f, 8, cd); // cano
-        sph(x, r*1.05f, z + r*0.45f, r*0.18f, eye);                            // olho/mira
-        break;
-    }
-
-    case BLOB: {
-        // MorphX metal liquido: corpo deformando + pseudo-cabeca + braco-lanca.
-        float wob = sinf(t*5.0f)*r*0.18f;
-        sph(x, r*0.9f + wob*0.3f, z, r*0.95f + wob, c);
-        sph(x, r*1.8f, z, r*0.55f, cl);
-        sph(x-r*0.18f, r*1.9f, z+r*0.4f, r*0.12f, Color{255,255,255,255});
-        sph(x+r*0.18f, r*1.9f, z+r*0.4f, r*0.12f, Color{255,255,255,255});
-        limb(V(x, r*1.1f, z), V(x+fx*r*1.4f, r*0.9f+wob, z+r*0.3f), r*0.14f, cl);
-        break;
-    }
-
-    case BRUTE: {
-        float hipY = r * 0.9f, shY = hipY + r * 1.3f;
-        DrawCapsule(V(x - r*0.45f, 0, z), V(x - r*0.40f, hipY, z), r*0.32f, 7, 6, cd);  // pernas
-        DrawCapsule(V(x + r*0.45f, 0, z), V(x + r*0.40f, hipY, z), r*0.32f, 7, 6, cd);
-        DrawSphereEx(V(x, hipY + r*0.55f, z), r*0.95f, 9, 9, c);                        // torso
-        DrawCapsule(V(x, hipY, z), V(x, shY, z), r*0.70f, 9, 8, c);
-        // Nucleo brilhante no peito (golens de lava / void).
-        if (type==EnemyType::MoltenGolem || type==EnemyType::VolcanicTitan ||
-            type==EnemyType::InfernoHerald)
-            sph(x, hipY+r*0.7f, z+r*0.5f, r*0.30f, Color{255,150,0,255});
-        else if (type==EnemyType::VoidColossus)
-            sph(x, hipY+r*0.7f, z+r*0.5f, r*0.30f, Color{200,0,255,255});
-        float sw = sinf(t * 3.0f) * r * 0.15f;
-        limb(V(x - r*0.90f, shY, z), V(x - r*1.05f, hipY*0.7f, z + sw), r*0.28f, cd); // braco esq
-        DrawSphere(V(x - r*1.05f, hipY*0.7f, z + sw), r*0.32f, c);
-        if (type == EnemyType::Boss) {
-            // Braco-canhao de plasma apontado a frente.
-            DrawCylinderEx(V(x+r*0.9f, shY*0.85f, z), V(x+r*0.9f, shY*0.85f, z+r*1.9f), r*0.30f, r*0.22f, 9, cd);
-            sph(x+r*0.9f, shY*0.85f, z+r*2.0f, r*0.20f, eye);
-        } else {
-            limb(V(x + r*0.90f, shY, z), V(x + r*1.05f, hipY*0.7f, z - sw), r*0.28f, cd);
-            DrawSphere(V(x + r*1.05f, hipY*0.7f, z - sw), r*0.32f, c);
-        }
-        Vector3 head = V(x, shY + r*0.45f, z);
-        DrawSphereEx(head, r*0.42f, 8, 8, cl);
-        if (type == EnemyType::OrcCibernetico) {  // presas
-            sph(x-r*0.16f, head.y-r*0.3f, head.z+r*0.35f, r*0.08f, Color{225,210,170,255});
-            sph(x+r*0.16f, head.y-r*0.3f, head.z+r*0.35f, r*0.08f, Color{225,210,170,255});
-        }
-        if (type == EnemyType::Boss) {  // T-visor horizontal vermelho
-            DrawCapsule(V(x-r*0.32f, head.y+r*0.05f, z+r*0.34f),
-                        V(x+r*0.32f, head.y+r*0.05f, z+r*0.34f), r*0.09f, 5, 4, eye);
-        } else {
-            sph(x - r*0.18f, head.y + r*0.05f, head.z + r*0.35f, r*0.10f, eye);
-            sph(x + r*0.18f, head.y + r*0.05f, head.z + r*0.35f, r*0.10f, eye);
-        }
-        break;
-    }
-
-    default: { // HUMANOID
-        bool zombie = (type==EnemyType::Zombie     || type==EnemyType::ZombieHorde ||
-                       type==EnemyType::ZombieRager|| type==EnemyType::ZombieLord);
-        float gait = sinf(t * 5.0f) * r * 0.30f;
-        float hipY = r * 1.0f, shY = hipY + r * 1.05f;
-        float lean = zombie ? r*0.22f : 0.0f;                          // zumbi curvado
-        DrawCapsule(V(x - r*0.35f, 0, z - gait), V(x - r*0.30f, hipY, z), r*0.20f, 6, 5, cd);
-        DrawCapsule(V(x + r*0.35f, 0, z + gait), V(x + r*0.30f, hipY, z), r*0.20f, 6, 5, cd);
-        DrawCapsule(V(x, hipY, z), V(x, shY, z + lean), r*0.50f, 8, 7, c);
-        // Bracos (zumbis esticam para frente).
-        float aEndY = zombie ? hipY*1.05f : hipY*0.85f;
-        float aFwd  = zombie ? r*0.7f : 0.0f;
-        limb(V(x - r*0.55f, shY, z+lean), V(x - r*0.50f, aEndY, z + aFwd + gait), r*0.16f, cd);
-        bool rightArmBusy = (type==EnemyType::PaladinCorrompido || type==EnemyType::Shooter ||
-                             type==EnemyType::Sniper || type==EnemyType::GhostSniper ||
-                             type==EnemyType::CyberSamurai);
-        if (!rightArmBusy)
-            limb(V(x + r*0.55f, shY, z+lean), V(x + r*0.50f, aEndY, z + aFwd - gait), r*0.16f, cd);
-        Vector3 head = V(x, shY + r*0.50f, z + lean*1.1f);
-        DrawSphereEx(head, r*0.42f, 8, 8, cl);
-        if (type == EnemyType::UndeadEnforcer) {  // cranio rachado: 1 olho aceso
-            sph(x - r*0.16f, head.y + r*0.05f, head.z + r*0.34f, r*0.07f, Color{35,25,20,255});
-            sph(x + r*0.16f, head.y + r*0.05f, head.z + r*0.34f, r*0.10f, eye);
-        } else {
-            sph(x - r*0.16f, head.y + r*0.05f, head.z + r*0.34f, r*0.09f, eye);
-            sph(x + r*0.16f, head.y + r*0.05f, head.z + r*0.34f, r*0.09f, eye);
-        }
-
-        // ── Acessorios por tipo (silhueta marcante) ──
-        if (type == EnemyType::PaladinCorrompido) {
-            // Escudo (disco) a esquerda + espada brilhante + plume.
-            DrawCylinderEx(V(x-r*0.85f, shY*0.85f, z+r*0.25f), V(x-r*0.85f, shY*0.85f, z+r*0.45f),
-                           r*0.55f, r*0.55f, 10, cd);
-            Color sword = (auraColor.a>0) ? auraColor : Color{160,0,255,255};
-            limb(V(x+r*0.55f, hipY*0.9f, z+r*0.3f), V(x+r*0.55f, shY+r*1.3f, z+r*0.5f), r*0.07f, sword);
-            sph(x, head.y+r*0.6f, z, r*0.10f, sword);
-        }
-        else if (type==EnemyType::Shooter || type==EnemyType::Sniper || type==EnemyType::GhostSniper) {
-            // Rifle/sniper: cano longo a frente + brilho de boca.
-            float len = (type==EnemyType::Sniper || type==EnemyType::GhostSniper) ? 2.6f : 1.9f;
-            limb(V(x+r*0.5f, shY*0.9f, z+r*0.2f), V(x+r*0.5f, shY*0.9f, z+r*len), r*0.08f, cd);
-            sph(x+r*0.5f, shY*0.9f, z+r*len, r*0.10f, projectileColor);
-        }
-        else if (type==EnemyType::CyberSamurai || type==EnemyType::ReaperMech ||
-                 type==EnemyType::DemonHunter) {
-            // Lamina(s) brilhante(s).
-            Color blade = (auraColor.a>0) ? auraColor : cl;
-            limb(V(x+r*0.55f, hipY, z+r*0.3f), V(x+r*0.9f, shY+r*1.4f, z+r*0.8f), r*0.06f, blade);
-            if (type != EnemyType::CyberSamurai)
-                limb(V(x-r*0.55f, hipY, z+r*0.3f), V(x-r*0.9f, shY+r*1.4f, z+r*0.8f), r*0.06f, blade);
-        }
-        else if (type==EnemyType::Necromancer || type==EnemyType::LichKnight ||
-                 type==EnemyType::PlagueDoctor || type==EnemyType::AcidSpitter) {
-            // Cajado com orbe (conjuradores).
-            limb(V(x+r*0.6f, 0, z+r*0.2f), V(x+r*0.6f, shY+r*1.4f, z+r*0.2f), r*0.06f, cd);
-            sph(x+r*0.6f, shY+r*1.6f, z+r*0.2f, r*0.20f, projectileColor);
-        }
-        else if (type == EnemyType::Kamikaze) {
-            sph(x, hipY+r*0.5f, z+r*0.3f, r*0.30f, Color{255,90,0,255});   // nucleo explosivo
-        }
-        else if (type == EnemyType::ZombieLord) {
-            // Coroa de osso + manto cone.
-            for (int b=0;b<8;++b){ float ba=(float)b/8.0f*TAU;
-                limb(V(x+cosf(ba)*r*0.4f, head.y+r*0.35f, z+sinf(ba)*r*0.4f),
-                     V(x+cosf(ba)*r*0.5f, head.y+r*0.8f,  z+sinf(ba)*r*0.5f), r*0.05f,
-                     Color{205,200,175,255}); }
-            DrawCylinderEx(V(x,0,z), V(x,hipY*1.1f,z), r*1.0f, r*0.4f, 10, cd);
-        }
-        break;
-    }
-    } // switch(cat)
-
-    // ── Bosses: esferas de energia orbitando + nucleo flutuante (imponencia). ──
-    if (isBoss()) {
-        float topY = r * 3.4f;
-        for (int i = 0; i < 4; ++i) {
-            float a = ((float)i / 4.0f) * TAU + t * 1.5f;
-            DrawSphere(V(x + cosf(a)*r*1.3f, topY + sinf(t*2.0f + i)*r*0.20f, z + sinf(a)*r*1.3f),
-                       r*0.22f, ColorAlpha(cl, 0.85f));
-        }
-        DrawSphereEx(V(x, topY + r*0.4f, z), r*0.30f, 7, 7, ColorAlpha(cl, 0.9f));
-    }
-
-    // ── Evolucao por tempo de vida: aura translucida na cor do tier (auraColor). ──
-    if (evolTier > 0 && auraColor.a > 0) {
-        DrawSphereEx(V(x, r*1.2f, z), r*1.7f, 8, 8, ColorAlpha(auraColor, 0.10f));
-        if (evolTier >= 3)
-            for (int i = 0; i < 4; ++i) {
-                float a = ((float)i / 4.0f) * TAU + t * 1.5f;
-                DrawSphere(V(x + cosf(a)*r*1.9f, r*0.2f, z + sinf(a)*r*1.9f), r*0.12f, auraColor);
-            }
-    }
-
-    // ── Elite: aura translucida + anel de esferas brilhantes no chao. ──
-    if (isElite) {
-        Color glow = (auraColor.a > 0) ? auraColor : Color{ 255, 215, 0, 255 };
-        DrawSphereEx(V(x, r*1.2f, z), r*1.6f, 8, 8, ColorAlpha(glow, 0.12f));
-        for (int i = 0; i < 6; ++i) {
-            float a = ((float)i / 6.0f) * TAU + t * 2.0f;
-            DrawSphere(V(x + cosf(a)*r*1.5f, r*0.15f, z + sinf(a)*r*1.5f), r*0.12f, glow);
-        }
-    }
-
-    // ── Flash de dano: brilho branco translucido. ──
-    if (hitFlashTimer > 0.0f)
-        DrawSphereEx(V(x, r*1.3f, z), r*1.15f, 8, 8, ColorAlpha(WHITE, 0.35f));
-}

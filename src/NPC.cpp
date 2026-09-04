@@ -4,7 +4,7 @@
 #include <sstream>
 #include <algorithm>
 
-extern bool g_renderPass3D;
+extern bool g_voxelCapture;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Construtor legado
@@ -302,7 +302,7 @@ void NPC::render() const {
         case NPCRole::WeaponDealer: renderMerchant();  break;
         case NPCRole::ArmorSmith:   renderMerchant();  break;
     }
-    if (!g_renderPass3D) {
+    if (!g_voxelCapture) {
         if (hasQuest) {
             DrawText("!", (int)position.x - 4, (int)position.y - 50, 28, GOLD);
         }
@@ -311,145 +311,6 @@ void NPC::render() const {
         }
         DrawText(name.c_str(), (int)position.x - (int)name.size() * 4,
                  (int)position.y + 30, 14, WHITE);
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Render 3D low-poly (humanoide parado) — somente primitivas arredondadas
-//   Mapeamento: X3D = position.x, Z3D = position.y, Y = altura (pes em Y=0)
-// ─────────────────────────────────────────────────────────────────────────────
-void NPC::render3D() const {
-    const float X = position.x;
-    const float Z = position.y;
-
-    // ── Paleta base: corpo segue a cor do papel (bodyColor == color no design 2D) ──
-    Color skin = { 205, 160, 115, 255 };   // pele padrao (rostos visiveis)
-    Color gold = { 255, 200, 40, 255 };    // detalhe dourado dos vendedores
-    Color dark = { 80, 80, 80, 255 };      // metal de armas (DARKGRAY do 2D)
-
-    bool isVendor = (role == NPCRole::Merchant ||
-                     role == NPCRole::WeaponDealer ||
-                     role == NPCRole::ArmorSmith);
-
-    // Cor de roupa por papel, fiel aos renders 2D (renderSoldier/Engineer/...).
-    Color torsoCol = bodyColor;
-    Color legCol   = ColorBrightness(bodyColor, -0.30f);
-    Color armCol   = ColorBrightness(bodyColor, -0.16f);
-    Color headCol  = skin;                 // sobrescrito para capacetes/coberturas
-    switch (role) {
-        case NPCRole::Soldier:
-            legCol = { 30, 80, 30, 255 };  armCol = { 45, 100, 45, 255 };
-            headCol = bodyColor;           break;   // balaclava/capacete na cor do corpo
-        case NPCRole::Engineer:
-            legCol = { 40, 80, 140, 255 }; armCol = { 60, 110, 180, 255 };
-            headCol = { 60, 120, 180, 255 }; break; // capacete de engenheiro
-        case NPCRole::Leader:
-            legCol = { 20, 100, 40, 255 }; armCol = { 0, 150, 70, 255 };
-            headCol = { 25, 95, 45, 255 }; break;   // touca militar
-        case NPCRole::Scientist:                     // jaleco branco (2D ignora a cor base)
-            torsoCol = { 228, 228, 228, 255 };
-            legCol   = { 205, 205, 205, 255 };
-            armCol   = { 218, 218, 218, 255 };
-            headCol  = { 195, 160, 115, 255 };
-            break;
-        case NPCRole::Merchant:
-        case NPCRole::WeaponDealer:
-        case NPCRole::ArmorSmith:
-            legCol = { 100, 60, 20, 255 }; armCol = ColorBrightness(bodyColor, -0.14f);
-            headCol = { 200, 145, 95, 255 }; break;  // rosto visivel sob o chapeu
-        default: break;
-    }
-    Color neckCol = ColorBrightness(headCol, -0.10f);
-
-    // ── Proporcoes humanoides (pes em Y=0; mesma escala do Player 3D) ──
-    const float hipY   = 22.0f;
-    const float shY    = 40.0f;   // ombros / topo do tronco
-    const float headCY = 49.0f;
-    const float headR  = 5.5f;
-
-    // ── Pernas ──
-    DrawCapsule({ X - 4.5f, 1.0f, Z }, { X - 4.0f, hipY, Z }, 4.0f, 8, 4, legCol);
-    DrawCapsule({ X + 4.5f, 1.0f, Z }, { X + 4.0f, hipY, Z }, 4.0f, 8, 4, legCol);
-
-    // ── Tronco ──
-    DrawCapsule({ X, hipY, Z }, { X, shY, Z }, 6.8f, 10, 6, torsoCol);
-
-    // ── Bracos ao lado do corpo ──
-    DrawCapsule({ X - 7.8f, shY - 1.0f, Z }, { X - 8.6f, hipY + 2.0f, Z }, 3.0f, 8, 4, armCol);
-    DrawCapsule({ X + 7.8f, shY - 1.0f, Z }, { X + 8.6f, hipY + 2.0f, Z }, 3.0f, 8, 4, armCol);
-
-    // ── Pescoco + cabeca ──
-    DrawCapsule({ X, shY, Z }, { X, shY + 3.5f, Z }, 2.5f, 6, 4, neckCol);
-    DrawSphereEx({ X, headCY, Z }, headR, 8, 8, headCol);
-
-    // ── Tracos marcantes por papel (fiel ao 2D) ──
-    switch (role) {
-        case NPCRole::Soldier: {
-            // Capacete (calota verde escura cobrindo o topo)
-            DrawSphereEx({ X, headCY + 2.2f, Z - 0.4f }, 5.2f, 8, 6, { 35, 90, 35, 255 });
-            // Fuzil horizontal a frente (DARKGRAY)
-            DrawCylinderEx({ X + 6.5f, 26.0f, Z + 2.0f }, { X + 19.0f, 27.0f, Z + 2.0f },
-                           1.6f, 0.9f, 8, dark);
-            DrawSphereEx({ X + 19.5f, 27.0f, Z + 2.0f }, 1.1f, 6, 6, { 50, 50, 50, 255 });
-            break;
-        }
-        case NPCRole::Engineer: {
-            // Capacete de obra + dois olhos/visor ciano
-            DrawSphereEx({ X, headCY + 2.4f, Z - 0.3f }, 5.0f, 8, 6, { 45, 95, 150, 255 });
-            DrawSphereEx({ X - 2.2f, headCY + 0.3f, Z + 4.4f }, 1.1f, 6, 6, { 0, 200, 255, 255 });
-            DrawSphereEx({ X + 2.2f, headCY + 0.3f, Z + 4.4f }, 1.1f, 6, 6, { 0, 200, 255, 255 });
-            // Ferramenta/dispositivo na mao esquerda
-            DrawCapsule({ X - 9.0f, hipY + 2.0f, Z }, { X - 12.5f, hipY + 5.0f, Z },
-                        2.0f, 6, 4, { 40, 60, 120, 255 });
-            break;
-        }
-        case NPCRole::Leader: {
-            // Boina militar + emblema/faixa laranja
-            DrawSphereEx({ X, headCY + 3.0f, Z - 1.0f }, 5.2f, 8, 6, { 20, 70, 35, 255 });
-            DrawSphereEx({ X + 2.0f, headCY + 3.4f, Z + 3.4f }, 1.2f, 6, 6, { 220, 110, 0, 255 });
-            // Colete/insignia no peito (verde claro do 2D)
-            DrawCapsule({ X, hipY + 3.0f, Z + 3.6f }, { X, shY - 4.0f, Z + 3.6f },
-                        2.4f, 8, 4, { 0, 150, 70, 255 });
-            // Fuzil com mira a frente
-            DrawCylinderEx({ X + 6.5f, 27.0f, Z + 2.0f }, { X + 20.0f, 28.0f, Z + 2.0f },
-                           1.6f, 0.9f, 8, dark);
-            DrawSphereEx({ X + 13.0f, 29.5f, Z + 2.0f }, 1.2f, 6, 6, { 30, 30, 30, 255 });
-            break;
-        }
-        case NPCRole::Scientist: {
-            // Oculos azuis de laboratorio
-            DrawSphereEx({ X - 2.2f, headCY + 0.4f, Z + 4.3f }, 1.2f, 6, 6, { 0, 100, 200, 255 });
-            DrawSphereEx({ X + 2.2f, headCY + 0.4f, Z + 4.3f }, 1.2f, 6, 6, { 0, 100, 200, 255 });
-            // Prancheta/clipboard na mao esquerda
-            DrawCapsule({ X - 9.5f, hipY + 4.0f, Z + 1.0f }, { X - 9.5f, hipY + 9.0f, Z + 1.0f },
-                        2.4f, 6, 4, { 205, 185, 120, 255 });
-            break;
-        }
-        case NPCRole::Merchant:
-        case NPCRole::WeaponDealer:
-        case NPCRole::ArmorSmith: {
-            // Chapeu de aba larga (na cor do mercador)
-            DrawCylinderEx({ X, headCY + 4.2f, Z }, { X, headCY + 4.9f, Z }, 7.2f, 7.2f, 12, torsoCol);
-            DrawCylinderEx({ X, headCY + 4.9f, Z }, { X, headCY + 8.2f, Z }, 4.2f, 3.6f, 10, torsoCol);
-            // Cinto/sash dourado na cintura
-            DrawCapsule({ X, hipY - 0.5f, Z }, { X, hipY + 1.5f, Z }, 7.1f, 10, 4, gold);
-            // Bolsa/satchel no quadril esquerdo
-            DrawSphereEx({ X - 7.0f, hipY - 1.0f, Z + 2.0f }, 3.0f, 6, 6, { 150, 105, 40, 255 });
-            // Moeda dourada ("$" do 2D) flutuando junto a mao
-            DrawSphereEx({ X + 9.5f, hipY + 5.0f, Z + 1.5f }, 1.5f, 6, 6, gold);
-            break;
-        }
-        default: {
-            // Marcador de acento para tipos genericos
-            DrawSphereEx({ X, headCY + 6.0f, Z }, 1.2f, 6, 6, accentColor);
-            break;
-        }
-    }
-
-    // ── Indicador de missao (o "!" dourado do 2D) ──
-    if (hasQuest) {
-        DrawSphereEx({ X, headCY + 12.0f, Z }, 1.0f, 6, 6, gold);
-        DrawCapsule({ X, headCY + 9.0f, Z }, { X, headCY + 11.0f, Z }, 0.7f, 6, 4, gold);
     }
 }
 

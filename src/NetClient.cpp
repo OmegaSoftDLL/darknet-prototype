@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <chrono>
+#include <nlohmann/json.hpp>   // vendored em third_party/nlohmann/json.hpp
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -15,34 +16,23 @@
 static const float PEER_TIMEOUT = 5.0f;   // expira peer sem updates há >5s
 static const float SEND_PERIOD  = 0.1f;   // 10x/s
 
-// ── Helpers de string/JSON minimalistas (suficientes p/ nosso protocolo) ─────
-static bool jsonNumber(const std::string& s, const char* key, double& out) {
-    std::string k = std::string("\"") + key + "\"";
-    size_t p = s.find(k);
-    if (p == std::string::npos) return false;
-    p = s.find(':', p + k.size());
-    if (p == std::string::npos) return false;
-    p++;
-    while (p < s.size() && (s[p] == ' ' || s[p] == '\t')) p++;
-    char* end = nullptr;
-    out = std::strtod(s.c_str() + p, &end);
-    return end != s.c_str() + p;
+// ── Helpers de leitura JSON (nlohmann/json) ──────────────────────────────────
+// Mesmos defaults do parser manual anterior: chave ausente (ou com tipo
+// inesperado) retorna false e NAO altera `out` — quem chama inicializa com
+// 0 / "" antes, como antes. As mensagens do servidor sao objetos planos
+// (JSON.stringify), entao ler so as chaves de topo e equivalente a busca
+// por substring que o parser manual fazia.
+static bool jsonNumber(const nlohmann::json& j, const char* key, double& out) {
+    auto it = j.find(key);
+    if (it == j.end() || !it->is_number()) return false;
+    out = it->get<double>();
+    return true;
 }
 
-static bool jsonString(const std::string& s, const char* key, std::string& out) {
-    std::string k = std::string("\"") + key + "\"";
-    size_t p = s.find(k);
-    if (p == std::string::npos) return false;
-    p = s.find(':', p + k.size());
-    if (p == std::string::npos) return false;
-    p = s.find('"', p);
-    if (p == std::string::npos) return false;
-    p++;
-    out.clear();
-    while (p < s.size() && s[p] != '"') {
-        if (s[p] == '\\' && p + 1 < s.size()) { out.push_back(s[p + 1]); p += 2; }
-        else { out.push_back(s[p]); p++; }
-    }
+static bool jsonString(const nlohmann::json& j, const char* key, std::string& out) {
+    auto it = j.find(key);
+    if (it == j.end() || !it->is_string()) return false;
+    out = it->get<std::string>();
     return true;
 }
 
@@ -168,11 +158,10 @@ void NetClient::sendState(float x, float y, int charClass, int facing, bool movi
     if (!enabled) return;
     sendAccum_ += SEND_PERIOD; // chamado ~todo frame; aproxima 10x/s via contador
     // throttle real: usa relógio para não depender do dt do raylib
-    static auto last = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
-    float elapsed = std::chrono::duration<float>(now - last).count();
+    float elapsed = std::chrono::duration<float>(now - lastSend_).count();
     if (elapsed < SEND_PERIOD) return;
-    last = now;
+    lastSend_ = now;
 
     // anim_state compacto: "i"=idle, "wl"=andando p/ esquerda, "wr"=p/ direita
     const char* a = moving ? (facing < 0 ? "wl" : "wr") : "i";
@@ -385,14 +374,18 @@ void NetClient::netThreadMain() {
                 else if (opcode == 0x9) { wsSendControl(s, 0xA, payload); } // ping -> pong
                 else if (opcode == 0xA) { /* pong */ }
                 else if (opcode == 0x1 || opcode == 0x0) {            // texto
+                    // Parse tolerante a falhas: payload invalido e ignorado,
+                    // como o parser manual (que simplesmente nao achava "t").
+                    nlohmann::json j = nlohmann::json::parse(payload, nullptr, false);
+                    if (!j.is_discarded() && j.is_object()) {
                     std::string a; double idd = 0, xd = 0, yd = 0, cd = 0;
-                    std::string tt; jsonString(payload, "t", tt);
-                    if (tt == "peer" && jsonNumber(payload, "id", idd)) {
-                        jsonNumber(payload, "x", xd);
-                        jsonNumber(payload, "y", yd);
-                        jsonNumber(payload, "c", cd);
-                        jsonString(payload, "a", a);
-                        std::string nm; jsonString(payload, "n", nm);
+                    std::string tt; jsonString(j, "t", tt);
+                    if (tt == "peer" && jsonNumber(j, "id", idd)) {
+                        jsonNumber(j, "x", xd);
+                        jsonNumber(j, "y", yd);
+                        jsonNumber(j, "c", cd);
+                        jsonString(j, "a", a);
+                        std::string nm; jsonString(j, "n", nm);
                         uint32_t pid = (uint32_t)idd;
                         if (pid != myId_) {
                             std::lock_guard<std::mutex> lk(mtx_);
@@ -408,19 +401,20 @@ void NetClient::netThreadMain() {
                             peer->lastSeen = 0.0f;
                         }
                     }
-                    else if (tt == "chat" && jsonNumber(payload, "id", idd)) {
+                    else if (tt == "chat" && jsonNumber(j, "id", idd)) {
                         uint32_t pid = (uint32_t)idd;
-                        std::string txt; jsonString(payload, "text", txt);
+                        std::string txt; jsonString(j, "text", txt);
                         if (pid != myId_ && !txt.empty()) {
                             std::lock_guard<std::mutex> lk(mtx_);
                             chatIn_.push_back({ pid, txt });
                             if (chatIn_.size() > 32) chatIn_.pop_front();
                         }
                     }
-                    else if (tt == "edeath" && jsonNumber(payload, "id", idd)) {
+                    else if (tt == "edeath" && jsonNumber(j, "id", idd)) {
                         std::lock_guard<std::mutex> lk(mtx_);
                         enemyDeathIn_.push_back((uint32_t)idd);
                         if (enemyDeathIn_.size() > 256) enemyDeathIn_.pop_front();
+                    }
                     }
                 }
             }

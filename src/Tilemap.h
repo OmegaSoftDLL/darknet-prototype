@@ -53,7 +53,7 @@ public:
     ZoneID tileZone(int tx, int ty) const;
     ZoneID biomeAtWorld(float wx, float wy) const;  // bioma INFINITO (módulo 3x3) na posição do mundo — bate com o chão
     void   render(Vector2 camTarget = {0,0}, float zoom = 1.0f) const; // frustum culling
-    void   render3D(Vector2 camTarget) const;  // 2.5D: chão (DrawPlane) + paredes (DrawCube)
+    void   render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) const;  // 2.5D: chão (batch único) + paredes (DrawCube), com frustum culling
     bool   isWall(int x, int y) const;
     bool   isWallAtPosition(Vector2 pos) const;
     bool   isPortalAtPosition(Vector2 pos, ZoneID& outDest) const;
@@ -61,6 +61,7 @@ public:
 
     // Colisao de cenario: marca como solido o entorno de uma construcao/objeto.
     void   markSolidAt(Vector2 worldPos, float radius);
+    void   clearSolidAt(Vector2 worldPos, float radius);  // desmarca (fallback do portal)
     void   clearSolidFlags();   // limpa a colisao de cenario (mantem paredes)
 
 private:

@@ -1,66 +1,38 @@
-﻿#include "StoreClient.h"
+#include "StoreClient.h"
 #include "HttpClient.h"
 #include <thread>
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
+#include <nlohmann/json.hpp>   // vendored em third_party/nlohmann/json.hpp
 
-// ── Parsing JSON minimalista (suficiente para as respostas do backend) ───────
+// ── Parsing JSON (nlohmann/json) ─────────────────────────────────────────────
+// Mesmos defaults do parser manual anterior: chave ausente ou com tipo
+// inesperado vira "" / 0. Respostas invalidas (parse falho) viram um json
+// "discarded" sem chaves — o efeito e o mesmo de nao achar as chaves no corpo.
 namespace {
 
-bool jStr(const std::string& s, const char* key, std::string& out) {
-    std::string k = std::string("\"") + key + "\"";
-    size_t p = s.find(k);
-    if (p == std::string::npos) return false;
-    p = s.find(':', p + k.size());
-    if (p == std::string::npos) return false;
-    p = s.find('"', p);
-    if (p == std::string::npos) return false;
-    p++; out.clear();
-    while (p < s.size() && s[p] != '"') {
-        if (s[p] == '\\' && p + 1 < s.size()) { out.push_back(s[p + 1]); p += 2; }
-        else { out.push_back(s[p]); p++; }
-    }
-    return true;
+nlohmann::json jParse(const std::string& body) {
+    return nlohmann::json::parse(body, nullptr, false);
 }
 
-bool jNum(const std::string& s, const char* key, double& out) {
-    std::string k = std::string("\"") + key + "\"";
-    size_t p = s.find(k);
-    if (p == std::string::npos) return false;
-    p = s.find(':', p + k.size());
-    if (p == std::string::npos) return false;
-    p++;
-    while (p < s.size() && (s[p] == ' ' || s[p] == '\t')) p++;
-    char* end = nullptr;
-    out = std::strtod(s.c_str() + p, &end);
-    return end != s.c_str() + p;
+std::string jStr(const nlohmann::json& j, const char* key) {
+    auto it = j.find(key);
+    return (it != j.end() && it->is_string()) ? it->get<std::string>() : std::string();
 }
 
-// Extrai o conteúdo do array "key":[ ... ] (entre colchetes balanceados).
-bool jArray(const std::string& s, const char* key, std::string& out) {
-    std::string k = std::string("\"") + key + "\"";
-    size_t p = s.find(k);
-    if (p == std::string::npos) return false;
-    p = s.find('[', p);
-    if (p == std::string::npos) return false;
-    int depth = 0; size_t start = p;
-    for (; p < s.size(); ++p) {
-        if (s[p] == '[') depth++;
-        else if (s[p] == ']') { depth--; if (depth == 0) { out = s.substr(start, p - start + 1); return true; } }
-    }
-    return false;
+double jNum(const nlohmann::json& j, const char* key) {
+    auto it = j.find(key);
+    return (it != j.end() && it->is_number()) ? it->get<double>() : 0.0;
 }
 
-// Quebra um array "[ {..}, {..} ]" em objetos "{..}" individuais.
-std::vector<std::string> splitObjects(const std::string& arr) {
-    std::vector<std::string> objs;
-    int depth = 0; size_t start = std::string::npos;
-    for (size_t i = 0; i < arr.size(); ++i) {
-        if (arr[i] == '{') { if (depth == 0) start = i; depth++; }
-        else if (arr[i] == '}') { depth--; if (depth == 0 && start != std::string::npos) { objs.push_back(arr.substr(start, i - start + 1)); start = std::string::npos; } }
-    }
-    return objs;
+// Extrai um array de strings (ex.: "inventory") — ignora elementos nao-string.
+std::vector<std::string> jStrArray(const nlohmann::json& j, const char* key) {
+    std::vector<std::string> out;
+    auto it = j.find(key);
+    if (it != j.end() && it->is_array())
+        for (const auto& e : *it) if (e.is_string()) out.push_back(e.get<std::string>());
+    return out;
 }
 
 } // namespace
@@ -98,16 +70,15 @@ void StoreClient::loginAsync(const std::string& name) {
         std::string body = std::string("{\"name\":\"") + nm + "\"}";
         HttpResponse r = HttpClient::post(h, p, "/auth/login", body);
         if (r.status == 200) {
-            std::string tok, id;
-            jStr(r.body, "token", tok);
-            jStr(r.body, "id", id);
+            nlohmann::json j = jParse(r.body);
+            std::string tok = jStr(j, "token"), id = jStr(j, "id");
             { std::lock_guard<std::mutex> lk(mtx_); token_ = tok; playerId_ = id; }
             logged_ = true;
             setMsg("Conectado a Cyber Station");
             // Logo apos o login, busca o saldo de gems / inventario.
             HttpResponse me = HttpClient::get(h, p, "/me", tok);
             if (me.status == 200) {
-                double g = 0; jNum(me.body, "gems", g);
+                double g = jNum(jParse(me.body), "gems");
                 std::lock_guard<std::mutex> lk(mtx_); gems_ = (int)g;
             }
         } else {
@@ -127,20 +98,24 @@ void StoreClient::fetchStoreAsync() {
         if (r.status == 200) {
             std::vector<PremiumItem> its;
             std::vector<GemPack>     pks;
-            std::string arr;
-            if (jArray(r.body, "items", arr)) {
-                for (auto& o : splitObjects(arr)) {
-                    PremiumItem it; double g = 0;
-                    jStr(o, "id", it.id); jStr(o, "name", it.name);
-                    jStr(o, "type", it.type); jNum(o, "gems", g); it.gems = (int)g;
+            nlohmann::json j = jParse(r.body);
+            auto itemsArr = j.find("items");
+            if (itemsArr != j.end() && itemsArr->is_array()) {
+                for (const auto& o : *itemsArr) {
+                    if (!o.is_object()) continue;
+                    PremiumItem it;
+                    it.id = jStr(o, "id"); it.name = jStr(o, "name");
+                    it.type = jStr(o, "type"); it.gems = (int)jNum(o, "gems");
                     if (!it.id.empty()) its.push_back(it);
                 }
             }
-            if (jArray(r.body, "gemPacks", arr)) {
-                for (auto& o : splitObjects(arr)) {
-                    GemPack gp; double g = 0, pr = 0;
-                    jStr(o, "id", gp.id); jNum(o, "gems", g); jNum(o, "priceBRL", pr);
-                    gp.gems = (int)g; gp.priceBRL = pr;
+            auto packsArr = j.find("gemPacks");
+            if (packsArr != j.end() && packsArr->is_array()) {
+                for (const auto& o : *packsArr) {
+                    if (!o.is_object()) continue;
+                    GemPack gp;
+                    gp.id = jStr(o, "id"); gp.gems = (int)jNum(o, "gems");
+                    gp.priceBRL = jNum(o, "priceBRL");
                     if (!gp.id.empty()) pks.push_back(gp);
                 }
             }
@@ -162,19 +137,9 @@ void StoreClient::refreshAsync() {
     std::thread([this, h, p, tok]() {
         HttpResponse r = HttpClient::get(h, p, "/me", tok);
         if (r.status == 200) {
-            double g = 0; jNum(r.body, "gems", g);
-            std::vector<std::string> inv;
-            std::string arr;
-            if (jArray(r.body, "inventory", arr)) {
-                // inventory é um array de strings — extrai cada "..."
-                size_t i = 0;
-                while ((i = arr.find('"', i)) != std::string::npos) {
-                    size_t j = arr.find('"', i + 1);
-                    if (j == std::string::npos) break;
-                    inv.push_back(arr.substr(i + 1, j - i - 1));
-                    i = j + 1;
-                }
-            }
+            nlohmann::json j = jParse(r.body);
+            double g = jNum(j, "gems");
+            std::vector<std::string> inv = jStrArray(j, "inventory");
             { std::lock_guard<std::mutex> lk(mtx_); gems_ = (int)g; inventory_ = inv; }
         }
         activeThreads_.fetch_sub(1);
@@ -192,17 +157,9 @@ void StoreClient::buyItemAsync(const std::string& itemId) {
         std::string body = std::string("{\"itemId\":\"") + id + "\"}";
         HttpResponse r = HttpClient::post(h, p, "/store/buy-item", body, tok);
         if (r.status == 200) {
-            double g = 0; jNum(r.body, "gems", g);
-            std::vector<std::string> inv; std::string arr;
-            if (jArray(r.body, "inventory", arr)) {
-                size_t i = 0;
-                while ((i = arr.find('"', i)) != std::string::npos) {
-                    size_t j = arr.find('"', i + 1);
-                    if (j == std::string::npos) break;
-                    inv.push_back(arr.substr(i + 1, j - i - 1));
-                    i = j + 1;
-                }
-            }
+            nlohmann::json j = jParse(r.body);
+            double g = jNum(j, "gems");
+            std::vector<std::string> inv = jStrArray(j, "inventory");
             { std::lock_guard<std::mutex> lk(mtx_); gems_ = (int)g; if (!inv.empty()) inventory_ = inv; }
             setMsg("Item comprado!");
         } else if (r.status == 402) {
@@ -226,8 +183,8 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
         std::string body = std::string("{\"packId\":\"") + id + "\"}";
         HttpResponse r = HttpClient::post(h, p, "/store/buy-gems", body, tok);
         if (r.status == 200) {
-            std::string url;
-            if (jStr(r.body, "url", url) && !url.empty()) {
+            std::string url = jStr(jParse(r.body), "url");
+            if (!url.empty()) {
                 HttpClient::openBrowser(url);
                 setMsg("Abrindo pagamento seguro (Stripe)...");
             } else {
