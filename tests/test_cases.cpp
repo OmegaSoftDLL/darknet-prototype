@@ -7,6 +7,7 @@
 #include "CraftingSystem.h"
 #include "Enemy.h"
 #include "Equipment.h"
+#include "SaveManager.h"
 
 #include <doctest/doctest.h>
 
@@ -179,4 +180,112 @@ TEST_CASE("Equipment - custo de upgrade e canUpgrade") {
     Equipment vazio;
     CHECK(vazio.isEmpty());
     CHECK_FALSE(vazio.canUpgrade());     // slot vazio nao upa
+}
+
+// ── SaveManager: roundtrip V5 (slot) ─────────────────────────────────────────
+
+TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V5)") {
+    const int slot = 2;
+    SaveManager::deleteSave(slot);
+
+    Player p;
+    p.position = {123.0f, 456.0f};
+    p.applyClass(CharacterClass::Mago);
+    p.health = p.maxHealth;
+    p.level = 7;
+    p.xp = 2500;
+    p.xpToNextLevel = 3200;
+    p.credits = 9876;
+    p.totalKills = 123;
+    p.equipItem(EDB::rifleEnergia());
+    p.equipItem(EDB::armaduraAvan());
+    p.equipItem(EDB::neuralLink());
+    p.inventory.clear();
+    for (int i = 0; i < 5; ++i) { Item it{}; it.type = ItemType::MetalScrap; p.inventory.push_back(it); }
+    p.inventory.push_back(p.inventory[0]); // 6 no total para o DELETE do slot
+
+    std::vector<Quest> quests;
+    Quest qa("q_teste_a", "A", "d", "npc", QuestType::Kill, 10);
+    qa.current = 6; qa.completed = false; qa.rewardGiven = false;
+    Quest qb("q_teste_b", "B", "d", "npc", QuestType::KillBoss, 1);
+    qb.current = 1; qb.completed = true; qb.rewardGiven = true;
+    quests.push_back(qa); quests.push_back(qb);
+
+    SaveManager::save(p, quests, ZoneID::Cemetery, slot, 45.5f, 123);
+
+    Player loaded;
+    std::vector<Quest> loadedQuests;
+    loadedQuests.push_back(Quest("q_teste_a", "A", "d", "npc", QuestType::Kill, 10));
+    loadedQuests.push_back(Quest("q_teste_b", "B", "d", "npc", QuestType::KillBoss, 1));
+    ZoneID loadedZone = ZoneID::LARuins;
+
+    REQUIRE(SaveManager::load(loaded, loadedQuests, loadedZone, slot));
+    REQUIRE(SaveManager::hasSave(slot));
+
+    SaveSlotInfo info = SaveManager::getSlotInfo(slot);
+    CHECK(info.exists);
+    CHECK(info.playerLevel == 7);
+
+    // Player core
+    CHECK(loaded.position.x == doctest::Approx(123.0f));
+    CHECK(loaded.position.y == doctest::Approx(456.0f));
+    CHECK(loaded.level == 7);
+    CHECK(loaded.xp == 2500);
+    CHECK(loaded.credits == 9876);
+    CHECK(loaded.getCharClass() == CharacterClass::Mago);
+    CHECK(loaded.totalKills == 123);
+    CHECK(static_cast<int>(loadedZone) == static_cast<int>(ZoneID::Cemetery));
+
+    // Equipment resolvido por ID estavel (nao por nome)
+    CHECK(loaded.equippedWeapon.id == EDB::rifleEnergia().id);
+    CHECK(loaded.equippedArmor.id   == EDB::armaduraAvan().id);
+    CHECK(loaded.equippedImplant.id == EDB::neuralLink().id);
+
+    // Inventory
+    REQUIRE(loaded.inventory.size() == 6);
+    for (const auto& item : loaded.inventory)
+        CHECK(item.type == ItemType::MetalScrap);
+
+    // Quests (match por id, estado restaurado)
+    REQUIRE(loadedQuests.size() == 2);
+    CHECK(loadedQuests[0].current    == 6);
+    CHECK_FALSE(loadedQuests[0].completed);
+    CHECK(loadedQuests[1].current    == 1);
+    CHECK(loadedQuests[1].completed);
+    CHECK(loadedQuests[1].rewardGiven);
+
+    SaveManager::deleteSave(slot);
+    CHECK_FALSE(SaveManager::hasSave(slot));
+}
+
+TEST_CASE("SaveManager - V4 legado carrega equipamento por nome de exibicao") {
+    const int slot = 1;
+    SaveManager::deleteSave(slot);
+
+    // Grava um save V4 a mao: IDs antigos nao existiam, equipamento por nome.
+    std::string path = std::string("saves/darknet_slot1.txt");
+    {
+        FILE* f = fopen(path.c_str(), "w");
+        REQUIRE(f != nullptr);
+        fprintf(f, "DARKNET_SAVE_V4\nslot 1\nsaveDate 2026-08-21 10:00:00\n");
+        fprintf(f, "posX 10.0\nposY 20.0\nhealth 80.0\nmaxHealth 100.0\n");
+        fprintf(f, "attackDamage 15.0\nattackRange 90.0\nspeed 250.0\ndefense 0.0\n");
+        fprintf(f, "charClass 0\nlevel 3\nxp 150\nxpToNext 300\ncredits 500\nzone 4\n");
+        fprintf(f, "weaponName Pistola Plasma\narmorName Colete Militar\nimplantName none\n");
+        fprintf(f, "questCount 0\ninventory 0\n");
+        fclose(f);
+    }
+
+    Player loaded;
+    std::vector<Quest> quests;
+    ZoneID zone = ZoneID::LARuins;
+    REQUIRE(SaveManager::load(loaded, quests, zone, slot));
+
+    CHECK(loaded.equippedWeapon.id == EDB::pistolaPlas().id);
+    CHECK(loaded.equippedArmor.id   == EDB::coleteMilitar().id);
+    CHECK(loaded.equippedImplant.isEmpty());
+    CHECK(loaded.level == 3);
+    CHECK(loaded.credits == 500);
+
+    SaveManager::deleteSave(slot);
 }
