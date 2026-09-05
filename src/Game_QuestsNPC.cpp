@@ -367,9 +367,24 @@ void Game::setupWorldRegions() {
     // Each region = OW_ZONE_W * tileSize pixels wide/tall
     float sz = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize); // 2560
 
+    // ── Mundo aberto grande o suficiente para a FASE INTEIRA ─────────────────
+    // A fase e um disco de owPhaseRadius em volta do refugio. As regioes sao
+    // uma GRID quadrada (impar por lado) CENTRADA no refugio que cobre o disco
+    // inteiro. Antes eram 3x3 ancoradas na origem (0,0) com o hub no canto:
+    // metade de uma fase grande ficava sem cenario (regioes de 2560 tinham o
+    // hub em (1280,1280) e o quadrado todo começava na origem).
+    float side = (owPhaseRadius + 340.0f) * 2.0f;   // quadrado que contem o disco
+    int   cols = (int)ceilf(side / sz);
+    if (cols < 3) cols = 3;
+    if ((cols & 1) == 0) cols += 1;                  // impar p/ ter celula central
+    float regW  = side / (float)cols;
+    float x0 = safeZoneCenter.x - side * 0.5f;
+    float y0 = safeZoneCenter.y - side * 0.5f;
+    int   cc  = cols / 2;                            // coluna/linha central (hub)
+
     auto add = [&](int col, int row, ZoneID z, const char* n, Color c) {
         WorldRegion r;
-        r.bounds     = {col * sz, row * sz, sz, sz};
+        r.bounds     = {x0 + col * regW, y0 + row * regW, regW, regW};
         r.zoneType   = z;
         r.name       = n;
         r.discovered = false;
@@ -378,31 +393,52 @@ void Game::setupWorldRegions() {
     };
 
     // Uma FASE = um mundo inteiro: TODAS as regioes assumem o bioma da fase
-    // (currentZone), nao uma grade 3x3 fixa com LARuins no hub. Antes o refugio
-    // nascia com grade de predios modernos (structuresFor(LARuins)) mesmo na
-    // fase do Cemiterio — cidade de LA sobre chao de cemiterio (auditoria P2).
-    // O catalogo de estruturas ja e keyado por zoneType, entao a regiao seguindo
-    // a fase faz o cenario inteiro acompanhar o piso (biomeAtWorld = fase).
-    // As POSICOES 3x3 continuam casando com Tilemap::generateOpenWorld().
+    // (currentZone), nao uma grade 3x3 fixa com LARuins no hub.
     ZoneID hz = currentZone;
-    add(0, 0, hz, "Refugio",             {80,120,80,255});
-    add(1, 0, hz, "Setor Leste",         {60,80,120,255});
-    add(2, 0, hz, "Setor Extremo Leste", {20,50,20,255});
-    add(0, 1, hz, "Setor Sul",           {100,80,40,255});
-    add(1, 1, hz, "Setor Sudeste",       {60,60,80,255});
-    add(2, 1, hz, "Setor Leste 2",       {40,60,80,255});
-    add(0, 2, hz, "Setor Extremo Sul",   {120,40,20,255});
-    add(1, 2, hz, "Setor Sul 2",         {80,40,80,255});
-    add(2, 2, hz, "Confins",             {80,0,120,255});
 
-    // O nome do HUB acompanha a fase (e o nome que aparece no mapa).
-    {
-        const PhaseDef& pd = phaseDef(owPhase);
-        if (!pd.title.empty()) worldRegions[0].name = pd.title;
+    // Nomes por SETOR (bussola) em relacao ao refugio; o centro e o "Refugio".
+    auto sectName = [&](int dr, int dc) -> std::string {
+        std::string s;
+        if (dr < 0) s += "Norte";
+        else if (dr > 0) s += "Sul";
+        if (dc < 0) s += (s.empty() ? "Oeste" : "-Oeste");
+        else if (dc > 0) s += (s.empty() ? "Leste" : "-Leste");
+        return s;
+    };
+    static const Color SEC_COLORS[5] = {
+        {120,170,90,255}, {90,120,170,255}, {170,120,90,255},
+        {90,170,150,255}, {150,90,170,255},
+    };
+    for (int row = 0; row < cols; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            int dr = row - cc, dc = col - cc;
+            Color c = SEC_COLORS[((dr + 2) * 5 + (dc + 2)) % 5];
+            if (dr == 0 && dc == 0) {
+                add(col, row, hz, "Refugio", c);
+                continue;
+            }
+            std::string nm = sectName(dr, dc);
+            std::string full = nm.empty() ? "Setor Central" : ("Setor " + nm);
+            add(col, row, hz, full.c_str(), c);
+        }
     }
 
-    // First region starts discovered
-    if (!worldRegions.empty()) worldRegions[0].discovered = true;
+    // O HUB (regiao que contem a base/safeZoneCenter) acompanha a fase — e o nome
+    // que aparece no mapa — e nasce DESCOBERTO. A grid e row-major do canto
+    // superior-esquerdo, entao worldRegions[0] NAO e o hub: procuro pela regiao
+    // que contem o centro da base.
+    {
+        const PhaseDef& pd = phaseDef(owPhase);
+        for (auto& r : worldRegions) {
+            float cx = safeZoneCenter.x, cy = safeZoneCenter.y;
+            if (cx >= r.bounds.x && cx < r.bounds.x + r.bounds.width &&
+                cy >= r.bounds.y && cy < r.bounds.y + r.bounds.height) {
+                if (!pd.title.empty()) r.name = pd.title;
+                r.discovered = true;
+                break;
+            }
+        }
+    }
 }
 
 ZoneID Game::getRegionAt(Vector2 pos) const {

@@ -670,13 +670,13 @@ void Game::drawMinimap() const {
     float vx0, vy0, vx1, vy1;
     bool  owFocus = openWorldMode;
     if (owFocus) {
+        // Mundo aberto e um DISCO de owPhaseRadius ao redor da base; a janela do
+        // radar e esse disco com folga para o portal. Sem clamp em worldW/H: o cenario
+        // e infinito e a fase agora cresce (raio 5200..7800) para alem dos 7680u de
+        // antigamente — o texto/elipse central viajavam para fora do painel.
         float half = owPhaseRadius * 1.06f + 20.0f;   // folga p/ o portal na borda
         vx0 = safeZoneCenter.x - half; vx1 = safeZoneCenter.x + half;
         vy0 = safeZoneCenter.y - half; vy1 = safeZoneCenter.y + half;
-        if (vx0 < 0) { float d = -vx0; vx0 = 0; vx1 += d; }
-        if (vy0 < 0) { float d = -vy0; vy0 = 0; vy1 += d; }
-        if (vx1 > worldW) { float d = vx1 - worldW; vx1 = worldW; vx0 -= d; if (vx0 < 0) vx0 = 0; }
-        if (vy1 > worldH) { float d = vy1 - worldH; vy1 = worldH; vy0 -= d; if (vy0 < 0) vy0 = 0; }
     } else {
         vx0 = 0; vy0 = 0; vx1 = worldW; vy1 = worldH;
     }
@@ -714,19 +714,19 @@ void Game::drawMinimap() const {
     // Fronteiras da região que cruzam a janela da fase (orientação no mundo);
     // em mapa fechado não há regiões, então o overlay só existe em mundo aberto.
     if (owFocus) {
-        float regionW = worldW / Tilemap::OW_COLS;
-        float regionH = worldH / Tilemap::OW_ROWS;
-        for (int c = 1; c < Tilemap::OW_COLS; ++c) {
-            float wpx = c * regionW;
-            if (wpx < vx0 || wpx > vx1) continue;
-            int lx = mapX + mx(wpx);
-            DrawLine(lx, mapY, lx, mapY + mapH, ColorAlpha({0,235,255,255}, 0.10f));
-        }
-        for (int r2 = 1; r2 < Tilemap::OW_ROWS; ++r2) {
-            float wpy = r2 * regionH;
-            if (wpy < vy0 || wpy > vy1) continue;
-            int ly = mapY + my(wpy);
-            DrawLine(mapX, ly, mapX + mapW, ly, ColorAlpha({0,235,255,255}, 0.10f));
+        // Fronteiras das REGIOES (grid dinamico centrado na base) que cruzam a
+        // janela da fase — nao mais a grade fixa 3x3 do tilemap antigo.
+        for (const auto& r : worldRegions) {
+            float lx = r.bounds.x;
+            if (lx > vx0 && lx < vx1) {
+                int ll = mapX + mx(lx);
+                DrawLine(ll, mapY, ll, mapY + mapH, ColorAlpha({0,235,255,255}, 0.10f));
+            }
+            float ly = r.bounds.y;
+            if (ly > vy0 && ly < vy1) {
+                int l2 = mapY + my(ly);
+                DrawLine(mapX, l2, mapX + mapW, l2, ColorAlpha({0,235,255,255}, 0.10f));
+            }
         }
         DrawText(TextFormat("FASE %d", owPhase + 1), mapX + 60, mapY - 11, 10,
                  ColorAlpha({0,235,255,255}, 0.9f));

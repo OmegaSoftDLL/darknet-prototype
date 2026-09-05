@@ -111,9 +111,12 @@ void Game::buildOpenWorldScenery() {
         float dx = p.x - safeZoneCenter.x, dy = p.y - safeZoneCenter.y;
         return dx*dx + dy*dy <= phaseLimit * phaseLimit;
     };
-    // Zona livre do HUB (NPCs ficam no centro do mundo) — nenhuma estrutura nasce lá.
-    const float hubX = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f; // centro do hub (1ª zona)
-    const float hubY = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
+    // Zona livre do HUB (NPCs ficam no centro do mundo) — nenhuma estrutura nasce
+    // lá. Refugio = safeZoneCenter (o centro da fase/galáxia), nao mais o centro
+    // da zona 0 do tilemap 3x3 (coincidia em 1280,1280, mas o mundo agora é
+    // centrado na base e as fases cresceram para alem do grid antigo).
+    const float hubX = safeZoneCenter.x;
+    const float hubY = safeZoneCenter.y;
     auto place = [&](Rectangle b, int type, int count,
                      float minScale, float maxScale, float margin, bool city = false) {
         float areaK = (b.width * b.height) / (2560.0f * 2560.0f);
@@ -603,7 +606,6 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
     if (!openWorldMode) return;
     const float CH   = 1280.0f;                 // tamanho do chunk (~20 tiles)
     const int   RAD  = 2;                        // raio em chunks (5x5 carregados)
-    const float ORIG = (float)(Tilemap::OW_COLS * Tilemap::OW_ZONE_W * 64); // região fixa original
     int pcx = (int)floorf(playerPos.x / CH);
     int pcy = (int)floorf(playerPos.y / CH);
 
@@ -635,7 +637,21 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
     m_sceneryChunks.insert(toGen);
 
     float ox = gcx * CH, oy = gcy * CH;
-    if (!(ox >= 0 && oy >= 0 && ox < ORIG && oy < ORIG)) {   // não gera na região fixa
+    // MUNDO CENTRADO NA BASE: as regioes EAGER (worldRegions) cobrem a fase inteira,
+    // incluindo coordenadas negativas agora (grid dinamico centrado no refugio).
+    // Chunk procedural SO ativa onde nao existe regiao — ou seja, alem da fase.
+    // O guard antigo (ORIG fixo 0..24576) permitia gerar no quadrante negativo, e
+    // com a fase cobrindo a margem oeste/norte o cenario saia DUPLICADO em cima da
+    // regiao eager (o bug que a grade 3x3 ancorada na origem nunca tinha).
+    bool inEager = false;
+    for (const auto& r : worldRegions) {
+        if (ox >= r.bounds.x && oy >= r.bounds.y &&
+            ox < r.bounds.x + r.bounds.width && oy < r.bounds.y + r.bounds.height) {
+            inEager = true;
+            break;
+        }
+    }
+    if (!inEager) {   // gera chunk procedural fora da area eager
         unsigned int rng = (unsigned int)(gcx * 73856093) ^ (unsigned int)(gcy * 19349663) ^ 0x5151u;
         auto rnd = [&]() { rng = rng * 1664525u + 1013904223u; return (float)((rng >> 8) & 0xFFFF) / 65535.0f; };
         auto add = [&](int type, int count, float mn, float mx) {
@@ -677,8 +693,8 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
         // Estrutura só entra se: a bioma DA POSIÇÃO bate (sem vazar pro vizinho),
         // está longe do hub (NPCs) e NÃO encosta em outra estrutura (anti-amontoado).
         std::vector<Vector2> placedB;
-        const float hubX = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f; // centro do hub (1ª zona)
-        const float hubY = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
+        const float hubX = safeZoneCenter.x;   // refugio = centro da fase/base (ver buildOpenWorldScenery)
+        const float hubY = safeZoneCenter.y;
         auto putB = [&](int type, Vector2 pos, float sc, ZoneID want, float minSp = 400.0f) {
             if (tilemap.biomeAtWorld(pos.x, pos.y) != want) return;
             float hdx = pos.x - hubX, hdy = pos.y - hubY;

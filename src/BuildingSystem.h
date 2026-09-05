@@ -83,6 +83,12 @@ struct Building {
     float        productionTimer = 0.f;
     float        productionRate  = 15.f; // seconds per unit/credit cycle
 
+    // Fila de producao (Quartel/Fabrica) — unidades NAO nascem na hora.
+    // Cada clique/mao-de-obra enfileira; a unidade saí pronta so depois de spawnTime.
+    int          spawnQueue   = 0;    // unidades enfileiradas (inclui a atual)
+    float        spawnTimer   = 0.f;  // progresso da unidade atual (0→spawnTime)
+    float        spawnTime    = 5.f;  // segundos de producao por unidade
+
     // Resource generation
     float        genTimer     = 0.f;
     float        genRate      = 8.f;    // seconds between credit/material ticks
