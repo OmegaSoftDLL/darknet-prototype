@@ -231,7 +231,15 @@ Game::Game() {
     craftingSystem.buildRecipes();
     achievements.init();
 
-    // Open world — generate unified 9-region map
+    // Open world — mundo aberto CENTRADO NA BASE. A fase precisa estar definida
+    // ANTES das regioes: setupWorldRegions deriva a grid do owPhaseRadius e do
+    // bioma (currentZone) da fase. Com o raio no default (3000) as regioes
+    // nasciam menores que a barreira e o anel externo era populado por chunks
+    // com outra densidade — a borda da primeira fase lia diferente do resto.
+    const PhaseDef& p0 = phaseDef(0);
+    owPhase = 0; owPhaseKills = 0; owKillsAtStart = 0;
+    owPhaseGoal = p0.goal; owPhaseRadius = p0.radius;
+    owBossPhase = p0.boss; owBossDown = false; owPortalOpen = false;
     openWorldMode = true;
     tilemap.generateOpenWorld();
     setupWorldRegions();
@@ -245,10 +253,6 @@ Game::Game() {
     player.position  = {cx, cy};
     safeZoneCenter   = {cx, cy};   // refugio fica no centro da regiao inicial
     {   // fase 1 tambem sai da tabela (antes os valores viviam so no codigo)
-        const PhaseDef& p0 = phaseDef(0);
-        owPhaseGoal   = p0.goal;
-        owPhaseRadius = p0.radius;
-        owBossPhase   = p0.boss;
         currentZone   = p0.zone;
         currentRegion = p0.zone;
     }
@@ -605,6 +609,14 @@ void Game::run() {
                     } else {
                         if (hasSave) SaveManager::load(player, quests, currentZone);
                         if (openWorldMode) {
+                            // Reconstroi a fase a partir da zona salva (ver startLoadedGame).
+                            owPhase = 0; owPhaseRadius = 3000.0f; owPhaseGoal = 20; owBossPhase = false;
+                            for (int i = 0; i < (int)phaseDefs.size(); ++i)
+                                if (phaseDefs[i].zone == currentZone) {
+                                    owPhase = i; owPhaseGoal = phaseDefs[i].goal;
+                                    owPhaseRadius = phaseDefs[i].radius; owBossPhase = phaseDefs[i].boss; break;
+                                }
+                            owPhaseKills = 0; owKillsAtStart = 0; owBossDown = false; owPortalOpen = false;
                             tilemap.generateOpenWorld();
                             setupWorldRegions();
                             buildOpenWorldScenery();
@@ -778,6 +790,13 @@ void Game::startNewGame() {
     currentZone   = ZoneID::LARuins;
     currentRegion = ZoneID::LARuins;
     if (openWorldMode) {
+        // Reset completo do estado de fase: o mundo novo comeca na fase 1 do
+        // zero (raio/bioma/c1da fase). Antes owPhaseRadius ou owPhaseGoal podiam
+        // sobrar da partida anterior — o "Novo Jogo" herdava fase advanced.
+        const PhaseDef& pd0 = phaseDef(0);
+        owPhase = 0; owPhaseKills = 0; owKillsAtStart = 0;
+        owPhaseGoal = pd0.goal; owPhaseRadius = pd0.radius;
+        owBossPhase = pd0.boss; owBossDown = false; owPortalOpen = false;
         tilemap.generateOpenWorld();
         setupWorldRegions();
         float ox = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f;
@@ -942,6 +961,20 @@ void Game::startLoadedGame() {
     // Carrega o save e entra direto no jogo — SEM tela de dificuldade.
     // A dificuldade salva e mantida (so muda em Novo Jogo ou pelo menu de pause).
     if (SaveManager::exists()) SaveManager::load(player, quests, currentZone);
+    // Ow phase state nao fica no .json: reconstruo owPhase/raio/meta/boss a partir
+    // da ZONA salva, senao as regioes nascem para a fase 1 (raio 5200) num save de
+    // phase 10 (raio 7800) — grid menor que a barreira, anel externo sem cenario.
+    {
+        owPhase = 0; owPhaseRadius = 3000.0f; owPhaseGoal = 20; owBossPhase = false;
+        for (int i = 0; i < (int)phaseDefs.size(); ++i) {
+            if (phaseDefs[i].zone == currentZone) {
+                owPhase = i; owPhaseGoal = phaseDefs[i].goal;
+                owPhaseRadius = phaseDefs[i].radius; owBossPhase = phaseDefs[i].boss;
+                break;
+            }
+        }
+        owPhaseKills = 0; owKillsAtStart = 0; owBossDown = false; owPortalOpen = false;
+    }
     player.unclaimedLevels = 0;   // nivel veio do arquivo; nao e level-up novo
     if (openWorldMode) {
         tilemap.generateOpenWorld();
@@ -1028,6 +1061,12 @@ void Game::restartRun() {
     currentZone   = ZoneID::LARuins;
     currentRegion = ZoneID::LARuins;
     if (openWorldMode) {
+        // Mesmo reset de fase do Novo Jogo: retorno "partida reiniciada" tambem
+        // volta para a fase 1 (raio/bioma corretos antes de gerar o cenario).
+        const PhaseDef& pd0 = phaseDef(0);
+        owPhase = 0; owPhaseKills = 0; owKillsAtStart = 0;
+        owPhaseGoal = pd0.goal; owPhaseRadius = pd0.radius;
+        owBossPhase = pd0.boss; owBossDown = false; owPortalOpen = false;
         tilemap.generateOpenWorld();
         setupWorldRegions();
         buildOpenWorldScenery();

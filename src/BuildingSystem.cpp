@@ -35,11 +35,13 @@ Building::Building(Vector2 pos, BuildingType t) : position(pos), type(t) {
         case BuildingType::Barracks:
             health = maxHealth = 300.f;
             productionRate = 20.f;
+            spawnTime = 5.f;
             tintColor = {80, 160, 255, 255};
             break;
         case BuildingType::TankFactory:
             health = maxHealth = 400.f;
             productionRate = 30.f;
+            spawnTime = 9.f;
             tintColor = {255, 140, 0, 255};
             break;
         case BuildingType::Turret:
@@ -111,19 +113,34 @@ void BuildingSystem::update(float dt, Vector2 playerPos,
         updateBuilding(b, dt, playerPos, enemies);
     }
 
-    // Wall collision vs enemy projectiles
+    // Projecteis inimigos derrubam construcoes e unidades aliadas.
+    // Paredes barram o tiro; predios comuns levam dano mas deixa o projétil passar.
     if (enemyProj) {
         for (auto& ep : *enemyProj) {
+            bool wallHit = false;
             for (auto& b : buildings) {
                 if (!b.active || !b.built) continue;
-                if (b.type != BuildingType::Wall) continue;
-                float w = 64.f, h = 16.f;
-                Rectangle wr = {b.position.x - w/2.f, b.position.y - h/2.f, w, h};
-                if (CheckCollisionCircleRec(ep.position, ep.radius, wr)) {
-                    ep.active = false;
-                    b.health -= ep.damage * 0.5f;
+                bool isWall = (b.type == BuildingType::Wall);
+                float w = isWall ? 64.f : 48.f;
+                float h = isWall ? 16.f : 48.f;
+                Rectangle br = {b.position.x - w/2.f, b.position.y - h/2.f, w, h};
+                if (CheckCollisionCircleRec(ep.position, ep.radius, br)) {
+                    b.health -= ep.damage;
+                    if (isWall) { ep.active = false; wallHit = true; }
                     if (b.health <= 0.f) b.active = false;
+                    break;   // primeira construcao atingida por este projetil
                 }
+            }
+            if (wallHit) continue;
+            for (auto& t : tanks) {
+                if (!t.active || t.isDead()) continue;
+                if (Vector2Distance(ep.position, t.position) < ep.radius + 20.f)
+                    t.health -= ep.damage;
+            }
+            for (auto& s : soldiers) {
+                if (!s.active || s.isDead()) continue;
+                if (Vector2Distance(ep.position, s.position) < ep.radius + 12.f)
+                    s.health -= ep.damage;
             }
         }
     }
@@ -190,7 +207,7 @@ void BuildingSystem::updateBuilding(Building& b, float dt, Vector2 playerPos,
             b.productionTimer += dt;
             if (b.productionTimer >= b.productionRate) {
                 b.productionTimer = 0.f;
-                if ((int)soldiers.size() < 12) spawnSoldier(b.position);
+                if ((int)soldiers.size() + b.spawnQueue < 12) b.spawnQueue++;
             }
             break;
 
@@ -198,7 +215,7 @@ void BuildingSystem::updateBuilding(Building& b, float dt, Vector2 playerPos,
             b.productionTimer += dt;
             if (b.productionTimer >= b.productionRate) {
                 b.productionTimer = 0.f;
-                if ((int)tanks.size() < 8) spawnTank(b.position);
+                if ((int)tanks.size() + b.spawnQueue < 8) b.spawnQueue++;
             }
             break;
 
@@ -235,6 +252,20 @@ void BuildingSystem::updateBuilding(Building& b, float dt, Vector2 playerPos,
             break;
 
         default: break;
+    }
+
+    // ── Fila de producao ── base de produção constrói a unidade ao longo do
+    // tempo (spawnTime); ela NAO nasce pronto na hora.
+    if (b.spawnQueue > 0 && (b.type == BuildingType::Barracks ||
+                             b.type == BuildingType::TankFactory)) {
+        float m = 1.0f + (b.level - 1) * 0.5f;   // nivel reduz o tempo de producao
+        b.spawnTimer += dt;
+        if (b.spawnTimer >= b.spawnTime / m) {
+            b.spawnTimer = 0.f;
+            b.spawnQueue--;
+            if (b.type == BuildingType::Barracks) spawnSoldier(b.position);
+            else                                 spawnTank(b.position);
+        }
     }
 }
 
@@ -289,9 +320,11 @@ const Enemy* BuildingSystem::nearestEnemy(Vector2 from, float range,
 
 void BuildingSystem::spawnTank(Vector2 factoryPos) {
     FriendlyTank t;
-    t.position   = {factoryPos.x + 60.f, factoryPos.y};
+    // Angulo deterministico (sem GetRandomValue) — mantem o world-state reproduzivel
+    float angle = (float)tanks.size() * 1.7f + 2.0f;
+    t.position   = {factoryPos.x + cosf(angle) * 55.f, factoryPos.y + sinf(angle) * 55.f};
     t.factoryPos = factoryPos;
-    t.orbitAngle = (float)GetRandomValue(0, 360) * DEG2RAD;
+    t.orbitAngle = angle;
     tanks.push_back(t);
 }
 
@@ -304,19 +337,19 @@ int BuildingSystem::clickProduce(Vector2 worldPos, int& playerCredits) {
         if (Vector2Distance(worldPos, b.position) > 60.0f) continue;
 
         if (isFactory) {
-            if ((int)tanks.size() >= 8) return 3;       // limite
+            if ((int)tanks.size() + b.spawnQueue >= 8) return 3;   // limite
             int cost = 40;
             if (playerCredits < cost) return 2;          // sem creditos
             playerCredits -= cost;
-            spawnTank(b.position);
+            b.spawnQueue++;                              // entra na fila de producao
         } else {
-            if ((int)soldiers.size() >= 12) return 3;
+            if ((int)soldiers.size() + b.spawnQueue >= 12) return 3;
             int cost = 20;
             if (playerCredits < cost) return 2;
             playerCredits -= cost;
-            spawnSoldier(b.position);
+            b.spawnQueue++;
         }
-        return 1; // produziu
+        return 1; // enfileirou
     }
     return 0; // nao clicou em predio de producao
 }
@@ -473,23 +506,32 @@ void BuildingSystem::renderUnitPrompts() const {
 
         float bx = b.position.x, by = b.position.y - 56.0f;
         // Fundo
-        const char* lbl = TextFormat("[CLIQUE] %s  $%d   %d/%d", unit, cost, n, cap);
+        const char* lbl = TextFormat("[CLIQUE] %s  $%d   %d/%d", unit, cost, n + b.spawnQueue, cap);
         int tw = MeasureText(lbl, 11);
         DrawRectangle((int)(bx - tw/2 - 4), (int)(by - 2), tw + 8, 16, ColorAlpha(BLACK, 0.7f));
         DrawRectangleLines((int)(bx - tw/2 - 4), (int)(by - 2), tw + 8, 16,
                            ColorAlpha(Color{120,200,255,255}, 0.7f));
         DrawText(lbl, (int)(bx - tw/2), (int)by, 11, Color{180,220,255,255});
 
-        // Barra de producao automatica
-        float pct = b.productionTimer / b.productionRate;
-        DrawRectangle((int)(bx - 24), (int)(by + 16), 48, 4, ColorAlpha(BLACK, 0.6f));
-        DrawRectangle((int)(bx - 24), (int)(by + 16), (int)(48 * pct), 4, Color{255,200,0,255});
+        // Barra de producao: unidade em construcao (cyan) ou ciclo automatico (amarelo)
+        if (b.spawnQueue > 0) {
+            float pct = fminf(1.0f, (float)b.spawnTimer / b.spawnTime);
+            DrawRectangle((int)(bx - 26), (int)(by + 16), 52, 4, ColorAlpha(BLACK, 0.6f));
+            DrawRectangle((int)(bx - 26), (int)(by + 16), (int)(52 * pct), 4, Color{80,220,255,255});
+            DrawText(TextFormat("Construindo... %d na fila", b.spawnQueue),
+                     (int)(bx - 34), (int)(by + 22), 9, Color{140,220,255,255});
+        } else {
+            float pct = b.productionTimer / b.productionRate;
+            DrawRectangle((int)(bx - 24), (int)(by + 16), 48, 4, ColorAlpha(BLACK, 0.6f));
+            DrawRectangle((int)(bx - 24), (int)(by + 16), (int)(48 * pct), 4, Color{255,200,0,255});
+        }
     }
 }
 
 void BuildingSystem::spawnSoldier(Vector2 barracksPos) {
     FriendlySoldier s;
-    float angle = (float)GetRandomValue(0, 360) * DEG2RAD;
+    // Angulo deterministico (sem GetRandomValue) — mantem o world-state reproduzivel
+    float angle = (float)soldiers.size() * 0.9f + 7.0f;
     s.position   = {barracksPos.x + cosf(angle) * 50.f, barracksPos.y + sinf(angle) * 50.f};
     s.barracksPos = barracksPos;
     soldiers.push_back(s);
@@ -561,19 +603,24 @@ void FriendlyTank::update(float dt, const std::vector<Enemy*>& enemies) {
 void FriendlyTank::render() const {
     if (!active || isDead()) return;
 
-    // Tank body
-    Color bodyC = {200, 140, 60, 255};
-    DrawRectangle((int)(position.x - 18), (int)(position.y - 12), 36, 24, bodyC);
-    DrawRectangle((int)(position.x - 14), (int)(position.y - 8),  28, 16, {220, 160, 80, 255});
-    // Turret
-    DrawCircle((int)position.x, (int)position.y, 9.f, {180, 120, 50, 255});
-    // Barrel
+    // ── APC Void-Tech — casco escuro + nucleo neon ─────────────────────────────
+    Color hullC = {42, 48, 66, 255};
+    Color coreC = {0, 240, 255, 255};
+    DrawRectangle((int)(position.x - 18), (int)(position.y - 12), 36, 24, hullC);
+    DrawRectangleLinesEx({position.x - 18, position.y - 12, 36, 24}, 1.f,
+                         ColorAlpha(coreC, 0.4f));
+    DrawRectangle((int)(position.x - 14), (int)(position.y - 8),  28, 16, {56, 62, 82, 255});
+    // Nucleo de energia central
+    DrawCircle((int)position.x, (int)position.y, 7.f, {0, 200, 255, 255});
+    DrawCircleLines((int)position.x, (int)position.y, 9.f, ColorAlpha(coreC, 0.5f));
+    // Canhao de energia
     Vector2 barrelEnd = {position.x + shootDir.x * 18.f, position.y + shootDir.y * 18.f};
-    DrawLineEx(position, barrelEnd, 4.f, {120, 80, 30, 255});
+    DrawLineEx(position, barrelEnd, 4.f, {0, 220, 255, 255});
     // HP bar
     float pct = health / maxHealth;
     DrawRectangle((int)(position.x - 18), (int)(position.y - 20), 36, 4, ColorAlpha(BLACK, 0.6f));
-    DrawRectangle((int)(position.x - 18), (int)(position.y - 20), (int)(36 * pct), 4, GREEN);
+    DrawRectangle((int)(position.x - 18), (int)(position.y - 20), (int)(36 * pct), 4,
+                  {0, 240, 255, 255});
 }
 
 // ─── FriendlySoldier Update ──────────────────────────────────────────────────
@@ -634,16 +681,22 @@ void FriendlySoldier::update(float dt, Vector2 playerPos, const std::vector<Enem
 
 void FriendlySoldier::render() const {
     if (!active || isDead()) return;
-    // Body (resistance soldier)
-    DrawCircle((int)position.x, (int)(position.y - 8), 8.f, {80, 120, 200, 255});
-    DrawRectangle((int)(position.x - 5), (int)(position.y), 10, 16, {60, 100, 180, 255});
-    // Rifle
+    // ── Infantaria Void — armadura escura + visor neon ─────────────────────────
+    // Helmet com visor
+    DrawCircle((int)position.x, (int)(position.y - 8), 8.f, {34, 40, 56, 255});
+    DrawCircleLines((int)position.x, (int)(position.y - 8), 8.f,
+                    ColorAlpha({0, 240, 255, 255}, 0.35f));
+    DrawCircle((int)position.x, (int)(position.y - 9), 3.f, {0, 240, 255, 255});
+    // Torso de armadura
+    DrawRectangle((int)(position.x - 5), (int)position.y, 10, 16, {28, 34, 50, 255});
+    // Rifle de energia
     Vector2 rifleEnd = {position.x + shootDir.x * 16.f, position.y - 8.f + shootDir.y * 16.f};
-    DrawLineEx({position.x, position.y - 8.f}, rifleEnd, 2.5f, {40, 60, 120, 255});
+    DrawLineEx({position.x, position.y - 8.f}, rifleEnd, 2.5f, {0, 220, 255, 255});
     // HP
     float pct = health / maxHealth;
     DrawRectangle((int)(position.x - 12), (int)(position.y - 18), 24, 3, ColorAlpha(BLACK, 0.6f));
-    DrawRectangle((int)(position.x - 12), (int)(position.y - 18), (int)(24 * pct), 3, {100, 200, 255, 255});
+    DrawRectangle((int)(position.x - 12), (int)(position.y - 18), (int)(24 * pct), 3,
+                  {0, 220, 255, 255});
 }
 
 // ─── Render ──────────────────────────────────────────────────────────────────
@@ -701,11 +754,14 @@ void BuildingSystem::renderArkBuilding(const Building& b) const {
     float pulse = 0.5f + 0.5f * sinf(b.animTimer * 2.0f);
 
     if (!b.built) {
-        // Under construction scaffold
-        DrawRectangleLinesEx({b.position.x - 36, b.position.y - 36, 72, 72}, 2.f, GRAY);
+        // Scaffold holografico sob construcao
+        DrawRectangleLinesEx({b.position.x - 36, b.position.y - 36, 72, 72}, 1.5f,
+                             ColorAlpha({0, 220, 255, 255}, 0.4f + pulse * 0.4f));
         float prog = b.buildTimer * 72.f;   // era (int) num float: truncava e gerava C4244
-        DrawRectangle((int)(b.position.x - 36), (int)(b.position.y + 28), (int)prog, 8, YELLOW);
-        DrawText("Construindo...", (int)(b.position.x - 36), (int)(b.position.y - 50), 12, YELLOW);
+        DrawRectangle((int)(b.position.x - 36), (int)(b.position.y + 28), (int)prog, 8,
+                      Color{0, 255, 220, 255});
+        DrawText("MONTANDO...", (int)(b.position.x - 36), (int)(b.position.y - 50), 12,
+                 Color{0, 220, 255, 255});
         return;
     }
 
@@ -735,104 +791,147 @@ void BuildingSystem::renderArkBuilding(const Building& b) const {
 }
 
 void BuildingSystem::renderHouseBuilding(const Building& b) const {
+    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 2.2f);
+
     if (!b.built) {
-        DrawRectangleLinesEx({b.position.x - 24, b.position.y - 24, 48, 48}, 2.f, GRAY);
-        DrawRectangle((int)(b.position.x - 24), (int)(b.position.y + 18), (int)(b.buildTimer * 48), 6, YELLOW);
+        // Scaffold holografico de construcao
+        DrawRectangleLinesEx({b.position.x - 24, b.position.y - 24, 48, 48}, 1.5f,
+                             ColorAlpha({0, 220, 255, 255}, 0.4f + pulse * 0.4f));
+        DrawRectangle((int)(b.position.x - 24), (int)(b.position.y + 18), (int)(b.buildTimer * 48), 6,
+                      Color{0, 255, 220, 255});
+        DrawText("MONTANDO...", (int)(b.position.x - 30), (int)(b.position.y - 44), 10,
+                 Color{0, 220, 255, 255});
         return;
     }
 
-    // Walls
-    DrawRectangle((int)(b.position.x - 22), (int)(b.position.y - 14), 44, 32, {160, 140, 100, 255});
-    // Roof
-    Vector2 roofPts[3] = {
-        {b.position.x - 26, b.position.y - 14},
-        {b.position.x + 26, b.position.y - 14},
-        {b.position.x,      b.position.y - 34}
-    };
-    DrawTriangle(roofPts[2], roofPts[1], roofPts[0], {180, 60, 60, 255});
-    // Window
-    DrawRectangle((int)(b.position.x - 10), (int)(b.position.y - 8), 10, 10, {200, 220, 255, 180});
-    DrawRectangle((int)(b.position.x + 2),  (int)(b.position.y - 8), 10, 10, {200, 220, 255, 180});
-    // Door
-    DrawRectangle((int)(b.position.x - 4), (int)(b.position.y + 4), 8, 14, {100, 70, 40, 255});
+    // ── Base de Apoio (relay de energia) — nada de fazenda ────────────────────
+    // Plataforma escura com painel
+    DrawRectangle((int)(b.position.x - 22), (int)(b.position.y - 12), 44, 30, {26, 32, 48, 255});
+    DrawRectangleLinesEx({b.position.x - 22, b.position.y - 12, 44, 30}, 1.5f,
+                         ColorAlpha({0, 200, 255, 255}, 0.35f + pulse * 0.3f));
 
-    // Credit indicator
+    // Núcleo de energia acima da plataforma
+    DrawCircle((int)b.position.x, (int)(b.position.y - 18), 9.f + pulse * 2.f,
+               ColorAlpha({0, 220, 255, 255}, 0.18f));
+    DrawCircle((int)b.position.x, (int)(b.position.y - 18), 5.f, {130, 230, 255, 255});
+    DrawCircleLines((int)b.position.x, (int)(b.position.y - 18), 9.f,
+                    ColorAlpha({0, 220, 255, 255}, 0.6f + pulse * 0.4f));
+
+    // Antena beacon
+    DrawLineEx({b.position.x, b.position.y - 12.f}, {b.position.x, b.position.y + 2.f}, 2.f,
+               {0, 220, 255, 255});
+
+    // Condutos de energia nas laterais
+    for (int i = -1; i <= 1; i += 2) {
+        DrawLineEx({b.position.x + i * 14.f, b.position.y - 8.f},
+                   {b.position.x + i * 20.f, b.position.y + 14.f}, 2.f,
+                   ColorAlpha({80, 180, 255, 255}, 0.5f + pulse * 0.4f));
+    }
+
+    // Barra de geracao de creditos (cyan)
     float genPct = b.genTimer / b.genRate;
     DrawRectangle((int)(b.position.x - 20), (int)(b.position.y + 22), (int)(40 * genPct), 4,
-                  {255, 220, 0, 200});
-    DrawRectangleLinesEx({b.position.x - 20, b.position.y + 22, 40, 4}, 1.f, {200, 180, 0, 255});
+                  {0, 220, 255, 200});
+    DrawRectangleLinesEx({b.position.x - 20, b.position.y + 22, 40, 4}, 1.f, {0, 170, 220, 255});
+    DrawText("PWR", (int)(b.position.x - 12), (int)(b.position.y + 28), 10, {0, 220, 255, 255});
 }
 
 void BuildingSystem::renderBarracks(const Building& b) const {
+    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 2.6f);
+
     if (!b.built) {
-        DrawRectangleLinesEx({b.position.x - 32, b.position.y - 20, 64, 40}, 2.f, GRAY);
-        DrawRectangle((int)(b.position.x - 32), (int)(b.position.y + 16), (int)(b.buildTimer * 64), 6, YELLOW);
+        DrawRectangleLinesEx({b.position.x - 32, b.position.y - 20, 64, 40}, 1.5f,
+                             ColorAlpha({0, 220, 255, 255}, 0.4f + pulse * 0.4f));
+        DrawRectangle((int)(b.position.x - 32), (int)(b.position.y + 16), (int)(b.buildTimer * 64), 6,
+                      Color{0, 255, 220, 255});
+        DrawText("MONTANDO...", (int)(b.position.x - 34), (int)(b.position.y - 40), 10,
+                 Color{0, 220, 255, 255});
         return;
     }
 
-    // Main body
-    DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 20), 64, 40, {50, 80, 50, 255});
-    DrawRectangle((int)(b.position.x - 28), (int)(b.position.y - 28), 56, 12, {40, 70, 40, 255});
+    // ── Quartel holografico — casco escuro + viga de energia ──────────────────
+    DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 20), 64, 40, {24, 30, 46, 255});
+    DrawRectangleLinesEx({b.position.x - 32, b.position.y - 20, 64, 40}, 1.5f,
+                         ColorAlpha({0, 200, 255, 255}, 0.35f + pulse * 0.3f));
 
-    // Fortified top
-    for (int i = -2; i <= 2; i++) {
-        DrawRectangle((int)(b.position.x + i * 11 - 4), (int)(b.position.y - 34), 8, 8,
-                      {40, 70, 40, 255});
+    // Costelas de energia ao longo do casco
+    for (int x = -24; x <= 24; x += 12) {
+        DrawLineEx({b.position.x + x, b.position.y - 18.f},
+                   {b.position.x + x, b.position.y + 18.f}, 1.5f,
+                   ColorAlpha({80, 200, 255, 255}, 0.3f + pulse * 0.25f));
     }
-    // Door
-    DrawRectangle((int)(b.position.x - 6), (int)(b.position.y + 0), 12, 20, {30, 50, 30, 255});
-    // Flag
-    DrawLineEx({b.position.x + 32, b.position.y - 34}, {b.position.x + 32, b.position.y - 50}, 2.f, WHITE);
-    DrawRectangle((int)(b.position.x + 32), (int)(b.position.y - 50), 16, 10, {0, 150, 255, 255});
 
-    DrawText("QUARTEL", (int)(b.position.x - 22), (int)(b.position.y + 24), 10, {100, 200, 100, 255});
+    // Porta de deploy — arco luminoso
+    DrawRectangleLinesEx({b.position.x - 9, b.position.y + 0, 18, 20}, 2.f,
+                         ColorAlpha({0, 220, 255, 255}, 0.45f + pulse * 0.5f));
+
+    // Antena no teto
+    DrawLineEx({b.position.x, b.position.y - 20.f}, {b.position.x, b.position.y - 30.f}, 2.f,
+               {0, 220, 255, 255});
+    DrawCircle((int)b.position.x, (int)(b.position.y - 32), 2.f,
+               ColorAlpha({0, 255, 220, 255}, 0.4f + pulse * 0.6f));
+
+    DrawText("QUARTEL", (int)(b.position.x - 26), (int)(b.position.y + 24), 10, {80, 220, 255, 255});
 }
 
 void BuildingSystem::renderTankFactory(const Building& b) const {
+    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 3.0f);
+
     if (!b.built) {
-        DrawRectangleLinesEx({b.position.x - 40, b.position.y - 28, 80, 56}, 2.f, GRAY);
-        DrawRectangle((int)(b.position.x - 40), (int)(b.position.y + 24), (int)(b.buildTimer * 80), 6, YELLOW);
+        DrawRectangleLinesEx({b.position.x - 40, b.position.y - 28, 80, 56}, 1.5f,
+                             ColorAlpha({255, 150, 30, 255}, 0.4f + pulse * 0.4f));
+        DrawRectangle((int)(b.position.x - 40), (int)(b.position.y + 24), (int)(b.buildTimer * 80), 6,
+                      Color{255, 180, 60, 255});
+        DrawText("MONTANDO...", (int)(b.position.x - 34), (int)(b.position.y - 48), 10,
+                 Color{255, 150, 30, 255});
         return;
     }
 
-    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 3.0f);
+    // ── Fabrica Void-Tech — casco escuro + nucleo de energia ───────────────────
+    DrawRectangle((int)(b.position.x - 40), (int)(b.position.y - 28), 80, 56, {34, 28, 26, 255});
+    DrawRectangleLinesEx({b.position.x - 40, b.position.y - 28, 80, 56}, 1.5f,
+                         ColorAlpha({255, 150, 30, 255}, 0.35f + pulse * 0.3f));
 
-    // Factory body
-    DrawRectangle((int)(b.position.x - 40), (int)(b.position.y - 28), 80, 56, {80, 70, 50, 255});
-    // Chimney stacks
-    DrawRectangle((int)(b.position.x - 30), (int)(b.position.y - 44), 12, 20, {60, 55, 40, 255});
-    DrawRectangle((int)(b.position.x + 18), (int)(b.position.y - 44), 12, 20, {60, 55, 40, 255});
-    // Smoke
+    // Nucleo de energia central pulsante
+    DrawCircle((int)b.position.x, (int)(b.position.y - 2), 13.f + pulse * 3.f,
+               ColorAlpha({255, 150, 30, 255}, 0.16f));
+    DrawCircle((int)b.position.x, (int)(b.position.y - 2), 7.f, {255, 180, 70, 255});
+    DrawCircleLines((int)b.position.x, (int)(b.position.y - 2), 11.f,
+                    ColorAlpha({255, 150, 30, 255}, 0.55f + pulse * 0.45f));
+
+    // Condutos de energia para as bordas
+    DrawLineEx({b.position.x - 6.f, b.position.y - 2.f},
+               {b.position.x - 36.f, b.position.y - 2.f}, 2.5f,
+               ColorAlpha({255, 160, 50, 255}, 0.4f + pulse * 0.4f));
+    DrawLineEx({b.position.x + 6.f, b.position.y - 2.f},
+               {b.position.x + 36.f, b.position.y - 2.f}, 2.5f,
+               ColorAlpha({255, 160, 50, 255}, 0.4f + pulse * 0.4f));
+
+    // Particulas de carga subindo (substitui a fumaca)
     for (int i = 0; i < 3; i++) {
-        float smokeY = b.position.y - 48 - i * 10.f - fmodf(b.animTimer * 12.f, 10.f);
-        DrawCircle((int)(b.position.x - 24), (int)smokeY, 5.f - i * 1.2f,
-                   ColorAlpha(GRAY, 0.4f - i * 0.1f));
-        DrawCircle((int)(b.position.x + 24), (int)smokeY, 5.f - i * 1.2f,
-                   ColorAlpha(GRAY, 0.4f - i * 0.1f));
+        float y = b.position.y - 26.f - fmodf(b.animTimer * 14.f + i * 8.f, 30.f);
+        DrawCircle((int)(b.position.x - 24 + i * 24), (int)y, 2.5f - i * 0.6f,
+                   ColorAlpha({255, 190, 90, 255}, 0.5f - i * 0.12f));
     }
 
-    // Gear indicator
-    DrawCircle((int)b.position.x, (int)(b.position.y - 4), 14.f, {100, 90, 60, 255});
-    DrawCircleLines((int)b.position.x, (int)(b.position.y - 4), 14.f,
-                    ColorAlpha({255, 140, 0, 255}, 0.5f + pulse * 0.5f));
-    DrawCircle((int)b.position.x, (int)(b.position.y - 4), 5.f, {80, 70, 45, 255});
-
-    // Production bar
+    // Barra de producao
     float prodPct = b.productionTimer / b.productionRate;
     DrawRectangle((int)(b.position.x - 36), (int)(b.position.y + 32), (int)(72 * prodPct), 5,
-                  {255, 140, 0, 200});
-    DrawRectangleLinesEx({b.position.x - 36, b.position.y + 32, 72, 5}, 1.f, {200, 110, 0, 255});
-    DrawText("FABRICA", (int)(b.position.x - 22), (int)(b.position.y + 40), 10, {255, 140, 0, 255});
+                  {255, 160, 50, 200});
+    DrawRectangleLinesEx({b.position.x - 36, b.position.y + 32, 72, 5}, 1.f, {220, 120, 30, 255});
+    DrawText("FABRICA", (int)(b.position.x - 26), (int)(b.position.y + 40), 10, {255, 160, 50, 255});
 }
 
 void BuildingSystem::renderTurret(const Building& b) const {
+    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 4.0f);
+
     if (!b.built) {
-        DrawCircleLines((int)b.position.x, (int)b.position.y, 20.f, GRAY);
-        DrawRectangle((int)(b.position.x - 20), (int)(b.position.y + 18), (int)(b.buildTimer * 40), 5, YELLOW);
+        DrawCircleLines((int)b.position.x, (int)b.position.y, 20.f,
+                        ColorAlpha({255, 60, 60, 255}, 0.4f + pulse * 0.4f));
+        DrawRectangle((int)(b.position.x - 20), (int)(b.position.y + 18), (int)(b.buildTimer * 40), 5,
+                      Color{255, 90, 60, 255});
         return;
     }
-
-    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 4.0f);
 
     // Base platform
     DrawCircle((int)b.position.x, (int)b.position.y, 18.f, {60, 60, 70, 255});
@@ -855,13 +954,15 @@ void BuildingSystem::renderTurret(const Building& b) const {
 }
 
 void BuildingSystem::renderResourceNode(const Building& b) const {
+    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 1.5f);
+
     if (!b.built) {
-        DrawRectangleLinesEx({b.position.x - 22, b.position.y - 22, 44, 44}, 2.f, GRAY);
-        DrawRectangle((int)(b.position.x - 22), (int)(b.position.y + 18), (int)(b.buildTimer * 44), 5, YELLOW);
+        DrawRectangleLinesEx({b.position.x - 22, b.position.y - 22, 44, 44}, 1.5f,
+                             ColorAlpha({180, 100, 255, 255}, 0.4f + pulse * 0.4f));
+        DrawRectangle((int)(b.position.x - 22), (int)(b.position.y + 18), (int)(b.buildTimer * 44), 5,
+                      Color{200, 130, 255, 255});
         return;
     }
-
-    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 1.5f);
 
     // Mining rig body
     DrawRectangle((int)(b.position.x - 18), (int)(b.position.y - 14), 36, 28, {70, 50, 90, 255});
@@ -881,31 +982,41 @@ void BuildingSystem::renderResourceNode(const Building& b) const {
 }
 
 void BuildingSystem::renderWall(const Building& b) const {
-    float pct = b.health / b.maxHealth;
-    Color wallC = pct > 0.5f ? Color{160, 160, 160, 255} :
-                  pct > 0.25f ? Color{180, 120, 60, 255} : Color{160, 80, 60, 255};
+    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 3.4f);
 
     if (!b.built) {
-        DrawRectangleLinesEx({b.position.x - 32, b.position.y - 8, 64, 16}, 2.f, GRAY);
+        DrawRectangleLinesEx({b.position.x - 32, b.position.y - 8, 64, 16}, 1.5f,
+                             ColorAlpha({0, 220, 255, 255}, 0.4f + pulse * 0.4f));
         DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 8),
-                      (int)(b.buildTimer * 64), 16, ColorAlpha(YELLOW, 0.4f));
+                      (int)(b.buildTimer * 64), 16, ColorAlpha({0, 255, 220, 255}, 0.35f));
         return;
     }
 
-    DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 8), 64, 16, wallC);
-    // Stone texture lines
-    DrawLineEx({b.position.x - 32, b.position.y}, {b.position.x + 32, b.position.y},
-               1.f, ColorAlpha(BLACK, 0.3f));
-    for (int i = -3; i <= 3; i++) {
-        DrawLineEx({b.position.x + i * 10.f, b.position.y - 8},
-                   {b.position.x + i * 10.f, b.position.y},
-                   1.f, ColorAlpha(BLACK, 0.2f));
+    float pct = b.health / b.maxHealth;
+    Color coreC = pct > 0.5f ? Color{0, 220, 255, 255} :
+                  pct > 0.25f ? Color{255, 190, 60, 255} : Color{255, 90, 60, 255};
+
+    // Barra de metal escuro
+    DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 8), 64, 16, {32, 38, 52, 255});
+    DrawRectangleLinesEx({b.position.x - 32, b.position.y - 8, 64, 16}, 1.f,
+                         ColorAlpha(coreC, 0.55f + pulse * 0.45f));
+
+    // Rendagem de energia (grade holografica)
+    for (int x = -28; x <= 28; x += 7) {
+        DrawLineEx({b.position.x + x, b.position.y - 6.f},
+                   {b.position.x + x, b.position.y + 6.f}, 1.f,
+                   ColorAlpha(coreC, 0.25f + pulse * 0.2f));
     }
-    // Battle crenels on top
+    DrawLineEx({b.position.x - 30, b.position.y}, {b.position.x + 30, b.position.y}, 1.f,
+               ColorAlpha(coreC, 0.4f + pulse * 0.3f));
+
+    // Pilones de energia no topo
     for (int i = -2; i <= 2; i++) {
-        DrawRectangle((int)(b.position.x + i * 11 - 4), (int)(b.position.y - 14), 8, 8, wallC);
+        DrawCircle((int)(b.position.x + i * 12), (int)(b.position.y - 12), 2.5f,
+                   ColorAlpha(coreC, 0.5f + pulse * 0.5f));
     }
-    // HP bar on wall
+
+    // HP bar
     DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 20), 64, 3,
                   ColorAlpha(BLACK, 0.6f));
     DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 20), (int)(64 * pct), 3,
@@ -913,29 +1024,38 @@ void BuildingSystem::renderWall(const Building& b) const {
 }
 
 void BuildingSystem::renderMedBay(const Building& b) const {
+    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 2.5f);
+
     if (!b.built) {
-        DrawRectangleLinesEx({b.position.x - 26, b.position.y - 26, 52, 52}, 2.f, GRAY);
-        DrawRectangle((int)(b.position.x - 26), (int)(b.position.y + 22), (int)(b.buildTimer * 52), 5, YELLOW);
+        DrawRectangleLinesEx({b.position.x - 26, b.position.y - 26, 52, 52}, 1.5f,
+                             ColorAlpha({80, 255, 140, 255}, 0.4f + pulse * 0.4f));
+        DrawRectangle((int)(b.position.x - 26), (int)(b.position.y + 22), (int)(b.buildTimer * 52), 5,
+                      Color{80, 255, 140, 255});
+        DrawText("MONTANDO...", (int)(b.position.x - 30), (int)(b.position.y - 46), 10,
+                 Color{80, 255, 140, 255});
         return;
     }
 
-    float pulse = 0.5f + 0.5f * sinf(b.animTimer * 2.5f);
+    // ── Nano-MedBay — capsula elastica com cruz de bio-reparo ──────────────────
+    DrawRectangle((int)(b.position.x - 24), (int)(b.position.y - 20), 48, 40, {30, 42, 40, 255});
+    DrawRectangleLinesEx({b.position.x - 24, b.position.y - 20, 48, 40}, 1.5f,
+                         ColorAlpha({80, 255, 140, 255}, 0.35f + pulse * 0.3f));
 
-    // White building
-    DrawRectangle((int)(b.position.x - 24), (int)(b.position.y - 20), 48, 40, {220, 220, 220, 255});
-    DrawRectangle((int)(b.position.x - 20), (int)(b.position.y - 26), 40, 10, {200, 200, 200, 255});
-
-    // Red cross
+    // Cruz de bio-reparo pulsante
     DrawRectangle((int)(b.position.x - 3), (int)(b.position.y - 14), 6, 18,
-                  ColorAlpha({255, 40, 40, 255}, 0.8f + pulse * 0.2f));
+                  ColorAlpha({80, 255, 140, 255}, 0.8f + pulse * 0.2f));
     DrawRectangle((int)(b.position.x - 9), (int)(b.position.y - 8), 18, 6,
-                  ColorAlpha({255, 40, 40, 255}, 0.8f + pulse * 0.2f));
+                  ColorAlpha({80, 255, 140, 255}, 0.8f + pulse * 0.2f));
+
+    // Aneis de nano-reparo
+    DrawCircleLines((int)b.position.x, (int)b.position.y, 30.f + pulse * 2.f,
+                    ColorAlpha({80, 255, 140, 255}, 0.25f + pulse * 0.2f));
 
     // Heal radius pulse ring
     DrawCircleLines((int)b.position.x, (int)b.position.y, b.healRadius,
-                    ColorAlpha({0, 255, 100, 255}, 0.08f + pulse * 0.12f));
+                    ColorAlpha({80, 255, 140, 255}, 0.08f + pulse * 0.12f));
 
-    DrawText("MED", (int)(b.position.x - 12), (int)(b.position.y + 24), 12, {0, 200, 80, 255});
+    DrawText("MED", (int)(b.position.x - 12), (int)(b.position.y + 24), 12, {80, 255, 140, 255});
 }
 
 // ─── Build Menu (screen space) ────────────────────────────────────────────────

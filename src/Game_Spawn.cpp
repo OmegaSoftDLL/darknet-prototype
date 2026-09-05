@@ -217,19 +217,19 @@ void Game::spawnEnemy() {
         e.speed     *= diff.enemySpeedMult;
     }
 
-    // Gradiente por DISTÂNCIA da origem (mundo infinito): cada anel de 1 zona
-    // (2560px) além do centro endurece e recompensa mais — risco = recompensa.
-    if (openWorldMode) {
-        const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize);   // 2560
-        const Vector2 wc = { ZONE * Tilemap::OW_COLS * 0.5f, ZONE * Tilemap::OW_ROWS * 0.5f };
-        float dx = e.position.x - wc.x, dy = e.position.y - wc.y;
-        float ring = std::max(0.0f, (sqrtf(dx*dx + dy*dy) - ZONE) / ZONE);
-        if (ring > 0.0f) {
-            float hpMul = 1.0f + ring * 0.22f, dmgMul = 1.0f + ring * 0.18f;
-            e.health *= hpMul; e.maxHealth *= hpMul; e.damage *= dmgMul;
-            e.xpReward = (int)(e.xpReward * (1.0f + ring * 0.20f));
+// Gradiente por DISTÂNCIA do REFUGIO (mundo centrado na base): cada anel
+        // de 1 zona (2560px) alem do centro endurece e recompensa mais.
+        if (openWorldMode) {
+            const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize);   // 2560
+            const Vector2 wc = safeZoneCenter;   // base/hub, coracao da fase
+            float dx = e.position.x - wc.x, dy = e.position.y - wc.y;
+            float ring = std::max(0.0f, (sqrtf(dx*dx + dy*dy) - ZONE) / ZONE);
+            if (ring > 0.0f) {
+                float hpMul = 1.0f + ring * 0.22f, dmgMul = 1.0f + ring * 0.18f;
+                e.health *= hpMul; e.maxHealth *= hpMul; e.damage *= dmgMul;
+                e.xpReward = (int)(e.xpReward * (1.0f + ring * 0.20f));
+            }
         }
-    }
 
     // Motor de Evolucao Infinita — Nivel de Ameaca + mutador ativo
     {

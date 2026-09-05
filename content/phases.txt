@@ -11,14 +11,14 @@
 # chefe:   1 = o portal so abre depois de derrotar o chefe da fase
 # raio:    tamanho do mundo da fase (unidades a partir do refugio)
 # ─────────────────────────────────────────────────────────────────────────────
-LARuins        | 20  | 0 | 3000 | Ruinas de Los Angeles
-CursedFarm     | 28  | 0 | 3160 | Fazenda Maldita
-DarkForest     | 36  | 1 | 3320 | Floresta Negra
-Cemetery       | 44  | 0 | 3480 | Cemiterio dos Caidos
-GhostCity      | 52  | 0 | 3640 | Cidade Fantasma
-Bunker         | 60  | 1 | 3800 | Bunker NEXUS
-Catacombs      | 68  | 0 | 3960 | Catacumbas
-AbandonedManor | 76  | 0 | 4120 | Mansao Abandonada
-KronosForge    | 84  | 1 | 4280 | A Forja de KRONOS
-InfernoZone    | 92  | 0 | 4440 | Zona Inferno
-KronosNexus    | 100 | 1 | 4600 | Nucleo KRONOS
+LARuins        | 20  | 0 | 5200 | Ruinas de Los Angeles
+CursedFarm     | 28  | 0 | 5460 | Fazenda Maldita
+DarkForest     | 36  | 1 | 5720 | Floresta Negra
+Cemetery       | 44  | 0 | 5980 | Cemiterio dos Caidos
+GhostCity      | 52  | 0 | 6240 | Cidade Fantasma
+Bunker         | 60  | 1 | 6500 | Bunker NEXUS
+Catacombs      | 68  | 0 | 6760 | Catacumbas
+AbandonedManor | 76  | 0 | 7020 | Mansao Abandonada
+KronosForge    | 84  | 1 | 7280 | A Forja de KRONOS
+InfernoZone    | 92  | 0 | 7540 | Zona Inferno
+KronosNexus    | 100 | 1 | 7800 | Nucleo KRONOS

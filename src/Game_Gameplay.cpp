@@ -394,12 +394,13 @@ void Game::update(float dt) {
                 unsigned int dseed = 0x343fdu * (unsigned int)((int)newRegion + 1)
                                    + (unsigned int)owPhase * 0x9e3779b9u;
                 darkWorld.load((int)newRegion, dseed);
-                for (const auto& wr : worldRegions) {
-                    if (wr.zoneType == newRegion) {
-                        darkWorld.applyWorldOffset({wr.bounds.x, wr.bounds.y});
-                        break;
-                    }
-                }
+                // Dark scenery e gerado na origem da antiga grade 3x3 (hub em (1280,1280)).
+                // O mundo agora e CENTRADO na base: translada a decoracao para o hub
+                // (delta = safeZoneCenter - centro antigo = 0 nas fases atuais, mas
+                // explicito caso a base um dia mude de lugar).
+                darkWorld.applyWorldOffset({
+                    safeZoneCenter.x - (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f,
+                    safeZoneCenter.y - (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f });
             } else {
                 darkWorld.active = false;
             }
