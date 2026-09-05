@@ -52,7 +52,7 @@ void Game::updateBotControl(float dt) {
             if (np  > botController.peakProjectiles) botController.peakProjectiles = np;
             if (nep > botController.peakEnemyProj)   botController.peakEnemyProj = nep;
             if (nu  > botController.peakUnits)        botController.peakUnits = nu;
-            float fps = (float)GetFPS();
+            float fps = Game::headless ? headlessFps : (float)GetFPS();
             if (fps > 0.0f && fps < botController.fpsLowValue &&
                 botController.fpsQuarantine <= 0.0f && dt <= 0.25f) {   // ignora janela pos-carga
                 botController.fpsLowValue     = fps;
@@ -106,7 +106,7 @@ void Game::updateBotControl(float dt) {
             player.position, player.attackRange,
             player.health, player.maxHealth,
             player.level, player.credits,
-            (float)GetFPS(),
+            (Game::headless ? headlessFps : (float)GetFPS()),
             enemyPos, itemPos, skillsReady, portalPos, 0);
 
         // Pedido de avanco de fase do bot — consumido por updatePhasePortal

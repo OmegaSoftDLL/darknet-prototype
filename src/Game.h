@@ -92,6 +92,10 @@ public:
     float autoTestSeconds = 0.0f;   // >0 encerra o autoteste e grava o relatorio
     bool  autoTestPassed  = true;   // resultado do portao de validacao (vira exit code)
     void runAutoTest(bool autoTest);
+    void runHeadless();
+    // Setado por main.cpp ANTES de construir Game: roda SEM janela/GPU (CI).
+    static bool headless;
+    float  headlessFps = 0.0f;   // FPS medido do proprio loop headless (GetFPS()=0 sem janela)
 
 private:
     // Update

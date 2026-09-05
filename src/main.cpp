@@ -8,14 +8,17 @@ int main(int argc, char* argv[]) {
     printf("Uso: darknet.exe [--autobot|--autotest] [--test-seconds=N] [--seed=N]\n");
     printf("  --autotest        bot de teste automatico\n");
     printf("  --test-seconds=N  encerra o teste em N segundos e grava o relatorio\n");
-    printf("  --seed=N          mundo REPRODUTIVEL (mesmo seed = mesmo mapa)\n\n");
+    printf("  --seed=N          mundo REPRODUTIVEL (mesmo seed = mesmo mapa)\n");
+    printf("  --headless        sem janela/GPU (CI): so a simulacao do bot\n\n");
 
     bool     autoTest = false;
     float    testSecs = 0.0f;   // 0 = usa o padrao (2h)
     unsigned seed     = 0;      // 0 = aleatorio
+    bool     headless = false;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--autotest" || arg == "--autobot") autoTest = true;
+        else if (arg == "--headless") headless = true;
         // Sem --test-seconds o autoteste ia ate 7200s: so dava pra medir matando o
         // processo, e ai o relatorio nunca era escrito.
         else if (arg.rfind("--test-seconds=", 0) == 0)
@@ -29,6 +32,11 @@ int main(int argc, char* argv[]) {
         SetRandomSeed(seed);
         printf("SEED FIXA: %u (mundo reprodutivel)\n", seed);
     }
+
+    // Headless precisa ser setado ANTES de construir Game: o construtor decide
+    // quais recursos sobem (sem janela/GL, ha contextos de GPU invalidos no CI).
+    Game::headless = headless;
+    if (headless) printf("HEADLESS: sem janela/GPU (modo CI)\n");
 
     Game game;
     game.worldSeed       = seed;

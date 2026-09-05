@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           cd build/Release
-          ./darknet.exe --autotest --test-seconds=120 --seed=7 > validate.log 2>&1
+          ./darknet.exe --autotest --test-seconds=120 --seed=7 --headless > validate.log 2>&1
           code=$?
           grep -E "VALIDACAO|FASES:|POSTFX|WORLDLIT" validate.log | head -20
           test "$code" -eq 0
@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           cd build/Release
-          ./darknet.exe --autotest --test-seconds=120 --seed=20260821 > validate2.log 2>&1
+          ./darknet.exe --autotest --test-seconds=120 --seed=20260821 --headless > validate2.log 2>&1
           code=$?
           grep -E "VALIDACAO|FASES:|POSTFX|WORLDLIT" validate2.log | head -20
           test "$code" -eq 0
