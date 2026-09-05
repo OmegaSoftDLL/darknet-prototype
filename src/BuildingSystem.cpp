@@ -190,7 +190,7 @@ void BuildingSystem::updateBuilding(Building& b, float dt, Vector2 playerPos,
     // Construction phase
     if (!b.built) {
         b.buildTimer += dt / 3.0f; // 3 seconds to build
-        if (b.buildTimer >= 1.0f) { b.buildTimer = 1.0f; b.built = true; }
+        if (b.buildTimer >= 1.0f) { b.buildTimer = 1.0f; b.built = true; b.builtAt = (float)GetTime(); }
         return;
     }
 

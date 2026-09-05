@@ -80,6 +80,7 @@ struct Building {
     // Production timers
     float        buildTimer   = 0.f;    // construction progress 0→1
     bool         built        = false;
+    float        builtAt      = 0.f;    // GetTime() quando a construcao terminou (efeito de materializacao)
     float        productionTimer = 0.f;
     float        productionRate  = 15.f; // seconds per unit/credit cycle
 

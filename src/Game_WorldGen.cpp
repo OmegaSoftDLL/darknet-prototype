@@ -133,9 +133,13 @@ void Game::buildOpenWorldScenery() {
                 float dx = o.position.x - hubX, dy = o.position.y - hubY;
                 if (dx*dx + dy*dy < 150.0f * 150.0f) continue;
             }
+            if (type == 2) {   // arvore: praca central livre (area playable da base)
+                float dx = o.position.x - hubX, dy = o.position.y - hubY;
+                if (dx*dx + dy*dy < 400.0f * 400.0f) continue;
+            }
             if (city) {   // cidade: nada em cima da pista desenhada (quad ±112u)
                 float dr = std::fminf(laneDist(o.position.x), laneDist(o.position.y));
-                if (type == 2 && dr < 130.0f) continue;                 // arvore: so no quarteirao
+                if (type == 2 && dr < 170.0f) continue;                 // arvore: so no quarteirao, longe do meio-fio (copa nao invade a pista)
                 if (type == 6 && dr > 102.0f) continue;                 // carro: NA pista
                 if (type == 5 && dr < 118.0f) continue;                 // poste: fora da pista, na calcada
             }
@@ -259,6 +263,11 @@ void Game::buildOpenWorldScenery() {
                 place(b, 5, 20, 1.0f, 1.0f, 150, true);  // postes nas ruas
                 place(b, 6, 16, 1.0f, 1.0f, 150, true);  // carros abandonados (so cidade)
                 place(b, 2,  6, 0.8f, 1.2f, 150, true);  // árvores
+                // ── CÓDIGO DE GUERRA: cidade bombardeada ───────────────────────────
+                place(b, 28, 10, 0.9f, 1.7f, 100, true); // crateras (no chao, junto as vias)
+                place(b, 30, 18, 0.9f, 1.9f,  60, true); // asfalto destruído (manchas)
+                place(b, 29,  9, 0.8f, 1.5f, 200, true); // prédio colapsado (ruína com fumaça)
+                place(b, 31,  7, 1.0f, 1.4f, 160, true); // carcaça em chamas (fogo + fumaça pesada)
             } break;
             case ZoneID::Bunker: {   // Bunker — compostos militares (estruturas+silos em linha)
                 for (int bl = 0; bl < 3; ++bl) {
@@ -421,6 +430,9 @@ void Game::buildOpenWorldScenery() {
             case 20: rad = buildingRadius(o.position.x, o.position.y, o.scale); break;   // predio moderno
             case 21: continue;   // entulho: decoracao, NAO bloqueia (virava labirinto)
             case 22: continue;   // fogueira: nao bloqueia
+            case 28: rad = 40.0f * o.scale; break;               // cratera: borda bloqueia
+            case 29: rad = 60.0f * o.scale; break;               // predio colapsado: escombros bloqueiam
+            case 31: rad = 30.0f * o.scale; break;               // carcaça queimada: casco bloqueia
             default: continue;                                            // arvores/cercas/postes: atravessavel
         }
         tilemap.markSolidAt(o.position, rad);
@@ -675,11 +687,14 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                 float lim = owPhaseRadius + 140.0f;
                 if (dx*dx + dy*dy > lim*lim) return;
             }
-            {   // cidade: arvore nunca na pista, carro sempre na pista (mesma da malha fixa)
-                ZoneID pz = tilemap.biomeAtWorld(pos.x, pos.y);
-                if (pz == ZoneID::LARuins || pz == ZoneID::GhostCity) {
+            {   // arvore nunca na pista, carro sempre na pista. A pista E desenhada quando
+                // currentZone e uma zona de cidade (Tilemap desenha a malha 475+k*950
+                // so nesses biomas); o guard segue currentZone, nao biomeAtWorld — a
+                // biome do ponto pode divergir nas bordas de fase e arvore nascia no
+                // meio do asfalto.
+                if (currentZone == ZoneID::LARuins || currentZone == ZoneID::GhostCity) {
                     float dr = std::fminf(laneDist(pos.x), laneDist(pos.y));
-                    if (type == 2 && dr < 130.0f) return;
+                    if (type == 2 && dr < 170.0f) return;
                     if (type == 6 && dr > 102.0f) return;
                     if (type == 5 && dr < 118.0f) return;   // poste: na calcada, nunca na pista
                 }
@@ -715,14 +730,15 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
             switch (lz) {
                 case ZoneID::DarkForest:     t = (roll < 0.84f) ? 2 : 12; mx = 1.9f; break;  // árvores/pedras
                 case ZoneID::Cemetery:       t = (roll < 0.70f) ? 2 : 12; break;             // árvores/pedras (lápides no cluster)
-                case ZoneID::GhostCity:      t = (roll < 0.5f) ? 5 : (roll < 0.8f) ? 6 : 12; break; // postes/carros/detritos
+                case ZoneID::GhostCity:      t = (roll < 0.4f) ? 5 : (roll < 0.65f) ? 6 : (roll < 0.85f) ? 12 : 28; break; // postes/carros/detritos/cratera
                 case ZoneID::KronosForge:
                 case ZoneID::InfernoZone:    t = (roll < 0.72f) ? 12 : 2; break;             // pedras/árvore queimada
                 case ZoneID::CursedFarm:     t = (roll < 0.55f) ? 4 : 2; break;              // cercas/árvores
                 case ZoneID::Bunker:         t = (roll < 0.6f) ? 4 : 5; break;               // cercas/postes
                 case ZoneID::AbandonedManor: t = (roll < 0.6f) ? 2 : 3; break;               // árvores/lápides
                 case ZoneID::KronosNexus:    t = 12; break;                                  // detritos
-                case ZoneID::LARuins:        t = (roll < 0.5f) ? 5 : (roll < 0.8f) ? 6 : 2; break; // postes/carros/árvore
+                case ZoneID::LARuins:        t = (roll < 0.50f) ? 5 : (roll < 0.68f) ? 6 : (roll < 0.78f) ? 2 :
+                                (roll < 0.88f) ? 28 : (roll < 0.95f) ? 30 : 31; break; // postes/carros/árvore/cratera/asfalto/carcaça
                 default:                     t = (roll < 0.7f) ? 2 : 12; break;
             }
             if (t >= 0) put(t, p, mn + rnd() * (mx - mn));

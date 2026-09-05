@@ -241,11 +241,35 @@ void Game::spawnEnemy() {
         e.xpReward   = (int)(e.xpReward * ts);
     }
 
-    // 15% chance to spawn as elite (no minions, no bosses)
+    // Curva por FASE (mundo aberto): a mare inimiga endurece a cada mundo.
+    // Fase 1 (ruinas) = normal; mundos seguintes +8% HP e +5% dano por fase.
+    if (openWorldMode && owPhase > 0) {
+        float phMul = 1.0f + owPhase * 0.08f;
+        e.health    *= phMul;
+        e.maxHealth *= phMul;
+        e.damage    *= (1.0f + owPhase * 0.05f);
+    }
+
+    // Chance de ELITE escala com a fase e o raio do refugio (estilo Risk of Rain):
+    // base 12% + 3% por fase + 5% por anel, teto 45%. Tales afixos: 0 Berserker,
+    // 1 Armored, 2 Volatile, 3 Shielded, 4 KronosRapid — resistem de jeitos
+    // diferentes, exigindo reacoes diferentes (fracos demais = "tipo um chefe".
     // ANTES do split do Zergling: os emplace_back abaixo podem realocar o vetor
     // e invalidar a referencia `e` (use-after-realloc).
-    if (type != EnemyType::Boss && GetRandomValue(0, 100) < 15) {
-        e.makeElite(GetRandomValue(0, 2));
+    if (type != EnemyType::Boss && type != EnemyType::Zergling) {
+        int pct = 12;
+        if (openWorldMode) {
+            const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize);
+            float dx = e.position.x - safeZoneCenter.x, dy = e.position.y - safeZoneCenter.y;
+            float ring = std::max(0.0f, (sqrtf(dx*dx + dy*dy) - ZONE) / ZONE);
+            pct += (int)owPhase * 3 + (int)ring * 5;
+        }
+        pct = std::min(45, pct);
+        if (GetRandomValue(0, 99) < pct)
+            e.makeElite(GetRandomValue(0, 4));
+        // Armored elite fica mais blindado conforme o mundo (8 + 4 por fase).
+        if (e.isElite && e.eliteMod == 1)
+            e.armor = 8.0f + (float)owPhase * 4.0f;
     }
 
     // Zergling swarm — spawn 2 more in formation (StarCraft feel)
