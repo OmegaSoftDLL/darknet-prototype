@@ -198,6 +198,191 @@ void Game::drawArkStructure(Vector2 pos) const {
     }
 }
 
+// Visuais futuristas das construcoes do jogador (sci-fi: casco gunmetal + acentos
+// emissivos), independentes do biome — substitui os modelos medievais que liam
+// como "castelinho" no meio do cenario tecnologico (auditoria do ciclo E28).
+static void drawPlayerBuilding(const Building& b) {
+    const float x   = b.position.x, z = b.position.y;
+    const Vector3 v = { x, 0.0f, z };
+    const float t   = (float)GetTime();
+    const float pl  = 0.5f + 0.5f * sinf(t * 2.4f + x * 0.05f);
+
+    const Color DARK  = { 24, 28, 44, 255 };   // casco externo (gunmetal escuro)
+    const Color PLATE = { 44, 50, 74, 255 };   // paineis intermediarios
+    const Color METAL = { 96, 104, 132, 255 }; // arestas/estrutura
+    const Color CYAN  = { 0, 220, 255, 255 };  // energia aliada
+    const Color TEAL  = { 0, 255, 190, 255 };  // cura/stasis
+    const Color HOT   = { 255, 150, 30, 255 }; // calor da fabrica
+    const Color DEF   = { 255, 70, 70, 255 };  // defesa
+
+    // sombra de contato + anel de energia (o "power pad" que prende a base)
+    DrawCylinderEx({ x, 0.10f, z }, { x, 0.11f, z }, 60.0f, 56.0f, 18, ColorAlpha(BLACK, 0.30f));
+    DrawCylinderEx({ x, 0.12f, z }, { x, 0.13f, z }, 58.0f, 58.0f, 20, ColorAlpha(CYAN, 0.08f + 0.05f * pl));
+
+    // estruturas em construcao aparecem como scaffold holografico no estilo sci-fi
+    auto scaffold = [&](float w, float d, float h, Color accent) {
+        DrawCubeWiresV({ x, h / 2.0f, z }, { w, h, d }, ColorAlpha(METAL, 0.25f));
+        float ph = 0.8f + 0.4f * b.buildTimer;   // corpo sobe com o progresso
+        DrawCubeV({ x, h * ph / 2.0f, z }, { w * 0.5f, h * ph, d * 0.5f },
+                  ColorAlpha(accent, 0.12f + 0.18f * pl));
+        DrawCylinderEx({ x, 0.15f, z }, { x, 0.16f, z }, w * 0.06f, w * 0.06f, 8,
+                       ColorAlpha(accent, 0.5f + 0.4f * pl));   // feixe de montagem
+        int pips = (int)(b.buildTimer * 4.0f);                  // barra de progresso
+        for (int i = 0; i < 4; ++i) {
+            float px = x + (i - 1.5f) * 6.0f;
+            DrawCubeV({ px, h + 6.0f, z }, { 4.0f, 4.0f, 4.0f },
+                      i < pips ? accent : ColorAlpha(accent, 0.18f));
+        }
+    };
+
+    switch (b.type) {
+    case BuildingType::Ark: {   // BUNKER DE COMANDO + beacon de cura
+        if (!b.built) { scaffold(150.0f, 150.0f, 90.0f, CYAN); return; }
+        DrawCubeV({ x, 6.0f, z }, { 150.0f, 12.0f, 150.0f }, DARK);       // plataforma
+        DrawCubeV({ x, 46.0f, z }, { 92.0f, 68.0f, 92.0f }, PLATE);       // corpo blindado
+        DrawCubeV({ x, 86.0f, z }, { 60.0f, 22.0f, 60.0f }, METAL);       // coberta 1
+        DrawCubeV({ x, 104.0f, z }, { 30.0f, 14.0f, 30.0f }, DARK);       // coberta 2 (nucleo da base)
+        for (int i = 0; i < 4; ++i) {                                    // pilares de canto
+            float px = (i & 1) ? 68.0f : -68.0f, pz = (i & 2) ? 68.0f : -68.0f;
+            DrawCubeV({ x + px, 34.0f, z + pz }, { 14.0f, 56.0f, 14.0f }, METAL);
+            DrawSphereEx({ x + px, 66.0f, z + pz }, 4.5f, 6, 6, ColorAlpha(CYAN, 0.4f + 0.5f * pl));
+        }
+        DrawCylinderEx({ x, 106.0f, z }, { x, 172.0f, z }, 2.4f, 1.2f, 6, METAL);   // mastro beacon
+        DrawSphereEx({ x, 178.0f, z }, 6.5f, 7, 7, ColorAlpha(CYAN, 0.55f + 0.45f * pl));
+        DrawSphereEx({ x, 178.0f, z }, 9.0f, 7, 7, ColorAlpha(CYAN, 0.12f + 0.10f * pl));
+        DrawCylinderEx({ x, 0.12f, z }, { x, 0.13f, z }, b.healRadius, b.healRadius, 28,
+                       ColorAlpha(TEAL, 0.05f + 0.05f * pl));             // aura de cura
+        DrawCubeV({ x - 30.0f, 12.0f, z }, { 26.0f, 24.0f, 8.0f }, CYAN); // porta de acesso
+        break;
+    }
+    case BuildingType::House: {   // PILONE DE ENERGIA (casa -> geradora)
+        if (!b.built) { scaffold(60.0f, 60.0f, 56.0f, CYAN); return; }
+        DrawCubeV({ x, 5.0f, z }, { 52.0f, 10.0f, 52.0f }, DARK);         // base
+        DrawCylinderEx({ x, 20.0f, z }, { x, 46.0f, z }, 12.0f, 8.0f, 6, PLATE);
+        DrawCylinderEx({ x, 48.0f, z }, { x, 62.0f, z }, 7.0f, 5.0f, 6, METAL);
+        DrawSphereEx({ x, 66.0f, z }, 6.0f, 7, 7, ColorAlpha(CYAN, 0.35f + 0.35f * pl));
+        float cyc = 1.0f - fmodf(b.genTimer, b.genRate) / b.genRate;      // pulso sobe a cada tick
+        DrawCubeV({ x, 4.0f, z }, { 8.0f, 8.0f + cyc * 44.0f, 8.0f }, ColorAlpha(CYAN, 0.30f + 0.30f * pl));
+        for (int cI = 1; cI < 3; ++cI) {                                  // condutas laterais
+            float cx = x + (cI == 1 ? 30.0f : -30.0f);
+            DrawCubeV({ cx, 8.0f, z }, { 10.0f, 24.0f, 10.0f }, METAL);
+            DrawSphereEx({ cx, 24.0f, z }, 3.0f, 5, 5, ColorAlpha(CYAN, 0.3f + 0.25f * pl));
+        }
+        if (b.level >= 2) DrawCylinderEx({ x, 52.0f, z }, { x, 53.0f, z }, 16.0f, 16.0f, 6, ColorAlpha(CYAN, 0.6f));
+        if (b.level >= 3) DrawSphereEx({ x, 40.0f, z }, 3.0f, 6, 6, CYAN);
+        break;
+    }
+    case BuildingType::Barracks: {   // PORTAO DE DEPLOY
+        if (!b.built) { scaffold(84.0f, 64.0f, 60.0f, CYAN); return; }
+        DrawCubeV({ x, 4.0f, z }, { 80.0f, 8.0f, 60.0f }, DARK);          // piso
+        DrawCubeV({ x, 26.0f, z }, { 62.0f, 36.0f, 50.0f }, PLATE);       // estrutura
+        DrawCubeV({ x, 48.0f, z }, { 74.0f, 8.0f, 56.0f }, METAL);        // coroamento
+        DrawCubeV({ x, 0.0f, z }, { 26.0f, 48.0f, 22.0f }, DARK);         // arco do portal
+        for (int sI = -1; sI <= 1; sI += 2) {                             // aletas emissivas
+            DrawCubeV({ x + sI * 46.0f, 26.0f, z }, { 10.0f, 44.0f, 46.0f }, METAL);
+            DrawCubeV({ x + sI * 40.0f, 26.0f, z }, { 4.0f, 34.0f, 36.0f }, ColorAlpha(CYAN, 0.6f));
+        }
+        if (b.spawnQueue > 0) {                                           // feixe de spawn
+            float ph = 0.5f + 0.5f * (1.0f - b.spawnTimer / b.spawnTime);
+            DrawCylinderEx({ x, 50.0f, z }, { x, 8.0f, z }, 7.0f, 9.0f, 6, ColorAlpha(CYAN, 0.25f + 0.35f * ph));
+            DrawSphereEx({ x, 8.0f, z }, 7.0f, 6, 6, ColorAlpha(CYAN, 0.5f));
+        }
+        if (b.level >= 2) DrawCylinderEx({ x, 56.0f, z }, { x, 60.0f, z }, 3.0f, 1.5f, 6, ColorAlpha(CYAN, 0.7f));
+        break;
+    }
+    case BuildingType::TankFactory: {   // CRATERA DE REATOR
+        if (!b.built) { scaffold(104.0f, 88.0f, 64.0f, HOT); return; }
+        DrawCubeV({ x, 5.0f, z }, { 100.0f, 10.0f, 84.0f }, DARK);        // piso
+        DrawCubeV({ x, 27.0f, z }, { 84.0f, 34.0f, 66.0f }, PLATE);       // gibao
+        DrawCubeV({ x, 27.0f, z }, { 94.0f, 8.0f, 76.0f }, METAL);        // borda
+        for (int i = 0; i < 2; ++i) {                                     // portas de fabrico
+            float dx = (i ? 56.0f : -56.0f);
+            DrawCubeV({ x + dx, 10.0f, z }, { 18.0f, 34.0f, 20.0f }, DARK);
+            DrawCubeV({ x + dx, 10.0f, z }, { 10.0f, 26.0f, 12.0f }, ColorAlpha(HOT, 0.5f));
+        }
+        float cpl = 0.5f + 0.5f * sinf(t * 3.0f + x * 0.1f);              // nucleo pulsante
+        DrawCylinderEx({ x, 40.0f, z }, { x, 56.0f, z }, 16.0f, 11.0f, 7, ColorAlpha(HOT, 0.75f + 0.25f * cpl));
+        DrawSphereEx({ x, 62.0f, z }, 10.0f, 8, 8, ColorAlpha(HOT, 0.65f + 0.35f * cpl));
+        DrawSphereEx({ x, 62.0f, z }, 14.0f, 8, 8, ColorAlpha(HOT, 0.10f + 0.10f * pl));
+        for (int sI = 0; sI < 3; ++sI) {                                  // chamines de exaustao
+            float sx = -30.0f + sI * 30.0f, sy = 16.0f + sI * 2.0f;
+            DrawCylinderEx({ x + sx, sy, z - 38.0f }, { x + sx, sy + 22.0f, z - 38.0f },
+                           5.0f, 3.5f, 6, METAL);
+            float my = sy + 24.0f + fmodf(t * 16.0f + sI * 10.0f, 18.0f); // mota de calor
+            DrawSphereEx({ x + sx, my, z - 38.0f }, 2.2f, 5, 5,
+                         ColorAlpha(HOT, 0.35f * (1.0f - (my - 58.0f) / 18.0f)));
+        }
+        int pips = (int)((1.0f - b.productionTimer / b.productionRate) * 8.0f);  // barra de producao
+        for (int i = 0; i < 8; ++i)
+            DrawCubeV({ x + (i - 3.5f) * 8.0f, 52.0f, z - 37.0f }, { 6.0f, 2.5f, 2.0f },
+                      i < pips ? HOT : ColorAlpha(HOT, 0.15f));
+        break;
+    }
+    case BuildingType::Turret: {   // TORRE DE DEFESA GIRATORIA
+        if (!b.built) { scaffold(56.0f, 56.0f, 40.0f, DEF); return; }
+        DrawCubeV({ x, 4.0f, z }, { 50.0f, 8.0f, 50.0f }, DARK);          // base
+        DrawCylinderEx({ x, 12.0f, z }, { x, 26.0f, z }, 10.0f, 8.0f, 8, PLATE);    // pescoco
+        DrawCylinderEx({ x, 42.0f, z }, { x, 27.0f, z }, 12.0f, 10.0f, 8, METAL);   // cupula giratoria
+        float ang = atan2f(b.shootDir.y, b.shootDir.x);                   // mira no alvo
+        for (int bI = -1; bI <= 1; bI += 2) {                             // canhoes duplos
+            float off = bI * 15.0f;
+            Vector3 bb = { x + cosf(ang) * 16.0f - sinf(ang) * off, 36.0f,
+                           z + sinf(ang) * 16.0f + cosf(ang) * off };
+            Vector3 bt = { x + cosf(ang) * 40.0f - sinf(ang) * off, 36.0f,
+                           z + sinf(ang) * 40.0f + cosf(ang) * off };
+            DrawCylinderEx(bt, bb, 3.0f, 3.4f, 6, PLATE);
+            DrawSphereEx(bt, 3.2f, 6, 6, ColorAlpha(DEF, 0.5f + 0.5f * pl));   // boca
+        }
+        DrawSphereEx({ x, 48.0f, z }, 5.5f, 6, 6, DEF);                   // sensor
+        if (b.level >= 2)                                                 // anel de alcance
+            DrawCylinderEx({ x, 0.12f, z }, { x, 0.13f, z }, b.shootRange, b.shootRange, 42,
+                           ColorAlpha(DEF, 0.03f + 0.03f * pl));
+        break;
+    }
+    case BuildingType::MedBay: {   // ESTACAO DE STASIS
+        if (!b.built) { scaffold(64.0f, 64.0f, 52.0f, TEAL); return; }
+        DrawCubeV({ x, 4.0f, z }, { 60.0f, 8.0f, 60.0f }, DARK);          // piso
+        DrawCubeV({ x, 20.0f, z }, { 46.0f, 30.0f, 46.0f }, PLATE);       // modulos
+        DrawCylinderEx({ x, 36.0f, z }, { x, 40.0f, z }, 4.0f, 3.0f, 6, METAL);
+        DrawSphereEx({ x, 43.0f, z }, 6.0f, 7, 7, ColorAlpha(TEAL, 0.4f + 0.4f * pl));
+        DrawCubeV({ x, 13.0f, z }, { 20.0f, 20.0f, 6.0f }, ColorAlpha(TEAL, 0.55f));  // cruz medica
+        DrawCubeV({ x, 13.0f, z }, { 4.0f, 20.0f, 6.5f }, ColorAlpha(TEAL, 0.8f));
+        for (int sI = -1; sI <= 1; sI += 2) {                             // pods laterais
+            DrawCubeV({ x + sI * 30.0f, 14.0f, z }, { 12.0f, 24.0f, 12.0f }, METAL);
+            DrawSphereEx({ x + sI * 30.0f, 30.0f, z }, 3.0f, 5, 5, ColorAlpha(TEAL, 0.35f));
+        }
+        DrawCylinderEx({ x, 0.12f, z }, { x, 0.13f, z }, b.healRadius, b.healRadius, 26,
+                       ColorAlpha(TEAL, 0.04f + 0.04f * pl));
+        break;
+    }
+    case BuildingType::Wall: {   // PARAPEITO DE ENERGIA
+        if (!b.built) { scaffold(64.0f, 14.0f, 64.0f, CYAN); return; }
+        DrawCubeV({ x, 20.0f, z }, { 64.0f, 40.0f, 14.0f }, DARK);        // muro
+        DrawCubeV({ x, 34.0f, z }, { 56.0f, 12.0f, 18.0f }, METAL);       // corrimao
+        DrawCubeV({ x, 38.0f, z }, { 68.0f, 4.0f, 10.0f }, ColorAlpha(CYAN, 0.55f + 0.25f * pl)); // lâmina no topo
+        for (int cI = 0; cI < 2; ++cI)                                    // celulas emissivas
+            DrawSphereEx({ x + (cI ? 24.0f : -24.0f), 22.0f, z }, 3.0f, 5, 5, ColorAlpha(CYAN, 0.6f + 0.3f * pl));
+        if (b.level >= 2)
+            for (int pI = 0; pI < 4; ++pI) {                              // pilares de reforco
+                float px = (pI & 1) ? 26.0f : -26.0f, pz = (pI & 2) ? 6.0f : -6.0f;
+                DrawCubeV({ x + px, 12.0f, z + pz }, { 8.0f, 24.0f, 8.0f }, METAL);
+            }
+        break;
+    }
+    case BuildingType::ResourceNode: {   // CRISTAL DE RECURSO
+        if (!b.built) { scaffold(40.0f, 40.0f, 36.0f, HOT); return; }
+        DrawCylinderEx({ x, 6.0f, z }, { x, 0.0f, z }, 4.0f, 2.0f, 6, ColorAlpha(HOT, 0.6f));
+        DrawSphereEx(v, 10.0f, 6, 6, ColorAlpha(HOT, 0.30f + 0.20f * pl));
+        for (int cI = 0; cI < 4; ++cI) {                                  // cilhas do cristal
+            float a = 6.2831853f * cI / 4.0f;
+            DrawSphereEx({ x + cosf(a) * 14.0f, 10.0f + (cI % 2) * 6.0f, z + sinf(a) * 14.0f },
+                         3.5f, 5, 5, ColorAlpha(HOT, 0.4f + 0.25f * pl));
+        }
+        break;
+    }
+    }
+}
+
 void Game::drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase, bool moving) {
     // Quadro do passo pela fase da caminhada da PROPRIA entidade (nao pelo relogio):
     // parado = pose 0, andando = ciclo de VOX_POSES quadros.
@@ -1725,42 +1910,10 @@ void Game::renderWorld3D() {
         }
 
         // Construções, Tanques e Soldados (Building System / RTS)
-        // Arca/Casa: modelos MEDIEVAIS (castle.obj/house.obj) so em zona rural/
-        // gotica. Em zona urbana/sci-fi a Arca vira bunker de concreto com
-        // antenas e a Casa vira estrutura moderna (auditoria P1: telhado de
-        // telha e torre de castelo no asfalto quebravam a cidade).
-        const bool medievalZone = isMedievalZone(currentZone);
+        // Construcoes do jogador: visuais sci-fi unificados (casco gunmetal +
+        // acentos emissivos). Os modelos OBJ medievais ficam so no cenario.
         for (const auto& b : buildingSystem.buildings) {
-            if (m_modelsLoaded && b.built) {
-                if (b.type == BuildingType::Ark && medievalZone && m_castleModel.meshCount > 0) {
-                    DrawModelEx(m_castleModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_castleScale, m_castleScale, m_castleScale }, WHITE);
-                } else if (b.type == BuildingType::Ark && !medievalZone) {
-                    drawArkStructure(b.position);
-                } else if (b.type == BuildingType::House && medievalZone && m_houseModel.meshCount > 0) {
-                    DrawModelEx(m_houseModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_houseScale, m_houseScale, m_houseScale }, WHITE);
-                } else if (b.type == BuildingType::House && !medievalZone) {
-                    drawGenericStructure(b.position, 1.0f);   // casa moderna (concreto+metal)
-                } else if (b.type == BuildingType::Barracks && m_barracksModel.meshCount > 0) {
-                    DrawModelEx(m_barracksModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_barracksScale, m_barracksScale, m_barracksScale }, WHITE);
-                } else if (b.type == BuildingType::Turret && m_turretModel.meshCount > 0) {
-                    DrawModelEx(m_turretModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_turretScale, m_turretScale, m_turretScale }, WHITE);
-                } else if (b.type == BuildingType::TankFactory && m_marketModel.meshCount > 0) {
-                    DrawModelEx(m_marketModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_marketScale, m_marketScale, m_marketScale }, WHITE);
-                } else if (b.type == BuildingType::MedBay && m_wellModel.meshCount > 0) {
-                    DrawModelEx(m_wellModel, { b.position.x, 0.0f, b.position.y }, { 0.0f, 1.0f, 0.0f }, 0.0f, { m_wellScale, m_wellScale, m_wellScale }, WHITE);
-                } else if (b.type == BuildingType::Wall) {
-                    SpriteBank& sb = SpriteBank::get();
-                    if (sb.ready) {
-                        DrawCubeTexture(sb.tileWall[(int)currentZone], { b.position.x, 32.0f, b.position.y }, 64.0f, 64.0f, 64.0f, WHITE);
-                    } else {
-                        DrawCube({ b.position.x, 32.0f, b.position.y }, 64.0f, 64.0f, 64.0f, GRAY);
-                    }
-                } else {
-                    drawGenericStructure(b.position, 1.0f);
-                }
-            } else {
-                drawGenericStructure(b.position, 1.0f);
-            }
+            drawPlayerBuilding(b);
         }
         // Tanque com escala e forma de tanque: 96u de casco contra 66u de heroi.
         // Os 28u antigos faziam o "tanque" caber embaixo do braco do personagem.
