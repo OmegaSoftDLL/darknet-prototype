@@ -35,8 +35,13 @@ add_executable(darknet
     src/Game_Phases.cpp
     src/Game_Spawn.cpp
     src/Game_WorldGen.cpp
+    src/Game_WorldRender.cpp
+    src/Game_Gameplay.cpp
+    src/Enemy_Render.cpp
     src/Game_HUD.cpp
     src/Game_Bot.cpp
+    src/Game_SkillTree.cpp
+    src/SkillTree.cpp
     src/SpriteExtrude.cpp
     src/Player.cpp
     src/Enemy.cpp
@@ -94,6 +99,7 @@ add_executable(darknet_tests
     src/Item.cpp          # Item::createRandom no load de inventario
     src/Quest.cpp         # construcao/update de quests nos testes
     src/Skill.cpp         # Player::update/useSkill referenciam Skill
+    src/SkillTree.cpp     # Player::refreshSkillVectors/getEffectiveDamage usam perks
 )
 target_include_directories(darknet_tests PRIVATE src third_party)
 target_link_libraries(darknet_tests PRIVATE raylib)

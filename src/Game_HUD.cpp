@@ -5,6 +5,7 @@
 #include <raymath.h>
 #include <cmath>
 #include <algorithm>
+#include <cstdio>
 #include <vector>
 #include <string>
 
@@ -42,18 +43,28 @@ void Game::drawHudAndOverlays() {
 
     // ── HUD do Motor de Evolucao: Nivel de Ameaca + Mutador ativo ─────────────
     {
-        int hx = screenWidth - 224, hy = 56;
-        DrawRectangle(hx, hy, 214, activeMutator == WorldMutator::None ? 22 : 40,
-                      ColorAlpha(BLACK, 0.55f));
-        DrawText(TextFormat("AMEACA  Lv %d", threatLevel), hx + 8, hy + 4, 14,
+        int hx = screenWidth - 232, hy = 56;
+        int hh = activeMutator == WorldMutator::None ? 24 : 42;
+        DrawRectangle(hx, hy, 226, hh, ColorAlpha({8,12,26,255}, 0.86f));
+        DrawRectangle(hx, hy, 3, hh, ColorAlpha({255,70,70,255}, 0.9f));
+        int ac = 6;
+        Color aB = ColorAlpha({255,90,90,255}, 0.65f);
+        DrawLine(hx+ac, hy, hx+226-ac, hy, aB);
+        DrawLine(hx+ac, hy+hh, hx+226-ac, hy+hh, aB);
+        DrawLine(hx, hy+ac, hx+ac, hy, aB);
+        DrawLine(hx+226-ac, hy, hx+226, hy+ac, aB);
+        DrawLine(hx, hy+hh-ac, hx+ac, hy+hh, aB);
+        DrawLine(hx+226-ac, hy+hh, hx+226, hy+hh-ac, aB);
+        DrawText(TextFormat("AMEACA  Lv %d", threatLevel), hx + 12, hy + 4, 14,
                  Color{255, 90, 90, 255});
         if (activeMutator != WorldMutator::None) {
             float pulse = 0.6f + 0.4f * std::sin((float)GetTime() * 3.0f);
-            DrawText(TextFormat("%s", mutatorName(activeMutator)), hx + 8, hy + 22, 12,
+            DrawText(TextFormat("%s", mutatorName(activeMutator)), hx + 12, hy + 22, 12,
                      ColorAlpha(Color{180, 120, 255, 255}, pulse));
-            // barra de tempo restante do mutador
             float frac = 1.0f - (mutatorTimer / mutatorDuration);
-            DrawRectangle(hx + 150, hy + 24, (int)(56 * frac), 5, Color{180,120,255,200});
+            DrawRectangle(hx + 152, hy + 24, (int)(58 * frac), 5, Color{180,120,255,200});
+            DrawRectangleLinesEx({(float)(hx+151),(float)(hy+23),60.f,7.f}, 1,
+                                 ColorAlpha(Color{180,120,255,255}, 0.4f));
         }
     }
 
@@ -62,21 +73,35 @@ void Game::drawHudAndOverlays() {
         const char* si = "ZONA SEGURA - prepare-se e construa sua base";
         int siw = MeasureText(si, 16);
         float pulse = 0.6f + 0.4f * std::sin((float)GetTime() * 3.0f);
-        DrawRectangle(screenWidth/2 - siw/2 - 10, 30, siw + 20, 24, ColorAlpha(BLACK, 0.6f));
-        DrawRectangleLinesEx({(float)(screenWidth/2 - siw/2 - 10), 30, (float)(siw + 20), 24},
-                             1.0f, ColorAlpha(Color{0,230,160,255}, 0.7f));
-        DrawText(si, screenWidth/2 - siw/2, 34, 16, ColorAlpha(Color{0,255,180,255}, pulse));
+        int szx = screenWidth/2 - siw/2 - 14, szy = 30;
+        DrawRectangle(szx, szy, siw + 28, 26, ColorAlpha({6,18,28,255}, 0.9f));
+        DrawRectangle(szx, szy, 3, 26, ColorAlpha({0,255,180,255}, 0.9f));
+        int szc = 6;
+        Color szB = ColorAlpha({0,230,160,255}, 0.7f);
+        DrawLine(szx+szc, szy, szx+siw+28-szc, szy, szB);
+        DrawLine(szx+szc, szy+26, szx+siw+28-szc, szy+26, szB);
+        DrawLine(szx, szy+szc, szx+szc, szy, szB);
+        DrawLine(szx+siw+28-szc, szy, szx+siw+28, szy+szc, szB);
+        DrawLine(szx, szy+26-szc, szx+szc, szy+26, szB);
+        DrawLine(szx+siw+28-szc, szy+26, szx+siw+28, szy+26-szc, szB);
+        DrawText(si, screenWidth/2 - siw/2, szy + 5, 16, ColorAlpha({0,255,180,255}, pulse));
     }
-    // Progresso da FASE (abates ate o portal) — objetivo sempre visivel
+    // Progresso da FASE (abates ate o portal) — objetivo sempre visivel.
+    // Fora do CENTRO: dock na esquerda, sob o capitulo/zona (nada de pill no meio).
     if (openWorldMode) {
         const char* pt = owPortalOpen
             ? "PORTAL ABERTO - siga o marcador e pressione [E]"
             : TextFormat("FASE %d  -  abates ate o portal: %d/%d",
                          owPhase + 1, owPhaseKills, owPhaseGoal);
         int pw = MeasureText(pt, 13);
-        DrawRectangle(screenWidth/2 - pw/2 - 8, 82, pw + 16, 20, ColorAlpha(BLACK, 0.55f));
-        DrawText(pt, screenWidth/2 - pw/2, 85, 13,
-                 owPortalOpen ? Color{0,255,180,255} : Color{200,206,220,255});
+        int pxx = 10, pyy = 56;
+        DrawRectangle(pxx, pyy, pw + 28, 22, ColorAlpha({8,12,26,255}, 0.86f));
+        DrawRectangle(pxx, pyy, 3, 22, ColorAlpha({0,235,255,255}, 0.9f));
+        DrawText(pt, pxx + 12, pyy + 4, 13,
+                 owPortalOpen ? Color{0,255,180,255} : Color{210,220,235,255});
+        DrawLine(pxx, pyy + 22, pxx + pw + 28, pyy + 22, ColorAlpha({0,235,255,255}, 0.35f));
+        DrawLine(pxx + 6, pyy + 22, pxx + 14, pyy + 22, ColorAlpha({0,235,255,255}, 0.7f));
+        DrawLine(pxx + pw + 14, pyy + 22, pxx + pw + 22, pyy + 22, ColorAlpha({0,235,255,255}, 0.7f));
     }
     drawStoryBanner();
     drawPhaseFade();
@@ -108,8 +133,14 @@ void Game::drawUI() const {
     Color C_green = {0, 210, 80, 255};
 
     // ── Top bar ───────────────────────────────────────────────────────────────
-    DrawRectangle(0, 0, screenWidth, 26, ColorAlpha(BLACK, 0.75f));
-    DrawLine(0, 26, screenWidth, 26, ColorAlpha(C_cyan, 0.3f));
+    DrawRectangle(0, 0, screenWidth, 26, ColorAlpha(BLACK, 0.78f));
+    DrawLine(0, 26, screenWidth, 26, ColorAlpha(C_cyan, 0.35f));
+    DrawLine(0, 24, 12, 24, ColorAlpha({255,180,40,255}, 0.7f));
+    DrawLine(screenWidth - 12, 24, screenWidth, 24, ColorAlpha({0,235,255,255}, 0.7f));
+    DrawLine(12, 24, 12, 26, ColorAlpha({255,180,40,255}, 0.7f));
+    DrawLine(screenWidth - 12, 24, screenWidth - 12, 26, ColorAlpha({0,235,255,255}, 0.7f));
+    DrawRectangle(0, 26, 6, 2, ColorAlpha({0,235,255,255}, 0.8f));
+    DrawRectangle(screenWidth - 6, 26, 6, 2, ColorAlpha({0,235,255,255}, 0.8f));
 
     // Chapter + zone
     ZoneInfo info = getZoneInfo(currentZone);
@@ -134,7 +165,7 @@ void Game::drawUI() const {
         struct Ctl { const char* key; const char* label; Color col; };
         static const Ctl ctls[] = {
             {"Q",      "Cura (pocao + regen)",   {0,255,120,255}},
-            {"I",      "Inventario / Equipar",   {0,230,255,255}},
+            {"I",      "Inventario / Equipar",   {0,235,255,255}},
             {"O",      "Grupo / Aliança",        {120,255,160,255}},
             {"B",      "Construir base/tanques", {120,200,255,255}},
             {"C",      "Forja de armas/armad.",  {255,200,100,255}},
@@ -147,14 +178,17 @@ void Game::drawUI() const {
         };
         int n = (int)(sizeof(ctls)/sizeof(ctls[0]));
         int ch = 18 * n + 24;
-        DrawRectangle(cx, cy, cw, ch, ColorAlpha(BLACK, 0.62f));
-        DrawRectangleLinesEx({(float)cx,(float)cy,(float)cw,(float)ch}, 1.0f,
-                             ColorAlpha(C_cyan, 0.5f));
+        DrawPanel(cx, cy, cw, ch, C_cyan, 0.72f);
+        DrawRectangle(cx, cy, 3, ch, ColorAlpha({0,235,255,255}, 0.85f));
         DrawText("CONTROLES", cx + 8, cy + 6, 11, ColorAlpha(C_cyan, 0.9f));
         for (int i = 0; i < n; i++) {
             int ly = cy + 22 + i * 18;
-            DrawText(ctls[i].key, cx + 8, ly, 11, ctls[i].col);
-            DrawText(ctls[i].label, cx + 74, ly, 10, ColorAlpha(WHITE, 0.78f));
+            int kw = MeasureText(ctls[i].key, 11);
+            DrawRectangle(cx + 8, ly - 1, kw + 10, 14, ColorAlpha(ctls[i].col, 0.22f));
+            DrawRectangleLinesEx({(float)(cx+8), (float)(ly-1), (float)(kw+10), 14}, 1,
+                                 ColorAlpha(ctls[i].col, 0.5f));
+            DrawText(ctls[i].key, cx + 13, ly, 11, ctls[i].col);
+            DrawText(ctls[i].label, cx + 78, ly, 10, ColorAlpha(WHITE, 0.78f));
         }
     }
 
@@ -167,6 +201,9 @@ void Game::drawUI() const {
     if (!anyOverlay) {
         drawSkillsPanel();
     }
+
+    // ── HACK TREE (skill tree de perks) ────────────────────────────────────────
+    drawSkillTreePanel();
 
     // ── MINIMAP (bottom-right) — hidden when fullscreen overlay active ─────────
     if (!anyOverlay) {
@@ -181,20 +218,22 @@ void Game::drawUI() const {
         drawQuestHUD();
     }
 
-    // ── Level Up announcement ─────────────────────────────────────────────────
+    // ── Level Up announcement (banner compacto, LONG DO banner de zona/fase) ──
+    // Antes era 420x70 centrado em -100 (colhia sobre o nome da fase em -40).
+    // Novo: pill compacto, menor fonte, encostado no topo sob a barra de HUD.
     if (player.leveledUp) {
         float a = std::min(player.levelUpTimer / 2.5f, 1.0f);
-        // Main banner
-        int bw = 420, bh = 70;
-        int bx = screenWidth/2 - bw/2, by = screenHeight/2 - 100;
-        DrawPanel(bx, by, bw, bh, C_gold, 0.92f);
-        DrawText(TextFormat("NIVEL %d ALCANCADO!", player.level),
-                 bx + bw/2 - MeasureText(TextFormat("NIVEL %d ALCANCADO!", player.level), 28)/2,
-                 by + 8, 28, ColorAlpha(C_gold, a));
+        char lvl[48]; snprintf(lvl, sizeof(lvl), "NIVEL %d ALCANCADO!", player.level);
+        int fw = MeasureText(lvl, 20);
+        int fw2 = player.lastPassive.empty() ? 0 : MeasureText(player.lastPassive.c_str(), 12);
+        int bw = std::max(fw, fw2) + 36, bh = player.lastPassive.empty() ? 40 : 52;
+        int bx = screenWidth/2 - bw/2, by = 30;
+        DrawPanel(bx, by, bw, bh, C_gold, 0.94f);
+        DrawText(lvl, bx + bw/2 - fw/2, by + (player.lastPassive.empty() ? 11 : 6), 20,
+                 ColorAlpha(C_gold, a));
         if (!player.lastPassive.empty()) {
-            DrawText(player.lastPassive.c_str(),
-                     bx + bw/2 - MeasureText(player.lastPassive.c_str(), 14)/2,
-                     by + 44, 14, ColorAlpha({0,255,180,255}, a));
+            DrawText(player.lastPassive.c_str(), bx + bw/2 - fw2/2, by + 32, 12,
+                     ColorAlpha({0,255,180,255}, a));
         }
     }
 
@@ -236,12 +275,12 @@ void Game::drawUI() const {
 }
 
 void Game::drawCharacterPanel() const {
-    Color C_cyan  = {0,210,255,255};
+    Color C_cyan  = {0,235,255,255};
     Color C_green = {0,210,80, 255};
     Color C_gold  = {255,190,0,255};
 
     // Painel reorganizado — linhas bem separadas, SEM sobreposicao.
-    bool hasPts = (pendingLevelUps > 0 || pendingEvolutions > 0);
+    bool hasPts = (pendingLevelUps > 0 || pendingEvolutions > 0 || player.skillPoints > 0);
     int panX = 8, panW = 322;
     int panH = hasPts ? 196 : 172;
     int panY = screenHeight - panH - 8;
@@ -276,7 +315,7 @@ void Game::drawCharacterPanel() const {
                  panX+40, y+2, 12, ColorAlpha(WHITE, 0.95f));
         // Escudo/Sobrecarga como rotulo curto no fim da barra de HP
         if (player.isShielded())
-            DrawText("[BARREIRA]", panX+232, y+2, 11, Color{0,210,255,255});
+            DrawText("[BARREIRA]", panX+232, y+2, 11, Color{0,235,255,255});
         else if (player.isOverloaded())
             DrawText("[SOBRECGA]", panX+232, y+2, 11, Color{255,150,0,255});
     }
@@ -298,6 +337,7 @@ void Game::drawCharacterPanel() const {
         std::string txt;
         if (pendingLevelUps > 0)  txt += TextFormat("[L] %d ponto(s)  ", pendingLevelUps);
         if (pendingEvolutions > 0) txt += TextFormat("[K] %d evolucao", pendingEvolutions);
+        if (player.skillPoints > 0) txt += TextFormat("[X] %d hack", player.skillPoints);
         DrawRectangle(panX+8, y-1, panW-16, 17, ColorAlpha(Color{90,60,0,255}, 0.5f * pulse));
         DrawText(txt.c_str(), panX+12, y+1, 12, ColorAlpha(Color{255,215,0,255}, 0.6f+0.4f*pulse));
     }
@@ -325,7 +365,7 @@ void Game::drawCharacterPanel() const {
 }
 
 void Game::drawObjectivesPanel() const {
-    Color C_cyan = {0,210,255,255};
+    Color C_cyan = {0,235,255,255};
     Color C_gold = {255,190,0,255};
     Color C_red  = {220, 30, 30,255};
 
@@ -379,55 +419,128 @@ void Game::drawObjectivesPanel() const {
 
 void Game::drawSkillsPanel() const {
     Color C_cyan  = {0, 210, 255, 255};
-    Color C_gold  = {255, 190, 0,  255};
-    Color C_green = {0,  210, 80,  255};
 
-    int count  = (int)player.skills.size();
-    int slotW  = 90, slotH = 84;
-    int totalW = count * slotW;
-    int baseX  = screenWidth/2 - totalW/2;
-    int baseY  = screenHeight - slotH - 8;
+    const int count = (int)player.skills.size();
+    if (count <= 0) return;
 
-    // Background bar
-    DrawRectangle(baseX-8, baseY-4, totalW+16, slotH+12, ColorAlpha(BLACK, 0.65f));
-    DrawLine(baseX-8, baseY-4, baseX+totalW+8, baseY-4, ColorAlpha(C_cyan, 0.3f));
+    // Cada poder tem IDENTIDADE propria: cor, icone procedural, estado vivo.
+    static const Color POW_COLORS[6] = {
+        {  0, 235, 255, 255 },   // 1 Laser       - cyan
+        {255, 215,  60, 255 },   // 2 EMP         - ouro
+        {255, 140,  30, 255 },   // 3 Granada     - laranja
+        {255,  90,  50, 255 },   // 4 Sobrecarga  - vermelho
+        { 70, 170, 255, 255 },   // 5 Barreira    - azul
+        {  0, 220, 110, 255 }    // 6 Rajada      - verde
+    };
+
+    const int slotW = 92, slotH = 106, gap = 4;
+    const int totalW = count * slotW + (count - 1) * gap;
+    const int baseX  = screenWidth/2 - totalW/2;   // permanece EMBAIXO, no centro
+    const int baseY  = screenHeight - slotH - 8;
+    const float t    = (float)GetTime();
+
+    // Fundo da barra — painel angular mais presente
+    DrawRectangle(baseX-12, baseY-8, totalW+24, slotH+18, ColorAlpha({7,12,26,255}, 0.86f));
+    DrawRectangle(baseX-12, baseY-8, 4, slotH+18, ColorAlpha(C_cyan, 0.85f));
+    {
+        int bb = 9;
+        DrawLine(baseX-12+bb, baseY-8, baseX+totalW+12-bb, baseY-8, ColorAlpha(C_cyan, 0.4f));
+        DrawLine(baseX-12+bb, baseY+slotH+10, baseX+totalW+12-bb, baseY+slotH+10, ColorAlpha(C_cyan, 0.4f));
+        DrawLine(baseX-12, baseY-8+bb, baseX-12+bb, baseY-8, ColorAlpha(C_cyan, 0.7f));
+        DrawLine(baseX+totalW+12-bb, baseY-8, baseX+totalW+12, baseY-8+bb, ColorAlpha(C_cyan, 0.7f));
+        DrawLine(baseX-12, baseY+slotH+10-bb, baseX-12+bb, baseY+slotH+10, ColorAlpha(C_cyan, 0.6f));
+        DrawLine(baseX+totalW+12-bb, baseY+slotH+10, baseX+totalW+12, baseY+slotH+10-bb, ColorAlpha(C_cyan, 0.5f));
+    }
 
     for (int i = 0; i < count; ++i) {
         const Skill& s = player.skills[i];
-        int sx = baseX + i * slotW;
+        Color col = POW_COLORS[i % 6];
+        const int sx = baseX + i * (slotW + gap);
+        const bool ready = s.isReady();
+        const float pul = 0.55f + 0.45f * sinf(t * 3.0f + i * 1.3f);
 
-        // Slot background
-        bool ready = s.isReady();
-        Color border = ready ? C_green : ColorAlpha(WHITE, 0.2f);
-        DrawPanel(sx, baseY, slotW-4, slotH, border, 0.75f);
-
-        // Key number
-        DrawText(TextFormat("%d", i+1), sx+4, baseY+4, 15, C_gold);
-
-        // Skill name (wrapped)
-        DrawText(s.name.c_str(), sx+4, baseY+22, 12, ColorAlpha(WHITE, 0.9f));
-
-        // Ready / cooldown
+        // Corpo do slot
+        DrawRectangle(sx, baseY, slotW, slotH, Color{11,18,34,255});
+        DrawRectangle(sx+2, baseY+2, slotW-4, slotH-4, ColorAlpha(col, ready ? 0.05f : 0.015f));
+        Color border = ready ? ColorAlpha(col, 0.55f + 0.45f * pul)
+                             : ColorAlpha(WHITE, 0.18f);
+        DrawRectangleLinesEx({(float)sx,(float)baseY,(float)slotW,(float)slotH}, 2, border);
         if (ready) {
-            DrawText("PRONTO", sx+4, baseY+40, 11, C_green);
-            // Subtle glow
-            DrawRectangle(sx, baseY+slotH-6, slotW-4, 6, ColorAlpha(C_green, 0.35f));
-        } else {
-            float pct = 1.0f - s.cooldownPercent();
-            DrawBarH(sx, baseY+slotH-6, slotW-4, 6, pct,
-                     {60,140,255,255}, ColorAlpha(BLACK, 0.5f));
-            // Cooldown overlay
-            DrawRectangle(sx, baseY, slotW-4,
-                          (int)((slotH) * s.cooldownPercent()),
-                          ColorAlpha(BLACK, 0.55f));
-            DrawText(TextFormat("%.1fs", s.currentCooldown),
-                     sx+4, baseY+40, 13, ColorAlpha({255,140,0,255}, 0.9f));
+            DrawLine(sx, baseY, sx+slotW, baseY, ColorAlpha(col, 0.9f * pul));
+            DrawLine(sx, baseY+slotH, sx+slotW, baseY+slotH, ColorAlpha(col, 0.25f));
         }
 
-        // Damage hint
+        // Tecla (chip no canto)
+        DrawRectangle(sx+4, baseY+4, 20, 16, ColorAlpha(col, 0.92f));
+        DrawText(TextFormat("%d", i+1), sx+9, baseY+5, 12, Color{6,10,20,255});
+
+        // ── Icone PROCEDURAL (sem assets) ─────
+        const float cx = sx + slotW/2.0f, cy = baseY + 34.0f;
+        switch (i) {
+        case 0: {   // LASER — projétil de energia
+            DrawTriangle({cx, cy-11},{cx-7, cy+9},{cx+7, cy+9}, col);
+            DrawTriangle({cx-2.5f, cy-2},{cx-5.5f, cy+6},{cx+5.5f, cy+6}, ColorAlpha(WHITE, 0.55f));
+            DrawLineV({cx, cy+11},{cx, cy+19}, ColorAlpha(col, 0.5f));
+        } break;
+        case 1: {   // EMP — pulso concêntrico
+            DrawRing({cx, cy}, 11, 14, 0, 360, 30, ColorAlpha(col, 0.85f));
+            DrawCircle((int)cx, (int)cy, 4, ColorAlpha(col, 0.9f));
+            DrawRing({cx, cy}, 4, 6, 0, 360, 20, ColorAlpha(WHITE, 0.45f));
+        } break;
+        case 2: {   // GRANADA — esfera com pavio aceso
+            DrawCircle((int)(cx), (int)(cy+1), 10, col);
+            DrawCircleSector({cx, cy+1}, 10, 30, 90, 14, ColorAlpha(WHITE, 0.35f));
+            DrawLineV({cx, cy-9},{cx+7, cy-14},{255,230,150,255});
+            DrawCircle((int)(cx+8), (int)(cy-15), 2.3f, {255,245,200,255});
+        } break;
+        case 3: {   // SOBRECARGA — raio em zigue-zague
+            DrawTriangle({cx-5, cy-12},{cx+3, cy-12},{cx-2, cy+2}, col);
+            DrawTriangle({cx+6, cy-3},{cx-2, cy+2},{cx+3, cy+12}, ColorAlpha({255,200,140,255}, 0.95f));
+            DrawLineV({cx-8, cy},{cx+8, cy}, ColorAlpha({255,220,160,255}, 0.6f));
+        } break;
+        case 4: {   // BARREIRA — escudo hexagonal
+            DrawPoly({cx, cy}, 6, 13, 90.0f, ColorAlpha(col, 0.35f));
+            DrawPolyLines({cx, cy}, 6, 13, 90.0f, ColorAlpha(col, 0.95f));
+            DrawTriangle({cx-6, cy+7},{cx+6, cy+7},{cx, cy-6}, col);
+        } break;
+        case 5: {   // RAJADA — leque de projéteis
+            for (int k = -1; k <= 1; ++k) {
+                float a = -PI/2.0f + k * 0.34f;
+                Vector2 tip = { cx + cosf(a)*15, cy + sinf(a)*15 };
+                Vector2 p1  = { cx + cosf(a-0.14f)*7, cy + sinf(a-0.14f)*7 };
+                Vector2 p2  = { cx + cosf(a+0.14f)*7, cy + sinf(a+0.14f)*7 };
+                DrawTriangle(tip, p1, p2, k == 0 ? col : ColorAlpha(col, 0.6f));
+            }
+        } break;
+        default: break;
+        }
+
+        // Nome
+        int nw = MeasureText(s.name.c_str(), 11);
+        DrawText(s.name.c_str(), sx + slotW/2 - nw/2, baseY + 58, 11,
+                 ready ? ColorAlpha(WHITE, 0.95f) : ColorAlpha(WHITE, 0.65f));
+
+        // Estado
+        if (ready) {
+            int tw = MeasureText("PRONTO", 10);
+            DrawText("PRONTO", sx + slotW/2 - tw/2, baseY + 74, 10, ColorAlpha(col, 0.9f));
+            DrawRectangle(sx+2, baseY+slotH-4, slotW-4, 4, ColorAlpha(col, 0.35f + 0.4f*pul));
+        } else {
+            // Overlay descendo (lê como "carregando") ANTES dos textos
+            float cd = s.cooldownPercent();
+            DrawRectangle(sx, baseY, slotW, (int)(slotH * cd), ColorAlpha(BLACK, 0.58f));
+            Color warm = ColorAlpha({255,150,40,255}, 0.9f);
+            std::string cds = TextFormat("%.1fs", s.currentCooldown);
+            int tw = MeasureText(cds.c_str(), 10);
+            DrawText(cds.c_str(), sx + slotW/2 - tw/2, baseY + 74, 10, warm);
+            DrawBarH(sx+2, baseY+slotH-6, slotW-4, 4, 1.0f - cd,
+                     {80,150,255,255}, ColorAlpha(BLACK, 0.6f));
+        }
+
+        // Dano (quando relevante)
         if (s.damage > 0)
-            DrawText(TextFormat("DMG:%.0f", s.damage), sx+4, baseY+58, 10,
-                     ColorAlpha({255,80,80,255}, 0.7f));
+            DrawText(TextFormat("DMG %.0f", s.damage), sx+4, baseY + slotH - 17, 9,
+                     ColorAlpha({255,120,120,255}, 0.75f));
     }
 }
 
@@ -438,8 +551,13 @@ void Game::drawZoneInfo() const {
     if (zoneNameTimer > 0.0f) {
         float alpha = std::min(zoneNameTimer, 1.0f);
         Color c = ColorAlpha(info.portalColor, alpha);
+        DrawText(info.name.c_str(), screenWidth/2 - MeasureText(info.name.c_str(), 40)/2 + 2,
+                 screenHeight/2 - 38, 40, ColorAlpha(BLACK, alpha * 0.7f));
         DrawText(info.name.c_str(), screenWidth/2 - MeasureText(info.name.c_str(), 40)/2,
                  screenHeight/2 - 40, 40, c);
+        DrawText(info.description.c_str(),
+                 screenWidth/2 - MeasureText(info.description.c_str(), 20)/2 + 1,
+                 screenHeight/2 + 11, 20, ColorAlpha(BLACK, alpha * 0.7f));
         DrawText(info.description.c_str(),
                  screenWidth/2 - MeasureText(info.description.c_str(), 20)/2,
                  screenHeight/2 + 10, 20, ColorAlpha(WHITE, alpha));
@@ -449,7 +567,7 @@ void Game::drawZoneInfo() const {
 void Game::drawQuestHUD() const {
     // Always-visible active mission panel — top-right corner
     Color C_gold  = {255,200,0,255};
-    Color C_cyan  = {0,210,255,255};
+    Color C_cyan  = {0,235,255,255};
     Color C_green = {0,220,100,255};
 
     // Count active non-completed quests
@@ -470,10 +588,9 @@ void Game::drawQuestHUD() const {
     // o painel nascia POR BAIXO dele e os dois textos se sobrepunham na tela.
     int px = screenWidth - panW - 8, py = 102;
 
-    // Panel background
-    DrawRectangle(px, py, panW, panH, ColorAlpha(BLACK, 0.82f));
-    DrawRectangleLinesEx({(float)px,(float)py,(float)panW,(float)panH}, 1.5f,
-                         ColorAlpha(C_gold, 0.75f));
+    // Panel background (angular)
+    DrawPanel(px, py, panW, panH, C_gold, 0.82f);
+    DrawRectangle(px, py, 3, panH, ColorAlpha(C_gold, 0.85f));
 
     // Header
     DrawText("MISSOES ATIVAS [J]", px + 8, py + 4, 12, ColorAlpha(C_gold, 0.95f));
@@ -516,9 +633,9 @@ void Game::drawQuestHUD() const {
 void Game::drawQuestLog() const {
     int x = 340, y = 160;
     int rows = (int)quests.size();
-    DrawRectangle(x - 10, y - 10, 380, 40 + rows * 55, ColorAlpha(BLACK, 0.9f));
-    DrawRectangleLinesEx({(float)x-10, (float)y-10, 380, (float)(40+rows*55)}, 1, DARKGRAY);
-    DrawText("DIARIO DE MISSOES (J):", x, y, 18, GOLD);
+    DrawPanel(x - 10, y - 10, 380, 40 + rows * 55, {255,200,0,255}, 0.90f);
+    DrawRectangle(x - 10, y - 10, 3, 40 + rows * 55, ColorAlpha({255,200,0,255}, 0.85f));
+    DrawText("DIARIO DE MISSOES (J):", x, y, 18, {255,215,40,255});
 
     int dy = 30;
     for (const auto& q : quests) {
@@ -570,68 +687,91 @@ void Game::drawMinimap() const {
     int mapX = screenWidth - mapW - 8;
     int mapY = screenHeight - mapH - 100;  // above skills panel
 
+    // Janela do radar em UNIDADES DE MUNDO. Em mundo aberto o minimapa mostra SÓ
+    // a FASE ATUAL (o círculo de owPhaseRadius ao redor do centro da base), nunca
+    // o mapa global inteiro — antes a escala usava o mundo todo (OW_ZONE) e os
+    // blips espremiam num canto, deixando o radar inútil.
     float worldW = (float)(tilemap.width  * Tilemap::tileSize);
     float worldH = (float)(tilemap.height * Tilemap::tileSize);
-    float scaleX = mapW / worldW;
-    float scaleY = mapH / worldH;
+    float vx0, vy0, vx1, vy1;
+    bool  owFocus = openWorldMode;
+    if (owFocus) {
+        float half = owPhaseRadius * 1.06f + 20.0f;   // folga p/ o portal na borda
+        vx0 = safeZoneCenter.x - half; vx1 = safeZoneCenter.x + half;
+        vy0 = safeZoneCenter.y - half; vy1 = safeZoneCenter.y + half;
+        if (vx0 < 0) { float d = -vx0; vx0 = 0; vx1 += d; }
+        if (vy0 < 0) { float d = -vy0; vy0 = 0; vy1 += d; }
+        if (vx1 > worldW) { float d = vx1 - worldW; vx1 = worldW; vx0 -= d; if (vx0 < 0) vx0 = 0; }
+        if (vy1 > worldH) { float d = vy1 - worldH; vy1 = worldH; vy0 -= d; if (vy0 < 0) vy0 = 0; }
+    } else {
+        vx0 = 0; vy0 = 0; vx1 = worldW; vy1 = worldH;
+    }
+    float scaleX = mapW / (vx1 - vx0);
+    float scaleY = mapH / (vy1 - vy0);
+    auto mx = [&](float p) { return (int)((p - vx0) * scaleX); };   // mundo -> px (relativo a mapX)
+    auto my = [&](float p) { return (int)((p - vy0) * scaleY); };
 
     // Panel background with cyberpunk border
-    DrawRectangle(mapX - 2, mapY - 14, mapW + 4, mapH + 16, ColorAlpha(BLACK, 0.82f));
-    DrawRectangleLines(mapX - 2, mapY - 14, mapW + 4, mapH + 16,
-                       ColorAlpha({0,210,255,255}, 0.55f));
-    // Title
-    DrawText("RADAR", mapX, mapY - 12, 10, ColorAlpha({0,210,255,255}, 0.75f));
+    DrawPanel(mapX - 2, mapY - 14, mapW + 4, mapH + 16, {0,235,255,255}, 0.85f);
+    DrawRectangle(mapX - 2, mapY - 14, mapW + 4, 2, ColorAlpha({0,235,255,255}, 0.7f));
+    // Title chip
+    DrawRectangle(mapX, mapY - 12, 54, 13, ColorAlpha({0,235,255,255}, 0.25f));
+    DrawRectangleLinesEx({(float)mapX, (float)(mapY-12), 54.f, 13.f}, 1,
+                         ColorAlpha({0,235,255,255}, 0.6f));
+    DrawText("RADAR", mapX + 4, mapY - 11, 10, ColorAlpha({0,235,255,255}, 0.95f));
 
     // Clipping region background
     DrawRectangle(mapX, mapY, mapW, mapH, ColorAlpha({5,10,20,255}, 0.9f));
 
-    // Open world region grid overlay
-    if (openWorldMode && !worldRegions.empty()) {
-        float rScale = (float)mapW / worldW;
-        // Draw each region
-        for (const auto& r : worldRegions) {
-            int rx = mapX + (int)(r.bounds.x * rScale);
-            int ry = mapY + (int)(r.bounds.y * rScale);
-            int rw = std::max(1, (int)(r.bounds.width  * rScale));
-            int rh = std::max(1, (int)(r.bounds.height * rScale));
-            Color col = r.discovered ? r.mapColor : Color{25,25,30,255};
-            DrawRectangle(rx, ry, rw, rh, ColorAlpha(col, r.discovered ? 0.45f : 0.25f));
-            DrawRectangleLinesEx({(float)rx,(float)ry,(float)rw,(float)rh}, 0.8f,
-                                  ColorAlpha(WHITE, 0.15f));
-            if (r.discovered) {
-                int tw = MeasureText(r.name.c_str(), 6);
-                // Clamp text inside minimap
-                int tx2 = rx + rw/2 - tw/2;
-                int ty2 = ry + rh/2 - 3;
-                if (tx2 >= mapX && tx2 + tw <= mapX + mapW && ty2 >= mapY && ty2 + 6 <= mapY + mapH)
-                    DrawText(r.name.c_str(), tx2, ty2, 6, ColorAlpha(WHITE, 0.7f));
-            }
+    // Em mundo aberto: realce da área jogável = o disco da FASE ATUAL no centro
+    // do radar, com a zona segura marcada por dentro.
+    if (owFocus) {
+        DrawRectangle(mapX, mapY, mapW, mapH, ColorAlpha({0,140,220,255}, 0.16f));
+        DrawEllipseLines(mapX + mapW / 2, mapY + mapH / 2, mapW * 0.5f, mapH * 0.5f,
+                         ColorAlpha({0,235,255,255}, 0.55f));
+        DrawEllipseLines(mapX + mapW / 2, mapY + mapH / 2, mapW * 0.5f - 2, mapH * 0.5f - 2,
+                         ColorAlpha({255,200,90,255}, 0.18f));
+        float zrX = safeZoneRadius * scaleX, zrY = safeZoneRadius * scaleY;
+        if (zrX > 4.0f && zrY > 4.0f)
+            DrawEllipseLines(mapX + mx(safeZoneCenter.x), mapY + my(safeZoneCenter.y),
+                             zrX, zrY, ColorAlpha(GREEN, 0.35f));
+    }
+
+    // Fronteiras da região que cruzam a janela da fase (orientação no mundo);
+    // em mapa fechado não há regiões, então o overlay só existe em mundo aberto.
+    if (owFocus) {
+        float regionW = worldW / Tilemap::OW_COLS;
+        float regionH = worldH / Tilemap::OW_ROWS;
+        for (int c = 1; c < Tilemap::OW_COLS; ++c) {
+            float wpx = c * regionW;
+            if (wpx < vx0 || wpx > vx1) continue;
+            int lx = mapX + mx(wpx);
+            DrawLine(lx, mapY, lx, mapY + mapH, ColorAlpha({0,235,255,255}, 0.10f));
         }
-        // Region borders
-        float szPx = worldRegions[0].bounds.width * rScale;
-        for (int c = 1; c < Tilemap::OW_COLS; ++c)
-            DrawLine(mapX + (int)(c * szPx), mapY, mapX + (int)(c * szPx), mapY + mapH,
-                     ColorAlpha({0,210,255,255}, 0.3f));
-        for (int r2 = 1; r2 < Tilemap::OW_ROWS; ++r2)
-            DrawLine(mapX, mapY + (int)(r2 * szPx), mapX + mapW, mapY + (int)(r2 * szPx),
-                     ColorAlpha({0,210,255,255}, 0.3f));
-        DrawText("MAPA", mapX + 2, mapY - 12, 10, ColorAlpha({0,210,255,255}, 0.75f));
+        for (int r2 = 1; r2 < Tilemap::OW_ROWS; ++r2) {
+            float wpy = r2 * regionH;
+            if (wpy < vy0 || wpy > vy1) continue;
+            int ly = mapY + my(wpy);
+            DrawLine(mapX, ly, mapX + mapW, ly, ColorAlpha({0,235,255,255}, 0.10f));
+        }
+        DrawText(TextFormat("FASE %d", owPhase + 1), mapX + 60, mapY - 11, 10,
+                 ColorAlpha({0,235,255,255}, 0.9f));
     }
 
     // Grid lines (faint)
     for (int gx = 0; gx <= 4; ++gx) {
         int lx = mapX + gx * mapW / 4;
-        DrawLine(lx, mapY, lx, mapY + mapH, ColorAlpha({0,210,255,255}, 0.08f));
+        DrawLine(lx, mapY, lx, mapY + mapH, ColorAlpha({0,235,255,255}, 0.08f));
     }
     for (int gy = 0; gy <= 4; ++gy) {
         int ly = mapY + gy * mapH / 4;
-        DrawLine(mapX, ly, mapX + mapW, ly, ColorAlpha({0,210,255,255}, 0.08f));
+        DrawLine(mapX, ly, mapX + mapW, ly, ColorAlpha({0,235,255,255}, 0.08f));
     }
 
     // Portals on minimap
     for (const auto& portal : tilemap.portals) {
-        int px = mapX + (int)(portal.position.x * scaleX);
-        int py = mapY + (int)(portal.position.y * scaleY);
+        int px = mapX + mx(portal.position.x);
+        int py = mapY + my(portal.position.y);
         DrawCircle(px, py, 4, portal.color);
         DrawCircleLines(px, py, 6, ColorAlpha(portal.color, 0.4f));
     }
@@ -639,8 +779,8 @@ void Game::drawMinimap() const {
     // Portal de FASE aberto: blip pulsante no radar. O HUD manda "seguir o
     // marcador" — sem isto nao existia marcador nenhum.
     if (openWorldMode && owPortalOpen) {
-        int px = mapX + (int)(owPortalPos.x * scaleX);
-        int py = mapY + (int)(owPortalPos.y * scaleY);
+        int px = mapX + mx(owPortalPos.x);
+        int py = mapY + my(owPortalPos.y);
         float pulse = 0.55f + 0.45f * std::sin((float)GetTime() * 5.0f);
         DrawCircle(px, py, 5, ColorAlpha(Color{0,255,180,255}, pulse));
         DrawCircleLines(px, py, 8, ColorAlpha(Color{0,255,180,255}, 0.5f));
@@ -648,8 +788,8 @@ void Game::drawMinimap() const {
 
     // NPCs
     for (const auto& npc : npcs) {
-        DrawCircle(mapX + (int)(npc.position.x * scaleX),
-                   mapY + (int)(npc.position.y * scaleY), 3, BLUE);
+        DrawCircle(mapX + mx(npc.position.x),
+                   mapY + my(npc.position.y), 3, BLUE);
     }
 
     // Construcoes do jogador (quadrados coloridos por tipo — saber onde estao)
@@ -666,8 +806,8 @@ void Game::drawMinimap() const {
             case BuildingType::MedBay:       bc = Color{255,120,200,255};break;
             default:                         bc = Color{200,200,200,255};break;
         }
-        int bx = mapX + (int)(b.position.x * scaleX);
-        int by = mapY + (int)(b.position.y * scaleY);
+        int bx = mapX + mx(b.position.x);
+        int by = mapY + my(b.position.y);
         DrawRectangle(bx - 2, by - 2, 5, 5, bc);
         DrawRectangleLines(bx - 2, by - 2, 5, 5, ColorAlpha(WHITE, 0.5f));
     }
@@ -679,30 +819,41 @@ void Game::drawMinimap() const {
                     (enemy.type == EnemyType::MorphX)   ? Color{0,255,255,255} :
                     (enemy.type == EnemyType::HunterDrone) ? SKYBLUE  :
                     (enemy.type == EnemyType::Kamikaze)? Color{255,80,0,255} : RED;
-        int ex = mapX + (int)(enemy.position.x * scaleX);
-        int ey = mapY + (int)(enemy.position.y * scaleY);
+        int ex = mapX + mx(enemy.position.x);
+        int ey = mapY + my(enemy.position.y);
         DrawCircle(ex, ey, enemy.isElite ? 4.0f : 3.0f, col);
     }
 
     // Viewport rectangle (what the camera sees)
     {
-        float vw = (float)screenWidth  / camera.zoom / worldW * mapW;
-        float vh = (float)screenHeight / camera.zoom / worldH * mapH;
-        float vx = mapX + (camera.target.x - screenWidth /(2.0f*camera.zoom)) * scaleX;
-        float vy = mapY + (camera.target.y - screenHeight/(2.0f*camera.zoom)) * scaleY;
+        float vw = (float)screenWidth  / camera.zoom * scaleX;
+        float vh = (float)screenHeight / camera.zoom * scaleY;
+        float vx = mapX + mx(camera.target.x) - (float)screenWidth  / (2.0f * camera.zoom) * scaleX;
+        float vy = mapY + my(camera.target.y) - (float)screenHeight / (2.0f * camera.zoom) * scaleY;
         DrawRectangleLines((int)vx, (int)vy, (int)vw, (int)vh,
                            ColorAlpha({0,255,150,255}, 0.35f));
     }
 
     // Player (bright green, 5px)
     {
-        int ppx = mapX + (int)(player.position.x * scaleX);
-        int ppy = mapY + (int)(player.position.y * scaleY);
+        int ppx = mapX + mx(player.position.x);
+        int ppy = mapY + my(player.position.y);
         DrawCircle(ppx, ppy, 5, GREEN);
         DrawCircleLines(ppx, ppy, 8, ColorAlpha(GREEN, 0.4f));
     }
 
-    DrawRectangleLines(mapX, mapY, mapW, mapH, ColorAlpha({0,210,255,255}, 0.4f));
+    DrawRectangleLines(mapX, mapY, mapW, mapH, ColorAlpha({0,235,255,255}, 0.4f));
+    {
+        Color ct = ColorAlpha({0,235,255,255}, 0.9f);
+        DrawLine(mapX, mapY+4, mapX, mapY+8, ct);
+        DrawLine(mapX, mapY, mapX+4, mapY, ct);
+        DrawLine(mapX+mapW, mapY+4, mapX+mapW, mapY+8, ct);
+        DrawLine(mapX+mapW-4, mapY, mapX+mapW, mapY, ct);
+        DrawLine(mapX, mapY+mapH-4, mapX, mapY+mapH-8, ct);
+        DrawLine(mapX, mapY+mapH, mapX+4, mapY+mapH, ct);
+        DrawLine(mapX+mapW, mapY+mapH-4, mapX+mapW, mapY+mapH-8, ct);
+        DrawLine(mapX+mapW-4, mapY+mapH, mapX+mapW, mapY+mapH, ct);
+    }
 
     // ── Screen-edge indicators for off-screen enemies ──────────────────────
     float margin = 28.0f;
@@ -789,5 +940,176 @@ void Game::drawMinimap() const {
             DrawText("PORTAL", (int)screenPos.x - MeasureText("PORTAL", 11) / 2,
                      (int)screenPos.y - 30, 11, ColorAlpha(portalCol, pulse));
         }
+    }
+
+    // ── Barras de HP dos inimigos (2D sobre a projecao 3D, tipo ARPG) ─────────
+    for (const auto& e : enemies) {
+        if (e.isDead()) continue;
+        bool always = e.isBoss() || e.isElite;
+        if (!always && e.health >= e.maxHealth) continue;
+        if (Vector2Distance(e.position, camera.target) > 900.0f) continue;
+        float hgt = always ? 88.0f : 58.0f;   // acima da cabeca do voxel
+        Vector2 sp = GetWorldToScreenEx({e.position.x, hgt, e.position.y},
+                                        camera3D, screenWidth, screenHeight);
+        if (sp.x < -70 || sp.x > screenWidth + 70 ||
+            sp.y < -70 || sp.y > screenHeight + 70) continue;
+        float pct = e.maxHealth > 0.0f
+            ? std::max(0.0f, std::min(1.0f, e.health / e.maxHealth)) : 0.0f;
+        int bw = always ? 50 : 40;
+        int bx = (int)sp.x - bw/2, by = (int)sp.y - (always ? 9 : 7);
+        Color c = pct > 0.5f ? Color{0, 220, 90, 255}
+                : pct > 0.25f ? Color{255, 190, 60, 255}
+                              : Color{235, 60, 40, 255};
+        DrawRectangle(bx, by, bw, 6, ColorAlpha(BLACK, 0.62f));
+        DrawRectangle(bx + 1, by + 1, (int)((bw - 2) * pct), 4, c);
+        if (e.hitFlashTimer > 0.0f)
+            DrawRectangle(bx + 1, by + 1, (int)((bw - 2) * pct), 4,
+                          ColorAlpha(WHITE, e.hitFlashTimer));
+        DrawRectangleLinesEx({(float)bx, (float)by, (float)bw, 6.0f}, 1,
+                             ColorAlpha(WHITE, always ? 0.5f : 0.28f));
+    }
+
+    // ── Retículo de mira + LOCK do aim assist ────────────────────────────────
+    //    4 ticks ao redor do cursor (sem esconder o cursor do sistema). Com o
+    //    inimigo grudado pela assistência, o cursor fica vermelho, um anel de
+    //    lock pulsa sobre o alvo e uma linha fina liga um ao outro.
+    {
+        Vector2 ms = GetMousePosition();
+        float t3 = (float)GetTime();
+        bool locked = (hudAimLock.x >= 0.0f);
+        Color rcl = locked ? Color{255, 90, 70, 255} : Color{0,235,255,255};
+        const int ofs = 10;
+        float ta = locked ? 0.9f : 0.36f;
+        DrawLine((int)ms.x - ofs, (int)ms.y, (int)ms.x - 4, (int)ms.y, ColorAlpha(rcl, ta));
+        DrawLine((int)ms.x + 4, (int)ms.y, (int)ms.x + ofs, (int)ms.y, ColorAlpha(rcl, ta));
+        DrawLine((int)ms.x, (int)ms.y - ofs, (int)ms.x, (int)ms.y - 4, ColorAlpha(rcl, ta));
+        DrawLine((int)ms.x, (int)ms.y + 4, (int)ms.x, (int)ms.y + ofs, ColorAlpha(rcl, ta));
+        if (locked) {
+            Vector2 lk = GetWorldToScreenEx({hudAimLock.x, 40.0f, hudAimLock.y},
+                                            camera3D, screenWidth, screenHeight);
+            if (lk.x > -60 && lk.x < screenWidth + 60 && lk.y > -60 && lk.y < screenHeight + 60) {
+                float pulse = 0.6f + 0.4f * std::sin(t3 * 9.0f);
+                float rad = 15.0f + 3.0f * pulse;
+                DrawLineEx(ms, lk, 1.2f, ColorAlpha({255,180,60,255}, 0.30f));
+                DrawCircleLines((int)lk.x, (int)lk.y, rad, ColorAlpha(rcl, 0.55f + 0.45f * pulse));
+                DrawCircleLines((int)lk.x, (int)lk.y, rad * 0.55f, ColorAlpha(rcl, 0.30f));
+                for (int k4 = 0; k4 < 4; ++k4) {
+                    float a = t3 * 3.0f + k4 * 1.5708f;
+                    float ex = rad + 7.0f * pulse + 2.0f;
+                    DrawLineEx({ lk.x + cosf(a) * rad, lk.y + sinf(a) * rad },
+                               { lk.x + cosf(a) * ex,  lk.y + sinf(a) * ex },
+                               2.0f, ColorAlpha(rcl, 0.9f));
+                }
+            }
+        }
+    }
+    const Enemy* boss = nullptr;
+    for (const auto& e : enemies) {
+        if ((e.isBoss() || e.isFinalBoss) && !e.isDead()) { boss = &e; break; }
+    }
+    if (boss) {
+        auto bossName = [](EnemyType t) -> const char* {
+            switch (t) {
+                case EnemyType::Boss:            return "COMANDANTE KRONOS";
+                case EnemyType::AlienBoss:       return "MATRIARCA XENON";
+                case EnemyType::OmegaBoss:       return "ALFA-OMEGA";
+                case EnemyType::PoltergeistBoss: return "ESPECTRO POLTER";
+                case EnemyType::ZombieLord:      return "SENHOR ZUMBI";
+                case EnemyType::VoidColossus:    return "COLOSSO DO VAZIO";
+                case EnemyType::FrostWyrm:       return "VERME GLACIAL";
+                case EnemyType::InfernoHerald:   return "ARAUTO DO INFERNO";
+                case EnemyType::VolcanicTitan:   return "TITAN VULCANICO";
+                case EnemyType::Leviathan:       return "NUCLEO KRONOS";
+                default:                         return "COMANDANTE";
+            }
+        };
+
+        int bw = 560, bh = 16;
+        int bx = screenWidth/2 - bw/2, by = 112;
+        float hpPct = boss->maxHealth > 0.0f ? boss->health / boss->maxHealth : 0.0f;
+        hpPct = std::max(0.0f, std::min(1.0f, hpPct));
+        float pulse = (hpPct < 0.30f)
+            ? 0.55f + 0.45f * std::sin((float)GetTime() * 8.0f)
+            : 1.0f;
+        Color barFill = hpPct  > 0.55f ? Color{255, 70, 70, 255} :
+                        hpPct  > 0.25f ? Color{255, 190, 60, 255} :
+                                         Color{255, 250, 60, 255};
+
+        DrawPanel(bx - 8, by - 22, bw + 16, bh + 28, ColorAlpha(barFill, 0.65f), 0.94f);
+        DrawRectangle(bx, by, bw, bh, ColorAlpha({4,6,14,255}, 0.92f));
+        DrawRectangle(bx, by, (int)(bw * hpPct), bh, ColorAlpha(barFill, 0.95f));
+        DrawRectangle(bx, by, (int)(bw * hpPct), bh/3, ColorAlpha(WHITE, 0.12f));
+        // ticks a cada 10%
+        for (int k = 1; k < 10; ++k)
+            DrawLine(bx + bw * k / 10, by, bx + bw * k / 10, by + bh,
+                     ColorAlpha({0,0,0,255}, 0.55f));
+        DrawRectangleLinesEx({(float)bx,(float)by,(float)bw,(float)bh}, 1.5f,
+                             ColorAlpha(barFill, pulse * 0.9f));
+        const char* bn = bossName(boss->type);
+        int nw = MeasureText(bn, 16);
+        DrawText(bn, screenWidth/2 - nw/2, by - 19, 16,
+                 ColorAlpha(Color{255, 230, 230, 255}, hpPct < 0.30f ? pulse : 1.0f));
+        DrawText(TextFormat("%d / %d  HP  (%.1f%%)", (int)boss->health,
+                 (int)boss->maxHealth, hpPct * 100.0f),
+                 screenWidth/2 - bw/2 + 4, by + bh + 4, 12, ColorAlpha(WHITE, 0.75f));
+    }
+
+    // ── Indicador direcional de DANO (aponta para quem feriu o jogador) ───────
+    if (hurtDirTimer > 0.0f) {
+        float t = std::min(1.0f, hurtDirTimer / 1.15f);
+        float a = 0.15f + 0.85f * t;
+        Vector2 v = Vector2Normalize(hurtDir);
+        float ang = ::atan2f(v.y, v.x);
+        float radx = (sw * 0.5f) / std::max(0.01f, std::fabs(std::cos(ang)));
+        float rady = (sh * 0.5f) / std::max(0.01f, std::fabs(std::sin(ang)));
+        float radius = std::min(radx, rady);
+        float px = sw * 0.5f + std::cos(ang) * (radius - 30.0f);
+        float py = sh * 0.5f + std::sin(ang) * (radius - 30.0f);
+
+        // trail de chevrons acelerando em direcao à fonte do dano
+        for (int i = 3; i >= 0; --i) {
+            float back = (float)(i + 1) * 20.0f * t;
+            float bx = px - std::cos(ang) * back;
+            float by = py - std::sin(ang) * back;
+            float bs = 4.0f + (float)i * 1.6f;
+            float ba = a * (0.20f + 0.14f * (float)(3 - i));
+            float perpx = -std::sin(ang), perpy = std::cos(ang);
+            Vector2 tip = {bx + std::cos(ang) * bs * 2.0f, by + std::sin(ang) * bs * 2.0f};
+            Vector2 mid = {bx + std::cos(ang) * bs,       by + std::sin(ang) * bs};
+            Vector2 c1  = {bx + perpx * bs,               by + perpy * bs};
+            Vector2 c2  = {bx - perpx * bs,               by - perpy * bs};
+            DrawTriangle(tip, mid, c1, ColorAlpha(Color{255, 60, 40, 255}, ba));
+            DrawTriangle(tip, mid, c2, ColorAlpha(Color{255, 60, 40, 255}, ba));
+        }
+        float pulse = 0.7f + 0.3f * std::sin((float)GetTime() * 12.0f);
+        float size = 14.0f;
+        float perpx = -std::sin(ang), perpy = std::cos(ang);
+        Vector2 tip = {px + std::cos(ang) * size, py + std::sin(ang) * size};
+        Vector2 w1  = {px + perpx * size * 0.7f,  py + perpy * size * 0.7f};
+        Vector2 w2  = {px - perpx * size * 0.7f,  py - perpy * size * 0.7f};
+        DrawTriangle(tip, w1, w2, ColorAlpha(Color{255, 90, 60, 255}, a * pulse));
+        DrawTriangleLines(tip, w1, w2, ColorAlpha(WHITE, a * 0.6f));
+    }
+
+    // ── Vinheta de HP BAIXO do player (visao vermelha nas bordas) ────────────
+    if (player.health > 0.0f && player.health < player.maxHealth * 0.30f) {
+        float a = (player.maxHealth * 0.30f - player.health) / (player.maxHealth * 0.30f);
+        float pulse = 0.7f + 0.3f * std::sin((float)GetTime() * 5.0f);
+        float edgeA = std::min(0.36f, 0.08f + a * 0.34f * pulse);
+        int bandV = (int)(screenHeight * 0.11f * (0.35f + a));
+        int bandH = (int)(screenWidth  * 0.11f * (0.35f + a));
+        Color r0 = ColorAlpha(Color{210, 8, 18, 255}, edgeA * 0.45f);
+        Color r1 = ColorAlpha(Color{210, 8, 18, 255}, edgeA);
+        DrawRectangleGradientV(0, 0, screenWidth, bandV, r1, r0);
+        DrawRectangleGradientV(0, screenHeight - bandV, screenWidth, bandV, r0, r1);
+        DrawRectangleGradientH(0, 0, bandH, screenHeight, r1, r0);
+        DrawRectangleGradientH(screenWidth - bandH, 0, bandH, screenHeight, r0, r1);
+    }
+
+    // ── Flash vermelho de dano (tela toda) — era setado mas NUNCA desenhado ───
+    if (hitFlashTimer > 0.0f) {
+        float alpha = std::min(0.45f, hitFlashTimer * 1.5f);
+        DrawRectangle(0, 0, screenWidth, screenHeight,
+                      ColorAlpha(Color{255, 20, 20, 255}, alpha));
     }
 }

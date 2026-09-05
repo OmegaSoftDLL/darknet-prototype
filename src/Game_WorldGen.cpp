@@ -15,6 +15,36 @@ static constexpr float FIT_BARRACKS = 190.0f;   // celeiro/galpao ~12 m
 static constexpr float FIT_CASTLE   = 340.0f;   // predio/castelo ~21 m
 static constexpr float FIT_WELL     = 130.0f;   // silo alto
 
+// Raio de colisao = CIRCUNSCRITO do que realmente e desenhado (mesmo hash do
+// render em Game.cpp). O circulo inscrito ai era menor que a fachada: o heroi
+// afundava ~60u dentro do predio antes de bater na parede invisivel.
+static float buildingRadius(float x, float z, float sc) {
+    unsigned hsh = (unsigned)(x * 0.6f) * 374761393u ^ (unsigned)(z * 0.6f) * 668265263u;
+    float W = (250.0f + (float)((hsh >> 5) & 15) * 5.0f) * sc;
+    float D = (220.0f + (float)((hsh >> 9) & 15) * 4.0f) * sc;
+    return 0.5f * (float)std::sqrt((double)(W * W + D * D));
+}
+
+static float vehicleRadius(float x, float z, float sc) {
+    unsigned hsh = (unsigned)(x * 0.5f) * 2246822519u ^ (unsigned)(z * 0.5f) * 3266489917u;
+    int kind = (int)(hsh % 3);                     // 0 carro 1 van 2 caminhao
+    float L  = (kind == 2 ? 164.0f : kind == 1 ? 122.0f : 100.0f) * sc;
+    float WD = (kind == 2 ?  60.0f : kind == 1 ?  54.0f :  50.0f) * sc;
+    float halfW = WD * 0.5f + 5.0f * sc;           // pneu/flange ~5u fora da lataria
+    return 0.5f * (float)std::sqrt((double)(L * L + halfW * halfW * 4.0f));
+}
+
+// Distancia lateral ate a via de desenho mais proxima (malha 475 + k*950, meio-fio
+// em 112u). A pista que O JOGADOR ENXERGA e essa malha de quads do Tilemap, inde-
+// pendente dos tiles (as ruas de tile sao aleatorias). O cenario de cidade precisa
+// respeitar ESSA malha, ou predio/arvore nascem no meio da rua.
+static float laneDist(float v) {
+    float r = std::fmod(v - 475.0f, 950.0f);
+    if (r < 0.0f) r += 950.0f;
+    if (r > 475.0f) r = 950.0f - r;
+    return r;
+}
+
 // Helper file-local (static): usado por buildOpenWorldScenery/updateSceneryChunks.
 static const int* structuresFor(ZoneID z, int& outCount) {
     // COERENCIA: castelo (7), poco/silo (8) e celeiro (1) sao MEDIEVAIS/RURAIS —
@@ -81,8 +111,11 @@ void Game::buildOpenWorldScenery() {
         float dx = p.x - safeZoneCenter.x, dy = p.y - safeZoneCenter.y;
         return dx*dx + dy*dy <= phaseLimit * phaseLimit;
     };
+    // Zona livre do HUB (NPCs ficam no centro do mundo) — nenhuma estrutura nasce lá.
+    const float hubX = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f; // centro do hub (1ª zona)
+    const float hubY = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
     auto place = [&](Rectangle b, int type, int count,
-                     float minScale, float maxScale, float margin) {
+                     float minScale, float maxScale, float margin, bool city = false) {
         float areaK = (b.width * b.height) / (2560.0f * 2560.0f);
         count = (int)(count * areaK);
         for (int i = 0; i < count; ++i) {
@@ -93,6 +126,16 @@ void Game::buildOpenWorldScenery() {
                 b.y + margin + rnd() * (b.height - 2 * margin)
             };
             if (!insidePhase(o.position)) continue;
+            if (type == 6) {   // nucleo do refugio livre de carcacas
+                float dx = o.position.x - hubX, dy = o.position.y - hubY;
+                if (dx*dx + dy*dy < 150.0f * 150.0f) continue;
+            }
+            if (city) {   // cidade: nada em cima da pista desenhada (quad ±112u)
+                float dr = std::fminf(laneDist(o.position.x), laneDist(o.position.y));
+                if (type == 2 && dr < 130.0f) continue;                 // arvore: so no quarteirao
+                if (type == 6 && dr > 102.0f) continue;                 // carro: NA pista
+                if (type == 5 && dr < 118.0f) continue;                 // poste: fora da pista, na calcada
+            }
             o.rotation = rnd() * 3.14159f;
             o.scale    = minScale + rnd() * (maxScale - minScale);
             // tint.r > 128 acende luzes (janelas/postes)
@@ -100,9 +143,6 @@ void Game::buildOpenWorldScenery() {
             owDecor.scenery.push_back(o);
         }
     };
-    // Zona livre do HUB (NPCs ficam no centro do mundo) — nenhuma estrutura nasce lá.
-    const float hubX = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f; // centro do hub (1ª zona)
-    const float hubY = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
     std::vector<Vector2> placedB;   // estruturas já colocadas (anti-sobreposição)
     auto isStruct = [](int t) { return t == 0 || t == 1 || t == 7 || t == 8 || t == 10 ||
                                        (t >= 14 && t <= 20); };
@@ -130,15 +170,17 @@ void Game::buildOpenWorldScenery() {
         if (!insidePhase(pos)) return;
         if (isStruct(type)) {
             float hdx = pos.x - hubX, hdy = pos.y - hubY;
-            if (hdx*hdx + hdy*hdy < 360.0f * 360.0f) return;   // praça central (NPCs) livre
+            if (hdx*hdx + hdy*hdy < 560.0f * 560.0f) return;   // praça central (NPCs) livre: 560u de folga pra construção não espremer o hub
             float md = spacingFor(type);
             for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < md*md) return; }
             placedB.push_back(pos);
         }
         SceneryObject o; o.type = type; o.position = pos;
         // Predio de cidade se ALINHA a rua (giro em multiplos de 90 graus). Predio
-        // torto no meio do quarteirao denuncia geracao aleatoria na hora.
-        bool aligned = (type == 20 || type == 15 || type == 0);
+        // torto no meio do quarteirao denuncia geracao aleatoria na hora. Carros
+        // tambem: parados na malha de ruas (04 angulos), senao ficam atravessados
+        // e o "layout" parece bagunca.
+        bool aligned = (type == 20 || type == 15 || type == 0 || type == 6);
         o.rotation = aligned ? (float)((int)(rnd() * 4.0f) % 4) * 1.5708f
                              : rnd() * 3.14159f;
         o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
@@ -154,21 +196,39 @@ void Game::buildOpenWorldScenery() {
         switch (r.zoneType) {
             case ZoneID::LARuins:    // Ruínas de LA — CIDADE: grade de prédios com praça central
             case ZoneID::GhostCity: {// Cidade fantasma
-                float gp   = 950.0f;                    // quarteirao (fachada 280u + rua 210u)
-                // GhostCity = cidade MORTA: muito mais lote vazio e ruina que LA,
-                // quarteirao menor e mais degradado. Antes reusava a grade de LA
-                // quase identica (skip 0.18 x 0.32) — as duas fases liam igual.
+                // Questão do quarteirão = malha de VIAS desenhada (475 + k*950).
+                // Centro do quarteirão fica a meio caminho entre duas vias, em
+                // múltiplos de 950; prédio a EDGE=210 do centro ≈ colado no meio-fio.
+                // Antes a grade era 220 + k*950 com EDGE=350: a fachada furada
+                // ~137u DENTRO da pista — o "prédio no meio da rua" que o usuário
+                // apontou. GhostCity usa o MESMO quarteirão (as vias desenhadas
+                // são iguais para as duas cidades) e difere em ruína/vazio, não
+                // em espaçamento (antes gp=880 desencaixava das vias de 950).
                 bool ghost = (r.zoneType == ZoneID::GhostCity);
                 float skip = ghost ? 0.44f : 0.30f;              // lotes vazios
-                if (ghost) gp = 880.0f;                          // quarteiroes menores
-                for (float gx = b.x + 220.0f; gx < b.x + b.width - 220.0f; gx += gp)
-                    for (float gy = b.y + 220.0f; gy < b.y + b.height - 220.0f; gy += gp) {
-                        if (rnd() < skip) continue;                            // lote vazio = praça/rua larga
+                float gx0 = (float)std::ceil((b.x + 475.0f) / 950.0f) * 950.0f;
+                float gy0 = (float)std::ceil((b.y + 475.0f) / 950.0f) * 950.0f;
+                for (float gx = gx0; gx < b.x + b.width - 150.0f; gx += 950.0f)
+                    for (float gy = gy0; gy < b.y + b.height - 150.0f; gy += 950.0f) {
+                        if (rnd() < skip) {                        // lote vazio = CENA DE GUERRA, nao terreno morto
+                            for (int di = 0; di < 3; ++di)
+                                put1(21, { gx + (rnd() - 0.5f) * 250.0f, gy + (rnd() - 0.5f) * 250.0f },
+                                     0.9f + rnd() * 1.1f);
+                            if (rnd() < 0.60f)                     // barril em chamas
+                                put1(22, { gx + (rnd() - 0.5f) * 210.0f, gy + (rnd() - 0.5f) * 210.0f },
+                                     1.0f + rnd() * 0.4f);
+                            if (rnd() < 0.50f)                     // carcaça queimada de veiculo
+                                put1(6, { gx + (rnd() - 0.5f) * 240.0f, gy + (rnd() - 0.5f) * 240.0f }, 1.0f);
+                            if (rnd() < 0.60f)                     // marcas de fogo/tiroteio no piso
+                                put1(13, { gx + (rnd() - 0.5f) * 250.0f, gy + (rnd() - 0.5f) * 250.0f },
+                                     1.0f + rnd() * 1.4f);
+                            continue;
+                        }
                         // PERIMETRO do quarteirao ocupado: 3 construcoes por lado,
                         // coladas na calcada, deixando o MIOLO como patio de entulho.
                         // Assim a rua vira corredor entre massas construidas.
                         int nk2 = 0; const int* kk2 = structuresFor(r.zoneType, nk2);
-                        const float EDGE = 350.0f;      // do centro do quarteirao ate a calcada
+                        const float EDGE = 210.0f;      // do centro do quarteirao ate a calcada
                         for (int side = 0; side < 4; ++side) {
                             for (int slot = 0; slot < 2; ++slot) {
                                 // GhostCity: mais brechas (rua esburacada, cidade vazia)
@@ -193,9 +253,9 @@ void Game::buildOpenWorldScenery() {
                             put1(22, { gx + (rnd() - 0.5f) * 360.0f,
                                        gy + (rnd() - 0.5f) * 360.0f }, 1.0f + rnd() * 0.5f);
                     }
-                place(b, 5, 20, 1.0f, 1.0f, 150);  // postes nas ruas
-                place(b, 6, 16, 1.0f, 1.0f, 150);  // carros abandonados (so cidade)
-                place(b, 2,  6, 0.8f, 1.2f, 150);  // árvores
+                place(b, 5, 20, 1.0f, 1.0f, 150, true);  // postes nas ruas
+                place(b, 6, 16, 1.0f, 1.0f, 150, true);  // carros abandonados (so cidade)
+                place(b, 2,  6, 0.8f, 1.2f, 150, true);  // árvores
             } break;
             case ZoneID::Bunker: {   // Bunker — compostos militares (estruturas+silos em linha)
                 for (int bl = 0; bl < 3; ++bl) {
@@ -275,6 +335,62 @@ void Game::buildOpenWorldScenery() {
         place(b, 21, (int)( 90 * rubbleK), 0.7f, 1.6f, 30);   // ENTULHO: o mundo caiu, tem que ter escombro
     }
 
+    // ── Praça central do REFUGIO = PERIMETRO DE GUERRA ──
+    // Fase 1 (LA): o vao de 360u no meio do mundo onde os NPCs ficam nao pode
+    // ler como descampado. Monta um anel de ROADBLOCKS (carros virados para fora,
+    // frente apontando para a rua), barris em chamas no anel interno, escombros e
+    // marcas de tiroteio. O nucleo (r<150) continua livre para dar spawn erguer NPC.
+    if (currentZone == ZoneID::LARuins) {
+        const float R0 = 215.0f, R1 = 320.0f;
+        const float openArc = 1.0f;          // vao aberto pro leste (saida livre)
+        const int   nCars = 7;
+        const float stepA = 6.2832f / (float)nCars;
+        float a0 = 0.85f;
+        for (int i = 0; i < nCars; ++i) {
+            float a = a0 + i * stepA;
+            if (a > 2.0f * 3.14159f - openArc) a += stepA;   // pula o vao
+            Vector2 p = { hubX + cosf(a) * (R0 + rnd() * (R1 - R0)),
+                          hubY + sinf(a) * (R0 + rnd() * (R1 - R0)) };
+            if (!insidePhase(p)) continue;
+            SceneryObject o;
+            o.type = 6; o.position = p;
+            o.rotation = a + 3.14159f * 0.5f + (rnd() - 0.5f) * 0.6f;  // frente p/ fora
+            o.scale = 1.0f + rnd() * 0.25f;
+            o.tint = { 200, 200, 200, 255 };
+            owDecor.scenery.push_back(o);
+        }
+        for (int i = 0; i < 5; ++i) {        // barris em chamas no anel interno
+            float a = rnd() * 6.2832f, r = 165.0f + rnd() * 45.0f;
+            Vector2 p = { hubX + cosf(a) * r, hubY + sinf(a) * r };
+            if (!insidePhase(p)) continue;
+            SceneryObject o;
+            o.type = 22; o.position = p; o.rotation = rnd() * 6.2832f; o.scale = 1.0f;
+            o.tint = { 200, 200, 200, 255 };
+            owDecor.scenery.push_back(o);
+        }
+        for (int i = 0; i < 20; ++i) {       // escombros e detritos
+            float a = rnd() * 6.2832f, r = 40.0f + rnd() * 315.0f;
+            Vector2 p = { hubX + cosf(a) * r, hubY + sinf(a) * r };
+            float dx = p.x - hubX, dy = p.y - hubY;
+            if (dx*dx + dy*dy < 52.0f * 52.0f) continue;
+            if (!insidePhase(p)) continue;
+            SceneryObject o;
+            o.type = (rnd() < 0.55f) ? 21 : 12;
+            o.position = p; o.rotation = rnd() * 6.2832f; o.scale = 0.8f + rnd() * 1.5f;
+            o.tint = { 80, 80, 80, 255 };
+            owDecor.scenery.push_back(o);
+        }
+        for (int i = 0; i < 16; ++i) {       // marcas de fogo/estampidos no piso
+            float a = rnd() * 6.2832f, r = 110.0f + rnd() * 260.0f;
+            Vector2 p = { hubX + cosf(a) * r, hubY + sinf(a) * r };
+            if (!insidePhase(p)) continue;
+            SceneryObject o;
+            o.type = 13; o.position = p; o.rotation = rnd() * 6.2832f; o.scale = 0.9f + rnd() * 1.4f;
+            o.tint = { 200, 200, 200, 255 };
+            owDecor.scenery.push_back(o);
+        }
+    }
+
     // ── Colisao de cenario: estruturas grandes bloqueiam passagem (nao andar em
     //    cima de casas/predios/carros/silos/estatuas). Tipos: 0 casa, 1 celeiro,
     //    6 carro, 7 predio, 8 silo, 9 catacumba, 10 estatua. Arvores/cercas/postes
@@ -290,7 +406,7 @@ void Game::buildOpenWorldScenery() {
             case 7:  rad = FIT_CASTLE   * o.scale * 0.40f; break; // predio/castelo
             case 8:  rad = FIT_WELL     * o.scale * 0.42f; break; // silo
             case 9:  rad = 70.0f * o.scale; break;                // catacumba
-            case 6:  rad = 78.0f * o.scale; break;                // veiculo (primitivas)
+            case 6:  rad = vehicleRadius(o.position.x, o.position.y, o.scale); break; // veiculo
             case 10: rad = 48.0f * o.scale; break;                // estatua
             // estruturas proprias de bioma (cripta/bunker/espira/monolito/cabana/torre)
             case 14: rad = 46.0f * o.scale; break;
@@ -299,7 +415,7 @@ void Game::buildOpenWorldScenery() {
             case 17: rad = 28.0f * o.scale; break;
             case 18: rad = 46.0f * o.scale; break;
             case 19: rad = 26.0f * o.scale; break;
-            case 20: rad = 96.0f * o.scale; break;   // predio moderno (circulo inscrito)
+            case 20: rad = buildingRadius(o.position.x, o.position.y, o.scale); break;   // predio moderno
             case 21: continue;   // entulho: decoracao, NAO bloqueia (virava labirinto)
             case 22: continue;   // fogueira: nao bloqueia
             default: continue;                                            // arvores/cercas/postes: atravessavel
@@ -323,9 +439,57 @@ void Game::buildOpenWorldScenery() {
                  (int)owDecor.scenery.size(), st, gr);
     }
     owDecorBuilt       = true;
+    placeBaseShops();   // barracas/lojas dos NPCs da zona segura (depois das sólidas: o anel delas não colide)
+    // AREA PROTEGIDA PURA: a base é lugar de NPC e LOJA, não de pular entre
+    // carcaças. O lixo urbano que cai dentro do raio protegido (carros, entulho,
+    // marcas de fogo, fogueiras, panelas de pedra) sai do cenário; grama, árvores
+    // e postes de luz ficam (iluminação/vegetação não são refugo).
+    {
+        const float cleanR = safeZoneRadius;
+        auto isDebris = [](int t) {
+            return t == 6 || t == 12 || t == 13 || t == 21 || t == 22;
+        };
+        owDecor.scenery.erase(
+            std::remove_if(owDecor.scenery.begin(), owDecor.scenery.end(),
+                [&](const SceneryObject& o) {
+                    if (!isDebris(o.type)) return false;
+                    float dx = o.position.x - safeZoneCenter.x;
+                    float dy = o.position.y - safeZoneCenter.y;
+                    return dx * dx + dy * dy <= cleanR * cleanR;
+                }),
+            owDecor.scenery.end());
+    }
     setupResourceNodes();   // nós de coleta (madeira/pedra/ferro/prata/ouro)
     setupAnimals();         // vida selvagem (veado/coelho/javali/lobo/passaro)
     spawnCityFolk();        // civis que perambulam pela cidade (vida ambiente)
+}
+
+// Barracas/lojas da ZONA SEGURA: cada NPC de serviço tem ESTANDE PRÓPRIO,
+// proporcional ao ofício, ancorado no anel em volta da praça central. Os
+// offsets espelham setupBaseNPCs() (Game_QuestsNPC.cpp) e cada tenda é
+// deslocada ~52u PRA FORA do raio: o vendedor fica em frente da própria loja
+// quando o jogador chega pelo centro — mercado em círculo, não prédio espremido.
+// Tipos (só visuais, não bloqueiam): 25 comando · 27 arsenal · 24 forja ·
+// 23 estande de mercado · 26 laboratório.
+void Game::placeBaseShops() {
+    float bx = safeZoneCenter.x, by = safeZoneCenter.y;
+    auto shop = [&](float ox, float oy, int type, float sc, float rot) {
+        float len = std::sqrt(ox * ox + oy * oy);
+        if (len < 1.0f) { ox = 1.0f; oy = 0.0f; len = 1.0f; }
+        SceneryObject o;
+        o.type     = type;
+        o.position = { bx + ox + (ox / len) * 52.0f, by + oy + (oy / len) * 52.0f };
+        o.rotation = rot;
+        o.scale    = sc;
+        o.tint     = { 200, 200, 200, 255 };   // luz acesa no estande
+        owDecor.scenery.push_back(o);
+    };
+    // (offset em X/Y, offset do NPC em setupBaseNPCs e o MESMO)
+    shop(-120.0f,  -90.0f, 25, 1.05f, -0.50f);   // VANCE RIOS   -> posto de comando
+    shop( 150.0f,  -70.0f, 27, 1.00f, -0.40f);   // ZARA         -> arsenal de armas
+    shop( 180.0f,  100.0f, 24, 1.10f,  0.60f);   // FERREIRO KANE-> forja + bigorna
+    shop(-180.0f,  110.0f, 23, 0.95f,  2.60f);   // LUNA         -> estande de mercado
+    shop( -30.0f,  150.0f, 26, 0.95f,  1.80f);   // DR. CHEN     -> laboratório de implantes
 }
 
 // Popula a CIDADE com civis que TÊM TAREFAS (não vagam à toa): guardas patrulham
@@ -495,9 +659,19 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
                 float lim = owPhaseRadius + 140.0f;
                 if (dx*dx + dy*dy > lim*lim) return;
             }
+            {   // cidade: arvore nunca na pista, carro sempre na pista (mesma da malha fixa)
+                ZoneID pz = tilemap.biomeAtWorld(pos.x, pos.y);
+                if (pz == ZoneID::LARuins || pz == ZoneID::GhostCity) {
+                    float dr = std::fminf(laneDist(pos.x), laneDist(pos.y));
+                    if (type == 2 && dr < 130.0f) return;
+                    if (type == 6 && dr > 102.0f) return;
+                    if (type == 5 && dr < 118.0f) return;   // poste: na calcada, nunca na pista
+                }
+            }
             SceneryObject o;
             o.type = type; o.position = pos; o.rotation = rnd() * 3.14159f;
             o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
+            if (type == 6) o.rotation = (float)((int)(rnd() * 4.0f) % 4) * 1.5708f;   // carro alinhado a rua
             o.chunk = toGen; owDecor.scenery.push_back(o);
         };
         // Estrutura só entra se: a bioma DA POSIÇÃO bate (sem vazar pro vizinho),
@@ -505,11 +679,11 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
         std::vector<Vector2> placedB;
         const float hubX = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f; // centro do hub (1ª zona)
         const float hubY = (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f;
-        auto putB = [&](int type, Vector2 pos, float sc, ZoneID want) {
+        auto putB = [&](int type, Vector2 pos, float sc, ZoneID want, float minSp = 400.0f) {
             if (tilemap.biomeAtWorld(pos.x, pos.y) != want) return;
             float hdx = pos.x - hubX, hdy = pos.y - hubY;
             if (hdx*hdx + hdy*hdy < 360.0f * 360.0f) return;   // praça central (NPCs) livre
-            for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < 400.0f*400.0f) return; }
+            for (const auto& q : placedB) { float dx = pos.x-q.x, dy = pos.y-q.y; if (dx*dx + dy*dy < minSp*minSp) return; }
             placedB.push_back(pos);
             put(type, pos, sc);
         };
@@ -544,22 +718,42 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
             ZoneID  bz   = tilemap.biomeAtWorld(seed.x, seed.y);
             switch (bz) {
                 case ZoneID::GhostCity:
-                case ZoneID::LARuins: {                       // quarteirão: GRADE de prédios + postes nas ruas
-                    int cols = 2 + (int)(rnd() * 2.0f), rows = 2 + (int)(rnd() * 2.0f);
-                    float sp = 340.0f;
-                    for (int r = 0; r < rows; ++r) for (int c = 0; c < cols; ++c) {
-                        if (rnd() < 0.18f) continue;          // lote vazio (variedade)
-                        Vector2 bp = { seed.x + (c - cols * 0.5f) * sp + (rnd() - 0.5f) * 26.0f,
-                                       seed.y + (r - rows * 0.5f) * sp + (rnd() - 0.5f) * 26.0f };
-                        float tr = rnd();
-                        // tipos vindos do catalogo do BIOMA (cada fase tem outra cara)
+                case ZoneID::LARuins: {   // quarteirao: predios na grade das vias + carros na pista
+                    // Seed e PONTO DE COLAGEM: encaixa o quarteirao na malha real
+                    // (vias em 475+k*950, centro do quarteirao em 950*m). Predio a
+                    // 210u do centro = colado no meio-fio, nunca dentro da pista.
+                    float bx = (float)std::floor(seed.x / 950.0f) * 950.0f + 950.0f;
+                    float by = (float)std::floor(seed.y / 950.0f) * 950.0f + 950.0f;
+                    for (int k = 0; k < 4; ++k) {
+                        if (rnd() < 0.18f) continue;            // brecha = beco / lote vazio
+                        float px = (k & 1) ? bx + 210.0f : bx - 210.0f;
+                        float py = (k & 2) ? by + 210.0f : by - 210.0f;
+                        if (rnd() < 0.30f) {                    // lote vazio = escombros da guerra
+                            put(21, { px + (rnd() - 0.5f) * 130.0f, py + (rnd() - 0.5f) * 130.0f },
+                                0.9f + rnd() * 0.9f);
+                            if (rnd() < 0.5f)
+                                put(6, { px + (rnd() - 0.5f) * 260.0f, py + (rnd() - 0.5f) * 260.0f }, 1.0f);
+                            if (rnd() < 0.55f)
+                                put(22, { px + (rnd() - 0.5f) * 260.0f, py + (rnd() - 0.5f) * 260.0f }, 1.0f);
+                            continue;
+                        }
                         int nKinds = 0;
-                        const int* kinds = structuresFor(bz, nKinds);   // bioma do chunk
-                        int bt = kinds[(int)(tr * nKinds) % nKinds];
-                        putB(bt, bp, 0.85f + rnd() * 0.35f, bz);
+                        const int* kinds = structuresFor(bz, nKinds);
+                        // minSp 220: torres vizinhas na mesma calcada sao adjacentes
+                        // mesmo (285u no quarteirao); o 400 generico matava o canto.
+                        putB(kinds[(int)(rnd() * nKinds) % nKinds], { px, py },
+                             0.85f + rnd() * 0.35f, bz, 220.0f);
                     }
-                    for (int k = 0; k < 4; ++k)
-                        put(5, { seed.x + (rnd() - 0.5f) * sp * cols, seed.y + (rnd() - 0.5f) * sp * rows }, 1.0f);
+                    // miolo do quarteirao: entulho (patio de guerra, nao descampado)
+                    for (int mi = 0; mi < 3; ++mi)
+                        put(21, { bx + (rnd() - 0.5f) * 430.0f, by + (rnd() - 0.5f) * 430.0f },
+                            1.0f + rnd() * 0.9f);
+                    // postes nos meios-fios da via (x em 338..352 do centro = calcada,
+                    // 12..26u para fora da pista de 112u — nunca dentro do asfalto)
+                    for (int k = 0; k < 3; ++k) {
+                        float px = bx + ((rnd() < 0.5f) ? -1.0f : 1.0f) * (338.0f + rnd() * 14.0f);
+                        put(5, { px, by + (rnd() - 0.5f) * 600.0f }, 1.0f);
+                    }
                 } break;
                 case ZoneID::CursedFarm: {                    // vila: casas + celeiro + silo + cerca em anel
                     putB(0, seed, 1.2f + rnd() * 0.4f, bz);
@@ -613,6 +807,16 @@ void Game::updateSceneryChunks(Vector2 playerPos) {
             case 1:  rad = FIT_BARRACKS * o.scale * 0.46f; break;
             case 7:  rad = FIT_CASTLE   * o.scale * 0.40f; break;
             case 8:  rad = FIT_WELL     * o.scale * 0.42f; break;
+            case 6:  rad = vehicleRadius(o.position.x, o.position.y, o.scale); break;
+            case 9:  rad = 70.0f * o.scale; break;
+            case 10: rad = 48.0f * o.scale; break;
+            case 14: rad = 46.0f * o.scale; break;
+            case 15: rad = 58.0f * o.scale; break;
+            case 16: rad = 30.0f * o.scale; break;
+            case 17: rad = 28.0f * o.scale; break;
+            case 18: rad = 46.0f * o.scale; break;
+            case 19: rad = 26.0f * o.scale; break;
+            case 20: rad = buildingRadius(o.position.x, o.position.y, o.scale); break;
             default: continue;
         }
         m_chunkSolids.push_back({ o.position.x, o.position.y, rad });

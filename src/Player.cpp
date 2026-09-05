@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "Effects.h"
+#include "SkillTree.h"
 #include <cmath>
 #include <string>
 extern bool g_voxelCapture;
@@ -13,8 +14,13 @@ Player::Player() {
     skills.emplace_back("Barreira",  "Campo de forca: imune 3s",         24.0f, 0.0f,   0.0f,  KEY_FIVE);
     skills.emplace_back("Rajada",    "Salva: 8 projetos em leque",        9.0f, 42.0f,  440.0f, KEY_SIX);
 
-    // Guarda o dano base de cada skill para aplicar o skillPower da classe de forma idempotente
-    for (auto& s : skills) baseSkillDamage.push_back(s.damage);
+    // Guarda o dano/alcance/cooldown base de cada skill para aplicar mods
+    // (skillPower da classe + perks) de forma idempotente
+    for (auto& s : skills) {
+        baseSkillDamage.push_back(s.damage);
+        baseSkillRange.push_back(s.range);
+        baseSkillCool.push_back(s.cooldown);
+    }
 
     applyClass(CharacterClass::Soldado);  // classe padrao
 }
@@ -51,13 +57,20 @@ void Player::applyClass(CharacterClass c) {
         default: break;
     }
     skillPower = skillMult;
-    // Dano de habilidade da classe (idempotente — recalcula do base guardado)
-    if (baseSkillDamage.size() == skills.size())
-        for (size_t i = 0; i < skills.size(); ++i)
-            skills[i].damage = baseSkillDamage[i] * skillMult;
+    refreshSkillVectors();
 
     applyEquipmentStats();   // mantem bonus de equipamento/evolucao
     health = maxHealth;
+}
+
+void Player::refreshSkillVectors() {
+    if (baseSkillDamage.size() != skills.size()) return;
+    auto st = SkillTree::statsFor(perkMask);
+    for (size_t i = 0; i < skills.size(); ++i) {
+        skills[i].damage   = baseSkillDamage[i]  * skillPower * st.skillMult;
+        skills[i].range    = baseSkillRange[i]   * st.rangeMult;
+        skills[i].cooldown = baseSkillCool[i]    * cdEvoMult * st.cdMult;
+    }
 }
 
 const char* Player::className(CharacterClass c) {
@@ -134,6 +147,16 @@ void Player::update(float dt) {
     if (regenTimer   > 0.0f) {
         regenTimer -= dt;
         heal(maxHealth * 0.06f * dt);   // ~6% maxHP por segundo enquanto dura
+    }
+
+    // Perk Hack Tree: Regenerador (HP/s) + timer do Protocolo Imortal
+    {
+        auto st = SkillTree::statsFor(perkMask);
+        if (st.regen > 0.0f) heal(st.regen * dt);
+        if (!reviveReady) {
+            reviveTimer -= dt;
+            if (reviveTimer <= 0.0f) reviveReady = true;
+        }
     }
 
     // Coast/freio: SO desacelera quando NAO houve input no frame anterior.
@@ -816,7 +839,7 @@ static void invItemIcon(float cx, float cy, float s, ItemType t, Color col) {
 
 void Player::drawInventory() const {
     const int SW=1280, SH=720;
-    const Color C_cyan={0,210,255,255}, C_gold={255,190,0,255}, C_green={0,210,80,255};
+    const Color C_cyan={0,235,255,255}, C_gold={255,190,0,255}, C_green={0,210,80,255};
     DrawRectangle(0,0,SW,SH, ColorAlpha(BLACK,0.82f));
     int PX=64, PY=44, PW=SW-128, PH=SH-88;
     DrawRectangle(PX,PY,PW,PH, ColorAlpha(Color{10,12,24,255},0.97f));
@@ -1113,11 +1136,25 @@ void Player::increaseBaseMaxHP(float amount) {
     applyEquipmentStats();
 }
 
+void Player::increaseBaseDefense(float amount) {
+    baseDefense += amount;
+    applyEquipmentStats();
+}
+
 void Player::takeDamage(float amount) {
     if (inSafeRefuge) return;   // refúgio = invulnerável (ninguém te mata na cidade)
     if (isShielded()) return;
+    auto st = SkillTree::statsFor(perkMask);
+    if (st.evade > 0.0f && (rand() % 100) < (int)(st.evade * 100.0f)) return;
     float reduced = amount * (1.0f - defense / 100.0f);
     health -= reduced;
+    if (health < 0.0f && st.revive && reviveReady) {
+        reviveReady = false;
+        reviveTimer = 60.0f;
+        health      = maxHealth * 0.40f;
+        say("PROTOCOLO IMORTAL! Reconstruindo.", 3.0f, {0, 220, 160, 255});
+        return;
+    }
     if (health < 0.0f) health = 0.0f;
 }
 
@@ -1167,16 +1204,18 @@ void Player::levelUp() {
     static const int CD_LEVELS[] = {10, 25, 40, 60};
     for (int cl : CD_LEVELS) {
         if (level == cl) {
-            for (auto& sk : skills) sk.cooldown *= 0.88f;
+            cdEvoMult *= 0.88f;
             break;
         }
     }
 
     applyEquipmentStats();
+    refreshSkillVectors();
     health = maxHealth;
     leveledUp    = true;
     levelUpTimer = 2.5f;
     unclaimedLevels++;   // o Game drena isto (conta TODOS os niveis, inclusive multiplos)
+    skillPoints++;       // Hack Tree: 1 ponto de perk por nivel
 
     // Level-up speech
     if (level % 10 == 0)
@@ -1289,7 +1328,8 @@ void Player::applyEquipmentStats() {
 }
 
 float Player::getEffectiveDamage() const {
-    return attackDamage * (isOverloaded() ? 1.5f : 1.0f);
+    return attackDamage * (isOverloaded() ? 1.5f : 1.0f)
+                        * SkillTree::statsFor(perkMask).weaponMult;
 }
 
 void Player::say(const std::string& text, float duration, Color col) {
@@ -1354,6 +1394,9 @@ void Player::onKill() {
     totalKills++;
     killStreak.count++;
     killStreak.resetTimer = 4.0f;
+
+    auto st = SkillTree::statsFor(perkMask);
+    if (st.lifesteal > 0.0f) heal(maxHealth * st.lifesteal);
 
     if (killStreak.count == 5)
         say("Cinco seguidos!", 2.5f, {255, 200, 0, 255});

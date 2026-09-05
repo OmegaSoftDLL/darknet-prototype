@@ -176,3 +176,210 @@ Conforme nota da auditoria 2 (§7): todo o trabalho está **não commitado** (34
 - **`wss://` no cliente**: `NetClient` é Winsock puro sem TLS — recusa URLs `wss://` antes de abrir thread (documentado no código). O gateway já serve `/ws` sob TLS quando o bloco 443 é ativado; migrar o cliente para WSS exige TLS (Schannel/OpenSSL) no socket.
 - **Auth real** (trocar o stub `/auth/login` por OAuth ou e-mail+senha com hash) — fora do escopo deste ciclo.
 - Fases 5–11 em execução e áudio (julgamento humano) — seguem como no Ciclo 3.
+
+---
+
+# ADENDO — Ciclo 5: colisão de cenário + retheme visual dos menus (2026-09-04)
+
+| | |
+|---|---|
+| **Em resposta a** | 1) Bug do usuário: "personagens atravessando por coisas no cenário (carros e prédios muito grandes)". 2) "O visual do jogo/menus é uma merda, melhorar 1000%" — escopo aprovado: **menus primeiro**, estilo **cyberpunk neon dark**, **só primitivas raylib**. |
+
+## E1. Colisão de cenário (causa raiz + correção)
+
+| Sev. | Tema | O que foi feito |
+|---|---|---|
+| 🔴 | Raio de colisão **inscrito** menor que a pegada desenhada | Prédio moderno (tipo 20) era marcado com raio fixo `96·sc` mas é desenhado com W≈250-325·sc × D≈220-304·sc; veículos (tipo 6) com `78·sc` mas carro/van/caminhão têm L≈158/196/264·sc. Herói afundava dezenas de px nas fachadas. |
+| 🔴 | Chunks de cidade sem colisão nenhuma | `m_chunkSolids` só cobria tipos 0/1/7/8 — prédios (20) e carros (6) spawnados por chunk eram 100% atravessáveis. |
+| 🟢 | Correção | `Game_WorldGen.cpp`: helpers `buildingRadius`/`vehicleRadius` replicam **o mesmo hash do render** (W/D idênticos ao desenho) e retornam o **circulo circunscrito** exato; usados no mundo fixo (substitui 96·sc e 78·sc) e o switch de chunks passa a cobrir tipos 6/9/10/14-20 (mesmos raios do fixo). |
+
+## E2. Retheme visual — menus (cyberpunk neon dark, primitivas raylib)
+
+| Tela | O que mudou |
+|---|---|
+| Main menu | Fundo em gradiente profundo; moldura de câmera nos cantos; contadores decorativos (KRN.LOG / NEXUS ONLINE); grade cibernética mais fina; crânio IRON-VIII reacolhido em azul-aço com olhos vermelhos; título com **extrusão 3D + aura ciano**; separador com pontas chanfradas; botões com **trilho de energia esquerdo, cantos chanfrados, badge de tecla com recesso, sublinhado neon e seta pulsante**; rodapé em chips (`//`) com versão à esquerda. |
+| Pause | Título embracado com sublinha e cantos; lista envolta em `DrawPanel`; item focado ganha trilho neon + cantos chanfrados e `»`. |
+| Seleção de classe | Título com extrusão + sublinha e chave âmbar; cards com cantos chanfrados, trilho da cor da classe, topo pulsante ciano no selecionado; dica inferior em painel chanfrado. |
+| Save slots | Painel chanfrado com topo pulsante; slot selecionado com trilho âmbar, borda chanfrada pulsante e [DEL] apagar; barra de dicas inferior. |
+| Level-up / Evolução | Cards com cantos chanfrados + barra de topo na seleção; fundos mais escuros/consistentes. |
+| Implicação | `Game::DrawPanel` (HUD) já era o padrão de canto chanfrado — retheme amplia o mesmo idioma para todos os menus (identidade única). `SaveManager.cpp` ganhou `#include <cmath>`. |
+
+## E3. Retheme visual — HUD in-game (mesmo idioma)
+
+| Painel | O que mudou |
+|---|---|
+| Stats HUD / top bar | Paleta unificada para ciano `{0,235,255,255}` (replaceAll sobre `{0,210,255}`/`{0,230,255}` no `Game_HUD.cpp`); top bar com sublinha dupla e marcas de canto. |
+| Ameaça / mutador / zona segura / fase | Chips chanfrados com trilho colorido (vermelho/verde/ciano). |
+| Controles | `DrawPanel` + chips de tecla. |
+| Skill bar | Fundo angular + número de tecla em chip âmbar + linha neon no topo. |
+| Quest HUD / diário | `DrawPanel` + trilho lateral / cabeçalho âmbar. |
+| Minimapa | Moldura angular, chip RADAR, MAPA reposicionado (mapX+60), ticks de canto. |
+| Skill tree | `Game_SkillTree.cpp`: borda neon, linha de topo, linhas selecionadas chanfradas com trilho. |
+| Tela de dificuldade | Título com extrusão + separador chanfrado com diamante âmbar. |
+| Rede / loja premium | C_cyan unificado (Game_Network.cpp, Game_PremiumStore.cpp, Player.cpp:842 inventário). ⚠ Player.cpp:35 e :235 são cores 3D e **não** foram tocadas. |
+
+## E4. Passada visual do mundo 3D (proporções + veículos)
+
+| Sev. | Tema | O que foi feito |
+|---|---|---|
+| 🔴 | Carros "blocos de criança" e desproporcionais | Veículos tinham L≈158/196/264 (4,2m/5,2m/7m) ao lado de um personagem de ~1,1m e rodas enterradas em arcos gigantes de 1,45·wr → liam como monumentos/caixas. |
+| 🟢 | Correção `Game.cpp` case 6 | Reescrito com **proporções reais**: sedã ≈100u, van ≈122u, caminhão ≈164u (régua 1m≈37,6u); cintura **contínua e lisa** (sem escadinha entre capô/teto/mala) com friso cromado costurando as seções; vidros **recessados** (colarinho do teto), para-brisa e vidro traseiro **inclinados** (rotação Z); rodas **rentes** à lataria com arco discreto de 1,16·wr e pneus aterrados (assoalho + sainhas no chão — elimina o "flutuando"); faróis/lanternas/para-choques/retrovisores/antena. |
+| 🟢 | Layout da rua | `Game_WorldGen.cpp`: carros (tipo 6) passam a **alinhar à malha de ruas** (4 ângulos, como prédios) em vez de rotação aleatória atravessada; `vehicleRadius` recalibrado para os novos L/WD (raio circunscrito, pneu ±5u). |
+| 🟢 | Extras | 12 lados nas rodas (mais redondas, antes 10); calota rebaixada; caminhão com baú frisado + cabine com para-brisa inclinado, teto próprio. |
+
+## E5. Validação pós-correção (2026-09-04)
+
+- Build Debug e Release: **exit 0** nos dois (targets `darknet` e `darknet_tests`).
+- `darknet_tests.exe`: **12/12 casos, 109/109 asserções**.
+- `validate.sh 120 7` e `validate.sh 120 20260821`: **APROVADO** nas duas.
+
+## E6. Cidade sem prédio/árvore no meio da rua (causa raiz + correção)
+
+Achado do dono: "tem prédio e árvore no meio das ruas, isso não pode".
+
+| Tema | O que foi encontrado / feito |
+|---|---|
+| Causa raiz | As **ruas que o jogador enxerga** são quads em `475 + k*950` (±112u de meio-fio, `Tilemap::render3D`), independentes dos tiles (as ruas de tile são aleatórias a cada 6-8 tiles). A cidade **ignorava essa malha**: grade de prédios em `220 + k*950` com `EDGE=350` → fachada furada ~137u **dentro da pista**; árvores/carros de `place()` caíam em qualquer ponto (área vale ~56%). GhostCity ainda usava quarteirão 880 sobre vias de 950 (desencaixado). |
+| Correção | `laneDist()` (malha 475+k*950) como régua única: grade do mundo fixo **sincronizada às vias** (centro de quarteirão em múltiplos de 950, `EDGE=350→210` cola a fachada no meio-fio); `place()` recebe flag *cidade* → árvore nunca `laneDist<130`, carro sempre `laneDist≤102`; clusters de chunk de cidade enconxados na mesma malha (cantos a ±210 do centro, `putB` com espaçamento 220 p/ torres vizinhas) + gate no `put` de props; GhostCity volta a usar quarteirão 950 (difere em ruína/vazio, não em passo). |
+| Resultado | Quarteirão inteiro com massa centrada na quadra; pista é corredor limpo entre prédios; carros parados no asfalto; árvores só dentro dos lotes. |
+
+## E7. Validação pós-correção (2026-09-04, passada das ruas)
+
+- Build Debug e Release: **exit 0** nos dois (targets `darknet` e `darknet_tests`).
+- `darknet_tests.exe`: **12/12 casos, 109/109 asserções**.
+- `validate.sh 120 7` e `validate.sh 120 20260821`: **APROVADO** nas duas.
+
+## E8. Inimigos respeitam as construções de chunk (colisão)
+
+| Tema | O que foi feito |
+|---|---|
+| Gap | `Game::update` só barrava inimigos em **parede de tile** (`isWallAtPosition`). Construções geradas no infinito (`m_chunkSolids`, círculos) eram ignoradas → o inimigo andava **atravessado dentro do prédio de chunk**. Spawn já evitava (`Game_Spawn.cpp` usa `isBlocked`), fica só a movimentação. |
+| Correção | Bloco de colisão do inimigo agora avalia `blockedAt(pos)` = parede de tile **OU** círculo de chunk (`Game.cpp`), com o mesmo deslize por eixo (tenta X, depois Y, senão volta). Espectros/bosses voadores continuam atravessando de propósito. |
+
+## E9. Arquitetura: extração de Game_WorldRender.cpp
+
+| Tema | O que foi feito |
+|---|---|
+| Objetivo | `Game.cpp` estava com **5.027 linhas**; a renderização monopolizava ~1.700. |
+| Extração | Copiadas por **corte literais** para `src/Game_WorldRender.cpp` (novo): `ensureVoxel`, `drawGenericStructure`, `drawArkStructure`, `drawVoxel`, `sphereInCameraFrustum` e `renderWorld3D` (~1.620 linhas). Statics locais duplicadas (mesmo padrão de `Game_WorldGen.cpp`): `structureTintFor`, `isMedievalZone`, `FIT_*`, `DrawCubeTexture`. Registro no CMake. |
+| Resultado | `Game.cpp`: 5.027 → **3.236 linhas**; `Game_WorldRender.cpp`: 1.912. Nenhuma mudança de lógica (cópia literal). |
+
+## E10. Validação (2026-09-04, rodada de colisão e extração)
+
+- Build Debug e Release: **exit 0** (targets `darknet` e `darknet_tests`).
+- `darknet_tests.exe`: **12/12 casos, 109/109 asserções**.
+- `validate.sh 120 7` e `validate.sh 120 20260821`: **APROVADO** nas duas.
+
+## E11. Declarado (próximos da sequência)
+
+- Fases 5–11 em execução e áudio (julgamento humano) — seguem pendentes da sequência maior.
+- `wss://` no `NetClient`: exige TLS (OpenSSL/SChannel) — não-vendored, decisão de infra separada (segue com `ws://` local/gateway).
+- Personagem fica ~1,1m na régua (1m≈37,6u) enquanto prédios usam andar de 2,1m — reescalar herói/NPC é decisão de risco alto (reserva; hoje o top-down disfarça).
+- `Game::update` (1.170 linhas) e `Game::handleInput` (~550) seguem como próximos cortes do monolithic `Game.cpp`.
+
+
+---
+
+# ADENDO - Ciclo 6: cortes finais de Game.cpp + legibilidade das fases escuras (2026-09-04)
+
+## E12. Extraido Game::update e Game::handleInput -> Game_Gameplay.cpp
+
+- Game.cpp agora tem **1.493 linhas** (era 5.027 no inicio): lifecycle, menus, decals, colliders pequenos, camera e 
+ender().
+- Novo src/Game_Gameplay.cpp (1.880 linhas): Game::update e Game::handleInput por copia literal (zero logica alterada).
+- Incluido SkillTree.h (usava SkillTree::statsFor sem incluir). Comeca agora a pipeline de extras de ate 5 fases; o proximo alvo natural e Game::drawCharacterSelectScreen/menus, ja que o arquivo ficou de tamanho saudavel.
+- CMakeLists.txt: fonte registrada apos Game_WorldRender.cpp. Nenhuma statics file-scope extra necessaria (o getZoneInfo que update usa e inline em Zone.h).
+
+## E13. Fases escuras ilegiveis (queixa do jogador) - correcao de cena + textos
+
+Queixa: "fases com dizeres negros escuros estao MUITO escuras, nao da pra ver quase nada" (ceu cenario com derivativos pretos nas fases sombrias + textos engolidos).
+Resposta (cena e textos):
+- **Cena**: paleta de todas as 11 fases clareada em Zone.h::getZoneInfo (chao A/B, paredes e outline) mantendo o matiz; o clima escuro continua vindo do ceu/fog (skyColorFor) e props do DarkWorld, nao do chao. Ex.: DarkForest chao (20,28,20)->(54,72,50); Catacombs (30,25,30)->(70,58,66); Nexus (25,10,55)->(66,44,104).
+- **Textos**: banner de fase drawStoryBanner com painel mais opaco (0.62->0.84), sombra preta no titulo e subtitulo mais claro; fade de fase drawPhaseFade agora tem painel condensado com borda cyan e alpha minimo de texto ~70%; banner de zona do HUD com sombra. Nao existe dimming global alem das cores (confirmado: so ZoneInfo alimenta a luz).
+
+## E14. Evidencia de execucao de fases (bot)
+
+- Run longo --test-seconds=480 seed 7: **exit 0, VALIDACAO PASSOU** (o criterio de avanco de zona e obrigatorio em runs >=180s).
+- ot_report.txt (run 120s seed 20260821): "Zonas avancadas : 1" aos ~105s; 34 abates. Fases 5-11 seguem como julgamento humano/auditoria visual (conteudo das fases ja esta em content/phases.txt, as 11 carregadas).
+
+## E15. Declarado (sequencia restante)
+
+- Fases 5-11 em execucao completa (visual/audio) e oudio pleno - julgamento humano.
+- wss:// (TLS) segue decidido fora do escopo sem OpenSSL vendored.
+- Proximos cortes de arquivo grande: Game.cpp (1.493) ainda tem drawCharacterSelectScreen/menus; Game_Menus.cpp e Game_HUD.cpp sao os maiores restantes.
+- **Recomendacao recorrente**: 34+ arquivos modificados nao commitados; melhor estado do projeto - commitar antes de prosseguir.
+
+
+## E16. Enemy.cpp divido -> Enemy_Render.cpp
+
+- Enemy.cpp 3.280 -> **1.525 linhas**; novo src/Enemy_Render.cpp (~1.760) com todos os 22 Enemy::render* + helper local DrawRotatedRectangle (copia literal dos 6 blocos contiguos; unica static file-local: DrawRotatedRectangle; extern bool g_voxelCapture duplicado no novo arquivo).
+- CMakeLists atualizado. Gate: Debug+Release exit 0, testes 12/12 (109), validate 120/7 APROVADO.
+- Resta em Enemy.cpp: core/AI/knockback/ataques (setupByType, update*, bosses phases) - legibilidade mantida.
+
+
+
+## E17. Execucao de fases - runs longos (medicao)
+
+- 480s (seed 7): exit 0, VALIDACAO: PASSOU � o criterio de avanco de zona e OBRIGATORIO em run >=180s, logo o portal/fase funcionou.
+- 900s (seed 20260821): exit 0. ot_report.txt foi sobrescrito por runs menores; dado preservado: validacao e fase avan�ada em runs >=180s. Fases 5-11 seguem como auditoria visual/humana (conteudo em content/phases.txt, 11 carregadas).
+- Observacao de pacing: 120s seed 20260821 (re-run) deu "zonas=0" (portal abriu apos o corte dos 60s de monitor); 120s seed 7 deu "zonas=1" as ~105s. Variancia de timing/seed � portao frouxo (<180s) cobre isso de proposito.
+
+## E18. Quadro de level-up (queixa do jogador: grande e por cima das mensagens)
+
+- Causa: banner 420x70 centrado em y-100, desenhado DEPOIS do banner de zona (y-40) e painel de missoes � cobria o nome da fase.
+- Correcao: pill compacto (largura do texto + 36, 40/52 de altura), fonte 28->20, realocado para y=30 (sob a barra de HUD, longe do centro). Incluido <cstdio> (snprintf).
+
+## E19. Evolucao da renderizacao ("esta amador demais")
+
+- world.fs: camada anti-plastico � fbm de 3 oitavas no ESPACO do mundo (uniform worldPeriod, 950 no open-world LA / 480 no mapa fixo) quebra os muros de cor unica das grandes faces opacas; + especular seco (specularK 0.28, esfera 26) na lataria/metal � so em alpha>0.999 (decal translucido nao recebe).
+- grade.fs: vinheta cinematografica (ate 32% nas bordas) dobrada na passada final � custo zero.
+- initPostFX: bloom 0.95->1.15, saturacao 1.22->1.28 (mais viveza).
+- Gate: Debug exit 0, Release exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS (POSTFX/WORLDLIT ATIVO).
+
+## E20 � Rodada de "juice" (pesquisa de game feel em twin-stick shooters)
+Pesquisa: solana.garden (hit stop 40-120ms por tier, screen shake trauma^2 com decay, camera kick/recoil no tiro, pop de kill, flash de impacto) + raylib oficial (shapes_top_down_lights.c � light mask top-down p/ refer�ncia futura). Diagn�stico: o melee j� tinha hitstop (Game_Gameplay update: hitStopTimer 0.05/0.09 com freeze parcial, part�culas continuam), shake 3.5 e blood sparks; MAS explos�es e abates comuns e casts n�o tinham peso.
+Implementado (baixo risco, sem tocar em l�gica de bot/balance):
+- Game.cpp updateProjectiles (explos�o de granada): triggerShake(6.0, 0.25) + hitStopTimer 0.07 � explos�o "bate" de verdade.
+- Game_Gameplay.cpp bloco de morte de inimigo: **POP de morte** � burst de part�culas em escala (12 normal / 24 elite / 46 boss; cor do corpo; branco central), e elite/boss congelam o mundo (hitstop 0.06/0.10) + shake 4.5/7.0 com c�mera longa.
+- Camera kick em casts: Laser 2.2/0.10, EMP 4.0/0.18 (onda de choque), Granada 1.8/0.08 (peso no arremesso), Rajada 2.5/0.12.
+- Gate: Debug exit 0, Release exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS.
+Pr�ximos (se o usu�rio pedir evolu��o visual): light mask 2D ao estilo raylib top-down p/ luzes din�micas da cena; flash ao receber dano de elite; pitch variation nos SFX de hit.
+
+## E21 � Personagem "voando" corrigido + barra de poderes com vida
+- BUG "voando": Game::update chama handleInput(dt) (movimento?player.move?isMoving=true) e DEPOIS player.update(dt), que ZERA isMoving no comeco. O voxel (drawVoxel do player em Game_WorldRender.cpp) usava player.isMoving ? chegava SEMPRE false no render ? pose 0 congelada + sem passo + sem gingado = desliza/flutua. O render 2D legado (Player::render) compensava com elMag>12, o 3D nao. Correcao: usar a velocidade real (|v|>12) no drawVoxel do jogador; passo (step snap) 0.030?0.040.
+- Barra de PODERES (drawSkillsPanel): era chip de tecla + nome ("123456" estetica). Novo painel "vivo": icones PROCEDURAIS por poder (Laser=projetil cyan, EMP=pulso concetntrico ouro, Granada=esfera+pavio, Sobrecarga=raio, Barreira=hexagono, Rajada=leque) sem assets; cor propria por slot; borda pulsando quando PRONTO; recarga = overlay descendente + barra de progresso + segundos; dano visivel.
+- Gate: Debug exit 0, Release exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS.
+- Auditoria: P1 marcador/marcador do portal, bot atravessa o portal, construcao dupla do cenario e higiene do BotController.h j� estavam resolvidos (verificado nesta rodada: setupWorldRegions e chamado 6x mas com safeZoneCenter correto ANTES de buildOpenWorldScenery; reset()/restartRun existem).
+
+## E22 � Reacao ao dano + chefao com barra + HUD sem nada fixo no centro
+- **Flash vermelho de dano** (bug latente): `hitFlashTimer` era setado em 5 pontos e decaia, mas NUNCA era desenhado. Agora `drawHudAndOverlays` pinta a tela toda com alpha min(0.45, flash*1.5).
+- **Indicador direcional de dano**: novos `hurtDir`/`hurtDirTimer`/`noteHurtDir(Vector2 src)` (Game.h + Game.cpp); disparado nos 5 locais que ferem o player (projetil inimigo Game.cpp, contato + kamikaze/zergling + explosao AOE em Game_Gameplay, lobo em Game_Resources); decay no update. Render: setas em trail acelerando ate a fonte + triangulo pulsante na borda da tela.
+- **Barra de HP de boss** (topo-centro): painel com nome por tipo (COMANDANTE KRONOS/NUCLEO KRONOS/etc), % + HP numerico, ticks a cada 10%, borda pulsando abaixo de 30% HP.
+- **Nada fixo no CENTRO da tela** (queixa do usuario): HUD de RECURSOS (5 quadradinhos coloridos centrados em y=56, pareciam "menu que nunca mostra nada") dockado na ESQUERDA (x=10, y=80, mesmo estilo da pill da FASE: fundo 8,12,26 + filete cyan); pill da FASE saiu do centro (x=10, y=56); a barra de PODERES do usuario fica ONDE ESTAVA (base-centro) e o minimapa voltou ao lugar.
+- Gate: Debug exit 0, Release exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS. (Nota: rodar as duas validações EM PARALELO faz uma derrubar a outra no rebuild compartilhado - "2 travamentos > 10s" falso; sequencial exporta verde.)
+
+## E23 ? Nomes dos recursos + rodada de juice (game feel)
+- **Nome em cada recurso** (pedido explicito do usuario: "precisa colocar os nomes de cada recurso"): `drawResourceHUD` redesenhado na ESQUERDA (x=10, y=80, altura 40, largura 96/item): quadrado colorido + quantidade + NOME (Madeira/Pedra/Ferro/Prata/Ouro) na cor do recurso. `resourceName`/`resourceColor` em Game_Resources.cpp.
+- **Juice na coleta de XP**: orb de XP ganha faisca cyan + `spawnExplosion` + pop de dano "XP n" (mesma coleta + magnetismo, Game.cpp).
+- **Barra de HP em inimigos**: `drawHudAndOverlays` projeta a barra com `GetWorldToScreenEx(camera3D)`; boss/elite sempre, demais só quando feridos; cull a 900u; flash branco com `hitFlashTimer`.
+- **Vinheta de vida baixa**: gradientes vermelhos nas bordas da tela quando `player.health < maxHealth*0.30` (pulso suave).
+
+## E24 ? Zona segura vira a CASA do jogador (hub limpo + lojas por NPC)
+- **Folga de construcoes no hub**: exclusao de estruturas em volta da praca subiu 360u -> 560u (Game_WorldGen `put1`) - nenhum predio espremendo a base.
+- **Lojas PROPORCIONAIS por NPC** (pedido explicito): novos tipos de cenario 23-27, cada um com RENDER 3D procedural proprio em Game_WorldRender:
+  - 23 ESTANDE DE MERCADO (LUNA): balcao + lona listrada + mercadoria;
+  - 24 FORJA (FERREIRO KANE): bigorna + fornalha com brasa emissiva + chamine + mesa de metal;
+  - 25 POSTO DE COMANDO (VANCE RIOS): mesa + mapa luminescente + radio + estandarte NEXUS ondulando;
+  - 26 LABORATORIO DE IMPLANTES (DR. CHEN): bancada + tanque + holoprojetor cyan;
+  - 27 ARSENAL (ZARA): rack de armas + caixas de municao + luz de trabalho.
+  `placeBaseShops()` (Game_WorldGen, declarado em Game.h) coloca as lojas no ANEL ao redor da praca, espelhando os offsets de `setupBaseNPCs()` +52u pra fora: cada vendedor fica em FRENTE da propria loja quando chega pelo centro. Erase com o ramp: rebuilt a cada fase (chamado no fim de `buildOpenWorldScenery`, depois das solidas - as lojas nao colidem).
+- **Anel de energia da zona segura** (Game_WorldRender): piso translucido cyan/amber + 2 aneis tracejados pulsando e girando em sentidos opostos + 8 balizas com luz + varredura rotativa + coluna de energia central (marco da base). Renderiza so perto do hub (raio 1250).
+- **Area protegida PURA** (pedido explicito: "tirar os carros detritos, deixar so os npc e as suas lojas"): passe de limpeza no fim de `buildOpenWorldScenery` remove do raio de `safeZoneRadius` os detritos urbanos (6 carro, 12 pedras, 13 marcas de fogo, 21 entulho, 22 fogueira); grama/arvores/postes ficam.
+- **Minimapa so da FASE ATUAL** (pedido explicito): `drawMinimap` agora usa janela de mundo = circulo de `owPhaseRadius` (+6%) ao redor do centro da base em vez do mundo inteiro de 128 regioes (que espremia os blips num canto). Pinta o disco da fase, elipse de limite cyan pulsante, elipse verde da zona segura, chip "FASE n", e converte todos os blips (portais, NPC, construcoes, inimigos, viewport, player) pelas novas lambdas mx/my. Em mapa fechado mantem o comportamento antigo.
+- Gate: Release + Debug exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS (sequenciais).
+
+## E25 - Aim assist (mira magnetica) + ret�culo de lock + postes fora da rua
+- **Aim assist em todas as skills direcionais**: `aimDir` (Game_Gameplay.cpp) agora GRUDA no inimigo vivo mais perto do cursor dentro de raio de magnetismo de 120u; a dire��o vira SEMPRE UNIT�RIA. Bug latente corrigido no caminho: antes o vetor escalava com a dist�ncia do mouse e o proj�til b�sico corria em velocidades diferentes conforme o cursor estivesse perto/longe.
+- **Ret�culo de mira (drawHudAndOverlays)**: 4 ticks ciano ao redor do cursor (sem esconder o cursor do SO); com alvo travado o ret�culo fica vermelho, um anel de lock pulsante com 4 pontas girando pinta o inimigo alvo (proje��o GetWorldToScreenEx) e uma linha fina de guia liga cursor->alvo.
+- **Postes de luz fora da rua** (pedido explicito: "tem postes de luz no meio da rua"): o tipo 5 n�o tinha filtro de pista (s� �rvore/carro tinham) - postes nasciam aleat�rios SOBRE o asfalto desenhado. Corrigido em 3 pontos: `place()` (cidade/bunker) recusa poste com dr<118u da via; `put()` do streaming recusa o mesmo nas biomas de cidade; postes dos meios-fios sa�ram de x 363..383 (at� 20u DENTRO do asfalto) para 338..352 (cal�ada, 12..26u fora da pista).
+- Gate: Release exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS (sequenciais).

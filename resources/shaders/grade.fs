@@ -27,5 +27,11 @@ void main() {
     col = clamp((col - 0.5) * contrast + 0.5, 0.0, 1.0);
     float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
     col = clamp(mix(vec3(l), col, saturation), 0.0, 1.0);
+    // ── vinheta: enquadramento cinematografico. Leve — so segura as bordas que
+    // o bloom estouraria, nao "escurece o jogo".
+    vec2 vc = fragTexCoord - 0.5;
+    float vd = length(vc) * 1.35;
+    float vig = 1.0 - smoothstep(0.52, 0.95, vd) * 0.32;
+    col *= vig;
     finalColor = vec4(col, 1.0) * colDiffuse * fragColor;
 }
