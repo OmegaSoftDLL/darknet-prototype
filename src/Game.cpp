@@ -124,9 +124,15 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
 
 // ─── Constructor / Destructor ────────────────────────────────────────────────
 
+bool Game::headless = false;   // definicao do static (main.cpp seta antes de construir)
+
 Game::Game() {
-    // Janela redimensionavel — o conteudo (1280x720) e escalado com letterbox em
-    // presentFrame(), entao nunca corta. F11 alterna tela cheia.
+    // Headless (CI sem display/GPU): pula TODO o bloco grafico do construtor
+    // (janela, render textures, sprites, modelos e shaders) e so monta os dados
+    // e a simulacao. O bot corre igual — cenario, inimigos, fases, colisao.
+    // Bloco grafico: janela redimensionavel — o conteudo (1280x720) e escalado com
+    // letterbox em presentFrame(), entao nunca corta. F11 alterna tela cheia.
+    if (!headless) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "DARKNET - ARPG Futurista | Guerra contra KRONOS");
     SetExitKey(KEY_NULL);   // ESC NAO fecha o jogo — abre o menu de pause
@@ -223,6 +229,7 @@ Game::Game() {
     applyWorldShader(m_marketModel);   applyWorldShader(m_wellModel);
     applyWorldShader(m_carModel);
     m_modelsLoaded = true;
+    }   // fim do bloco grafico — headless nao cria janela/GL/models/texturas
 
     audio.init();
     loadPhaseDefs();   // campanha vem de content/phases.txt (editavel sem recompilar)
@@ -267,10 +274,15 @@ Game::Game() {
     updateCamera3D();
 
     spawnInterval = getZoneInfo(currentZone).spawnInterval;
-    background.generate(currentZone, tilemap.width, tilemap.height, Tilemap::tileSize);
+    if (!headless)   // background e textura GPU (so render), nao existe simulacao nela
+        background.generate(currentZone, tilemap.width, tilemap.height, Tilemap::tileSize);
 }
 
 Game::~Game() {
+    if (headless) {
+        audio.shutdown();   // sem contexto GL: nao ha GPU/texturas/modelos para liberar
+        return;
+    }
     UnloadRenderTexture(gameTarget);
     UnloadRenderTexture(tempEntityTarget);
     lightSystem.shutdown();
@@ -542,7 +554,28 @@ void Game::runAutoTest(bool autoTest) {
     }
 }
 
+void Game::runHeadless() {
+    // CI/validacao sem display nem GPU: roda a MESMA update() do jogo em tempo
+    // real (dt real do relogio), sem documento/menu/render/screenshot. O FPS
+    // reportado ao bot e medido deste proprio loop (GetFPS() fica em 0 sem janela).
+    auto tLast = std::chrono::steady_clock::now();
+    while (!quitRequested) {
+        auto tNow = std::chrono::steady_clock::now();
+        float dt  = std::chrono::duration<float>(tNow - tLast).count();
+        tLast     = tNow;
+        if (dt <= 0.0f) {
+            std::this_thread::yield();
+            continue;
+        }
+        if (dt > 0.25f) dt = 0.25f;   // mesma quarentena da janela (frame de carga)
+        headlessFps = 1.0f / dt;
+        update(dt);
+        // update() pode marcar quitRequested (autoteste concluido/fim do jogo)
+    }
+}
+
 void Game::run() {
+    if (headless) { runHeadless(); return; }
     bool menuMusicStarted = false;
     while (!WindowShouldClose() && !quitRequested) {
         float dt = GetFrameTime();
