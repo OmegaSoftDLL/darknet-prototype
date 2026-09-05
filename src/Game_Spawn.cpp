@@ -241,6 +241,13 @@ void Game::spawnEnemy() {
         e.xpReward   = (int)(e.xpReward * ts);
     }
 
+    // 15% chance to spawn as elite (no minions, no bosses)
+    // ANTES do split do Zergling: os emplace_back abaixo podem realocar o vetor
+    // e invalidar a referencia `e` (use-after-realloc).
+    if (type != EnemyType::Boss && GetRandomValue(0, 100) < 15) {
+        e.makeElite(GetRandomValue(0, 2));
+    }
+
     // Zergling swarm — spawn 2 more in formation (StarCraft feel)
     if (type == EnemyType::Zergling) {
         for (int z = 0; z < 2; ++z) {
@@ -252,11 +259,6 @@ void Game::spawnEnemy() {
             };
             enemies.emplace_back(zp, EnemyType::Zergling);
         }
-    }
-
-    // 15% chance to spawn as elite (no minions, no bosses)
-    if (type != EnemyType::Boss && GetRandomValue(0, 100) < 15) {
-        e.makeElite(GetRandomValue(0, 2));
     }
 }
 

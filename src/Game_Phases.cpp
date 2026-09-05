@@ -310,7 +310,7 @@ void Game::transitionToZone(ZoneID dest) {
 
     // Load dark world scenery for sombre zones (Cemetery..AbandonedManor only)
     if ((int)dest >= (int)ZoneID::Cemetery && dest != ZoneID::InfernoZone) {
-        darkWorld.load((int)dest, (unsigned int)GetRandomValue(1000, 99999));
+        darkWorld.load((int)dest, 0x343fdu * (unsigned int)((int)dest + 1));  // seed deterministica por zona
     } else {
         darkWorld.active = false;
     }

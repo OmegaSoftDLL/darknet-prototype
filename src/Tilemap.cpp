@@ -508,37 +508,10 @@ void Tilemap::generateOpenWorld() {
     // SEM borda: mundo aberto é INFINITO (isWall libera fora dos limites; o chão
     // e o cenário se auto-geram por posição conforme o jogador explora).
 
-    // Obstaculos esparsos por regiao — cobertura tatica, NUNCA bloqueiam passagem.
-    // Pequenos blocos de 1-3 tiles espalhados; ha sempre chao aberto em volta.
-    unsigned int rng = 0x0BADC0DE;
-    auto rnd = [&]() { rng = rng * 1664525u + 1013904223u; return (rng >> 8) & 0x7FFF; };
-
     for (int row = 0; row < OW_ROWS; ++row) {
         for (int col = 0; col < OW_COLS; ++col) {
             int offX = col * OW_ZONE_W;
             int offY = row * OW_ZONE_H;
-
-            // Centro da regiao fica limpo (spawn / area de combate aberta)
-            int centerX = offX + OW_ZONE_W / 2;
-            int centerY = offY + OW_ZONE_H / 2;
-
-            int clusters = 0; // SEM blocos de parede no mundo aberto (estruturas = modelos de cenario)
-            for (int c = 0; c < clusters; ++c) {
-                int cxp = offX + 5 + rnd() % (OW_ZONE_W - 10);
-                int cyp = offY + 5 + rnd() % (OW_ZONE_H - 10);
-                // Nao colocar perto do centro da regiao (raio 6 tiles)
-                int ddx = cxp - centerX; if (ddx < 0) ddx = -ddx;
-                int ddy = cyp - centerY; if (ddy < 0) ddy = -ddy;
-                if (ddx < 6 && ddy < 6) continue;
-                int bw = 1 + rnd() % 3;
-                int bh = 1 + rnd() % 3;
-                for (int dy = 0; dy < bh; ++dy)
-                    for (int dx = 0; dx < bw; ++dx) {
-                        int tx = cxp + dx, ty = cyp + dy;
-                        if (tx > 3 && ty > 3 && tx < width - 3 && ty < height - 3)
-                            tiles[ty][tx].type = TileType::Wall;
-                    }
-            }
         }
     }
 }

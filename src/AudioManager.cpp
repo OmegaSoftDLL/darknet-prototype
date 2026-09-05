@@ -1922,13 +1922,21 @@ void AudioManager::playDeathCry() const {
     PlaySound(sfxDeathCry);
 }
 
+// Toca o efeito com PITCH aleatorio no range [lo,hi]: hits repetidos deixam de
+// soar identicos (copia local — nao altera o sound original do AudioManager).
+static void playPitched(Sound sfx, float lo, float hi) {
+    Sound s = sfx;
+    SetSoundPitch(s, lo + (hi - lo) * (float)GetRandomValue(0, 1000) * 0.001f);
+    PlaySound(s);
+}
+
 // â”€â”€â”€ Play â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void AudioManager::playLaser()         const { PlaySound(sfxLaser); }
 void AudioManager::playEMP()           const { PlaySound(sfxEMP); }
-void AudioManager::playHit()           const { PlaySound(sfxHit); }
-void AudioManager::playHitHeavy()      const { PlaySound(sfxHitHeavy); }
-void AudioManager::playHitAlien()      const { PlaySound(sfxHitAlien); }
+void AudioManager::playHit()           const { playPitched(sfxHit,         0.93f, 1.07f); }
+void AudioManager::playHitHeavy()      const { playPitched(sfxHitHeavy,    0.90f, 1.10f); }
+void AudioManager::playHitAlien()      const { playPitched(sfxHitAlien,    0.95f, 1.05f); }
 void AudioManager::playExplosion()     const { PlaySound(sfxExplosion); }
 void AudioManager::playExplosionBig()  const { PlaySound(sfxExplosionBig); }
 void AudioManager::playPickup()        const { PlaySound(sfxPickup); }
@@ -1937,8 +1945,8 @@ void AudioManager::playLevelUp()       const { PlaySound(sfxLevelUp); }
 void AudioManager::playShield()        const { PlaySound(sfxShield); }
 void AudioManager::playPortal()        const { PlaySound(sfxPortal); }
 void AudioManager::playFootstep()      const { PlaySound(sfxFootstep); }
-void AudioManager::playMeleeSwing()    const { PlaySound(sfxMeleeSwing); }
-void AudioManager::playMeleeImpact()   const { PlaySound(sfxMeleeImpact); }
+void AudioManager::playMeleeSwing()    const { playPitched(sfxMeleeSwing,  0.92f, 1.08f); }
+void AudioManager::playMeleeImpact()   const { playPitched(sfxMeleeImpact, 0.94f, 1.06f); }
 void AudioManager::playAlienScream()   const { PlaySound(sfxAlienScream); }
 void AudioManager::playBossRoar()      const { PlaySound(sfxBossRoar); }
 void AudioManager::playChargeUp()      const { PlaySound(sfxChargeUp); }
@@ -1947,13 +1955,16 @@ void AudioManager::playRicochet()      const { PlaySound(sfxRicochets[rand() % 3
 
 // ── New contextual play methods ───────────────────────────────────────────────
 
-void AudioManager::playMeleeHit(bool isCrit)    const { isCrit ? PlaySound(sfxCritHit) : PlaySound(sfxMeleeImpact); }
+void AudioManager::playMeleeHit(bool isCrit)    const {
+    if (isCrit) playPitched(sfxCritHit,       1.00f, 1.12f);
+    else        playPitched(sfxMeleeImpact,   0.94f, 1.06f);
+}
 void AudioManager::playPlasmaShot()             const { PlaySound(sfxLaser); }
 void AudioManager::playShotgun()                const { PlaySound(sfxExplosion); }
 void AudioManager::playExplosion(bool large)    const { large ? PlaySound(sfxExplosionBig) : PlaySound(sfxExplosion); }
-void AudioManager::playEnemyHit()               const { PlaySound(sfxHit); }
+void AudioManager::playEnemyHit()               const { playPitched(sfxHit, 0.93f, 1.07f); }
 void AudioManager::playEnemyDeath(bool isBoss)  const { isBoss ? PlaySound(sfxBossRoar) : PlaySound(sfxAlienScream); }
-void AudioManager::playPlayerHurt()             const { if (voiceEnabled) PlaySound(sfxPlayerHurt); }
+void AudioManager::playPlayerHurt()             const { if (voiceEnabled) playPitched(sfxPlayerHurt, 0.95f, 1.05f); }
 void AudioManager::playEvolve()                 const { PlaySound(sfxEvolve); }
 void AudioManager::playHeal()                   const { PlaySound(sfxHeal); }
 void AudioManager::playItemPickup(int rarity)   const {
