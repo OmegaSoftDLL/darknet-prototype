@@ -83,7 +83,7 @@ void Game::drawPremiumStore() const {
     }
 
     Color C_mag  = {225,120,255,255};
-    Color C_cyan = {0,210,255,255};
+    Color C_cyan = {0,235,255,255};
     int pw = 520, ph = 420;
     int px = screenWidth/2 - pw/2, py = screenHeight/2 - ph/2;
     DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, 0.55f));

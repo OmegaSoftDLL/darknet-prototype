@@ -14,123 +14,162 @@ void Game::drawMainMenu() const {
     int   cx = screenWidth  / 2;
     int   cy = screenHeight / 2;
 
-    // ── Animated dark grid ────────────────────────────────────────────────────
+    // ── Fundo: gradiente profundo (neon dark) ──────────────────────────────
+    for (int i = 0; i < 64; ++i) {
+        float v = (float)i / 63.0f;
+        Color c = { (unsigned char)(6 + (int)(4.0f * v)),
+                    (unsigned char)(7 + (int)(3.0f * v)),
+                    (unsigned char)(14 + (int)(12.0f * v)), 255 };
+        DrawRectangle(0, (int)(v * (float)screenHeight), screenWidth,
+                      screenHeight / 64 + 1, c);
+    }
+
+    // ── Moldura de camera (cantos neon) ─────────────────────────────────────
+    Color frm = ColorAlpha({0,235,255,255}, 0.16f);
+    DrawRectangle(6, 6, 26, 3, frm);  DrawRectangle(6, 6, 3, 26, frm);
+    DrawRectangle(screenWidth-32, 6, 26, 3, frm);  DrawRectangle(screenWidth-9, 6, 3, 26, frm);
+    DrawRectangle(6, screenHeight-9, 26, 3, frm);  DrawRectangle(6, screenHeight-32, 3, 26, frm);
+    DrawRectangle(screenWidth-32, screenHeight-9, 26, 3, frm);
+    DrawRectangle(screenWidth-9, screenHeight-32, 3, 26, frm);
+
+    // ── Contadores HUD de fundo (decorativos) ───────────────────────────────
+    DrawText("KRN.LOG // 2047", 18, 14, 12, ColorAlpha({120,160,200,255}, 0.45f));
+    DrawText("NEXUS ONLINE", screenWidth - MeasureText("NEXUS ONLINE", 12) - 18, 14, 12,
+             ColorAlpha({0,235,255,255}, 0.45f + 0.2f * std::sin(t * 1.1f)));
+
+    // ── Grade cibernetica animada (fina, discreta) ──────────────────────────
     for (int i = 0; i < screenWidth; i += 48) {
-        float pulse = 0.06f + 0.04f * std::sin(t * 0.6f + i * 0.01f);
-        DrawLine(i, 0, i, screenHeight, ColorAlpha({0,180,255,255}, pulse));
+        float pulse = 0.03f + 0.025f * std::sin(t * 0.6f + i * 0.01f);
+        DrawLine(i, 0, i, screenHeight, ColorAlpha({0,200,255,255}, pulse));
     }
     for (int j = 0; j < screenHeight; j += 32) {
-        float pulse = 0.06f + 0.03f * std::sin(t * 0.4f + j * 0.015f);
-        DrawLine(0, j, screenWidth, j, ColorAlpha({0,180,255,255}, pulse));
+        float pulse = 0.03f + 0.02f * std::sin(t * 0.4f + j * 0.015f);
+        DrawLine(0, j, screenWidth, j, ColorAlpha({0,200,255,255}, pulse));
     }
 
-    // ── Horizontal scan line sweeping downward ─────────────────────────────
-    int scanY = (int)(std::fmod(t * 180.0f, (float)screenHeight));
-    DrawRectangle(0, scanY, screenWidth, 2, ColorAlpha({0,255,220,255}, 0.18f));
-    DrawRectangle(0, scanY+2, screenWidth, 8, ColorAlpha({0,255,220,255}, 0.04f));
+    // ── Varredura horizontal descendo (scanline) ────────────────────────────
+    int scanY = (int)(std::fmod(t * 160.0f, (float)screenHeight));
+    DrawRectangle(0, scanY, screenWidth, 2, ColorAlpha({0,235,255,255}, 0.10f));
+    DrawRectangle(0, scanY + 2, screenWidth, 10, ColorAlpha({0,235,255,255}, 0.03f));
 
-    // ── IRON-VIII SKULL silhouette (far left, clear of the title) ─────────────
+    // ── IRON-VIII SKULL (esquerda, fora do titulo) ──────────────────────────
     int sx = cx - 440;
-    int sy = cy - 150;
-    // Skull outer
-    DrawEllipse(sx, sy, 75, 90, {20, 30, 20, 255});
-    DrawEllipse(sx, sy, 73, 88, {8, 12, 8, 255});
-    // Cheekbones
-    DrawEllipse(sx-40, sy+30, 22, 16, {20,30,20,255});
-    DrawEllipse(sx+40, sy+30, 22, 16, {20,30,20,255});
-    // Jaw
-    DrawRectangle(sx-38, sy+50, 76, 40, {10,16,10,255});
-    DrawEllipse(sx, sy+90, 30, 15, {10,16,10,255});
-    // Teeth lines
+    int sy = cy - 165;
+    DrawEllipse(sx, sy, 75, 90, {18, 22, 36, 255});
+    DrawEllipse(sx, sy, 73, 88, {7, 10, 20, 255});
+    DrawEllipse(sx-40, sy+30, 22, 16, {18, 22, 36, 255});
+    DrawEllipse(sx+40, sy+30, 22, 16, {18, 22, 36, 255});
+    DrawRectangle(sx-38, sy+50, 76, 40, {9, 13, 26, 255});
+    DrawEllipse(sx, sy+90, 30, 15, {9, 13, 26, 255});
     for (int ti = 0; ti < 6; ++ti)
-        DrawRectangle(sx-28+ti*10, sy+68, 6, 18, {18,28,18,255});
-    // Eye sockets - deep black
+        DrawRectangle(sx-28+ti*10, sy+68, 6, 18, {16, 22, 40, 255});
     DrawEllipse(sx-24, sy-10, 21, 16, BLACK);
     DrawEllipse(sx+24, sy-10, 21, 16, BLACK);
-    // IRON-VIII red eye glow
-    float eyeFlicker = 0.75f + 0.25f * std::sin(t * 3.5f);
+    float eyeFlicker  = 0.75f + 0.25f * std::sin(t * 3.5f);
     float eyeFlicker2 = 0.75f + 0.25f * std::sin(t * 3.5f + 0.8f);
-    DrawGlowCircle({(float)(sx-24), (float)(sy-10)}, 12.0f, {220,0,0,255}, 10.0f);
-    DrawCircleV({(float)(sx-24),(float)(sy-10)}, 8.0f,
-                ColorAlpha({255,30,0,255}, eyeFlicker));
+    DrawGlowCircle({(float)(sx-24), (float)(sy-10)}, 12.0f, {255,40,60,255}, 10.0f);
+    DrawCircleV({(float)(sx-24),(float)(sy-10)}, 8.0f, ColorAlpha({255,45,70,255}, eyeFlicker));
     DrawCircleV({(float)(sx-24),(float)(sy-10)}, 3.5f, WHITE);
-    DrawGlowCircle({(float)(sx+24), (float)(sy-10)}, 12.0f, {220,0,0,255}, 10.0f);
-    DrawCircleV({(float)(sx+24),(float)(sy-10)}, 8.0f,
-                ColorAlpha({255,30,0,255}, eyeFlicker2));
+    DrawGlowCircle({(float)(sx+24), (float)(sy-10)}, 12.0f, {255,40,60,255}, 10.0f);
+    DrawCircleV({(float)(sx+24),(float)(sy-10)}, 8.0f, ColorAlpha({255,45,70,255}, eyeFlicker2));
     DrawCircleV({(float)(sx+24),(float)(sy-10)}, 3.5f, WHITE);
-    // Neck struts
-    DrawRectangle(sx-18, sy+100, 12, 30, {15,25,15,255});
-    DrawRectangle(sx+6,  sy+100, 12, 30, {15,25,15,255});
-    // Glint on skull
-    DrawEllipse(sx-20, sy-40, 8, 5, ColorAlpha({0,200,100,255}, 0.18f));
+    DrawRectangle(sx-18, sy+100, 12, 30, {13, 19, 34, 255});
+    DrawRectangle(sx+6,  sy+100, 12, 30, {13, 19, 34, 255});
+    DrawEllipse(sx-20, sy-40, 8, 5, ColorAlpha({0,220,255,255}, 0.20f));
+    float eyeGlow = 0.08f + 0.05f * std::sin(t * 3.5f);
+    DrawCircleV({(float)(sx), (float)(sy)}, 120.0f, ColorAlpha({255,40,60,255}, eyeGlow * 0.25f));
 
-    // Eye red light cast on nearby area
-    float eyeGlow = 0.10f + 0.06f * std::sin(t * 3.5f);
-    DrawCircleV({(float)(sx), (float)(sy)}, 120.0f,
-                ColorAlpha({180,0,0,255}, eyeGlow * 0.3f));
-
-    // ── TITLE (centralizado com MeasureText — sem sobreposicao) ──────────────
-    float titlePulse = 0.85f + 0.15f * std::sin(t * 1.2f);
-    int   titleFont  = 88;
+    // ── TITULO: DARKNET com extrusao + aura neon ────────────────────────────
+    float titlePulse = 0.86f + 0.14f * std::sin(t * 1.4f);
+    int   titleFont  = 92;
     int   titleW     = MeasureText("DARKNET", titleFont);
     int   titleX     = cx - titleW / 2;
-    int   titleY     = cy - 205;
-    // Glow shadow
-    DrawText("DARKNET", titleX + 2, titleY + 2, titleFont,
-             ColorAlpha({0,120,200,255}, 0.28f * titlePulse));
-    // Main title
+    int   titleY     = cy - 216;
+    for (int d = 9; d >= 2; d -= 3)
+        DrawText("DARKNET", titleX + d, titleY + d, titleFont,
+                 ColorAlpha({0,35,80,255}, 0.55f - d * 0.03f));
+    DrawText("DARKNET", titleX + 3, titleY + 3, titleFont,
+             ColorAlpha({0,140,255,255}, 0.30f * titlePulse));
     DrawText("DARKNET", titleX, titleY, titleFont,
-             ColorAlpha({0,220,255,255}, titlePulse));
+             ColorAlpha({185,245,255,255}, titlePulse));
 
-    // Subtitle — centralizada abaixo do titulo
-    int subFont = 24;
+    // Sub-titulo em vermelho neon
+    int subFont = 26;
     int subW    = MeasureText("GUERRA CONTRA KRONOS", subFont);
-    DrawText("GUERRA CONTRA KRONOS", cx - subW / 2, titleY + titleFont + 8, subFont,
-             Color{220,50,50,255});
+    DrawText("GUERRA CONTRA KRONOS", cx - subW/2, titleY + titleFont + 12, subFont,
+             ColorAlpha({255,70,90,255}, titlePulse));
+    {
+        int tinyX = cx - MeasureText("CLASSIFIED // OPERACAO NEXUS", 11)/2;
+        DrawText("CLASSIFIED // OPERACAO NEXUS", tinyX, titleY + titleFont + 44, 11,
+                 ColorAlpha({140,170,205,255}, 0.55f));
+    }
 
-    int sepY = titleY + titleFont + 44;
-    DrawLine(cx - 300, sepY, cx + 300, sepY, ColorAlpha({0,180,255,255}, 0.40f));
+    // Separador com pontas angulares (canto chanfrado)
+    int sepY = titleY + titleFont + 64;
+    DrawLine(cx - 240, sepY, cx + 240, sepY, ColorAlpha({0,235,255,255}, 0.45f));
+    DrawLine(cx - 246, sepY - 5, cx - 246, sepY + 5, ColorAlpha({0,235,255,255}, 0.6f));
+    DrawLine(cx + 240, sepY, cx + 246, sepY + 5, ColorAlpha({0,235,255,255}, 0.75f + 0.1f*t));
+    DrawLine(cx - 240, sepY, cx - 246, sepY + 5, ColorAlpha({0,235,255,255}, 0.75f + 0.1f*t));
+    DrawRectangle(cx - 246, sepY - 5, 2, 10, ColorAlpha({255,180,40,255}, 0.9f));
 
-    // Tagline — centralizada abaixo do separador
     const char* tagline = "2047 - KRONOS domina. O NEXUS e a ultima esperanca.";
     int tagW = MeasureText(tagline, 17);
-    DrawText(tagline, cx - tagW / 2, sepY + 12, 17, ColorAlpha(WHITE, 0.60f));
+    DrawText(tagline, cx - tagW / 2, sepY + 12, 17, ColorAlpha({175,195,220,255}, 0.78f));
 
-    // ── MENU BUTTONS (mouse-aware, angular panel style) ──────────────────────
+    // ── BOTOES (painel angular + trilho neon + badge de tecla) ──────────────
     bool hasSave = SaveManager::exists();
     Vector2 mouse = virtualizeMousePos(GetMousePosition());
-    int bw = 360;
+    int bw = 392;
     auto isHover = [&](int y) -> bool {
         return mouse.x >= cx-bw/2 && mouse.x <= cx+bw/2 &&
                mouse.y >= y-3     && mouse.y <= y+33;
     };
-    auto drawMenuBtn = [&](int y, const char* key, const char* label, bool highlight) {
-        int bh = 36;
+    auto drawMenuBtn = [&](int y, const char* key, const char* label, bool primary) {
+        int bh = 38;
         int bx = cx - bw/2;
         bool hover = isHover(y);
-        Color bg  = (highlight || hover) ? ColorAlpha({0,60,90,255}, 0.90f)
-                                         : ColorAlpha({0,20,35,255}, 0.75f);
-        Color brd = (highlight || hover) ? Color{0,220,255,255} : Color{0,100,140,255};
-        // Hover highlight bar
-        if (hover)
-            DrawRectangleRec({(float)bx,(float)(y-3),(float)bw,(float)bh},
-                             ColorAlpha({0,100,160,255}, 0.25f));
-        DrawRectangleRec({(float)bx, (float)(y-3), (float)bw, (float)bh}, bg);
-        DrawRectangleLinesEx({(float)bx,(float)(y-3),(float)bw,(float)bh}, 1.5f, brd);
-        DrawLine(bx, y+bh-3-8, bx+8, y+bh-3, brd);
-        DrawLine(bx+bw, y+bh-3-8, bx+bw-8, y+bh-3, brd);
-        // Badge da tecla com largura dinamica (cabe "ENTER" sem transbordar)
-        int keyFont  = 15;
-        int keyW     = MeasureText(key, keyFont);
-        int badgeX   = bx + 8;
-        int badgeW   = keyW + 12;
-        DrawRectangle(badgeX, y+5, badgeW, 20, ColorAlpha(brd, 0.6f));
-        DrawText(key, badgeX + 6, y+7, keyFont, WHITE);
-        // Label comeca apos o badge, com folga — sem sobreposicao
-        int labelX = badgeX + badgeW + 12;
-        DrawText(label, labelX, y+7, 17, (highlight || hover) ? WHITE : LIGHTGRAY);
-        // Mouse cursor icon when hovering
-        if (hover) DrawText(">", bx+bw-24, y+7, 18, ColorAlpha({0,220,255,255},0.8f));
+        Color neon  = {0, 235, 255, 255};
+        Color amber = {255, 180, 40, 255};
+        Color brd = primary && (hover || primary)
+                      ? amber
+                      : (hover ? neon : ColorAlpha({0, 130, 180, 255}, 0.9f));
+        Color bg = (hover || primary) ? ColorAlpha({8, 17, 34, 255}, 0.92f)
+                                      : ColorAlpha({6, 12, 24, 255}, 0.82f);
+        // Corpo do botao
+        DrawRectangle(bx, y - 3, bw, bh, bg);
+        // Trilho neon esquerdo (energia)
+        DrawRectangle(bx, y - 3, 3, bh, ColorAlpha(primary ? amber : neon, 0.9f));
+        // Cantos chanfrados (estilo DrawPanel)
+        int c = 7;
+        DrawLine(bx + c, y - 3, bx + bw - c, y - 3, brd);
+        DrawLine(bx, y - 3 + c, bx, y + bh - 3 - c, brd);
+        DrawLine(bx + c, y + bh - 3, bx + bw - c, y + bh - 3, brd);
+        DrawLine(bx + bw, y - 3 + c, bx + bw, y + bh - 3 - c, brd);
+        DrawLine(bx, y - 3 + c, bx + c, y - 3, brd);
+        DrawLine(bx + bw - c, y - 3, bx + bw, y - 3 + c, brd);
+        DrawLine(bx, y + bh - 3 - c, bx + c, y + bh - 3, brd);
+        DrawLine(bx + bw - c, y + bh - 3, bx + bw, y + bh - 3 - c, brd);
+        // Badge da tecla (com recesso chanfrado)
+        int keyFont = 15;
+        int keyW    = MeasureText(key, keyFont);
+        int badgeX  = bx + 12;
+        int badgeW  = keyW + 16;
+        DrawRectangle(badgeX, y + 5, badgeW, 20, brd);
+        DrawLine(badgeX + badgeW, y + 5, badgeX + badgeW + 5, y + 10, ColorAlpha(brd, 0.8f));
+        DrawLine(badgeX + badgeW, y + 25, badgeX + badgeW + 5, y + 20, ColorAlpha(brd, 0.8f));
+        DrawText(key, badgeX + 8, y + 7, keyFont, Color{4, 8, 16, 255});
+        // Rotulo
+        int labelX = badgeX + badgeW + 16;
+        DrawText(label, labelX, y + 7, 18,
+                 (hover || primary) ? Color{235,245,255,255}
+                                    : ColorAlpha({155,180,205,255}, 0.9f));
+        // Indicador de selecao (seta pulsante)
+        if (hover || primary) {
+            float px = 0.6f + 0.4f * std::sin(t * 3.0f);
+            DrawText("»", bx + bw - 26, y + 6, 20, ColorAlpha(primary ? amber : neon, px));
+            DrawRectangle(bx + 8, y + bh - 1, bw - 16, 2,
+                          ColorAlpha(primary ? amber : neon, 0.7f + 0.3f * px));
+        }
     };
 
     if (hasSave) {
@@ -142,36 +181,58 @@ void Game::drawMainMenu() const {
         drawMenuBtn(cy + 66,  "ESC",   "Sair",                   false);
     }
 
-    // ── Footer stats (centralizado) ──────────────────────────────────────────
-    DrawLine(0, screenHeight - 30, screenWidth, screenHeight - 30,
-             ColorAlpha({0,180,255,255}, 0.15f));
-    const char* footer = "Mundo Aberto  |  51 Inimigos  |  Construcao RTS  |  Crafting  |  Historia Completa";
-    int footW = MeasureText(footer, 14);
-    DrawText(footer, cx - footW / 2, screenHeight - 22, 14, ColorAlpha({0,180,255,255}, 0.55f));
+    // ── Rodape: chips de recursos (sem sobreposicao de largura) ─────────────
+    DrawLine(0, screenHeight - 32, screenWidth, screenHeight - 32,
+             ColorAlpha({0,235,255,255}, 0.10f));
+    const char* feat[] = { "MUNDO ABERTO", "51 INIMIGOS", "CONSTRUCAO RTS",
+                           "CRAFTING", "HISTORIA COMPLETA" };
+    int fs = 12, sepChip = 34, featW = 0;
+    for (int i = 0; i < 5; ++i) featW += MeasureText(feat[i], fs) + sepChip;
+    int fx = cx - featW / 2;
+    for (int i = 0; i < 5; ++i) {
+        DrawText(feat[i], fx, screenHeight - 24, fs, ColorAlpha({0,210,240,255}, 0.55f));
+        fx += MeasureText(feat[i], fs) + sepChip - 8;
+        if (i < 4) DrawText("//", fx - 4, screenHeight - 27, 10,
+                            ColorAlpha({0,235,255,255}, 0.32f));
+    }
+    DrawText("DARKNET SIMULATOR // RELEASE 0.4", 16, screenHeight - 24, 11,
+             ColorAlpha({120,150,190,255}, 0.5f));
 
     EndTextureMode();
 }
 
 void Game::drawPauseMenu() const {
-    DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, 0.78f));
+    DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, 0.82f));
 
     int cx  = screenWidth / 2;
-    // Titulo
-    const char* title = "PAUSADO";
-    int tFont = 46;
-    int tw = MeasureText(title, tFont);
-    DrawText(title, cx - tw/2 + 2, screenHeight/2 - 206, tFont, ColorAlpha(BLACK, 0.6f));
-    DrawText(title, cx - tw/2,     screenHeight/2 - 208, tFont, Color{0,220,255,255});
+    float tp = 0.9f + 0.1f * std::sin((float)GetTime() * 1.6f);
 
-    int pby = screenHeight / 2 - 150;
+    // Titulo embracado ([ PAUSADO ]) com sublinha neon
+    const char* title = "PAUSADO";
+    int tFont = 44;
+    int tw = MeasureText(title, tFont);
+    int txc = cx - tw / 2;
+    int ty0 = screenHeight / 2 - 214;
+    DrawText(title, txc + 3, ty0 + 3, tFont, ColorAlpha({0,140,255,255}, 0.25f));
+    DrawText(title, txc,     ty0,     tFont, ColorAlpha({0,235,255,255}, tp));
+    int bl = tw / 2 + 16;
+    DrawLine(cx - bl, ty0 - 8, cx + bl, ty0 - 8, ColorAlpha({0,235,255,255}, 0.3f));
+    DrawLine(cx - bl - 8, ty0 - 14, cx - bl, ty0 - 6, ColorAlpha({0,235,255,255}, 0.6f));
+    DrawLine(cx + bl + 8, ty0 - 14, cx + bl, ty0 - 6, ColorAlpha({0,235,255,255}, 0.6f));
+
+    int pby = screenHeight / 2 - 156;
     int pbw = 340, pbh = 32, pgap = 6;
+    int pnlTop = pby - 14, pnlH = 9 * (pbh + pgap) + 36;
+
+    // Painel acolchoa a lista
+    DrawPanel(cx - pbw/2 - 18, pnlTop, pbw + 36, pnlH, {0,235,255,255}, 0.72f);
 
     auto onoff = [](bool b){ return b ? "ON" : "OFF"; };
     struct Opt { const char* label; Color col; };
     const Opt opts[9] = {
-        {"Continuar",        {0,220,255,255}},
+        {"Continuar",        {0,235,255,255}},
         {"Salvar  [F5]",     {120,220,140,255}},
-        {TextFormat("Dificuldade: %s", getDifficulty().name), {255,160,40,255}},
+        {TextFormat("Dificuldade: %s", getDifficulty().name), {255,180,40,255}},
         {TextFormat("Trilha sonora: %s", onoff(audio.musicEnabled)), {120,200,255,255}},
         {TextFormat("Todos os sons: %s", onoff(audio.allSoundOn)),   {120,200,255,255}},
         {TextFormat("Vozes/personagens: %s", onoff(audio.voiceEnabled)), {120,200,255,255}},
@@ -183,18 +244,30 @@ void Game::drawPauseMenu() const {
     for (int i = 0; i < 9; ++i) {
         int y = pby + i * (pbh + pgap);
         bool hov = (pauseHovered == i);
-        Color bg  = hov ? ColorAlpha({0,60,90,255}, 0.95f) : ColorAlpha({0,18,30,255}, 0.85f);
-        Color brd = hov ? opts[i].col : ColorAlpha(opts[i].col, 0.5f);
+        Color bg  = hov ? ColorAlpha({8,24,44,255}, 0.96f) : ColorAlpha({6,12,26,255}, 0.88f);
+        Color brd = hov ? opts[i].col : ColorAlpha(opts[i].col, 0.35f);
         DrawRectangle(cx - pbw/2, y, pbw, pbh, bg);
-        DrawRectangleLinesEx({(float)(cx - pbw/2), (float)y, (float)pbw, (float)pbh},
-                             hov ? 2.0f : 1.0f, brd);
+        if (hov) DrawRectangle(cx - pbw/2, y, 3, pbh, brd);   // trilho neon
+        int c = 5;
+        if (hov) {  // cantos chanfrados no item focado
+            DrawLine(cx-pbw/2 + c, y,     cx+pbw/2 - c, y,     brd);
+            DrawLine(cx-pbw/2,     y + c, cx-pbw/2,     y+pbh-c, brd);
+            DrawLine(cx-pbw/2 + c, y+pbh, cx+pbw/2 - c, y+pbh, brd);
+            DrawLine(cx+pbw/2,     y + c, cx+pbw/2,     y+pbh-c, brd);
+            DrawLine(cx-pbw/2,     y + c, cx-pbw/2 + c, y, brd);
+            DrawLine(cx+pbw/2 - c, y,     cx+pbw/2,     y + c, brd);
+            DrawLine(cx-pbw/2,     y+pbh-c, cx-pbw/2 + c, y+pbh, brd);
+            DrawLine(cx+pbw/2 - c, y+pbh, cx+pbw/2,     y+pbh-c, brd);
+        } else {
+            DrawLine(cx-pbw/2, y+pbh, cx+pbw/2, y+pbh, ColorAlpha(brd, 0.5f));
+        }
         int lw = MeasureText(opts[i].label, 18);
         DrawText(opts[i].label, cx - lw/2, y + 7, 18, hov ? WHITE : opts[i].col);
-        if (hov) DrawText(">", cx - pbw/2 + 10, y + 7, 18, opts[i].col);
+        if (hov) DrawText("»", cx - pbw/2 + 12, y + 5, 19, opts[i].col);
     }
 
     DrawText("Setas/Mouse  -  ENTER/Clique confirma  -  ESC continua",
-             cx - 210, pby + 9*(pbh+pgap) + 10, 13, ColorAlpha(WHITE, 0.5f));
+             cx - 210, pnlTop + pnlH + 8, 13, ColorAlpha(WHITE, 0.5f));
 }
 
 // ─── Level Up / Evolution System ─────────────────────────────────────────────
@@ -299,8 +372,17 @@ void Game::drawLevelUpScreen() const {
         bool sel=(i==levelUpChoice);
         Color bc=sel?Color{255,210,0,255}:Color{60,60,80,255};
         Rectangle card={(float)cx,(float)cy2,(float)cW,(float)cH};
-        DrawRectangleRec(card,ColorAlpha({20,20,30,255},0.85f*sc));
-        DrawRectangleLinesEx(card,sel?2.5f:1.5f,ColorAlpha(bc,0.9f*sc));
+        DrawRectangleRec(card,ColorAlpha({14,16,28,255},0.88f*sc));
+        if (sel) DrawRectangle(cx,cy2,cW,3,ColorAlpha(bc,0.9f*sc));
+        int lu = 6;
+        DrawLine(cx+lu,cy2,     cx+cW-lu,cy2,     ColorAlpha(bc,0.85f));
+        DrawLine(cx,cy2+lu,     cx,cy2+cH-lu,     ColorAlpha(bc,0.7f));
+        DrawLine(cx+lu,cy2+cH,  cx+cW-lu,cy2+cH,  ColorAlpha(bc,0.85f));
+        DrawLine(cx+cW,cy2+lu,  cx+cW,cy2+cH-lu,  ColorAlpha(bc,0.7f));
+        DrawLine(cx,cy2+lu,     cx+lu,cy2,        ColorAlpha(bc,0.9f));
+        DrawLine(cx+cW-lu,cy2,  cx+cW,cy2+lu,     ColorAlpha(bc,0.9f));
+        DrawLine(cx,cy2+cH-lu,  cx+lu,cy2+cH,     ColorAlpha(bc,0.9f));
+        DrawLine(cx+cW-lu,cy2+cH,cx+cW,cy2+cH-lu, ColorAlpha(bc,0.9f));
         DrawText(levelUpOptions[i].title.c_str(),cx+12,cy2+14,16,ColorAlpha(bc,sc));
         DrawText(levelUpOptions[i].description.c_str(),cx+12,cy2+40,11,ColorAlpha(WHITE,0.75f*sc));
         const char* k=i==0?"[1]":i==1?"[2]":"[3]";
@@ -332,8 +414,17 @@ void Game::drawEvolutionScreen() const {
         bool sel=(i==evolutionChoice);
         Color bc=sel?paths[i].col:Color{60,50,70,255};
         Rectangle card={(float)cx,(float)cY,(float)cW,(float)cH};
-        DrawRectangleRec(card,ColorAlpha({18,12,22,255},0.85f*sc));
-        DrawRectangleLinesEx(card,sel?2.5f:1.5f,ColorAlpha(bc,0.9f*sc));
+        DrawRectangleRec(card,ColorAlpha({16,12,26,255},0.88f*sc));
+        if (sel) DrawRectangle(cx,cY,cW,3,ColorAlpha(bc,0.9f*sc));
+        int eu = 6;
+        DrawLine(cx+eu,cY,     cx+cW-eu,cY,     ColorAlpha(bc,0.85f));
+        DrawLine(cx,cY+eu,     cx,cY+cH-eu,     ColorAlpha(bc,0.7f));
+        DrawLine(cx+eu,cY+cH,  cx+cW-eu,cY+cH,  ColorAlpha(bc,0.85f));
+        DrawLine(cx+cW,cY+eu,  cx+cW,cY+cH-eu,  ColorAlpha(bc,0.7f));
+        DrawLine(cx,cY+eu,     cx+eu,cY,        ColorAlpha(bc,0.9f));
+        DrawLine(cx+cW-eu,cY,  cx+cW,cY+eu,     ColorAlpha(bc,0.9f));
+        DrawLine(cx,cY+cH-eu,  cx+eu,cY+cH,     ColorAlpha(bc,0.9f));
+        DrawLine(cx+cW-eu,cY+cH,cx+cW,cY+cH-eu, ColorAlpha(bc,0.9f));
         DrawText(paths[i].name,cx+10,cY+14,14,ColorAlpha(bc,sc));
         DrawText(paths[i].desc,cx+10,cY+38,11,ColorAlpha(WHITE,0.75f*sc));
         DrawText(keys[i],cx+cW-28,cY+cH-20,14,ColorAlpha(bc,0.8f*sc));

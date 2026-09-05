@@ -165,6 +165,7 @@ private:
     float    cameraHeight = 820.0f;   // altura da câmera acima do plano
     float    cameraDistY  = 650.0f;   // recuo no eixo Z (profundidade isométrica)
     float    cameraZoom   = 1.0f;
+    float    camPunch     = 0.0f;   // "camera kick" de zoom: sobe no cast/impacto e decai
     float    worldClock   = 0.32f;    // ciclo dia/noite (0=meia-noite, 0.5=meio-dia)
     int      bossPowersAbsorbed = 0;  // poderes de boss absorvidos (estilo V Rising)
     bool     victoryReported = false; // reset por partida (era static de funcao = bug)
@@ -205,6 +206,11 @@ private:
         shakeIntensity = intensity; shakeTimer = dur;
     }
 
+    // Indicador direcional de dano — aponta para QUEM feriu o jogador (shooter juice)
+    Vector2 hurtDir      = {0, 0};   // vetor unitario (mundo) fonte -> player
+    float   hurtDirTimer = 0.0f;     // tempo restante do indicador na borda da tela
+    void    noteHurtDir(Vector2 src);
+
     // Click-to-move target
     Vector2 moveTarget        = {0, 0};
     bool    hasTarget         = false;
@@ -243,6 +249,9 @@ private:
 
     // ── Juice de combate: hit-stop + decalques de chão (sangue/faíscas) ───────
     float hitStopTimer = 0.0f;   // congela o mundo por alguns frames no impacto
+    // Alvo do aim assist: posição do inimigo "grudado" no cursor para o retículo
+    // do HUD pintar o lock. {-1,-1} = sem alvo.
+    Vector2 hudAimLock = {-1.0f, -1.0f};
     struct GroundDecal {
         Vector2 pos; Color color; float life; float maxLife; float size; int type; // 0=sangue 1=queimado
     };
@@ -282,6 +291,12 @@ private:
     void drawObjectivesPanel() const;
     void drawCharacterPanel()  const;
     void drawSkillsPanel()     const;
+
+    // Hack Tree (skill tree de perks)
+    void updateSkillTreePanel();
+    void drawSkillTreePanel()  const;
+    void autoSpendSkillPoints();
+    bool buyPerk(int idx);
     static void DrawPanel(int x, int y, int w, int h, Color border, float alpha = 0.82f);
     static void DrawBarH(int x, int y, int w, int h, float pct, Color fill, Color bg);
 
@@ -313,6 +328,8 @@ private:
     bool    showInventory     = false;
     bool    showEquipment     = false;
     bool    showQuestLog      = false;
+    bool    showSkillTree     = false;
+    int     perkCursor        = 0;
     bool    paused            = false;
     mutable int pauseHovered  = -1;   // opcao destacada no menu de pause
     float   dyingCryCooldown  = 0.0f; // evita spam do grito de morte
@@ -383,7 +400,8 @@ private:
     Shader m_shWorld{};
     bool   m_worldLit = false;
     int    m_locLightDir = -1, m_locLightCol = -1, m_locAmbCol = -1, m_locCamPos = -1,
-           m_locFogCol = -1, m_locFogStart = -1, m_locFogEnd = -1, m_locRim = -1;
+           m_locFogCol = -1, m_locFogStart = -1, m_locFogEnd = -1, m_locRim = -1,
+           m_locSpecK = -1, m_locWorldPer = -1;
     void   initWorldShader();
     void   applyWorldShader(Model& m) const;   // liga o shader no material do modelo
     void   updateWorldShaderUniforms();
@@ -463,6 +481,7 @@ private:
     bool isBlocked(Vector2 pos) const;   // parede do grid OU estrutura de chunk no infinito
     void clearBlockingAt(Vector2 pos, float radius);  // fallback do portal: remove colisao de cenario num raio
     void      buildOpenWorldScenery();
+    void      placeBaseShops();   // barracas/lojas dos NPCs da zona segura (tipos 23-27)
 
     // Zona Segura / Base — refugio sem inimigos para preparar e construir.
     // Voce nasce e renasce aqui; inimigos nao spawnam nem perseguem dentro dela.

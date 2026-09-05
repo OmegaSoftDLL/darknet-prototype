@@ -258,15 +258,28 @@ void Game::drawPhaseFade() const {
     float a = (t > 0.5f) ? (t - 0.5f) * 2.0f : t * 2.0f; // sobe e desce
     a = 0.30f + a * 0.70f;
     DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, a));
-    int tw = MeasureText(owFadeText.c_str(), 36);
-    DrawText(owFadeText.c_str(), screenWidth/2 - tw/2, screenHeight/2 - 26, 36,
-             ColorAlpha(Color{0,220,255,255}, a + 0.2f));
+    // Painel condensado p/ o texto nao ser engolido pelas fases escuras
     const char* obj = owBossPhase
         ? TextFormat("OBJETIVO: %d abates e derrotar o CHEFE", owPhaseGoal)
         : TextFormat("OBJETIVO: %d abates para abrir o portal", owPhaseGoal);
+    int tw = MeasureText(owFadeText.c_str(), 36);
     int ow2 = MeasureText(obj, 16);
-    DrawText(obj, screenWidth/2 - ow2/2, screenHeight/2 + 22, 16,
-             ColorAlpha(WHITE, a));
+    int panW = (tw > ow2 ? tw : ow2) + 56;
+    int panX = screenWidth/2 - panW/2;
+    int panY = screenHeight/2 - 52;
+    float pa = 0.35f + a * 0.55f;
+    DrawRectangle(panX, panY, panW, 104, ColorAlpha(BLACK, pa));
+    DrawRectangleLinesEx({(float)panX, (float)panY, (float)panW, 104.0f},
+                         1.5f, ColorAlpha(Color{0,200,255,255}, 0.4f + a * 0.3f));
+    float ta = 0.7f + a * 0.3f;                 // texto nunca fica abaixo de ~70%
+    DrawText(owFadeText.c_str(), screenWidth/2 - tw/2 + 2, panY + 5, 36,
+             ColorAlpha(BLACK, ta));
+    DrawText(owFadeText.c_str(), screenWidth/2 - tw/2, panY + 3, 36,
+             ColorAlpha(Color{0,230,255,255}, ta));
+    DrawText(obj, screenWidth/2 - ow2/2 + 1, panY + 82, 16,
+             ColorAlpha(BLACK, ta));
+    DrawText(obj, screenWidth/2 - ow2/2, panY + 81, 16,
+             ColorAlpha(WHITE, ta));
 }
 
 void Game::transitionToZone(ZoneID dest) {

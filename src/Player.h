@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include <vector>
 #include <string>
+#include <cstdint>
 #include "Item.h"
 #include "Skill.h"
 #include "Equipment.h"
@@ -105,6 +106,8 @@ public:
     float overloadTimer = 0.0f;
     float shieldTimer   = 0.0f;
     bool  inSafeRefuge  = false;   // setado pelo Game: invulnerável dentro da zona segura
+    bool  reviveReady   = true;    // Protocolo Imortal (perk) — 1 uso por 60s
+    float reviveTimer   = 0.0f;
 
     bool isOverloaded() const { return overloadTimer > 0.0f; }
     bool isShielded()   const { return shieldTimer   > 0.0f; }
@@ -141,6 +144,10 @@ public:
     // (addXP grande) so dava 1 ponto.
     int   unclaimedLevels = 0;
     std::string lastPassive;
+
+    // ── Hack Tree (skill tree de perks) ──
+    int      skillPoints = 0;   // 1 por level-up; gasta na arvore (tecla X)
+    uint32_t perkMask    = 0;   // bits dos perks comprados (SkillTree::bit)
 
     // Player speech / dialogue
     PlayerSpeech speech;
@@ -188,6 +195,8 @@ public:
     void  addXP(int amount);   // acumula em unclaimedLevels
     void  takeDamage(float amount);
     void  increaseBaseMaxHP(float amount);
+    void  increaseBaseDefense(float amount);
+    void  refreshSkillVectors();   // recalcula dano/alcance/cooldown das skills (idempotente)
     void  equipItem(const Equipment& equip);
     void  drawEquipment() const;
     float getEffectiveDamage() const;
@@ -207,7 +216,10 @@ private:
     float baseDefense      = 8.0f;   // defesa base da classe (armadura soma por cima)
     bool  moveRequested    = false;  // input recebido neste frame (game feel)
 
-    std::vector<float> baseSkillDamage; // dano base das skills (p/ aplicar skillPower idempotente)
+    std::vector<float> baseSkillDamage;  // dano base das skills (p/ aplicar skillPower idempotente)
+    std::vector<float> baseSkillRange;    // alcance base das skills (perks recomputam dos originais)
+    std::vector<float> baseSkillCool;     // cooldown base das skills (idem)
+    float cdEvoMult = 1.0f;               // reducoes de cooldown por evolucao (lv 10/25/40/60)
 
     // Render de corpo por classe (formatos distintos)
     Color accentNow() const;  // accent considerando overload/escudo

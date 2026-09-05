@@ -1,7 +1,9 @@
 #include "SaveManager.h"
+#include "SkillTree.h"
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <cmath>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
@@ -114,6 +116,10 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
     fprintf(f, "evolutionPath %d\n", static_cast<int>(player.evolutionPath));
     fprintf(f, "evolutionTier %d\n", player.evolutionTier);
 
+    // Hack Tree (skill tree de perks)
+    fprintf(f, "skillPoints %d\n", player.skillPoints);
+    fprintf(f, "perkMask %d\n",    player.perkMask);
+
     // Stats
     fprintf(f, "totalKills %d\n",    totalKills > 0 ? totalKills : player.totalKills);
     fprintf(f, "totalDeaths %d\n",   totalDeaths);
@@ -195,6 +201,18 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"zone")==0)     { fscanf(f," %d",&zoneInt); zone=static_cast<ZoneID>(zoneInt); }
         else if (strcmp(key,"evolutionPath")==0){ int ep=0; fscanf(f," %d",&ep); player.evolutionPath=static_cast<EvolutionPath>(ep); hasEvolution=true; }
         else if (strcmp(key,"evolutionTier")==0){ fscanf(f," %d",&player.evolutionTier); }
+        else if (strcmp(key,"skillPoints")==0){
+            int sp = 0; fscanf(f," %d",&sp);
+            if (sp < 0) sp = 0;
+            if (sp > 4096) sp = 4096;
+            player.skillPoints = sp;
+        }
+        else if (strcmp(key,"perkMask")==0){
+            int pm = 0; fscanf(f," %d",&pm);
+            if (pm < 0) pm = 0;
+            if (pm > (1 << SkillTree::PERK_COUNT) - 1) pm = (1 << SkillTree::PERK_COUNT) - 1;
+            player.perkMask = static_cast<uint32_t>(pm);
+        }
         else if (strcmp(key,"weaponId")==0){
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);
             auto eq = resolveEquipById(buf);
@@ -270,6 +288,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         player.loadSavedProgress(static_cast<CharacterClass>(savedClass), bMax, bDmg, bSpd, bRng, bDef);
         player.health = (keepHealth > 0.0f && keepHealth <= player.maxHealth) ? keepHealth : player.maxHealth;
     }
+    player.refreshSkillVectors();   // perks carregados: reaplica mods de skill
     return true;
 }
 
@@ -313,45 +332,73 @@ SaveSlotInfo SaveManager::getSlotInfo(int slot) {
 }
 
 void SaveManager::renderSaveSlots(int screenW, int screenH, int highlightSlot) {
-    Color borderCol = {0,200,255,255};
-    int panW=500, panH=280;
+    Color neon = {0,235,255,255};
+    Color amber = {255,180,40,255};
+    int panW=540, panH=300;
     int panX=(screenW-panW)/2, panY=(screenH-panH)/2;
 
-    DrawRectangle(panX,panY,panW,panH,ColorAlpha(Color{5,8,18,255},0.96f));
-    DrawRectangleLinesEx({(float)panX,(float)panY,(float)panW,(float)panH},2.f,borderCol);
+    // Painel chanfrado (cyberpunk)
+    DrawRectangle(panX,panY,panW,panH,ColorAlpha(Color{7,13,28,255},0.97f));
+    int cc=10;
+    DrawLine(panX+cc,panY,     panX+panW-cc,panY,     neon);
+    DrawLine(panX,   panY+cc,  panX,   panY+panH-cc,  neon);
+    DrawLine(panX+cc,panY+panH,panX+panW-cc,panY+panH, neon);
+    DrawLine(panX+panW,panY+cc,panX+panW,panY+panH-cc,neon);
+    DrawLine(panX,   panY+cc,  panX+cc,panY,     neon);
+    DrawLine(panX+panW-cc,panY,panX+panW,panY+cc,neon);
+    DrawLine(panX,   panY+panH-cc,panX+cc,panY+panH, neon);
+    DrawLine(panX+panW-cc,panY+panH,panX+panW,panY+panH-cc, neon);
+    // Topo pulsante
+    DrawRectangle(panX,panY,panW,2,ColorAlpha(neon,0.6f+0.4f*std::sin((float)GetTime()*1.7f)));
 
-    const char* t = "[ SELECIONAR SAVE ]";
-    DrawText(t, panX+(panW-MeasureText(t,18))/2, panY+10, 18, borderCol);
-    DrawLine(panX+10,panY+34,panX+panW-10,panY+34,ColorAlpha(borderCol,0.3f));
+    const char* t = "SELECIONAR SAVE";
+    int tFont=20, tw=MeasureText(t,tFont);
+    DrawText(t, panX+(panW-tw)/2, panY+12, tFont, ColorAlpha(neon,0.95f));
+    DrawLine(panX+14,panY+40,panX+panW-14,panY+40,ColorAlpha(neon,0.35f));
+    DrawRectangle(panX+panW/2-3,panY+37,6,6,ColorAlpha(amber,0.9f));
 
     for (int s=0;s<SAVE_SLOTS;++s) {
         SaveSlotInfo info = getSlotInfo(s);
-        int sy = panY + 44 + s*72;
+        int sy = panY + 50 + s*74;
         bool sel = (s==highlightSlot);
 
-        Color bg  = sel ? ColorAlpha(Color{0,50,100,255},0.9f) : ColorAlpha(Color{10,16,30,255},0.7f);
-        DrawRectangle(panX+10, sy, panW-20, 64, bg);
-        DrawRectangleLinesEx({(float)(panX+10),(float)sy,(float)(panW-20),64.f},
-                              sel?2.f:1.f, sel?borderCol:ColorAlpha(WHITE,0.25f));
+        Color bg = sel ? Color{10,24,46,255} : Color{9,15,32,255};
+        DrawRectangle(panX+12, sy, panW-24, 66, ColorAlpha(bg, sel?0.94f:0.72f));
+        DrawRectangle(panX+12, sy, 3, 66, ColorAlpha(sel?amber:neon, sel?1.0f:0.4f));
+        int c2=6;
+        Color brd = sel ? neon : ColorAlpha(neon,0.28f);
+        DrawLine(panX+12+c2,sy,     panX+panW-12-c2,sy,     brd);
+        DrawLine(panX+12+c2,sy+66,  panX+panW-12-c2,sy+66,  brd);
+        if (sel) {
+            float p=0.5f+0.5f*std::sin((float)GetTime()*3.5f);
+            DrawLine(panX+12,sy,  panX+12+c2,sy,    ColorAlpha(neon,p));
+            DrawLine(panX+12,sy,  panX+12,sy+c2,    ColorAlpha(neon,p));
+            DrawLine(panX+panW-12-c2,sy, panX+panW-12,sy, ColorAlpha(neon,p));
+            DrawLine(panX+panW-12,sy,   panX+panW-12,sy+c2, ColorAlpha(neon,p));
+            DrawLine(panX+12,sy+66-c2, panX+12,sy+66, ColorAlpha(neon,p));
+            DrawLine(panX+12,sy+66, panX+12+c2,sy+66, ColorAlpha(neon,p));
+            DrawLine(panX+panW-12,sy+66-c2, panX+panW-12,sy+66, ColorAlpha(neon,p));
+            DrawLine(panX+panW-12-c2,sy+66, panX+panW-12,sy+66, ColorAlpha(neon,p));
+        }
 
-        DrawText(TextFormat("SLOT %d", s+1), panX+20, sy+6, 14, sel?WHITE:ColorAlpha(WHITE,0.7f));
+        DrawText(TextFormat("SLOT %d", s+1), panX+24, sy+7, 15,
+                 sel ? Color{235,245,255,255} : ColorAlpha({170,190,215,255},0.85f));
 
         if (info.exists) {
             DrawText(TextFormat("Level %d  |  %d kills  |  %.0f min",
                      info.playerLevel, info.totalKills, info.playMinutes),
-                     panX+20, sy+26, 11, ColorAlpha(Color{0,200,255,255},0.9f));
-            DrawText(info.saveDate.c_str(), panX+20, sy+44, 10, ColorAlpha(WHITE,0.45f));
+                     panX+24, sy+28, 12, ColorAlpha(neon,0.92f));
+            DrawText(info.saveDate.c_str(), panX+24, sy+48, 11, ColorAlpha({140,165,195,255},0.6f));
         } else {
-            DrawText("--- vazio ---", panX+20, sy+28, 12, ColorAlpha(WHITE,0.3f));
+            DrawText("--- vazio ---", panX+24, sy+30, 13, ColorAlpha({150,170,195,255},0.4f));
         }
 
-        // Delete hint
         if (info.exists && sel)
-            DrawText("[DEL] apagar", panX+panW-130, sy+46, 10, ColorAlpha(Color{220,60,60,255},0.7f));
+            DrawText("[DEL] apagar", panX+panW-140, sy+48, 11, ColorAlpha({255,90,90,255},0.85f));
     }
 
-    DrawText("[1/2/3] escolher  [ENTER] carregar  [ESC] voltar",
-             panX+10, panY+panH-22, 11, ColorAlpha(WHITE,0.45f));
+    DrawText("[1/2/3] escolher   [ENTER] carregar   [ESC] voltar",
+             panX+12, panY+panH-24, 12, ColorAlpha({170,190,215,255},0.55f));
 }
 
 // ─── Legacy ──────────────────────────────────────────────────────────────────

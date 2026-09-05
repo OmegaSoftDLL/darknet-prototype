@@ -31,6 +31,8 @@ void Game::initWorldShader() {
     m_locFogStart  = GetShaderLocation(m_shWorld, "fogStart");
     m_locFogEnd    = GetShaderLocation(m_shWorld, "fogEnd");
     m_locRim       = GetShaderLocation(m_shWorld, "rimStrength");
+    m_locSpecK     = GetShaderLocation(m_shWorld, "specularK");
+    m_locWorldPer  = GetShaderLocation(m_shWorld, "worldPeriod");
     m_worldLit = true;
     TraceLog(LOG_INFO, "WORLDLIT: iluminacao 3D ATIVA");
 }
@@ -64,6 +66,12 @@ void Game::updateWorldShaderUniforms() {
     float sdk = 0.30f + (1.0f - lightSystem.ambientDark) * 0.50f;
     Vector3 fog = { skc.r/255.0f * sdk, skc.g/255.0f * sdk, skc.b/255.0f * sdk };
     float fs = 900.0f, fe = 2600.0f, rim = 0.30f;
+    // especular sutil: so o suficiente para metal/lataria nunca ficar emba?ado
+    float sk = 0.28f;
+    // period = tamanho caracteristico do mundo (open-world: 950 do grid urbano;
+    // mapa fixo: os tiles nao tem grid, usa 480). A fbm gera manchas coerentes
+    // e SEM repeticao visivel a cada chunk.
+    float per = openWorldMode && currentZone == ZoneID::LARuins ? 950.0f : 480.0f;
     SetShaderValue(m_shWorld, m_locLightDir, &ld,   SHADER_UNIFORM_VEC3);
     SetShaderValue(m_shWorld, m_locLightCol, &lcV,  SHADER_UNIFORM_VEC3);
     SetShaderValue(m_shWorld, m_locAmbCol,   &ambV, SHADER_UNIFORM_VEC3);
@@ -72,6 +80,8 @@ void Game::updateWorldShaderUniforms() {
     SetShaderValue(m_shWorld, m_locFogStart, &fs,   SHADER_UNIFORM_FLOAT);
     SetShaderValue(m_shWorld, m_locFogEnd,   &fe,   SHADER_UNIFORM_FLOAT);
     SetShaderValue(m_shWorld, m_locRim,      &rim,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld, m_locSpecK,    &sk,   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld, m_locWorldPer, &per,  SHADER_UNIFORM_FLOAT);
 }
 
 void Game::initPostFX() {
@@ -110,7 +120,7 @@ void Game::initPostFX() {
     // Com tonemap no fim da cadeia a cena NAO precisa mais ser desenhada clara:
     // exposicao perto de 1.0 + contraste alto = pretos com pe e ilhas de luz
     // (o visual do genero), em vez do cinza chapado de antes.
-    float bs = 0.95f, ex = 1.06f, sat = 1.22f, con = 1.16f;
+    float bs = 1.15f, ex = 1.06f, sat = 1.28f, con = 1.16f;
     SetShaderValue(m_shGrade, m_locBloomStr,   &bs,  SHADER_UNIFORM_FLOAT);
     SetShaderValue(m_shGrade, m_locExposure,   &ex,  SHADER_UNIFORM_FLOAT);
     SetShaderValue(m_shGrade, m_locSaturation, &sat, SHADER_UNIFORM_FLOAT);

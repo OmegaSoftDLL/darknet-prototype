@@ -1,6 +1,7 @@
 // Game_Bot.cpp — decisoes do bot/autotest (extraido de Game::handleInput).
 // Mesma classe Game.
 #include "Game.h"
+#include "SkillTree.h"
 #include <raylib.h>
 #include <raymath.h>
 #include <cmath>
@@ -159,6 +160,16 @@ void Game::updateBotControl(float dt) {
             float dmgL = player.getEffectiveDamage() + player.skills[0].damage;
             projectiles.emplace_back(player.position, botAimDir, dmgL, 550.0f, 620.0f,
                                      Color{0,255,255,255});
+            int spread = 1 + SkillTree::statsFor(player.perkMask).laserBeams;
+            float baseA = std::atan2(botAimDir.y, botAimDir.x);
+            for (int k = 1; k <= spread; ++k) {
+                for (int s : {-1, 1}) {
+                    float a = baseA + s * 0.12f * (float)k;
+                    Vector2 d = {std::cos(a), std::sin(a)};
+                    projectiles.emplace_back(player.position, d, dmgL * 0.6f, 550.0f, 560.0f,
+                                             Color{0,200,255,180});
+                }
+            }
             particles.spawnHit(player.position, Color{0,255,255,255}, 8);
             audio.playLaser();
             botController.skillsFired++;
@@ -190,7 +201,7 @@ void Game::updateBotControl(float dt) {
         // Skill 4 — Sobrecarga
         if (dec.shouldUseSkill4 && (int)player.skills.size() > 3 && player.skills[3].isReady()) {
             player.useSkill(3, dec.nearestEnemyPos);
-            player.overloadTimer = 8.0f;
+            player.overloadTimer = 8.0f + SkillTree::statsFor(player.perkMask).overloadBonus;
             particles.spawnLevelUp(player.position);
             audio.playLevelUp();
             botController.skillsFired++;
@@ -209,7 +220,9 @@ void Game::updateBotControl(float dt) {
             player.useSkill(5, dec.nearestEnemyPos);
             float baseAngle6 = std::atan2(botAimDir.y, botAimDir.x);
             float dmg6 = player.skills[5].damage * (player.isOverloaded() ? 1.5f : 1.0f);
-            for (int i = -3; i <= 4; ++i) {
+            int lo = -3 - SkillTree::statsFor(player.perkMask).burstProj;
+            int hi =  4 + SkillTree::statsFor(player.perkMask).burstProj;
+            for (int i = lo; i <= hi; ++i) {
                 float angle = baseAngle6 + 0.22f * (float)i;
                 Vector2 d2 = {std::cos(angle), std::sin(angle)};
                 Color col = (std::abs(i) <= 1) ? Color{0,255,100,255} : Color{0,200,80,200};

@@ -100,7 +100,7 @@ void Game::updateParty() {
 
 void Game::drawPartyPanel() const {
     // Indicador permanente: sala atual + nº de aliados online
-    Color C_cyan = {0,210,255,255};
+    Color C_cyan = {0,235,255,255};
     std::string room = net.currentRoom();
     bool isParty = (room.rfind("party_", 0) == 0);
     int allies = (int)net.peers().size();

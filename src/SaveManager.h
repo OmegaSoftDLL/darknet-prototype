@@ -7,7 +7,7 @@
 #include <string>
 
 static constexpr int SAVE_SLOTS = 3;
-static constexpr int SAVE_VERSION = 5;   // V5: equipamento salvo por ID estavel (V4 era nome)
+static constexpr int SAVE_VERSION = 6;   // V6: Hack Tree (skillPoints + perkMask)
 
 struct SaveSlotInfo {
     bool        exists      = false;

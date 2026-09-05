@@ -188,20 +188,24 @@ void Game::renderResourceNodes() const {
 }
 
 void Game::drawResourceHUD() const {
-    // Painel compacto de recursos (topo, à direita do centro)
+    // Painel de recursos — dock ESQUERDA, logo abaixo da pill da FASE (fora do
+    // centro). Cada recurso: quadrado colorido + quantidade + NOME.
     int n = (int)ResourceType::COUNT;
-    int pw = 70 * n + 12;
-    int px = screenWidth/2 - pw/2;
-    int py = 56;
-    DrawRectangle(px, py, pw, 22, ColorAlpha(BLACK, 0.5f));
+    int ew = 96;
+    int pw = ew * n + 10;
+    int px = 10, py = 80;
+    DrawRectangle(px, py, pw, 40, ColorAlpha({8,12,26,255}, 0.86f));
+    DrawRectangle(px, py, 3, 40, ColorAlpha({0,235,255,255}, 0.9f));
     for (int i = 0; i < n; ++i) {
         ResourceType t = (ResourceType)i;
         Color c = resourceColor(t);
-        int ix = px + 8 + i * 70;
+        int ix = px + 10 + i * ew;
         DrawRectangle(ix, py + 6, 10, 10, c);
-        DrawText(TextFormat("%d", playerResources[i]), ix + 14, py + 5, 13,
-                 ColorAlpha(WHITE, 0.9f));
-        DrawText(resourceName(t), ix, py + 24, 8, ColorAlpha(c, 0.0f)); // tooltip oculto
+        DrawRectangleLinesEx({(float)ix, (float)(py+6), 10.0f, 10.0f}, 1,
+                             ColorAlpha(WHITE, 0.3f));
+        DrawText(TextFormat("%d", playerResources[i]), ix + 15, py + 3, 13,
+                 ColorAlpha(WHITE, 0.95f));
+        DrawText(resourceName(t), ix, py + 24, 10, ColorAlpha(c, 0.95f));
     }
 }
 
@@ -294,7 +298,7 @@ void Game::updateAnimals(float dt) {
             // lobo persegue
             move = Vector2Normalize(Vector2Subtract(player.position, a.position));
             if (distToPlayer < 40.0f && a.attackCD <= 0.f && !player.isShielded()) {
-                player.takeDamage(8.0f); hitFlashTimer = 0.2f; a.attackCD = 1.2f;
+                player.takeDamage(8.0f); noteHurtDir(a.position); hitFlashTimer = 0.2f; a.attackCD = 1.2f;
             }
         } else if (a.fleeing || (!a.hostile && distToPlayer < 160.0f)) {
             // foge do player
