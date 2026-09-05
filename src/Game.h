@@ -128,7 +128,6 @@ private:
     void render();
     void drawUI() const;
     void drawHudAndOverlays();   // HUD de recursos/ameaça + pause/levelup/loja/etc. (2D E 3D)
-    void drawSkills() const;
     void drawMinimap() const;
     void drawMainMenu() const;
     void drawPauseMenu() const;
@@ -223,6 +222,7 @@ private:
     float m_ambBaseDark = 0.27f;   // cura do Healer acumulada p/ 1 numero a cada ~5 HP
     float meleeCooldown  = 0.0f;
     float hitFlashTimer  = 0.0f;
+    float eliteFlashTimer = 0.0f;   // flash BRANCO (dano pesado: elite/boss)
     float slowMoTimer    = 0.0f;
     float footstepTimer  = 0.0f;
 

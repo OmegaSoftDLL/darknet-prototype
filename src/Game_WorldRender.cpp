@@ -367,6 +367,40 @@ void Game::renderWorld3D() {
         ClearBackground(Color{ (unsigned char)(sk.r * dk), (unsigned char)(sk.g * dk),
                                (unsigned char)(sk.b * dk), 255 });
     }
+    {   // Ceu PROCEDURAL por cima da cor base: estrelas discretas + bruma no
+        // horizonte (parallax pelo alvo da camera). So visual/deterministico —
+        // nao toca gameplay nem a validacao de FPS. A noite realca as estrelas.
+        Color sk = skyColorFor(currentZone);
+        Color halo = { (unsigned char)std::min(255, (int)sk.r + 40),
+                       (unsigned char)std::min(255, (int)sk.g + 40),
+                       (unsigned char)std::min(255, (int)sk.b + 40), 255 };
+        float px = (float)std::fmod(camera.target.x, 950.0f) / 950.0f;
+        float py = (float)std::fmod(camera.target.y, 950.0f) / 950.0f;
+        float starA = 0.34f * (1.0f - lightSystem.ambientDark);   // noite = mais estrelas
+        if (starA > 0.04f) {
+            unsigned int hse = 0x9e3779b9u ^ ((unsigned int)(screenWidth * screenHeight) & 0xFFFF);
+            auto hrnd = [&]() { hse = hse * 1664525u + 1013904223u; return (float)((hse >> 8) & 0xFFFF) / 65535.0f; };
+            for (int i = 0; i < 140; ++i) {
+                float sx = (hrnd() + px * 0.22f) * (float)screenWidth;
+                float sy = hrnd() * (float)screenHeight * 0.40f;
+                float r  = 0.8f + hrnd() * 1.1f;
+                Color c = (hrnd() < 0.18f) ? Color{255,230,170,255}            // estrela quente rara
+                                           : Color{220,230,255,255};
+                DrawCircle((int)sx, (int)sy, r,
+                           ColorAlpha(c, starA * (0.5f + 0.5f * hrnd())));
+            }
+        }
+        for (int i = 0; i < 8; ++i) {   // faixas de bruma (horizonte), cor do ceu clareada
+            float yy = (float)i / 8.0f * (float)screenHeight * 0.34f + py * 14.0f;
+            float wd = (0.20f + 0.20f * (float)((i * 2654435761u) & 0xFFFF) / 65535.0f)
+                       * (float)screenWidth;
+            float xx = (float)((i * 40503u) & 0xFFFF) / 65535.0f * (float)screenWidth + px * 30.0f;
+            float t  = 0.9f + 0.1f * std::sin((float)GetTime() * 0.5f + i * 1.7f);
+            DrawCircleGradient((int)(xx + wd * 0.5f), (int)yy, wd * 0.34f * t,
+                               ColorAlpha(halo, 0.10f * (1.0f - lightSystem.ambientDark * 0.4f)),
+                               ColorAlpha(halo, 0.0f));
+        }
+    }
     updateWorldShaderUniforms();
 
     // ── 1. Modo 3D: Chão, Paredes, Sombras e Entidades (Billboards) ───────────

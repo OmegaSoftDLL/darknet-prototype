@@ -67,7 +67,6 @@ add_executable(darknet
     src/LightSystem.cpp
     src/CraftingSystem.cpp
     src/InfernoZone.cpp
-    src/ScreenEffects.cpp
     src/Achievement.cpp
     src/TutorialSystem.cpp
     src/SpriteGen.cpp

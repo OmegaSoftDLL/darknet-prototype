@@ -389,7 +389,11 @@ void Game::update(float dt) {
             bool hasDarkScenery = ((int)newRegion >= (int)ZoneID::Cemetery &&
                                    newRegion != ZoneID::InfernoZone);
             if (hasDarkScenery) {
-                darkWorld.load((int)newRegion, (unsigned int)GetRandomValue(1000, 99999));
+                // Seed DERIVADA da regiao + fase (deterministica): a mesma fase
+                // sempre reestrutura o mesmo cenario sombrio ao voltar.
+                unsigned int dseed = 0x343fdu * (unsigned int)((int)newRegion + 1)
+                                   + (unsigned int)owPhase * 0x9e3779b9u;
+                darkWorld.load((int)newRegion, dseed);
                 for (const auto& wr : worldRegions) {
                     if (wr.zoneType == newRegion) {
                         darkWorld.applyWorldOffset({wr.bounds.x, wr.bounds.y});
@@ -411,6 +415,7 @@ void Game::update(float dt) {
 
     // Hit flash timer (player takes damage)
     if (hitFlashTimer > 0.0f) hitFlashTimer -= dt;
+    if (eliteFlashTimer > 0.0f) eliteFlashTimer -= dt;
     if (hurtDirTimer > 0.0f) hurtDirTimer -= dt;
 
     // Melee cooldown
@@ -651,6 +656,8 @@ void Game::update(float dt) {
                 if (mutatorBloodMoon())
                     enemy.health = std::min(enemy.maxHealth, enemy.health + dmg * 0.5f);
                 hitFlashTimer = 0.25f;
+                if (enemy.isElite || enemy.isBoss())
+                    eliteFlashTimer = std::max(eliteFlashTimer, 0.35f);
                 triggerShake(5.0f, 0.18f);
                 botController.damageEvents++;
                 botController.totalDmgTaken += dmg;
@@ -887,6 +894,7 @@ void Game::update(float dt) {
     // Process dead enemies
     nearNpcIndex = -1;
     std::vector<Enemy> splitSpawns;
+    bool pendingOmega = false;   // spawn do Omega adiado p/ DEPOIS do loop (push no loop invalidaria `it`)
 
     for (auto it = enemies.begin(); it != enemies.end();) {
         if (it->isDead()) {
@@ -1112,7 +1120,7 @@ void Game::update(float dt) {
                 // Omega Boss trigger every 50 kills (desativado apos a vitoria)
                 if (!gameWon && totalKills >= omegaKillThreshold) {
                     omegaKillThreshold += 50;
-                    spawnOmegaBoss();
+                    pendingOmega = true;   // spawn DEPOIS do loop de mortes (push aqui invalidaria `it`)
                 }
 
                 // First kill speech
@@ -1176,6 +1184,7 @@ void Game::update(float dt) {
                     player.takeDamage(30.0f);
                     noteHurtDir(it->position);
                     hitFlashTimer = 0.35f;
+                    eliteFlashTimer = std::max(eliteFlashTimer, 0.5f);
                 }
                 particles.spawnExplosion(it->position, {255, 0, 200, 255}, 28);
                 audio.playExplosionBig();
@@ -1203,6 +1212,9 @@ void Game::update(float dt) {
     }
 
     for (auto& s : splitSpawns) enemies.push_back(s);
+
+    // Omega boss adiado: entrou depois do loop, sem invalidar iteradores.
+    if (pendingOmega) spawnOmegaBoss();
 
     // Check NPC proximity
     for (int i = 0; i < (int)npcs.size(); ++i) {

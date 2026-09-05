@@ -653,32 +653,6 @@ void Game::drawQuestLog() const {
     }
 }
 
-void Game::drawSkills() const {
-    int baseX = screenWidth - 530;
-    int baseY = screenHeight - 92;
-
-    for (int i = 0; i < (int)player.skills.size(); ++i) {
-        const Skill& s = player.skills[i];
-        int x = baseX + i * 88;
-        Rectangle rect = {(float)x, (float)baseY, 80.0f, 80.0f};
-
-        DrawRectangleRec(rect, ColorAlpha(DARKGRAY, 0.8f));
-        DrawRectangleLinesEx(rect, 2, s.isReady() ? GREEN : Color{100,100,100,255});
-
-        DrawText(TextFormat("%d", i + 1), x + 4, baseY + 4, 16, WHITE);
-        DrawText(s.name.c_str(), x + 3, baseY + 42, 11, WHITE);
-
-        if (!s.isReady()) {
-            float pct = s.cooldownPercent();
-            DrawRectangle(x, (int)(baseY + 80 * (1.0f - pct)), 80, (int)(80 * pct),
-                          ColorAlpha(BLACK, 0.65f));
-            DrawText(TextFormat("%.1fs", s.currentCooldown), x + 22, baseY + 30, 14, ORANGE);
-        } else {
-            DrawText("PRONTO", x + 12, baseY + 28, 12, GREEN);
-        }
-    }
-}
-
 void Game::drawMinimap() const {
     // ── Minimap — bottom-right, above skills bar ──────────────────────────────
     //   Skills bar is at screenHeight - 92 → minimap sits just above it
@@ -1111,5 +1085,10 @@ void Game::drawMinimap() const {
         float alpha = std::min(0.45f, hitFlashTimer * 1.5f);
         DrawRectangle(0, 0, screenWidth, screenHeight,
                       ColorAlpha(Color{255, 20, 20, 255}, alpha));
+    }
+    // ── Flash BRANCO de dano pesado (elite/boss): cegante curto, por cima ────
+    if (eliteFlashTimer > 0.0f) {
+        float alpha = std::min(0.55f, eliteFlashTimer * 2.2f);
+        DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(WHITE, alpha));
     }
 }
