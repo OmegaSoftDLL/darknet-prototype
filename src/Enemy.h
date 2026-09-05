@@ -98,8 +98,14 @@ public:
 
     // Elite system
     bool  isElite      = false;
-    int   eliteMod     = 0;   // 0=Berserker 1=Armored 2=Volatile
+    int   eliteMod     = 0;   // 0=Berserker 1=Armored 2=Volatile 3=Shielded 4=KronosRapid
     float elitePulse   = 0.0f;
+
+    // Mitigacao (estilo ARPG): armadura reduz dano plano por hit; escudo Shielded
+    // absorve uma fracao de cada golpe e regenera com o tempo.
+    float armor         = 0.0f;
+    float shieldHp      = 0.0f;
+    float shieldMax     = 0.0f;
 
     // Boss final do jogo (NUCLEO KRONOS) — sua morte vence o jogo
     bool  isFinalBoss  = false;

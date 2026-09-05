@@ -427,3 +427,29 @@ Pr�ximos (se o usu�rio pedir evolu��o visual): light mask 2D ao estilo r
   - ResourceNode = cristal laranja com cilhas orbitais.
 - **Falsos positivos de build investigados**: (1) `const Color ORANGE/RED` colidiam com **macros do raylib** (mesmo nome) -> renomeados para HOT/DEF; (2) reescrita de arquivo via PowerShell `Set-Content -NoNewline` **fundiu o .cpp numa linha unica** (objs de 537 bytes "vazios", LNK2019 fantasma) -> fonte restaurado via git e reaplicado com a ferramenta de edicao.
 - Gate: Release + Debug exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS (sequenciais, janelados); headless intocado (nao renderiza). Screenshots do autotest (shot_00..03.png) para conferencia visual humana.
+
+## E29 - Mundo vivo sci-fi: materializacao das construcoes e drones de vigilancia
+
+- **Queixa do usuario**: jogo "vivo" demais? — pedido de "mundo vivo" sci-fi.
+- `Building.builtAt` (BuildingSystem.h) e setado ao concluir (BuildingSystem.cpp); `drawPlayerBuilding` abre com **materializacao** por 1.2s (anel de expansao cyan→branco 20→75u + 6 fagulhas setoriais) antes do casco compactar.
+- **`drawAmbientDrones`** (static, Game_WorldRender.cpp): 4 drones orbitando o alvo da camera, deterministas por tempo (orbita irregular, trilha de luz de 4 amostras, casco gunmetal, beacon piscando, anel de vigia girando); chamados em `renderWorld3D` gated por `openWorldMode`, antes do bloco VIDA AMBIENTE. Zero partículas = determinismo de frame preservado.
+- Gate: Release+Debug OK, testes 12/12 (109), validates 120/7 e 120/20260821 APROVADOS.
+
+## E30 - Dificuldade justa + fim definitivo das arvores na rua + cenário "codigo de guerra"
+
+- **Queixa do usuario**: "os inimigos sao faceis demais de matar — veja como os grandes jogos fazem, implemente, crie, inove" e "ainda temos arvores no meio da rua na primeira fase, corrija e adicione mais elementos ao cenario" e "tem que ter partes de asfalto destruido, cenario codigo de guerra, predios destruidos, fumaça".
+- **Dificuldade (estilo ARPG/Risk of Rain, sem quebrar o bot do validate)**:
+  - `Enemy::armor` — reducao PLANA de dano por hit (mitigacao estilo Diablo/Hades): elite Armored ganha 8u (+4 por fase). Arma fraca quase nao arranha mais.
+  - `Enemy::shieldHp/shieldMax` — afixo elite **Shielded** (novo mod 3): escudo absorve 75% de cada golpe ate esvaziar e **recarrega 10%/s** (RoR2).
+  - Afixo **KronosRapid** (mod 4): +35% velocidade, +30% dano e autorreparo 2%/s.
+  - Chance de elite agora **escala com fase e raio do refugio**: 12% + 3%/fase + 5%/anel, teto 45%; elige roll exclui Zergling (folgas do swarm).
+  - **Curva por fase no mundo aberto**: +8% HP e +5% dano por fase apos a fase 1.
+  - Fase 1 = intocada na curva (owPhase 0) e elite ~12% na base — o autotest de 120s continua APROVADO.
+- **Arvores na rua — fechamento completo**: guard de streaming já seguia `currentZone == LARuins||GhostCity` (condicao EXATA do desenho da rua) e clearance de copa 170u nas vias; agora a **praca central de 400u do hub fica livre de arvores** (a pista desenhada passa por ela). Sem condicao de carreira para a "arvore na avenida".
+- **Cenario "codigo de guerra"** (tipos 28-31, render procedural em Game_WorldRender + `drawSmokeColumn` de volutas por frame, sem particulas):
+  - 28 CRATERA DE BOMBA: tigela carbonizada + borda de terra arremessada + lajes atiradas + brasa + fumaça;
+  - 29 PREDIO COLAPSADO: esqueleto quebrado + laje tombada + barras de aco + poeira;
+  - 30 ASFALTO DESTRUIDO: placa rachada enegrecida + borda esfarelada (decor, nao bloqueia);
+  - 31 CARCACA QUEIMADA: casco retorcido + mastro dobrado + lareira + fumaça pesada.
+  - Distribuicao: cidade LA/GhostCity no mundo fixo (`place` por quarteirao) E no streaming (`put`/prop roll): cratera/asfalto/carcaça entram no roll da fase 1 e GhostCity ganha crateras; colisao marcada (28/29/31 bloqueiam com pegada moderada, 30 fica decor).
+- Gate: Release+Debug exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS (sequenciais, janelados); CI headless nao renderiza os novos props. Screenshots shot_00..03.png para conferencia visual.

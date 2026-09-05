@@ -528,6 +528,8 @@ void Enemy::update(float dt, Vector2 target) {
     if (regenRate > 0.0f) {
         health = std::min(maxHealth, health + regenRate * dt);
     }
+    if (shieldMax > 0.0f && shieldHp < shieldMax)   // escudo Shielded recarrega devagar
+        shieldHp = std::min(shieldMax, shieldHp + shieldMax * 0.10f * dt);
     if (isElite) elitePulse += dt * 4.0f;
 
     // ── Auto-evolução por tempo de vida ──────────────────────────────────────
@@ -927,13 +929,26 @@ void Enemy::makeElite(int mod) {
             damage *= 2.0f;
             health *= 1.5f; maxHealth = health;
             break;
-        case 1: // Armored — triple health, slower
+        case 1: // Armored — triple health, slow, mitigates flat damage per hit
             health *= 3.0f; maxHealth = health;
             speed  *= 0.75f;
+            armor   = 8.0f;
             break;
         case 2: // Volatile — normal stats, explodes on death
             health *= 1.8f; maxHealth = health;
             damage *= 1.4f;
+            break;
+        case 3: // Shielded — energy shield that absorbs a hit fraction and recharges
+            health *= 1.9f; maxHealth = health;
+            damage *= 1.15f;
+            shieldMax = maxHealth * 0.45f;
+            shieldHp  = shieldMax;
+            break;
+        case 4: // KronosRapid — fast, self-repairing
+            speed  *= 1.35f;
+            damage *= 1.3f;
+            health *= 1.5f; maxHealth = health;
+            regenRate = maxHealth * 0.02f;
             break;
     }
 }
@@ -957,6 +972,15 @@ void Enemy::applyKnockback(Vector2 dir, float force) {
 void Enemy::takeDamage(float amount) {
     // Boss invulnerável durante a breve transição de fase (drama)
     if (bossInvuln) { hitFlashTimer = 0.08f; return; }
+    // Escudo Shielded absorve 75% de cada golpe ate esvaziar; recarrega no update.
+    if (shieldHp > 0.0f) {
+        float absorbed = std::min(shieldHp, amount * 0.75f);
+        shieldHp -= absorbed;
+        amount   -= absorbed;
+    }
+    // Armadura reduz dano plano por hit (Arpg: tiro fraco quase nao arranha).
+    if (armor > 0.0f)
+        amount -= std::min(armor, amount);
     health -= amount;
     if (health < 0.0f) health = 0.0f;
     hitFlashTimer = 0.12f;

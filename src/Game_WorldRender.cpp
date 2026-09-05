@@ -381,6 +381,60 @@ static void drawPlayerBuilding(const Building& b) {
         break;
     }
     }
+
+    // materializacao: anel expansivo + fagulhas ao terminar a construcao
+    if (b.built) {
+        float age = t - b.builtAt;
+        if (age >= 0.0f && age < 1.2f) {
+            float k = age / 1.2f;
+            float rad = 20.0f + k * 55.0f;
+            float al = (1.0f - k) * 0.45f;
+            DrawCylinderEx({ x, 0.14f, z }, { x, 0.15f, z }, rad, rad, 28, ColorAlpha(CYAN, al));
+            DrawCylinderEx({ x, 0.16f, z }, { x, 0.17f, z }, rad * 0.92f, rad * 0.92f, 28,
+                           ColorAlpha(WHITE, al * 0.6f));
+            for (int sI = 0; sI < 6; ++sI) {
+                float sa = 6.2831853f * sI / 6.0f + t * 1.5f;
+                float sy = 14.0f + k * 70.0f * (0.4f + 0.1f * sI);
+                DrawSphereEx({ x + cosf(sa) * rad * 0.55f, sy, z + sinf(sa) * rad * 0.55f },
+                             3.0f - k * 1.4f, 5, 5, ColorAlpha(CYAN, al * 0.8f + 0.12f));
+            }
+        }
+    }
+}
+
+// Drones de vigilancia orbitando o jogador no mundo aberto (vida aerea sci-fi).
+// So visual: posicoes determinadas so pelo tempo + alvo da camera, sem estado.
+static void drawAmbientDrones(const Vector3& tgt) {
+    const float t = (float)GetTime();
+    for (int i = 0; i < 4; ++i) {
+        const float sp  = 0.11f + i * 0.017f;                 // velocidade angular
+        const float ph  = i * 2.399f;                         // fase por drone
+        const float rad = 240.0f + 60.0f * sinf(t * 0.05f + i * 1.3f);   // orbita irregular
+        const float hgt = 150.0f + 42.0f * sinf(t * 0.14f + i * 2.0f);
+        float ang = t * sp + ph;
+        Vector3 p = { tgt.x + cosf(ang) * rad, hgt, tgt.z + sinf(ang) * rad };
+        float blink = (fmodf(t * 3.0f + i * 0.7f, 1.0f) < 0.5f) ? 1.0f : 0.25f;
+        for (int k = 1; k <= 4; ++k) {                        // trilha de luz (amostras passadas)
+            float tk = t - k * 0.18f;
+            float ak = tk * sp + ph;
+            float rk = 240.0f + 60.0f * sinf(tk * 0.05f + i * 1.3f);
+            float hk = 150.0f + 42.0f * sinf(tk * 0.14f + i * 2.0f);
+            Vector3 q = { tgt.x + cosf(ak) * rk, hk, tgt.z + sinf(ak) * rk };
+            DrawSphereEx(q, 3.2f - k * 0.55f, 4, 4,
+                         ColorAlpha({ 0, 170, 255, 255 }, 0.10f - k * 0.02f));
+        }
+        DrawCubeV(p, { 6.0f, 4.0f, 6.0f }, { 34, 38, 58, 255 });        // casco
+        DrawCubeV({ p.x, p.y - 3.2f, p.z }, { 10.0f, 1.4f, 10.0f }, { 22, 26, 40, 255 });
+        DrawCylinderEx({ p.x, p.y + 3.0f, p.z }, { p.x, p.y + 6.2f, p.z }, 0.9f, 1.4f, 5,
+                       { 90, 100, 130, 255 });                          // antena
+        DrawSphereEx({ p.x, p.y + 6.8f, p.z }, 1.6f, 5, 5,
+                     ColorAlpha({ 0, 220, 255, 255 }, 0.55f + 0.45f * blink));   // beacon
+        DrawSphereEx(p, 4.2f, 6, 6,
+                     ColorAlpha({ 0, 170, 255, 255 }, 0.06f + 0.05f * blink));   // aura
+        float spin = fmodf(t * 2.0f + i, 6.2831853f);                   // giro do anel de vigia
+        DrawCubeV({ p.x + cosf(spin) * 2.4f, p.y - 2.1f, p.z + sinf(spin) * 2.4f },
+                  { 1.2f, 1.2f, 1.2f }, ColorAlpha({ 0, 220, 255, 255 }, 0.7f));
+    }
 }
 
 void Game::drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase, bool moving) {
@@ -468,6 +522,28 @@ static bool sphereInCameraFrustum(const Camera3D& cam, const Matrix& view, float
     if (vy < -limY || vy > limY) return false;
     float limX = dist * tanH * aspect + radius;
     return vx >= -limX && vx <= limX;
+}
+
+// Fumaça procedural para o cenário "código de guerra": coluna de volutas que sobe,
+// afina e some, com deriva lateral estável (hash da posição) — sem partículas,
+// o que mantém o determinismo por frame e custa só um punhado de esferas baratas.
+static void drawSmokeColumn(float x, float z, float seed, float intensity, bool fire) {
+    const float t = (float)GetTime();
+    if (fire) {   // brasa na base: esfera emissiva pulsando
+        float pu = 0.5f + 0.5f * std::sin(t * 7.0f + seed * 40.0f);
+        DrawSphereEx({ x, 1.6f, z }, 9.0f, 5, 5,
+                     ColorAlpha(Color{ 255, (unsigned char)(98 + (int)(60 * pu)), 35, 255 }, 0.30f + 0.30f * pu));
+    }
+    for (int i = 0; i < 9; ++i) {
+        float phase = std::fmod(t * (0.55f + 0.09f * ((int)(seed * 13.0f) % 3)) + i * 1.7f + seed * 20.0f, 1.0f);
+        float h   = phase * (88.0f + 26.0f * ((int)(seed * 7.0f) % 2));
+        float drift = std::sin(t * 0.7f + i * 2.1f + seed * 50.0f) * 17.0f;
+        float sway = std::sin(i * 2.4f + seed * 90.0f) * 7.0f;
+        float r    = 5.0f + phase * 19.0f + 2.0f * (i % 2);
+        float a    = 0.34f * (1.0f - phase) * intensity + 0.05f;
+        DrawSphereEx({ x + drift + sway, h, z - sway * 0.6f + std::cos(i * 1.9f + seed * 60.0f) * 7.0f },
+                     r, 6, 6, ColorAlpha(Color{ 56, 56, 64, 255 }, a));
+    }
 }
 
 void Game::renderWorld3D() {
@@ -1555,6 +1631,70 @@ void Game::renderWorld3D() {
                             DrawSphereEx({ x, 102.0f*sc, zz }, 5.0f*sc, 8, 8, ColorAlpha(amber, 0.5f + 0.5f*pl2));  // luz de trabalho
                             w = L * 1.2f; h = 106.0f * sc;
                         } break;
+                        case 28: { // CRATERA DE BOMBA (codigo de guerra): bowl carbonizado + borda + brasas + fumaça
+                            const float pu = 0.5f + 0.5f * std::sinf((float)GetTime() * 6.0f + x * 0.1f);
+                            float r = 58.0f * sc;
+                            DrawCylinderEx({ x, 2.2f, zz }, { x, 2.3f, zz }, r * 0.82f, r * 0.62f, 14,
+                                           Color{ 30, 28, 26, 255 });                       // tanque escavado
+                            DrawCubeV({ x, 13.0f * sc, zz }, { r * 1.6f, 26.0f * sc, r * 1.4f },
+                                      Color{ 60, 58, 54, 255 });                            // borda de terra salpicada
+                            for (int k = 0; k < 8; ++k) {                                  // laje de asfalto atirada
+                                float a = obj.rotation + k * 0.7854f, d = r * (0.7f + 0.5f * (k % 3));
+                                DrawCubeV({ x + std::cosf(a) * d, 4.0f + 3.0f * (k % 2), zz + std::sinf(a) * d },
+                                          { 22.0f, (k % 2) ? 5.0f : 3.0f, 16.0f }, Color{ 52, 50, 48, 255 });
+                            }
+                            DrawSphereEx({ x, 3.0f, zz }, r * 0.30f, 6, 6,
+                                         ColorAlpha(Color{ 255, (unsigned char)(92 + (int)(70 * pu)), 35, 255 },
+                                                    0.30f + 0.25f * pu));
+                            drawSmokeColumn(x, zz, std::fmod(x * 0.37f + zz * 0.19f, 100.0f), 0.55f, true);
+                            w = r * 1.8f; h = 40.0f * sc;
+                        } break;
+                        case 29: { // PREDIO COLAPSADO: esqueleto inclinado + laje partida + vigas + poeira
+                            float W = 80.0f * sc, H = 52.0f * sc;
+                            DrawCubeV({ x, H * 0.7f, zz }, { W, H * 1.4f, W * 0.62f }, Color{ 72, 68, 64, 255 });  // casca
+                            DrawCubeV({ x + W * 0.30f, H * 0.34f, zz }, { W * 0.46f, H * 0.66f, W * 0.56f },
+                                      Color{ 52, 50, 48, 255 });                                                    // parte desabada
+                            DrawCubeV({ x + W * 0.42f, H * 0.16f, zz + W * 0.20f }, { W * 0.55f, H * 0.3f, W * 0.5f },
+                                      Color{ 66, 62, 58, 255 });                                                    // laje tombada
+                            for (int k = 0; k < 7; ++k) {                                                          // barras de aço
+                                float a = obj.rotation + k * 0.897f;
+                                float hh = 10.0f + (k % 3) * 14.0f + ((x * 0.7f + k) > 0 ? 4.0f : 0.0f);
+                                DrawCylinderEx({ x + std::cosf(a) * W * 0.5f, 2.0f, zz + std::sinf(a) * W * 0.5f },
+                                               { x + std::cosf(a) * W * 0.5f, hh, zz + std::sinf(a) * W * 0.5f },
+                                               1.5f, 1.3f, 4, Color{ 74, 78, 92, 255 });
+                            }
+                            for (int k = 0; k < 5; ++k) {                                                          // destroços na base
+                                float a = obj.rotation + k * 1.257f, d = W * 0.35f * sc;
+                                DrawSphereEx({ x + std::cosf(a) * d, 2.0f + 1.4f * (k % 3), zz + std::sinf(a) * d },
+                                             7.0f * sc, 5, 5, Color{ 96, 92, 88, 255 });
+                            }
+                            drawSmokeColumn(x, zz, std::fmod(x * 0.53f + zz * 0.29f, 100.0f), 0.35f, false);  // poeira dos escombros
+                            w = W * 1.5f; h = H * 1.9f;
+                        } break;
+                        case 30: { // ASFALTO DESTRUIDO: placa rachada e enegrecida (decor, nao bloqueia)
+                            float B = 84.0f * sc;
+                            DrawCubeV({ x, 0.7f, zz }, { B, 1.4f, B * 0.72f }, Color{ 40, 38, 36, 255 });
+                            DrawCubeV({ x, 1.15f, zz }, { B * 0.86f, 0.5f, B * 0.6f }, Color{ 30, 28, 26, 255 });
+                            for (int k = 0; k < 6; ++k) {                                                        // borda esfarelada
+                                float a = obj.rotation + k * 1.047f, d = B * (0.32f + 0.38f * (k % 2));
+                                DrawCubeV({ x + std::cosf(a) * d, 1.0f, zz + std::sinf(a) * d },
+                                          { 15.0f, 2.0f, 15.0f }, Color{ 58, 56, 52, 255 });
+                            }
+                            w = B * 1.2f; h = 8.0f * sc;
+                        } break;
+                        case 31: { // CARCACA QUEIMADA: casco retorcido + fogo + FUMAÇA pesada
+                            const float pu = 0.5f + 0.5f * std::sinf((float)GetTime() * 6.8f + x * 0.13f);
+                            DrawCubeV({ x, 8.0f * sc, zz }, { 64.0f * sc, 14.0f * sc, 26.0f * sc }, Color{ 44, 40, 38, 255 });
+                            DrawCubeV({ x, 14.0f * sc, zz }, { 30.0f * sc, 10.0f * sc, 20.0f * sc }, Color{ 32, 30, 28, 255 });
+                            DrawCylinderEx({ x + 22.0f * sc, 2.0f, zz - 10.0f * sc }, { x - 6.0f * sc, 16.0f * sc, zz },
+                                           3.6f * sc, 3.0f * sc, 5, Color{ 52, 48, 44, 255 });                   // mastro retorcido
+                            for (int k = 0; k < 4; ++k)
+                                DrawSphereEx({ x + (k - 1.5f) * 11.0f * sc, 10.0f * sc, zz }, 4.2f * sc, 5, 5,
+                                             ColorAlpha(Color{ 255, (unsigned char)(104 + (int)(60 * pu)), 30, 255 },
+                                                        0.5f + 0.5f * pu));                                        // lareira
+                            drawSmokeColumn(x, zz, std::fmod(x * 0.31f + zz * 0.43f, 100.0f), 0.85f, true);
+                            w = 74.0f * sc; h = 30.0f * sc;
+                        } break;
                         default: if (hasSprite) { // fallback billboard so p/ tipos sem 3D
                             int variant = ((int)(obj.position.x*0.13f+obj.position.y*0.07f)) % SpriteBank::SCENERY_VARIANTS;
                             if (variant<0) variant+=SpriteBank::SCENERY_VARIANTS;
@@ -1961,6 +2101,11 @@ void Game::renderWorld3D() {
                 DrawPlane({mouseWorld.x, 0.2f, mouseWorld.y}, {64.0f, 64.0f}, ColorAlpha(pc, 0.25f));
                 DrawCubeWires({mouseWorld.x, 32.0f, mouseWorld.y}, 64.0f, 64.0f, 64.0f, pc);
             }
+        }
+
+        // ── DRONES DE VIGILANCIA (vida aerea sci-fi, so visual) ──
+        if (openWorldMode) {
+            drawAmbientDrones(camera3D.target);
         }
 
         // ── VIDA AMBIENTE: partículas flutuando (poeira/brasas/pólen) por TEMA ──
