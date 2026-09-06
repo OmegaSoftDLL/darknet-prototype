@@ -99,6 +99,8 @@ add_executable(darknet_tests
     src/Quest.cpp         # construcao/update de quests nos testes
     src/Skill.cpp         # Player::update/useSkill referenciam Skill
     src/SkillTree.cpp     # Player::refreshSkillVectors/getEffectiveDamage usam perks
+    src/Projectile.cpp    # testes de projéteis
+    src/Tilemap.cpp       # testes de tilemap
 )
 target_include_directories(darknet_tests PRIVATE src third_party)
 target_link_libraries(darknet_tests PRIVATE raylib)

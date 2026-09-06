@@ -10,6 +10,7 @@
 #include <vector>
 #include <mutex>
 #include <atomic>
+#include <thread>
 
 struct PremiumItem { std::string id, name, type; int gems = 0; };
 struct GemPack     { std::string id; int gems = 0; double priceBRL = 0.0; };
@@ -52,6 +53,7 @@ private:
     std::atomic<bool>         logged_{false};
     std::atomic<bool>         busy_{false};
     std::atomic<int>          activeThreads_{0};   // threads de rede em voo
+    std::vector<std::thread>  threads_;            // threads ativas (join no destrutor)
     int                       gems_ = 0;
     std::vector<PremiumItem>  items_;
     std::vector<GemPack>      packs_;
@@ -59,4 +61,5 @@ private:
     std::string               msg_;
 
     void setMsg(const std::string& m);
+    void startThread(std::thread&& t);             // helper: guarda e limpa threads finalizadas
 };

@@ -1,6 +1,7 @@
 #pragma once
 #include <raylib.h>
 #include <vector>
+#include "GfxResource.h"
 
 struct LightSource {
     Vector2 position;
@@ -16,8 +17,8 @@ struct LightSource {
 
 struct LightSystem {
     std::vector<LightSource> lights;
-    RenderTexture2D lightMask  = {};
-    Texture2D glowTex          = {};   // gradiente radial pré-gerado (1 quad por luz)
+    GfxRenderTexture lightMask;        // mascara de luz/sombra em meia resolucao
+    GfxTexture       glowTex;          // gradiente radial pré-gerado (1 quad por luz)
     float   glowPeak           = 1.0f; // brilho acumulado no centro do perfil antigo
     bool  enabled              = false;
     float ambientDark          = 0.55f; // fraction of screen in darkness (0=bright, 1=black)

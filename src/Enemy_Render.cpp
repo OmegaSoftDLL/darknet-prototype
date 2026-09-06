@@ -33,6 +33,62 @@ static void DrawRotatedRectangle(Vector2 center, float width, float length, floa
     }
 }
 
+// Marcador tatico por afixo de elite (leitura estilo Risk of Rain 2): o ANEL
+// diz "elite", o GLYPH e a COR dizem qual ameaca — o jogador reage sem ler texto.
+static void drawEliteAffix(const Enemy& e) {
+    const float puls = 0.5f + 0.5f * std::sin(e.elitePulse);
+    Color col; const char* tag = "ELITE";
+    switch (e.eliteMod) {
+        case 0:  col = {255,  60,   0, 255}; tag = "BERSERK";  break;  // fúria escarlate
+        case 1:  col = {226, 170,  84, 255}; tag = "BLINDADO"; break;  // placas cobre/platina
+        case 2:  col = {255,   0, 200, 255}; tag = "VOLATIL";  break;  // carga magenta
+        case 3:  col = { 72, 222, 255, 255}; tag = "ESCUDADO"; break;  // bolha ciano
+        default: col = { 92, 255, 148, 255}; tag = "CRONOS";   break;  // reação verde
+    }
+    const float r = e.radius + 10.0f + puls * 4.0f;
+    const int cx = (int)e.position.x, cy = (int)e.position.y;
+    DrawCircleV(e.position, r - 2.0f, ColorAlpha(col, 0.10f));
+    DrawCircleLines(cx, cy, r, ColorAlpha(col, 0.55f + puls * 0.25f));
+    switch (e.eliteMod) {
+        case 0:   // Berserker: anel duplo nervoso
+            DrawCircleLines(cx, cy, r * 0.84f - puls * 3.0f, ColorAlpha(col, 0.35f));
+            break;
+        case 1:   // Blindado: placas orbitando (blindagem extra)
+            for (int i = 0; i < 4; ++i) {
+                float a = e.elitePulse * 0.7f + i * 1.5708f;
+                DrawCircle((int)(e.position.x + cosf(a) * (r + 4.0f)),
+                           (int)(e.position.y + sinf(a) * (r + 4.0f)), 3.5f, col);
+            }
+            break;
+        case 2: { // Volatil: pips de carga convergindo
+            for (int i = 0; i < 4; ++i) {
+                float a = e.elitePulse * 1.2f + i * 1.5708f;
+                float fill = 0.20f + 0.80f * (cosf(e.elitePulse + 1.5708f + i) * 0.5f + 0.5f);
+                DrawCircle((int)(e.position.x + cosf(a) * (r * 0.5f + fill * r * 0.45f)),
+                           (int)(e.position.y + sinf(a) * (r * 0.5f + fill * r * 0.45f)),
+                           2.5f, ColorAlpha(col, 0.45f + 0.55f * fill));
+            }
+        } break;
+        case 3: { // Escudado: bolha + barra de saúde do escudo acima do HP
+            DrawCircleLines(cx, cy, e.radius + 16.0f, ColorAlpha(col, 0.35f + 0.30f * puls));
+            if (e.shieldMax > 0.0f) {
+                float p = e.shieldHp / e.shieldMax;
+                int bw = 30, bx = cx - bw / 2, by = cy - (int)e.radius - 26;
+                DrawRectangle(bx - 1, by - 1, bw + 2, 5, ColorAlpha(BLACK, 0.6f));
+                DrawRectangle(bx, by, (int)(bw * p), 3, col);
+            }
+        } break;
+        default:  // Cronos: riscos de velocidade orbitando
+            for (int i = 0; i < 3; ++i) {
+                float a = e.elitePulse * 1.4f + i * 2.0944f;
+                DrawCircle((int)(e.position.x + cosf(a) * (r * 0.55f + puls * 6.0f)),
+                           (int)(e.position.y + sinf(a) * (r * 0.55f + puls * 6.0f)), 2.5f, col);
+            }
+            break;
+    }
+    DrawText(tag, cx - MeasureText(tag, 10) / 2, cy - (int)e.radius - 32, 10, ColorAlpha(col, 0.9f));
+}
+
 void Enemy::render() const {
     // ── SPRITE PIXEL-ART (substitui o desenho por formas) ────────────────────
     SpriteBank& sb = SpriteBank::get();
@@ -157,20 +213,7 @@ void Enemy::render() const {
 
         if (!g_voxelCapture) {
             // Aura/tag de elite
-            if (isElite) {
-                float puls = 0.5f + 0.5f * std::sin(elitePulse);
-                Color eliteCol;
-                switch (eliteMod) {
-                    case 0:  eliteCol = {255, 60,  0,   255}; break;
-                    case 1:  eliteCol = {180, 180, 255, 255}; break;
-                    default: eliteCol = {255, 0,   200, 255}; break;
-                }
-                DrawCircleLines((int)position.x, (int)position.y, radius + 10 + puls * 4,
-                                ColorAlpha(eliteCol, 0.6f));
-                const char* tag = (eliteMod == 0) ? "BERSERK" : (eliteMod == 1) ? "BLINDADO" : "VOLATIL";
-                DrawText(tag, (int)(position.x - MeasureText(tag, 10)/2),
-                         (int)(position.y - radius - 32), 10, ColorAlpha(eliteCol, 0.9f));
-            }
+            if (isElite) drawEliteAffix(*this);
 
             // Barra de HP
             float barW  = isBoss() ? 70.0f : (type == EnemyType::Tank ? 48.0f : 36.0f);
@@ -555,23 +598,7 @@ void Enemy::render() const {
     }
 
     // Elite aura
-    if (isElite) {
-        float puls = 0.5f + 0.5f * std::sin(elitePulse);
-        Color eliteCol;
-        switch (eliteMod) {
-            case 0: eliteCol = {255, 60,  0,   255}; break; // Berserker — orange
-            case 1: eliteCol = {180, 180, 255, 255}; break; // Armored — steel blue
-            default:eliteCol = {255, 0,   200, 255}; break; // Volatile — magenta
-        }
-        DrawCircleV(position, radius + 12 + puls * 5, ColorAlpha(eliteCol, 0.18f));
-        DrawCircleV(position, radius + 7  + puls * 3, ColorAlpha(eliteCol, 0.28f));
-        DrawCircleLines((int)position.x, (int)position.y, radius + 10 + puls * 4,
-                        ColorAlpha(eliteCol, 0.6f));
-        // "ELITE" tag above head
-        const char* tag = (eliteMod == 0) ? "BERSERK" : (eliteMod == 1) ? "BLINDADO" : "VOLATIL";
-        DrawText(tag, (int)(position.x - MeasureText(tag, 10)/2),
-                 (int)(position.y - radius - 32), 10, ColorAlpha(eliteCol, 0.9f));
-    }
+    if (isElite) drawEliteAffix(*this);
 
     // Hit flash overlay
     if (flash) {
@@ -1174,12 +1201,7 @@ void Enemy::renderOrcCibernetico() const {
                  {80, 200, 40, 255});
 
     // Elite / hit flash
-    if (isElite) {
-        float puls = 0.5f + 0.5f * std::sin(elitePulse);
-        Color eliteCol = {255, 60, 0, 255};
-        DrawCircleV(position, radius + 12 + puls * 5, ColorAlpha(eliteCol, 0.18f));
-        DrawCircleLines((int)px, (int)py, radius + 10 + puls * 4, ColorAlpha(eliteCol, 0.6f));
-    }
+    if (isElite) drawEliteAffix(*this);
     if (hitFlashTimer > 0.0f)
         DrawCircleV(position, radius + 4, ColorAlpha(WHITE, 0.5f));
 
@@ -1271,12 +1293,7 @@ void Enemy::renderPaladinCorrompido() const {
         DrawCircleV(position, radius + 6, ColorAlpha(purpleGlw, 0.3f));
     }
 
-    if (isElite) {
-        float puls = 0.5f + 0.5f * std::sin(elitePulse);
-        Color eliteCol = {255, 180, 0, 255};
-        DrawCircleV(position, radius + 12 + puls * 5, ColorAlpha(eliteCol, 0.18f));
-        DrawCircleLines((int)px, (int)py, radius + 10 + puls * 4, ColorAlpha(eliteCol, 0.6f));
-    }
+    if (isElite) drawEliteAffix(*this);
     if (hitFlashTimer > 0.0f)
         DrawCircleV(position, radius + 4, ColorAlpha(WHITE, 0.5f));
 
@@ -1376,12 +1393,7 @@ void Enemy::renderUndeadEnforcer() const {
     DrawRectangle((int)(px - 4), (int)(py - 10), 8, 3, {45, 35, 25, 255});
     DrawRectangle((int)(px - 2), (int)(py - 9), 4, 2, bone);
 
-    if (isElite) {
-        float puls = 0.5f + 0.5f * std::sin(elitePulse);
-        Color eliteCol = {180, 0, 255, 255};
-        DrawCircleV(position, radius + 12 + puls * 5, ColorAlpha(eliteCol, 0.18f));
-        DrawCircleLines((int)px, (int)py, radius + 10 + puls * 4, ColorAlpha(eliteCol, 0.6f));
-    }
+    if (isElite) drawEliteAffix(*this);
     if (hitFlashTimer > 0.0f)
         DrawCircleV(position, radius + 4, ColorAlpha(purpleNecro, 0.65f));
 

@@ -9,8 +9,8 @@ void LightSystem::init(int w, int h) {
     maskW = w; maskH = h;
     // Mascara em MEIA resolucao: luz suave borrada por natureza, entao o upscale
     // bilinear e imperceptivel — e o custo de fill da mascara cai ~4x.
-    lightMask = LoadRenderTexture(w / 2, h / 2);
-    SetTextureFilter(lightMask.texture, TEXTURE_FILTER_BILINEAR);
+    lightMask = GfxRenderTexture(LoadRenderTexture(w / 2, h / 2));
+    SetTextureFilter(lightMask.get().texture, TEXTURE_FILTER_BILINEAR);
 
     // GLOW radial pre-gerado: substitui os 31 aneis concentricos por luz por UMA
     // quad texturizada. O perfil de alpha reproduz EXATAMENTE a soma dos aneis
@@ -41,16 +41,16 @@ void LightSystem::init(int w, int h) {
                 px[y * GS + x] = { 255, 255, 255, (unsigned char)(a * 255.0f + 0.5f) };
             }
         }
-        glowTex = LoadTextureFromImage(img);
-        SetTextureFilter(glowTex, TEXTURE_FILTER_BILINEAR);
-        SetTextureWrap(glowTex, TEXTURE_WRAP_CLAMP);
+        glowTex = GfxTexture(LoadTextureFromImage(img));
+        SetTextureFilter(glowTex.get(), TEXTURE_FILTER_BILINEAR);
+        SetTextureWrap(glowTex.get(), TEXTURE_WRAP_CLAMP);
         UnloadImage(img);
     }
 }
 
 void LightSystem::shutdown() {
-    if (maskW > 0) UnloadRenderTexture(lightMask);
-    if (glowTex.id > 0) UnloadTexture(glowTex);
+    lightMask.reset();
+    glowTex.reset();
 }
 
 void LightSystem::clear() {
@@ -138,7 +138,7 @@ void LightSystem::updatePlayerPos(Vector2 pos) {
 void LightSystem::prepareMask(Camera2D camera) {
     if (!enabled) return;
 
-    BeginTextureMode(lightMask);
+    BeginTextureMode(lightMask.get());
     // Fill with ambient darkness
     float amb = 1.0f - ambientDark;
     // PISO de ambiente: a mascara e MULTIPLICATIVA — abaixo de ~0.33 de
@@ -148,7 +148,7 @@ void LightSystem::prepareMask(Camera2D camera) {
     ClearBackground({ (unsigned char)(amb*ambientColor.r), (unsigned char)(amb*ambientColor.g), (unsigned char)(amb*ambientColor.b), 255 });
 
     // Mascara em meia resolucao: escala a camera para o alvo menor.
-    const float ms = (float)lightMask.texture.width / (float)maskW;
+    const float ms = (float)lightMask.get().texture.width / (float)maskW;
     camera.offset.x *= ms; camera.offset.y *= ms; camera.zoom *= ms;
 
     BeginMode2D(camera);
@@ -161,8 +161,8 @@ void LightSystem::prepareMask(Camera2D camera) {
         unsigned char ta = (unsigned char)fminf(255.0f, l.intensity * l.intensity * glowPeak * 255.0f);
         Color tint = { l.color.r, l.color.g, l.color.b, ta };
         float r = l.radius;
-        DrawTexturePro(glowTex,
-                       { 0.0f, 0.0f, (float)glowTex.width, (float)glowTex.height },
+        DrawTexturePro(glowTex.get(),
+                       { 0.0f, 0.0f, (float)glowTex.get().width, (float)glowTex.get().height },
                        { l.position.x - r, l.position.y - r, r * 2.0f, r * 2.0f },
                        { 0.0f, 0.0f }, 0.0f, tint);
     }
@@ -175,7 +175,7 @@ void LightSystem::prepareMask(Camera2D camera) {
 void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int screenH) {
     if (!enabled) return;
 
-    BeginTextureMode(lightMask);
+    BeginTextureMode(lightMask.get());
     // Fill with ambient darkness
     float amb = 1.0f - ambientDark;
     // PISO de ambiente (mesmo do prepareMask 2D): noite NUNCA apaga a cena —
@@ -186,7 +186,7 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
     BeginBlendMode(BLEND_ADDITIVE);
 
     // Mascara em meia resolucao: projeta em coordenadas de tela cheia e escala.
-    const float ms = (float)lightMask.texture.width / (float)screenW;
+    const float ms = (float)lightMask.get().texture.width / (float)screenW;
 
     for (const auto& l : lights) {
         if (!l.active) continue;
@@ -211,8 +211,8 @@ void LightSystem::prepareMask3D(const Camera3D& camera3D, int screenW, int scree
         // A quad esticada em rx/ry diferentes vira a elipse em perspectiva.
         unsigned char ta = (unsigned char)fminf(255.0f, l.intensity * l.intensity * glowPeak * 255.0f);
         Color tint = { l.color.r, l.color.g, l.color.b, ta };
-        DrawTexturePro(glowTex,
-                       { 0.0f, 0.0f, (float)glowTex.width, (float)glowTex.height },
+        DrawTexturePro(glowTex.get(),
+                       { 0.0f, 0.0f, (float)glowTex.get().width, (float)glowTex.get().height },
                        { cx - rx, cy - ry, rx * 2.0f, ry * 2.0f },
                        { 0.0f, 0.0f }, 0.0f, tint);
     }
@@ -229,8 +229,8 @@ void LightSystem::applyMask() const {
     // A mascara e renderizada em meia resolucao e esticada aqui (bilinear).
     BeginBlendMode(BLEND_MULTIPLIED);
     DrawTexturePro(
-        lightMask.texture,
-        { 0.0f, 0.0f, (float)lightMask.texture.width, -(float)lightMask.texture.height }, // flip Y
+        lightMask.get().texture,
+        { 0.0f, 0.0f, (float)lightMask.get().texture.width, -(float)lightMask.get().texture.height }, // flip Y
         { 0.0f, 0.0f, (float)maskW,                       (float)maskH },
         { 0.0f, 0.0f }, 0.0f, WHITE
     );

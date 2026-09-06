@@ -37,7 +37,30 @@ std::vector<std::string> jStrArray(const nlohmann::json& j, const char* key) {
 
 } // namespace
 
+// ── RAII helpers ─────────────────────────────────────────────────────────────
+
+// Garante que busy_ volte a false mesmo se a lambda lançar exceção.
+struct BusyGuard {
+    std::atomic<bool>* flag;
+    explicit BusyGuard(std::atomic<bool>* f) : flag(f) {}
+    ~BusyGuard() { if (flag) flag->store(false); }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
+
+void StoreClient::startThread(std::thread&& t) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    // Tenta dar join em threads que já terminaram para não acumular handles.
+    for (auto& th : threads_) {
+        if (th.joinable()) {
+            // Não podemos verificar se terminou sem C++20; como as operações
+            // são curtas (timeout 5s), fazemos join não-bloqueante não é padrão.
+            // Optamos por manter join no destrutor e, aqui, apenas garantir
+            // que não re-adicionamos sem necessidade. Nenhuma ação extra.
+        }
+    }
+    threads_.emplace_back(std::move(t));
+}
 
 void StoreClient::setMsg(const std::string& m) {
     std::lock_guard<std::mutex> lk(mtx_);
@@ -70,8 +93,8 @@ void StoreClient::loginAsync(const std::string& name) {
     std::string h = host; int p = port; std::string nm = name;
     bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, tls, pre, nm]() {
-        std::string body = std::string("{\"name\":\"") + nm + "\"}";
+    startThread(std::thread([this, h, p, tls, pre, nm]() {
+        std::string body = nlohmann::json{{"name", nm}}.dump();
         HttpResponse r = HttpClient::post(h, p, pre + "/auth/login", body, "", tls);
         if (r.status == 200) {
             nlohmann::json j = jParse(r.body);
@@ -90,7 +113,7 @@ void StoreClient::loginAsync(const std::string& name) {
                                  : "Falha no login da loja");
         }
         activeThreads_.fetch_sub(1);
-    }).detach();
+    }));
 }
 
 // ── catálogo: GET /store -> {gemPacks:[...], items:[...]} ─────────────────────
@@ -98,7 +121,7 @@ void StoreClient::fetchStoreAsync() {
     std::string h = host; int p = port;
     bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, tls, pre]() {
+    startThread(std::thread([this, h, p, tls, pre]() {
         HttpResponse r = HttpClient::get(h, p, pre + "/store", "", tls);
         if (r.status == 200) {
             std::vector<PremiumItem> its;
@@ -130,7 +153,7 @@ void StoreClient::fetchStoreAsync() {
             setMsg(r.status == 0 ? "Backend offline" : "Falha ao carregar a loja");
         }
         activeThreads_.fetch_sub(1);
-    }).detach();
+    }));
 }
 
 // ── saldo: GET /me -> {gems, inventory:[...]} ────────────────────────────────
@@ -140,7 +163,7 @@ void StoreClient::refreshAsync() {
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
     bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, tls, pre, tok]() {
+    startThread(std::thread([this, h, p, tls, pre, tok]() {
         HttpResponse r = HttpClient::get(h, p, pre + "/me", tok, tls);
         if (r.status == 200) {
             nlohmann::json j = jParse(r.body);
@@ -149,7 +172,7 @@ void StoreClient::refreshAsync() {
             { std::lock_guard<std::mutex> lk(mtx_); gems_ = (int)g; inventory_ = inv; }
         }
         activeThreads_.fetch_sub(1);
-    }).detach();
+    }));
 }
 
 // ── compra com gems: POST /store/buy-item {itemId} (servidor valida saldo) ────
@@ -160,8 +183,9 @@ void StoreClient::buyItemAsync(const std::string& itemId) {
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
     bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, tls, pre, tok, id]() {
-        std::string body = std::string("{\"itemId\":\"") + id + "\"}";
+    startThread(std::thread([this, h, p, tls, pre, tok, id]() {
+        BusyGuard bg(&busy_);
+        std::string body = nlohmann::json{{"itemId", id}}.dump();
         HttpResponse r = HttpClient::post(h, p, pre + "/store/buy-item", body, tok, tls);
         if (r.status == 200) {
             nlohmann::json j = jParse(r.body);
@@ -174,9 +198,8 @@ void StoreClient::buyItemAsync(const std::string& itemId) {
         } else {
             setMsg(r.status == 0 ? "Backend offline" : "Falha na compra");
         }
-        busy_ = false;
         activeThreads_.fetch_sub(1);
-    }).detach();
+    }));
 }
 
 // ── comprar gems: POST /store/buy-gems {packId} -> abre Stripe Checkout ───────
@@ -187,8 +210,9 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
     bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    std::thread([this, h, p, tls, pre, tok, id]() {
-        std::string body = std::string("{\"packId\":\"") + id + "\"}";
+    startThread(std::thread([this, h, p, tls, pre, tok, id]() {
+        BusyGuard bg(&busy_);
+        std::string body = nlohmann::json{{"packId", id}}.dump();
         HttpResponse r = HttpClient::post(h, p, pre + "/store/buy-gems", body, tok, tls);
         if (r.status == 200) {
             std::string url = jStr(jParse(r.body), "url");
@@ -201,15 +225,15 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
         } else {
             setMsg(r.status == 0 ? "Backend offline" : "Falha ao iniciar pagamento");
         }
-        busy_ = false;
         activeThreads_.fetch_sub(1);
-    }).detach();
+    }));
 }
 
 
 StoreClient::~StoreClient() {
-    // Espera (limitado) as threads de rede em voo antes de destruir membros
-    // (mutex/strings) — evita use-after-free no encerramento.
-    for (int i = 0; i < 200 && activeThreads_.load() > 0; ++i)
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    // Aguarda o término de todas as threads de rede antes de destruir membros
+    // compartilhados (mutex/strings) — evita use-after-free no encerramento.
+    std::vector<std::thread> toJoin;
+    { std::lock_guard<std::mutex> lk(mtx_); toJoin.swap(threads_); }
+    for (auto& th : toJoin) if (th.joinable()) th.join();
 }

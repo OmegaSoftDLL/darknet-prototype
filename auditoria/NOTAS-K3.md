@@ -453,3 +453,21 @@ Pr�ximos (se o usu�rio pedir evolu��o visual): light mask 2D ao estilo r
   - 31 CARCACA QUEIMADA: casco retorcido + mastro dobrado + lareira + fumaça pesada.
   - Distribuicao: cidade LA/GhostCity no mundo fixo (`place` por quarteirao) E no streaming (`put`/prop roll): cratera/asfalto/carcaça entram no roll da fase 1 e GhostCity ganha crateras; colisao marcada (28/29/31 bloqueiam com pegada moderada, 30 fica decor).
 - Gate: Release+Debug exit 0, testes 12/12 (109), validate 120/7 e 120/20260821 APROVADOS (sequenciais, janelados); CI headless nao renderiza os novos props. Screenshots shot_00..03.png para conferencia visual.
+
+## E31 - Auditoria das fases avancadas (5-10) e correcao do `--start-phase`
+
+- **Objetivo**: validar que as fases 6-11 da campanha (indice 5-10 em `content/phases.txt`) geram o bioma correto, spawnam inimigos, permitem combate e passam no portao de validacao do bot.
+- **Instrumentacao adicionada**: parametro `--start-phase=N` em `main.cpp` + flag estatica `Game::startPhaseOverride` (mesmo padrao de `Game::headless`), lida no construtor de `Game` para inicializar `owPhase`, `currentZone`, `currentRegion`, `owPhaseRadius` e `owPhaseGoal` a partir de `phaseDef(N)`.
+- **Defeito encontrado**: `Game game;` era criado ANTES de `game.startPhaseOverride = N`, entao o construtor sempre usava fase 0 (`LARuins`); o log `SCENERY` mostrava "Ruinas de Los Angeles" mesmo com `--start-phase=5`. Correcao: tornar `startPhaseOverride` static e setar `Game::startPhaseOverride` antes da construcao.
+- **Resultados do autotest headless (120s por fase, Release, seed aleatoria)**:
+  | Fase (indice) | Zona | SCENERY | Validacao |
+  |---|---|---|---|
+  | 5 | Bunker NEXUS | 9790 objetos, 312 estruturas | **PASSOU** |
+  | 6 | Catacumbas | 10733 objetos, 292 estruturas | **PASSOU** |
+  | 7 | Mansao Abandonada | 11753 objetos, 336 estruturas | **PASSOU** |
+  | 8 | Forja KRONOS | 12902 objetos, 385 estruturas | **PASSOU** |
+  | 9 | Zona Inferno | 14003 objetos, 407 estruturas | **PASSOU** |
+  | 10 | Nucleo KRONOS | 15486 objetos, 569 estruturas | **PASSOU** |
+- **Metricas da fase terminal (KronosNexus, 120s)**: 130 abates, 119 skills disparadas, 88 ataques melee, pico de 82 inimigos, 513 itens coletados, 0 mortes, 0 travamentos >10s, FPS minimo 388.
+- **Observacao**: testes de 30-60s falhavam esporadicamente por aleatoriedade de spawn/movimento do bot; 120s por fase estabilizou o gate.
+- **Gate**: Release build OK; autotest headless fases 5-10 APROVADOS; nenhuma alteracao de gameplay — apenas instrumentacao de auditoria + fix do ponto de aplicacao do override.

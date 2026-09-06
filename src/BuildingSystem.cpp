@@ -617,7 +617,7 @@ void FriendlyTank::render() const {
     Vector2 barrelEnd = {position.x + shootDir.x * 18.f, position.y + shootDir.y * 18.f};
     DrawLineEx(position, barrelEnd, 4.f, {0, 220, 255, 255});
     // HP bar
-    float pct = health / maxHealth;
+    float pct = (maxHealth > 0.0f) ? (health / maxHealth) : 0.0f;
     DrawRectangle((int)(position.x - 18), (int)(position.y - 20), 36, 4, ColorAlpha(BLACK, 0.6f));
     DrawRectangle((int)(position.x - 18), (int)(position.y - 20), (int)(36 * pct), 4,
                   {0, 240, 255, 255});
@@ -693,7 +693,7 @@ void FriendlySoldier::render() const {
     Vector2 rifleEnd = {position.x + shootDir.x * 16.f, position.y - 8.f + shootDir.y * 16.f};
     DrawLineEx({position.x, position.y - 8.f}, rifleEnd, 2.5f, {0, 220, 255, 255});
     // HP
-    float pct = health / maxHealth;
+    float pct = (maxHealth > 0.0f) ? (health / maxHealth) : 0.0f;
     DrawRectangle((int)(position.x - 12), (int)(position.y - 18), 24, 3, ColorAlpha(BLACK, 0.6f));
     DrawRectangle((int)(position.x - 12), (int)(position.y - 18), (int)(24 * pct), 3,
                   {0, 220, 255, 255});

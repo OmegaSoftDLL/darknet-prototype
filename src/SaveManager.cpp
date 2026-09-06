@@ -16,6 +16,27 @@
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+static bool isValidSlot(int slot) { return slot >= 0 && slot < SAVE_SLOTS; }
+
+static ZoneID clampZone(int v) {
+    const int max = static_cast<int>(ZoneID::InfernoZone);
+    if (v < 0) return ZoneID::LARuins;
+    if (v > max) return ZoneID::InfernoZone;
+    return static_cast<ZoneID>(v);
+}
+static EvolutionPath clampEvolutionPath(int v) {
+    const int max = static_cast<int>(EvolutionPath::ExecutorOmega);
+    if (v < 0) return EvolutionPath::None;
+    if (v > max) return EvolutionPath::ExecutorOmega;
+    return static_cast<EvolutionPath>(v);
+}
+static CharacterClass clampCharacterClass(int v) {
+    const int max = static_cast<int>(CharacterClass::COUNT) - 1;
+    if (v < 0) return CharacterClass::Soldado;
+    if (v > max) return static_cast<CharacterClass>(max);
+    return static_cast<CharacterClass>(v);
+}
+
 void SaveManager::ensureSavesDir() {
 #ifdef _WIN32
     CreateDirectoryA("saves", NULL);
@@ -23,6 +44,7 @@ void SaveManager::ensureSavesDir() {
 }
 
 std::string SaveManager::slotPath(int slot) {
+    if (!isValidSlot(slot)) return std::string("saves/darknet_slot_INVALID.txt");
     return std::string("saves/darknet_slot") + std::to_string(slot) + ".txt";
 }
 
@@ -198,8 +220,8 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"xpToNext")==0) { fscanf(f," %d",&player.xpToNextLevel); }
         else if (strcmp(key,"credits")==0)  { fscanf(f," %d",&player.credits); hasCredits=true; }
         else if (strcmp(key,"totalKills")==0){ fscanf(f," %d",&player.totalKills); }
-        else if (strcmp(key,"zone")==0)     { fscanf(f," %d",&zoneInt); zone=static_cast<ZoneID>(zoneInt); }
-        else if (strcmp(key,"evolutionPath")==0){ int ep=0; fscanf(f," %d",&ep); player.evolutionPath=static_cast<EvolutionPath>(ep); hasEvolution=true; }
+        else if (strcmp(key,"zone")==0)     { fscanf(f," %d",&zoneInt); zone=clampZone(zoneInt); }
+        else if (strcmp(key,"evolutionPath")==0){ int ep=0; fscanf(f," %d",&ep); player.evolutionPath=clampEvolutionPath(ep); hasEvolution=true; }
         else if (strcmp(key,"evolutionTier")==0){ fscanf(f," %d",&player.evolutionTier); }
         else if (strcmp(key,"skillPoints")==0){
             int sp = 0; fscanf(f," %d",&sp);
@@ -285,7 +307,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     // efetivos corretamente — sem isso o "continuar" voltava como Soldado nivel-base.
     if (savedClass >= 0) {
         float keepHealth = player.health;
-        player.loadSavedProgress(static_cast<CharacterClass>(savedClass), bMax, bDmg, bSpd, bRng, bDef);
+        player.loadSavedProgress(clampCharacterClass(savedClass), bMax, bDmg, bSpd, bRng, bDef);
         player.health = (keepHealth > 0.0f && keepHealth <= player.maxHealth) ? keepHealth : player.maxHealth;
     }
     player.refreshSkillVectors();   // perks carregados: reaplica mods de skill
@@ -303,6 +325,7 @@ bool SaveManager::hasSave(int slot) {
 }
 
 void SaveManager::deleteSave(int slot) {
+    if (!isValidSlot(slot)) return;
     std::string path = slotPath(slot);
     remove(path.c_str());
 }

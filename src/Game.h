@@ -29,6 +29,7 @@
 #include "Achievement.h"
 #include "NetClient.h"
 #include "StoreClient.h"
+#include "GfxResource.h"
 #include <vector>
 #include <string>
 #include <raylib.h>
@@ -93,8 +94,9 @@ public:
     bool  autoTestPassed  = true;   // resultado do portao de validacao (vira exit code)
     void runAutoTest(bool autoTest);
     void runHeadless();
-    // Setado por main.cpp ANTES de construir Game: roda SEM janela/GPU (CI).
-    static bool headless;
+    // Setados por main.cpp ANTES de construir Game.
+    static bool headless;          // roda SEM janela/GPU (CI)
+    static int  startPhaseOverride; // >=0: pula para esta fase no inicio (auditoria)
     float  headlessFps = 0.0f;   // FPS medido do proprio loop headless (GetFPS()=0 sem janela)
 
 private:
@@ -118,8 +120,14 @@ private:
     // ou seja, DESLIZAVA pelo cenario em vez de andar.
     static constexpr int VOX_POSES = 4;
     static int  voxKey(int base, int pose) { return base * 8 + pose; }
-    bool hasVoxel(int key) const { return m_voxModels.count(key) != 0; }
-    bool hasVoxelPoses(int base) const { return m_voxModels.count(voxKey(base, VOX_POSES - 1)) != 0; }
+    // O render 3D depende do SPRITE 2D capturado; o modelo voxel e gerado mas nao usado.
+    bool hasVoxelSprite(int key) const {
+        auto it = m_voxSprites.find(key);
+        return it != m_voxSprites.end() && it->second.valid();
+    }
+    bool hasVoxelPoses(int base) const { return hasVoxelSprite(voxKey(base, VOX_POSES - 1)); }
+    // DEPRECATED: mantido so para compatibilidade de codigo antigo.
+    bool hasVoxel(int key) const { return hasVoxelSprite(key); }
     void updateItems(float dt);
     void updateXPOrbs(float dt);
     void updateProjectiles(float dt);
@@ -165,20 +173,21 @@ private:
     // Câmera 3D para o mundo (chão/paredes). 2D continua sendo a base estável; o
     // modo 3D é alternável por F10 enquanto a migração avança incremento a incremento.
     Camera3D camera3D{};
-    float    cameraHeight = 820.0f;   // altura da câmera acima do plano
-    float    cameraDistY  = 650.0f;   // recuo no eixo Z (profundidade isométrica)
+    float    cameraHeight = 740.0f;   // altura da câmera acima do plano
+    float    cameraDistY  = 580.0f;   // recuo no eixo Z (profundidade isométrica)
     float    cameraZoom   = 1.0f;
     float    camPunch     = 0.0f;   // "camera kick" de zoom: sobe no cast/impacto e decai
     float    worldClock   = 0.32f;    // ciclo dia/noite (0=meia-noite, 0.5=meio-dia)
     int      bossPowersAbsorbed = 0;  // poderes de boss absorvidos (estilo V Rising)
     bool     victoryReported = false; // reset por partida (era static de funcao = bug)
     float    worldSun    = 1.0f;      // 0=noite, 1=dia (deriva do worldClock)     // roda do mouse: <1 aproxima, >1 afasta (olhar de cima)
-    RenderTexture2D tempEntityTarget{}; // alvo temporário p/ desenhar entidades procedurais
+    GfxRenderTexture tempEntityTarget; // alvo temporário p/ desenhar entidades procedurais
     void     updateCamera3D();
     Vector2  mouseGround3D() const;   // raycast do mouse no plano Y=0 -> mundo 2D
     void     renderWorld3D();         // caminho de render 2.5D completo (mundo 3D + outdoors procedurais)
     // Modelos VOXEL 3D reais (malha extrudada do sprite 2D) — cache por tipo.
-    std::unordered_map<int, Model> m_voxModels;
+    std::unordered_map<int, GfxModel> m_voxModels;
+    std::unordered_map<int, GfxTexture> m_voxSprites; // sprite 2D capturado por base (fallback se voxel sumir)
     int      m_voxGenBudget = 0;   // limite de geracoes de voxel por frame (anti-engasgo)
     void     ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn);
     void     drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase = 0.0f,
@@ -208,6 +217,13 @@ private:
     void    triggerShake(float intensity, float dur) {
         shakeIntensity = intensity; shakeTimer = dur;
     }
+
+    // Eventos de guerra ambiente (ruinas/cidade fantasma): impacto distante com
+    // flash, estrondo abafado e micro-tremor — o mundo "continua em guerra".
+    float   owWarTimer  = 0.0f;   // regressiva ate o proximo impacto ambiente
+    float   owWarFlash  = 0.0f;   // >0 = impacto ativo (render usa pra desenhar o flash)
+    Vector2 owWarPos    = { 0, 0 };
+    float   owWarSeed   = 0.0f;   // estabiliza angulo/escala do impacto corrente
 
     // Indicador direcional de dano — aponta para QUEM feriu o jogador (shooter juice)
     Vector2 hurtDir      = {0, 0};   // vetor unitario (mundo) fonte -> player
@@ -386,28 +402,30 @@ private:
     bool    dialogOpen        = false;
 
     // Fullscreen render target (virtual 1280x720 always)
-    RenderTexture2D gameTarget;
+    GfxRenderTexture gameTarget;
 
     // ── POS-PROCESSAMENTO (bloom + tonemap) ──
     // O frame inteiro (mundo + HUD) sai do gameTarget e passa por: brilho ->
     // blur H -> blur V -> composicao com tonemap filmico. Se algum shader falhar
     // em compilar, m_postFX fica false e a apresentacao volta ao caminho antigo
     // (DrawTexturePro puro) — nunca tela preta.
-    Shader          m_shBright{}, m_shBlur{}, m_shGrade{};
-    RenderTexture2D m_bloomA{}, m_bloomB{};
+    GfxShader          m_shBright, m_shBlur, m_shGrade;
+    GfxRenderTexture   m_bloomA, m_bloomB;
     bool            m_postFX = false;
     int m_locThreshold = -1, m_locKnee = -1, m_locBlurDir = -1;
     int m_locBloomTex = -1, m_locBloomStr = -1, m_locExposure = -1,
         m_locSaturation = -1, m_locContrast = -1;
     // Shader de ILUMINACAO do mundo 3D (direcional + ambiente + rim + nevoa).
     // Sem ele todo poligono saia com a cor escrita, sem volume: papelao colorido.
-    Shader m_shWorld{};
-    bool   m_worldLit = false;
+    GfxShader m_shWorld;
+    bool      m_worldLit = false;
+    GfxTexture m_whiteTex;   // textura 1x1 branca: voxels usam cor por vertice
     int    m_locLightDir = -1, m_locLightCol = -1, m_locAmbCol = -1, m_locCamPos = -1,
            m_locFogCol = -1, m_locFogStart = -1, m_locFogEnd = -1, m_locRim = -1,
            m_locSpecK = -1, m_locWorldPer = -1;
     void   initWorldShader();
     void   applyWorldShader(Model& m) const;   // liga o shader no material do modelo
+    void   applyWorldShader(GfxModel& m) const;
     void   updateWorldShaderUniforms();
 
     void    drawGenericStructure(Vector2 pos, float sc) const;
@@ -662,19 +680,19 @@ private:
     int   zonesVisitedSet  = 0;  // bitmask of visited zone ids
 
     // 3D Models and textures for realistic 3D graphics
-    Model m_houseModel{};
-    Model m_turretModel{};
-    Model m_barracksModel{};
-    Model m_castleModel; // used for Town Hall / Arca
-    Model m_marketModel; // used for Tank Factory
-    Model m_wellModel;   // used for MedBay
-    Model m_carModel;    // old_car_new.glb — carros do cenário 3D
+    GfxModel m_houseModel;
+    GfxModel m_turretModel;
+    GfxModel m_barracksModel;
+    GfxModel m_castleModel; // used for Town Hall / Arca
+    GfxModel m_marketModel; // used for Tank Factory
+    GfxModel m_wellModel;   // used for MedBay
+    GfxModel m_carModel;    // old_car_new.glb — carros do cenário 3D
     float m_houseScale=1,m_turretScale=1,m_barracksScale=1,m_castleScale=1,m_marketScale=1,m_wellScale=1,m_carScale=1;
-    Texture2D m_houseTex{};
-    Texture2D m_turretTex{};
-    Texture2D m_barracksTex{};
-    Texture2D m_castleTex{};
-    Texture2D m_marketTex{};
-    Texture2D m_wellTex{};
+    GfxTexture m_houseTex;
+    GfxTexture m_turretTex;
+    GfxTexture m_barracksTex;
+    GfxTexture m_castleTex;
+    GfxTexture m_marketTex;
+    GfxTexture m_wellTex;
     bool m_modelsLoaded = false;
 };
