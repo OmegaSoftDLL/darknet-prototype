@@ -615,7 +615,7 @@ void Game::run() {
                         characterHovered   = 0;
                         drawMainMenu(); drawCharacterSelectScreen(); presentFrame(); continue;
                     } else {
-                        if (hasSave) SaveManager::load(player, quests, currentZone);
+                        if (hasSave) SaveManager::load(player, quests, currentZone, 0, &totalKills);
                         if (openWorldMode) {
                             // Reconstroi a fase a partir da zona salva (ver startLoadedGame).
                             owPhase = 0; owPhaseRadius = 3000.0f; owPhaseGoal = 20; owBossPhase = false;
@@ -794,6 +794,9 @@ void Game::run() {
 void Game::startNewGame() {
     // Inicia a partida do zero apos escolher dificuldade e personagem.
     victoryReported = false;
+    tutorial.init();
+    tutorialRewardGiven = false;
+    achievements.playerPtr = &player;
     buildQuests();
     currentZone   = ZoneID::LARuins;
     currentRegion = ZoneID::LARuins;
@@ -968,7 +971,7 @@ void Game::drawCharacterSelectScreen() const {
 void Game::startLoadedGame() {
     // Carrega o save e entra direto no jogo — SEM tela de dificuldade.
     // A dificuldade salva e mantida (so muda em Novo Jogo ou pelo menu de pause).
-    if (SaveManager::exists()) SaveManager::load(player, quests, currentZone);
+    if (SaveManager::exists()) SaveManager::load(player, quests, currentZone, 0, &totalKills);
     // Ow phase state nao fica no .json: reconstruo owPhase/raio/meta/boss a partir
     // da ZONA salva, senao as regioes nascem para a fase 1 (raio 5200) num save de
     // phase 10 (raio 7800) — grid menor que a barreira, anel externo sem cenario.
@@ -1006,6 +1009,9 @@ void Game::restartRun() {
     // Reset do jogador (o construtor reconfigura skills e stats base)
     victoryReported = false;
     player = Player();
+    tutorial.init();
+    tutorialRewardGiven = false;
+    achievements.playerPtr = &player;
 
     // Limpa todas as entidades em jogo
     enemies.clear();
@@ -1142,6 +1148,9 @@ void Game::drainLevelUps() {
     if (gained <= 0) return;
     player.unclaimedLevels = 0;
 
+    tutorial.onLeveledUp();
+    achievements.onLevelUp(player.level);
+
     particles.spawnLevelUp(player.position);
     audio.playLevelUp();
     static const char* lvlLines[] = {
@@ -1214,6 +1223,7 @@ void Game::checkCollisions() {
             // Coleta REAL (item saindo do vetor) — o bot contava por proximidade
             // (<20px) e o magnetismo/recolha automatica removia o item antes.
             if (botController.active) botController.itemsCollected++;
+            tutorial.onItemPickedUp();
             switch (it->type) {
                 case ItemType::HealthPack:
                     player.heal(30.0f);
@@ -1221,6 +1231,8 @@ void Game::checkCollisions() {
                     break;
                 case ItemType::Credits:
                     player.credits += it->value;
+                    totalCreditsEarned += it->value;
+                    achievements.onCreditsEarned(totalCreditsEarned);
                     damageNumbers.push_back({it->position, (float)it->value, {255,210,0,255}, 1.4f, "$"});
                     break;
                 case ItemType::TechChip:
@@ -1240,10 +1252,14 @@ void Game::checkCollisions() {
                 case ItemType::ScrapMetal:
                     player.heal(8.0f);
                     player.credits += 8;
+                    totalCreditsEarned += 8;
+                    achievements.onCreditsEarned(totalCreditsEarned);
                     damageNumbers.push_back({it->position, 8.0f, {160,160,170,255}, 0.9f, "+"});
                     break;
                 case ItemType::WeaponPart:
                     player.credits += 20;
+                    totalCreditsEarned += 20;
+                    achievements.onCreditsEarned(totalCreditsEarned);
                     damageNumbers.push_back({it->position, 20.0f, {255,130,0,255}, 1.1f, "$"});
                     break;
                 case ItemType::EnergyCore:
@@ -1411,7 +1427,10 @@ void Game::noteHurtDir(Vector2 src) {
 }
 
 void Game::autoSave() {
-    SaveManager::save(player, quests, currentZone);
+    SaveManager::save(player, quests, currentZone, 0,
+                      sessionTime / 60.0f, player.totalKills,
+                      totalDeaths, totalBossesKilled, totalPortalsClosed,
+                      (int)difficulty, totalKills);
 }
 
 void Game::showStoryBanner(const std::string& title, const std::string& sub, float dur) {

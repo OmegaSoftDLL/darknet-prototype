@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include <vector>
 #include <cmath>
+#include <functional>
 
 enum class PortalState {
     Opening,  // animacao de abertura 1.5s
@@ -74,14 +75,16 @@ struct AnomalySystem {
     float waveTimer    = 0.0f;   // cooldown between waves
     float hudPulse     = 0.0f;
 
-    void spawnWave(int zoneW, int zoneH, Vector2 playerPos);
+    void spawnWave(int zoneW, int zoneH, Vector2 playerPos,
+                   Vector2 diskCenter = {0, 0}, float diskRadius = 0.0f);
     void update(float dt, Vector2 playerPos);
     void renderWorld() const;                            // world-space portals (inside BeginMode2D)
     void renderStorm(int screenW, int screenH) const;   // screen-space storm overlay
     void renderHUD(int screenW, int screenH) const;      // screen-space portal counter
 
     bool checkProjectileHit(Vector2 projPos, float projRadius, float damage);
-    bool pollSpawn(int& outEnemyTypeInt, Vector2& outPos);
+    bool pollSpawn(int& outEnemyTypeInt, Vector2& outPos,
+                   const std::function<bool(Vector2)>& isFree = nullptr);
 
     int  countOpen() const;
     bool hasActiveWave() const { return waveActive && countOpen() > 0; }

@@ -14,7 +14,6 @@
 #include "SaveManager.h"
 #include "Zone.h"
 #include "Equipment.h"
-#include "Effects.h"
 #include "Background.h"
 #include "LightSystem.h"
 #include "BotController.h"
@@ -27,6 +26,7 @@
 #include "DarkWorld.h"
 #include "InfernoZone.h"
 #include "Achievement.h"
+#include "TutorialSystem.h"
 #include "NetClient.h"
 #include "StoreClient.h"
 #include "GfxResource.h"
@@ -103,6 +103,7 @@ private:
     // Update
     void update(float dt);
     void handleInput(float dt);
+    void movePlayerWithSlide(Vector2 direction, float dt);
     // Decisoes do bot/autotest (extraido de handleInput): roda no mesmo ponto,
     // sob a guarda interna botController.active. shouldQuit sinaliza via quitRequested.
     void updateBotControl(float dt);
@@ -185,10 +186,9 @@ private:
     void     updateCamera3D();
     Vector2  mouseGround3D() const;   // raycast do mouse no plano Y=0 -> mundo 2D
     void     renderWorld3D();         // caminho de render 2.5D completo (mundo 3D + outdoors procedurais)
-    // Modelos VOXEL 3D reais (malha extrudada do sprite 2D) — cache por tipo.
-    std::unordered_map<int, GfxModel> m_voxModels;
-    std::unordered_map<int, GfxTexture> m_voxSprites; // sprite 2D capturado por base (fallback se voxel sumir)
-    int      m_voxGenBudget = 0;   // limite de geracoes de voxel por frame (anti-engasgo)
+    // Sprites 2D capturados por tipo — usados como textura nos billboards do mundo 3D.
+    std::unordered_map<int, GfxTexture> m_voxSprites;
+    int      m_voxGenBudget = 0;   // limite de geracoes de sprite por frame (anti-engasgo)
     void     ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn);
     void     drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase = 0.0f,
                        bool moving = false);
@@ -669,6 +669,10 @@ private:
 
     // Achievement system
     AchievementSystem achievements;
+
+    // Tutorial system
+    TutorialSystem tutorial;
+    bool tutorialRewardGiven = false;
 
     // Telemetry for achievements
     int   totalKillsEver   = 0;

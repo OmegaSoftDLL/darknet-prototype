@@ -1,6 +1,7 @@
 // Game_Menus.cpp — telas de menu principal, pausa, level-up e evolucao.
 // Modularizacao: extraido de Game.cpp (que estava com ~7000 linhas). Mesma classe Game.
 #include "Game.h"
+#include "Effects.h"
 #include <raylib.h>
 #include <raymath.h>
 #include "rlgl.h"
@@ -313,11 +314,11 @@ void Game::applyLevelUpChoice(int idx) {
     if (idx<0||idx>2) return;
     const LevelUpChoice& c = levelUpOptions[idx];
     switch (c.statType) {
-        case 0: player.maxHealth    += c.bonusAmount; player.health = player.maxHealth; break;
-        case 1: player.attackDamage += c.bonusAmount; break;
-        case 2: player.speed        += c.bonusAmount; break;
-        case 3: player.defense      += c.bonusAmount; break;
-        case 4: player.attackRange  += c.bonusAmount; break;
+        case 0: player.increaseBaseMaxHP(c.bonusAmount); player.health = player.maxHealth; break;
+        case 1: player.increaseBaseAttackDamage(c.bonusAmount); break;
+        case 2: player.increaseBaseSpeed(c.bonusAmount); break;
+        case 3: player.increaseBaseDefense(c.bonusAmount); break;
+        case 4: player.increaseBaseAttackRange(c.bonusAmount); break;
     }
     particles.spawnLevelUp(player.position);
 }

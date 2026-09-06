@@ -1136,6 +1136,21 @@ void Player::increaseBaseMaxHP(float amount) {
     applyEquipmentStats();
 }
 
+void Player::increaseBaseAttackDamage(float amount) {
+    baseAttackDamage += amount;
+    applyEquipmentStats();
+}
+
+void Player::increaseBaseSpeed(float amount) {
+    baseSpeed += amount;
+    applyEquipmentStats();
+}
+
+void Player::increaseBaseAttackRange(float amount) {
+    baseAttackRange += amount;
+    applyEquipmentStats();
+}
+
 void Player::increaseBaseDefense(float amount) {
     baseDefense += amount;
     applyEquipmentStats();

@@ -65,6 +65,8 @@ void Game::updateEvolutionEngine(float dt) {
         // Recompensa de marco + anuncio de novidade
         int bonus = 50 * threatLevel;
         player.credits += bonus;
+        totalCreditsEarned += bonus;
+        achievements.onCreditsEarned(totalCreditsEarned);
         showStoryBanner(TextFormat("NIVEL DE AMEACA %d", threatLevel),
             TextFormat("KRONOS escala. Inimigos +%.0f%% mais fortes. Bonus: $%d",
                        (threatStatMult()-1.0f)*100.0f, bonus), 4.0f);

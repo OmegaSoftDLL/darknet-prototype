@@ -3,6 +3,7 @@
 // drawGenericStructure, drawArkStructure, sphereInCameraFrustum, renderWorld3D).
 // Statics duplicadas localmente (mesmo padrao de Game_WorldGen.cpp).
 #include "Game.h"
+#include "Effects.h"
 #include "SpriteExtrude.h"
 #include "SpriteGen.h"
 #include <raylib.h>
@@ -193,19 +194,8 @@ void Game::ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn) {
     SetTextureWrap(spriteTex, TEXTURE_WRAP_CLAMP);
     m_voxSprites[key] = GfxTexture(spriteTex);
 
-    // Voxel 3D real: cacheado mas NAO renderizado no hardware deste usuario.
-    // Mantemos a geracao porque o sistema foi construido em torno dele.
-    const float VOX = 2.20f;
-    const float VOX_DEPTH = 11.0f;
-    m_voxModels[key] = GfxModel(SpriteExtrude::BuildVoxelModel(crop, VOX, VOX_DEPTH));
     UnloadImage(crop);
     UnloadImage(outlined);
-    {   // MEDIDA (nao chute): tamanho real do personagem em unidades de mundo,
-        // pra comparar com casa/carro.
-        BoundingBox bb = GetModelBoundingBox(m_voxModels[key].get());
-        TraceLog(LOG_INFO, "VOXSIZE key=%d  L=%.1f  A=%.1f  P=%.1f", key,
-                 bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z);
-    }
     UnloadImage(img);
 }
 

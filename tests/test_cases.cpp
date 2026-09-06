@@ -187,7 +187,7 @@ TEST_CASE("Equipment - custo de upgrade e canUpgrade") {
 
 // ── SaveManager: roundtrip V5 (slot) ─────────────────────────────────────────
 
-TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V5)") {
+TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     const int slot = 2;
     SaveManager::deleteSave(slot);
 
@@ -200,12 +200,28 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V5)") {
     p.xpToNextLevel = 3200;
     p.credits = 9876;
     p.totalKills = 123;
-    p.equipItem(EDB::rifleEnergia());
-    p.equipItem(EDB::armaduraAvan());
-    p.equipItem(EDB::neuralLink());
+
+    Equipment w = EDB::rifleEnergia(); w.upgradeLevel = 2; w.primary = 50; w.secondary = 70;
+    Equipment a = EDB::armaduraAvan(); a.upgradeLevel = 1; a.primary = 150; a.secondary = 20;
+    Equipment i = EDB::neuralLink();   i.upgradeLevel = 3; i.primary = 55; i.secondary = 1.8f;
+    p.equipItem(w);
+    p.equipItem(a);
+    p.equipItem(i);
+
+    p.equipBag.push_back(EDB::pistolaPlas());
+    p.equipBag.back().upgradeLevel = 1;
+    p.equipBag.push_back(EDB::exoesqueleto());
+
     p.inventory.clear();
-    for (int i = 0; i < 5; ++i) { Item it{}; it.type = ItemType::MetalScrap; p.inventory.push_back(it); }
-    p.inventory.push_back(p.inventory[0]); // 6 no total para o DELETE do slot
+    for (int k = 0; k < 5; ++k) {
+        Item it{}; it.type = ItemType::MetalScrap; it.rarity = ItemRarity::Common; p.inventory.push_back(it);
+    }
+    {
+        Item leg{}; leg.type = ItemType::PlasmaRifle; leg.rarity = ItemRarity::Legendary;
+        leg.value = 5000; leg.bonusDamage = 25; leg.bonusCrit = 0.15f;
+        leg.affixPrefix = "Flamejante"; leg.affixSuffix = "do Tita"; leg.baseName = "Rifle de Plasma";
+        p.inventory.push_back(leg);
+    }
 
     std::vector<Quest> quests;
     Quest qa("q_teste_a", "A", "d", "npc", QuestType::Kill, 10);
@@ -214,20 +230,23 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V5)") {
     qb.current = 1; qb.completed = true; qb.rewardGiven = true;
     quests.push_back(qa); quests.push_back(qb);
 
-    SaveManager::save(p, quests, ZoneID::Cemetery, slot, 45.5f, 123);
+    SaveManager::save(p, quests, ZoneID::Cemetery, slot, 45.5f, 123,
+                      2, 5, 9, 3, 777);
 
     Player loaded;
     std::vector<Quest> loadedQuests;
     loadedQuests.push_back(Quest("q_teste_a", "A", "d", "npc", QuestType::Kill, 10));
     loadedQuests.push_back(Quest("q_teste_b", "B", "d", "npc", QuestType::KillBoss, 1));
     ZoneID loadedZone = ZoneID::LARuins;
+    int loadedGameTotalKills = 0;
 
-    REQUIRE(SaveManager::load(loaded, loadedQuests, loadedZone, slot));
+    REQUIRE(SaveManager::load(loaded, loadedQuests, loadedZone, slot, &loadedGameTotalKills));
     REQUIRE(SaveManager::hasSave(slot));
 
     SaveSlotInfo info = SaveManager::getSlotInfo(slot);
     CHECK(info.exists);
     CHECK(info.playerLevel == 7);
+    CHECK(info.playMinutes == doctest::Approx(45.5f));
 
     // Player core
     CHECK(loaded.position.x == doctest::Approx(123.0f));
@@ -238,16 +257,33 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V5)") {
     CHECK(loaded.getCharClass() == CharacterClass::Mago);
     CHECK(loaded.totalKills == 123);
     CHECK(static_cast<int>(loadedZone) == static_cast<int>(ZoneID::Cemetery));
+    CHECK(loadedGameTotalKills == 777);
 
-    // Equipment resolvido por ID estavel (nao por nome)
+    // Equipment resolvido por ID estavel + upgrade/primary/secondary
     CHECK(loaded.equippedWeapon.id == EDB::rifleEnergia().id);
-    CHECK(loaded.equippedArmor.id   == EDB::armaduraAvan().id);
-    CHECK(loaded.equippedImplant.id == EDB::neuralLink().id);
+    CHECK(loaded.equippedWeapon.upgradeLevel == 2);
+    CHECK(loaded.equippedWeapon.primary == doctest::Approx(50.0f));
+    CHECK(loaded.equippedWeapon.secondary == doctest::Approx(70.0f));
+    CHECK(loaded.equippedArmor.upgradeLevel == 1);
+    CHECK(loaded.equippedImplant.upgradeLevel == 3);
 
-    // Inventory
+    // EquipBag
+    REQUIRE(loaded.equipBag.size() == 2);
+    CHECK(loaded.equipBag[0].id == EDB::pistolaPlas().id);
+    CHECK(loaded.equipBag[0].upgradeLevel == 1);
+    CHECK(loaded.equipBag[1].id == EDB::exoesqueleto().id);
+
+    // Inventory (raridade/afixos preservados)
     REQUIRE(loaded.inventory.size() == 6);
-    for (const auto& item : loaded.inventory)
-        CHECK(item.type == ItemType::MetalScrap);
+    const Item& legLoaded = loaded.inventory.back();
+    CHECK(legLoaded.type == ItemType::PlasmaRifle);
+    CHECK(legLoaded.rarity == ItemRarity::Legendary);
+    CHECK(legLoaded.value == 5000);
+    CHECK(legLoaded.bonusDamage == doctest::Approx(25.0f));
+    CHECK(legLoaded.bonusCrit == doctest::Approx(0.15f));
+    CHECK(legLoaded.affixPrefix == "Flamejante");
+    CHECK(legLoaded.affixSuffix == "do Tita");
+    CHECK(legLoaded.baseName == "Rifle de Plasma");
 
     // Quests (match por id, estado restaurado)
     REQUIRE(loadedQuests.size() == 2);

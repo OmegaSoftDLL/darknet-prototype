@@ -50,6 +50,7 @@ private:
     int   mapHeight = 2000;
     float ashSpawnTimer = 0.0f;
     float lavaDmgTimer  = 0.0f;
+    unsigned int rngSeed = 0;
 
     void spawnAsh(Vector2 near);
 };

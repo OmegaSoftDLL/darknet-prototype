@@ -184,6 +184,7 @@ private:
     float     clearTimer    = 0.0f;    // time with no enemies + no items
     bool      wasLowHP      = false;
     Vector2   fleeTarget    = {0, 0};
+    Vector2   lastAdvancePortalPos = {-99999.0f, -99999.0f}; // evita contar o mesmo portal multiplas vezes
 
     // Exploration spiral
     float     exploreTimer  = 0.0f;

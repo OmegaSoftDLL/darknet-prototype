@@ -7,7 +7,7 @@
 #include <string>
 
 static constexpr int SAVE_SLOTS = 3;
-static constexpr int SAVE_VERSION = 6;   // V6: Hack Tree (skillPoints + perkMask)
+static constexpr int SAVE_VERSION = 7;   // V7: metadados do Game, equipBag, upgrades/afixos
 
 struct SaveSlotInfo {
     bool        exists      = false;
@@ -28,8 +28,9 @@ public:
     static void save(const Player& player, const std::vector<Quest>& quests, ZoneID zone,
                      int slot = 0, float playMinutes = 0.f, int totalKills = 0,
                      int totalDeaths = 0, int bossesKilled = 0, int portalsSealed = 0,
-                     int difficultyLevel = 0);
-    static bool load(Player& player, std::vector<Quest>& quests, ZoneID& zone, int slot = 0);
+                     int difficultyLevel = 0, int gameTotalKills = 0);
+    static bool load(Player& player, std::vector<Quest>& quests, ZoneID& zone, int slot = 0,
+                     int* gameTotalKillsOut = nullptr);
     static bool hasSave(int slot = 0);
     static void deleteSave(int slot = 0);
     static SaveSlotInfo getSlotInfo(int slot);

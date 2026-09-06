@@ -284,6 +284,8 @@ void Game::updateAnimals(float dt) {
                        (a.type == AnimalType::Deer) ? GetRandomValue(15,30) :
                        (a.type == AnimalType::Wolf) ? GetRandomValue(12,24) : GetRandomValue(4,10);
             player.credits += cred;
+            totalCreditsEarned += cred;
+            achievements.onCreditsEarned(totalCreditsEarned);
             xpOrbs.emplace_back(a.position, cred / 2 + 5);
             damageNumbers.push_back({a.position, (float)cred, Color{255,200,0,255}, 1.0f, "$"});
             particles.spawnHit(a.position, Color{180,40,30,255}, 14);

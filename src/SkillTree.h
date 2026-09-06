@@ -39,7 +39,7 @@ namespace SkillTree {
     int             branchOf(int i);
     int             tierOf(int i);
     int             spentInBranch(uint32_t mask, int branch);
-    inline int      branchSpentReq(int tier) { return tier * 2; }
+    inline int      branchSpentReq(int tier) { return tier == 2 ? 3 : tier * 2; }
     bool            canBuy(uint32_t mask, int i);
     PerkStats       statsFor(uint32_t mask);
     int             bestNext(uint32_t mask);
