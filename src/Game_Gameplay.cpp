@@ -186,6 +186,18 @@ void Game::update(float dt) {
     craftingSystem.update(dt);
 
     handleInput(dt);
+
+    // Tutorial / achievement systems update (after input, before physics/combat)
+    tutorial.update(dt);
+    if (!tutorial.active && tutorial.currentStep == TutorialStep::Completed && !tutorialRewardGiven) {
+        tutorialRewardGiven = true;
+        player.xp      += 500;
+        player.credits += 100;
+    }
+    achievements.update(dt);
+    totalPlaytime += dt;
+    achievements.onPlaytime(totalPlaytime / 60.0f);
+
     player.update(dt);
     updateCompanions(dt);
     particles.update(dt);
@@ -800,7 +812,12 @@ void Game::update(float dt) {
         // Collect building-generated resources
         int genCredits  = buildingSystem.collectCredits();
         int genMaterials = buildingSystem.collectMaterials();
-        if (genCredits  > 0) { player.credits += genCredits;   damageNumbers.push_back({player.position, (float)genCredits,  {255,220,0,255}, 1.2f, "$"}); }
+        if (genCredits  > 0) {
+            player.credits += genCredits;
+            totalCreditsEarned += genCredits;
+            achievements.onCreditsEarned(totalCreditsEarned);
+            damageNumbers.push_back({player.position, (float)genCredits,  {255,220,0,255}, 1.2f, "$"});
+        }
         if (genMaterials > 0) materialMetal   += genMaterials;
 
         // Building heals
@@ -820,7 +837,11 @@ void Game::update(float dt) {
             anomalyWaveTimer = 0.0f;
             int mapW = tilemap.width  * Tilemap::tileSize;
             int mapH = tilemap.height * Tilemap::tileSize;
-            anomalySystem.spawnWave(mapW, mapH, player.position);
+            if (openWorldMode) {
+                anomalySystem.spawnWave(mapW, mapH, player.position, safeZoneCenter, owPhaseRadius);
+            } else {
+                anomalySystem.spawnWave(mapW, mapH, player.position);
+            }
             triggerPlayerSpeech("Anomalias detectadas! Feche os portais!", 3.5f);
             showStoryBanner("!! ANOMALIA DETECTADA !!", "Feche todos os portais para continuar");
         }
@@ -830,7 +851,8 @@ void Game::update(float dt) {
     // Spawn enemies from portals
     {
         int portalEnemyType; Vector2 portalSpawnPos;
-        if (anomalySystem.pollSpawn(portalEnemyType, portalSpawnPos)) {
+        auto isFree = [this](Vector2 pos) { return !isBlocked(pos); };
+        if (anomalySystem.pollSpawn(portalEnemyType, portalSpawnPos, isFree)) {
             enemies.emplace_back(portalSpawnPos, (EnemyType)portalEnemyType);
         }
     }
@@ -846,7 +868,11 @@ void Game::update(float dt) {
     // All portals closed — reward
     if (anomalySystem.waveActive && anomalySystem.countOpen() == 0) {
         anomalySystem.waveActive = false;
+        totalPortalsClosed++;
+        achievements.onPortalClosed(totalPortalsClosed);
         player.credits += 500;
+        totalCreditsEarned += 500;
+        achievements.onCreditsEarned(totalCreditsEarned);
         player.addXP(2500);
         triggerPlayerSpeech("Todas anomalias fechadas! Zona segura.", 3.5f);
     }
@@ -898,6 +924,8 @@ void Game::update(float dt) {
     if (player.health <= 0.0f) {
         audio.playDeathCry();
         triggerPlayerSpeech("NAO... nao acabou ainda!", 3.0f);
+        totalDeaths++;
+        achievements.onDeathCount(totalDeaths);
         enemies.clear();
         items.clear();
         projectiles.clear();
@@ -1009,6 +1037,8 @@ void Game::update(float dt) {
                 // ── ABSORÇÃO DE PODER (estilo V Rising): matar BOSS = buff PERMANENTE ──
                 if (it->isBoss()) {
                     bossPowersAbsorbed++;
+                    totalBossesKilled++;
+                    achievements.onBossKilled(totalBossesKilled);
                     int kind = bossPowersAbsorbed % 4;
                     const char* pname = (kind==0) ? "+10% Vida Maxima" : (kind==1) ? "+10% Dano"
                                       : (kind==2) ? "+4% Defesa" : "+6% Velocidade";
@@ -1134,6 +1164,8 @@ void Game::update(float dt) {
                 enemiesKilled++;
                 totalKills++;
                 botController.killCount++;
+                achievements.onKill(totalKills);
+                totalKillsEver++;
 
                 // VITORIA — o Nucleo KRONOS foi destruido
                 if (it->isFinalBoss) {
@@ -1262,6 +1294,40 @@ void Game::update(float dt) {
             grantQuestRewards(q);
         }
     }
+}
+
+void Game::movePlayerWithSlide(Vector2 direction, float dt) {
+    float len = std::sqrt(direction.x * direction.x + direction.y * direction.y);    if (len < 0.01f) return;
+    direction.x /= len;
+    direction.y /= len;
+
+    float currentSpeed = player.speed *
+                         (player.isOverloaded() ? 1.3f : 1.0f) *
+                         (player.sprinting ? 1.7f : 1.0f);
+    float t = 1.0f - std::exp(-24.0f * dt);
+    Vector2 targetVel = {
+        player.velocity.x + (direction.x * currentSpeed - player.velocity.x) * t,
+        player.velocity.y + (direction.y * currentSpeed - player.velocity.y) * t
+    };
+
+    player.isMoving = true;
+    player.moveRequested = true;
+
+    // Slide X first, then Y, to allow movement along walls.
+    player.position.x += targetVel.x * dt;
+    if (isBlocked(player.position)) {
+        player.position.x -= targetVel.x * dt;
+        targetVel.x = 0.0f;
+    }
+    player.position.y += targetVel.y * dt;
+    if (isBlocked(player.position)) {
+        player.position.y -= targetVel.y * dt;
+        targetVel.y = 0.0f;
+    }
+
+    player.velocity = targetVel;
+    if (player.velocity.x > 12.0f) player.facing = 1;
+    if (player.velocity.x < -12.0f) player.facing = -1;
 }
 
 void Game::handleInput(float dt) {
@@ -1486,6 +1552,7 @@ void Game::handleInput(float dt) {
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !dialogOpen && !rtsDragging) {
         moveTarget = mouseWorld;
         hasTarget  = true;
+        tutorial.onPlayerMoved();
     }
 
     // CORRER (segurar SHIFT) e PULAR (ESPAÇO) — pulo cruza obstaculos baixos
@@ -1503,12 +1570,14 @@ void Game::handleInput(float dt) {
         if (IsKeyDown(KEY_D)) wasd.x += 1.0f;
         float wlen = std::sqrt(wasd.x*wasd.x + wasd.y*wasd.y);
         if (wlen > 0.0f) {
-            Vector2 old = player.position;
-            player.move(wasd, dt);
-            if (!airborne && isBlocked(player.position) && !isBlocked(old)) player.position = old;
+            if (airborne) {
+                player.move(wasd, dt);
+            } else {
+                movePlayerWithSlide(wasd, dt);
+            }
             hasTarget = false; // WASD cancels click target
-        }
-    }
+            tutorial.onPlayerMoved();
+        }    }
 
     // Move toward click target
     if (hasTarget) {
@@ -1516,20 +1585,19 @@ void Game::handleInput(float dt) {
                             moveTarget.y - player.position.y};
         float dist = std::sqrt(toTarget.x*toTarget.x + toTarget.y*toTarget.y);
         if (dist > 10.0f) {
-            Vector2 old = player.position;
-            player.move({toTarget.x / dist, toTarget.y / dist}, dt);
-            if (!airborne && isBlocked(player.position) && !isBlocked(old)) {
-                player.position = old;
-                hasTarget = false;
+            if (airborne) {
+                player.move({toTarget.x / dist, toTarget.y / dist}, dt);
+            } else {
+                movePlayerWithSlide({toTarget.x / dist, toTarget.y / dist}, dt);
             }
-        } else {
-            hasTarget = false;
+        } else {            hasTarget = false;
         }
     }
 
     // ── Right-click → melee attack (also triggered by bot) ───────────────────
     if ((IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || botMeleeRequest) && !dialogOpen && meleeCooldown <= 0.0f) {
         meleeCooldown = 0.35f;
+        tutorial.onPlayerAttacked();
         bool hitAny = false;
         float comboMult = 1.0f + std::min(comboCount, 10) * 0.15f;
         float dmg = player.getEffectiveDamage() * comboMult;
@@ -1594,6 +1662,7 @@ void Game::handleInput(float dt) {
     // Skill 1 - Laser (piercing: fires 3 staggered beams; Perfurador adiciona mais)
     if (IsKeyPressed(KEY_ONE) && player.skills[0].isReady()) {
         player.useSkill(0, mouseWorld);
+        tutorial.onSkillUsed();
         float dmg = player.getEffectiveDamage() + player.skills[0].damage;
         projectiles.emplace_back(player.position, aimDir, dmg, 550.0f, 620.0f, Color{0,255,255,255});
         int spread = 1 + SkillTree::statsFor(player.perkMask).laserBeams;
@@ -1616,6 +1685,7 @@ void Game::handleInput(float dt) {
     // Skill 2 - EMP Area
     if (IsKeyPressed(KEY_TWO) && player.skills[1].isReady()) {
         player.useSkill(1, mouseWorld);
+        tutorial.onSkillUsed();
         float empDmg = player.skills[1].damage * (player.isOverloaded() ? 1.5f : 1.0f);
         for (auto& enemy : enemies) {
             if (Vector2Distance(player.position, enemy.position) <= player.skills[1].range) {
@@ -1633,6 +1703,7 @@ void Game::handleInput(float dt) {
     // Skill 3 - Plasma Grenade
     if (IsKeyPressed(KEY_THREE) && player.skills[2].isReady()) {
         player.useSkill(2, mouseWorld);
+        tutorial.onSkillUsed();
         float gDmg = player.skills[2].damage * (player.isOverloaded() ? 1.5f : 1.0f);
         projectiles.emplace_back(player.position, aimDir, gDmg,
                                  player.skills[2].range, 280.0f,
@@ -1646,6 +1717,7 @@ void Game::handleInput(float dt) {
     // Skill 4 - Sobrecarga
     if (IsKeyPressed(KEY_FOUR) && player.skills[3].isReady()) {
         player.useSkill(3, mouseWorld);
+        tutorial.onSkillUsed();
         player.overloadTimer = 8.0f + SkillTree::statsFor(player.perkMask).overloadBonus;
         particles.spawnLevelUp(player.position);
         audio.playLevelUp();
@@ -1655,6 +1727,7 @@ void Game::handleInput(float dt) {
     // Skill 5 - Barreira de Escudo
     if (IsKeyPressed(KEY_FIVE) && player.skills[4].isReady()) {
         player.useSkill(4, mouseWorld);
+        tutorial.onSkillUsed();
         player.shieldTimer = 3.0f;
         particles.spawnLevelUp(player.position);
         if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Barreira de escudo!", 2.0f);
@@ -1663,6 +1736,7 @@ void Game::handleInput(float dt) {
     // Skill 6 - Rajada (8 projetos em leque; Sistema Predador adiciona mais)
     if (IsKeyPressed(KEY_SIX) && player.skills[5].isReady()) {
         player.useSkill(5, mouseWorld);
+        tutorial.onSkillUsed();
         float baseAngle = std::atan2(aimDir.y, aimDir.x);
         float spread = 0.22f;
         float dmg = player.skills[5].damage * (player.isOverloaded() ? 1.5f : 1.0f);
@@ -1727,7 +1801,7 @@ void Game::handleInput(float dt) {
         if (nearNpcIndex >= 0 && nearNpcIndex < (int)npcs.size()) {
             int nLines = (int)npcs[nearNpcIndex].dialogLines.size();
             if (nLines > 0) {
-                if (!dialogOpen) { dialogOpen = true; dialogLine = 0; }   // inicia a historia
+                if (!dialogOpen) { dialogOpen = true; dialogLine = 0; tutorial.onNPCTalked(); }   // inicia a historia
                 else             { dialogLine = (dialogLine + 1) % nLines; } // avanca linha
             }
         }
@@ -1755,6 +1829,7 @@ void Game::handleInput(float dt) {
         else {
             shopSystem.buildShop(-1, "NEXUS Supply Terminal");
             shopSystem.open = true;
+            tutorial.onShopOpened();
             // Close everything else
             craftingSystem.open = false;
             showInventory = false; showEquipment = false; showQuestLog = false;

@@ -95,7 +95,7 @@ static const char* equipSaveToken(const Equipment& eq) {
 void SaveManager::save(const Player& player, const std::vector<Quest>& quests, ZoneID zone,
                        int slot, float playMinutes, int totalKills,
                        int totalDeaths, int bossesKilled, int portalsSealed,
-                       int difficultyLevel) {
+                       int difficultyLevel, int gameTotalKills) {
     ensureSavesDir();
     std::string path = slotPath(slot);
     FILE* f = fopen(path.c_str(), "w");
@@ -144,33 +144,54 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
 
     // Stats
     fprintf(f, "totalKills %d\n",    totalKills > 0 ? totalKills : player.totalKills);
+    fprintf(f, "gameTotalKills %d\n", gameTotalKills);
     fprintf(f, "totalDeaths %d\n",   totalDeaths);
     fprintf(f, "bossesKilled %d\n",  bossesKilled);
     fprintf(f, "portalsSealed %d\n", portalsSealed);
     fprintf(f, "difficultyLevel %d\n", difficultyLevel);
     fprintf(f, "playMinutes %f\n",   playMinutes);
 
-    // Equipment (V5: ID estavel; saves V4 tinham weaponName/armorName/implantName)
-    fprintf(f, "weaponId %s\n",  equipSaveToken(player.equippedWeapon));
-    fprintf(f, "armorId %s\n",   equipSaveToken(player.equippedArmor));
-    fprintf(f, "implantId %s\n", equipSaveToken(player.equippedImplant));
+    // Equipment (V7: ID + upgrade + primary/secondary; V5/V6 liam so o ID)
+    auto writeEquip = [&](const char* idKey, const char* upKey, const char* priKey, const char* secKey, const Equipment& eq) {
+        fprintf(f, "%s %s\n", idKey, equipSaveToken(eq));
+        fprintf(f, "%s %d\n", upKey, eq.upgradeLevel);
+        fprintf(f, "%s %f\n", priKey, eq.primary);
+        fprintf(f, "%s %f\n", secKey, eq.secondary);
+    };
+    writeEquip("weaponId", "weaponUpgrade", "weaponPrimary", "weaponSecondary", player.equippedWeapon);
+    writeEquip("armorId",  "armorUpgrade",  "armorPrimary",  "armorSecondary",  player.equippedArmor);
+    writeEquip("implantId","implantUpgrade","implantPrimary","implantSecondary",player.equippedImplant);
+
+    // EquipBag (V7)
+    fprintf(f, "equipBagCount %zu\n", player.equipBag.size());
+    for (const auto& eq : player.equipBag)
+        fprintf(f, "equipBag %s %d %f %f %d\n",
+                equipSaveToken(eq), eq.upgradeLevel, eq.primary, eq.secondary, (int)eq.slot);
 
     // Quests
     fprintf(f, "questCount %d\n", (int)quests.size());
     for (const auto& q : quests)
         fprintf(f, "quest %s %d %d %d\n", q.id.c_str(), q.current, q.completed?1:0, q.rewardGiven?1:0);
 
-    // Inventory
-    fprintf(f, "inventory %zu\n", player.inventory.size());
-    for (const auto& item : player.inventory)
-        fprintf(f, "%d\n", static_cast<int>(item.type));
+    // Inventory (V5/V6: so type; V7: full state)
+    fprintf(f, "inventoryV2 %zu\n", player.inventory.size());
+    for (const auto& item : player.inventory) {
+        fprintf(f, "invItm %d %d %d %f %f %f %f %f %f\n",
+                (int)item.type, (int)item.rarity, item.value,
+                item.bonusDamage, item.bonusHealth, item.bonusSpeed,
+                item.bonusDefense, item.bonusCrit, item.bonusVampirism);
+        fprintf(f, "invPrefix %s\n", item.affixPrefix.c_str());
+        fprintf(f, "invSuffix %s\n", item.affixSuffix.c_str());
+        fprintf(f, "invBaseName %s\n", item.baseName.c_str());
+    }
 
     fclose(f);
 }
 
 // ─── Load ────────────────────────────────────────────────────────────────────
 
-bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone, int slot) {
+bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone, int slot,
+                       int* gameTotalKillsOut) {
     std::string path = slotPath(slot);
     FILE* f = fopen(path.c_str(), "r");
 
@@ -193,6 +214,16 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     bool hasCredits = false, hasEvolution = false;
     int   savedClass = -1;
     float bMax = 0, bDmg = 0, bSpd = 0, bRng = 0, bDef = 0;
+    int   loadedGameTotalKills = 0;
+    Equipment loadedWeapon, loadedArmor, loadedImplant;
+    int   equipBagRemaining = 0;
+    int   inventoryV2Remaining = 0;
+    Item  inventoryV2Item;
+
+    // Limpa listas para evitar contaminacao de estado anterior (P0)
+    player.equipBag.clear();
+    player.inventory.clear();
+    loadedWeapon = loadedArmor = loadedImplant = Equipment{};
 
     // Re-read from start for simple line-by-line parsing
     rewind(f);
@@ -220,6 +251,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"xpToNext")==0) { fscanf(f," %d",&player.xpToNextLevel); }
         else if (strcmp(key,"credits")==0)  { fscanf(f," %d",&player.credits); hasCredits=true; }
         else if (strcmp(key,"totalKills")==0){ fscanf(f," %d",&player.totalKills); }
+        else if (strcmp(key,"gameTotalKills")==0){ fscanf(f," %d",&loadedGameTotalKills); }
         else if (strcmp(key,"zone")==0)     { fscanf(f," %d",&zoneInt); zone=clampZone(zoneInt); }
         else if (strcmp(key,"evolutionPath")==0){ int ep=0; fscanf(f," %d",&ep); player.evolutionPath=clampEvolutionPath(ep); hasEvolution=true; }
         else if (strcmp(key,"evolutionTier")==0){ fscanf(f," %d",&player.evolutionTier); }
@@ -237,33 +269,56 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         }
         else if (strcmp(key,"weaponId")==0){
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);
-            auto eq = resolveEquipById(buf);
-            if (!eq.isEmpty()) player.equipItem(eq);
+            loadedWeapon = resolveEquipById(buf);
         }
         else if (strcmp(key,"armorId")==0){
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);
-            auto eq = resolveEquipById(buf);
-            if (!eq.isEmpty()) player.equipItem(eq);
+            loadedArmor = resolveEquipById(buf);
         }
         else if (strcmp(key,"implantId")==0){
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);
-            auto eq = resolveEquipById(buf);
-            if (!eq.isEmpty()) player.equipItem(eq);
+            loadedImplant = resolveEquipById(buf);
         }
+        else if (strcmp(key,"weaponUpgrade")==0){ fscanf(f," %d",&loadedWeapon.upgradeLevel); }
+        else if (strcmp(key,"weaponPrimary")==0){ fscanf(f," %f",&loadedWeapon.primary); }
+        else if (strcmp(key,"weaponSecondary")==0){ fscanf(f," %f",&loadedWeapon.secondary); }
+        else if (strcmp(key,"armorUpgrade")==0){ fscanf(f," %d",&loadedArmor.upgradeLevel); }
+        else if (strcmp(key,"armorPrimary")==0){ fscanf(f," %f",&loadedArmor.primary); }
+        else if (strcmp(key,"armorSecondary")==0){ fscanf(f," %f",&loadedArmor.secondary); }
+        else if (strcmp(key,"implantUpgrade")==0){ fscanf(f," %d",&loadedImplant.upgradeLevel); }
+        else if (strcmp(key,"implantPrimary")==0){ fscanf(f," %f",&loadedImplant.primary); }
+        else if (strcmp(key,"implantSecondary")==0){ fscanf(f," %f",&loadedImplant.secondary); }
         else if (strcmp(key,"weaponName")==0){   // legado V4: nome de exibicao
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
-            auto eq = resolveEquipByName(buf);
-            if (!eq.isEmpty()) player.equipItem(eq);
+            loadedWeapon = resolveEquipByName(buf);
         }
         else if (strcmp(key,"armorName")==0){   // legado V4
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
-            auto eq = resolveEquipByName(buf);
-            if (!eq.isEmpty()) player.equipItem(eq);
+            loadedArmor = resolveEquipByName(buf);
         }
         else if (strcmp(key,"implantName")==0){   // legado V4
             char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
-            auto eq = resolveEquipByName(buf);
-            if (!eq.isEmpty()) player.equipItem(eq);
+            loadedImplant = resolveEquipByName(buf);
+        }
+        else if (strcmp(key,"equipBagCount")==0){
+            fscanf(f," %d",&equipBagRemaining);
+            if (equipBagRemaining < 0) equipBagRemaining = 0;
+            if (equipBagRemaining > 4096) equipBagRemaining = 4096;
+            player.equipBag.clear();
+        }
+        else if (strcmp(key,"equipBag")==0 && equipBagRemaining > 0){
+            char buf[128] = {}; int up=0, slotInt=0; float pri=0, sec=0;
+            fscanf(f," %127s %d %f %f %d",buf,&up,&pri,&sec,&slotInt);
+            Equipment eq = resolveEquipById(buf);
+            if (eq.isEmpty()) eq = resolveEquipByName(buf);
+            if (!eq.isEmpty()) {
+                eq.upgradeLevel = up;
+                eq.primary = pri;
+                eq.secondary = sec;
+                eq.slot = static_cast<EquipSlot>(slotInt);
+                player.equipBag.push_back(eq);
+            }
+            --equipBagRemaining;
         }
         else if (strcmp(key,"questCount")==0){
             int qc=0; fscanf(f," %d",&qc);
@@ -296,6 +351,48 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
                 player.inventory.push_back(item);
             }
         }
+        else if (strcmp(key,"inventoryV2")==0){
+            fscanf(f," %d",&inventoryV2Remaining);
+            if (inventoryV2Remaining < 0) inventoryV2Remaining = 0;
+            if (inventoryV2Remaining > 4096) inventoryV2Remaining = 4096;
+            player.inventory.clear();
+        }
+        else if (strcmp(key,"invItm")==0 && inventoryV2Remaining > 0){
+            int type=0, rarity=0, value=0;
+            float bd=0,bh=0,bs=0,bdef=0,bc=0,bv=0;
+            fscanf(f," %d %d %d %f %f %f %f %f %f",
+                   &type,&rarity,&value,&bd,&bh,&bs,&bdef,&bc,&bv);
+            inventoryV2Item = Item::createRandom(player.position);
+            if (type >= 0 && type <= (int)ItemType::DragonSlayer)
+                inventoryV2Item.type = static_cast<ItemType>(type);
+            if (rarity >= 0 && rarity <= (int)ItemRarity::Omega)
+                inventoryV2Item.rarity = static_cast<ItemRarity>(rarity);
+            inventoryV2Item.value = value;
+            inventoryV2Item.bonusDamage = bd;
+            inventoryV2Item.bonusHealth = bh;
+            inventoryV2Item.bonusSpeed = bs;
+            inventoryV2Item.bonusDefense = bdef;
+            inventoryV2Item.bonusCrit = bc;
+            inventoryV2Item.bonusVampirism = bv;
+            inventoryV2Item.pickedUp = true;
+        }
+        else if (strcmp(key,"invPrefix")==0 && inventoryV2Remaining > 0){
+            char buf[128] = {}; fscanf(f,"%127[^\n]",buf);
+            if (buf[0]==' ') inventoryV2Item.affixPrefix = buf+1;
+            else inventoryV2Item.affixPrefix = buf;
+        }
+        else if (strcmp(key,"invSuffix")==0 && inventoryV2Remaining > 0){
+            char buf[128] = {}; fscanf(f,"%127[^\n]",buf);
+            if (buf[0]==' ') inventoryV2Item.affixSuffix = buf+1;
+            else inventoryV2Item.affixSuffix = buf;
+        }
+        else if (strcmp(key,"invBaseName")==0 && inventoryV2Remaining > 0){
+            char buf[128] = {}; fscanf(f,"%127[^\n]",buf);
+            if (buf[0]==' ') inventoryV2Item.baseName = buf+1;
+            else inventoryV2Item.baseName = buf;
+            player.inventory.push_back(inventoryV2Item);
+            --inventoryV2Remaining;
+        }
         else {
             skipRestOfLine(f);   // pula so o resto DESTA linha (o formato antigo com espaco engolia a PROXIMA)
         }
@@ -310,7 +407,13 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         player.loadSavedProgress(clampCharacterClass(savedClass), bMax, bDmg, bSpd, bRng, bDef);
         player.health = (keepHealth > 0.0f && keepHealth <= player.maxHealth) ? keepHealth : player.maxHealth;
     }
+    // Equipa gear carregado (V7: com upgrade/primary/secondary; V5/V6: so ID)
+    if (!loadedWeapon.isEmpty())  player.equipItem(loadedWeapon);
+    if (!loadedArmor.isEmpty())   player.equipItem(loadedArmor);
+    if (!loadedImplant.isEmpty()) player.equipItem(loadedImplant);
     player.refreshSkillVectors();   // perks carregados: reaplica mods de skill
+
+    if (gameTotalKillsOut) *gameTotalKillsOut = loadedGameTotalKills;
     return true;
 }
 

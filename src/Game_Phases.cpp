@@ -121,6 +121,7 @@ void Game::updatePhasePortal(float dt) {
     bool goalMet = (owPhaseKills >= owPhaseGoal) && (!owBossPhase || owBossDown);
     if (!owPortalOpen && goalMet) {
         owPortalOpen = true;
+        tutorial.onPortalFound();
         // portal nasce perto do refugio, sempre no mesmo rumo (o jogador acha)
         owPortalPos = { safeZoneCenter.x + 620.0f, safeZoneCenter.y - 520.0f };
         // Garantia intencional (antes era acidental): o ponto do portal tem que
@@ -234,6 +235,8 @@ void Game::advanceOpenWorldPhase() {
     player.health   = player.maxHealth;
     int bonus       = 250 + owPhase * 150;
     player.credits += bonus;
+    totalCreditsEarned += bonus;
+    achievements.onCreditsEarned(totalCreditsEarned);
     player.addXP(200 + owPhase * 120);
     {
         Equipment drop = EDB::randomForTier(1 + owPhase / 2);
@@ -301,7 +304,8 @@ void Game::transitionToZone(ZoneID dest) {
 
     // Inferno zone — reset when leaving, generate when entering
     if (dest == ZoneID::InfernoZone) {
-        unsigned int seed = (unsigned int)GetRandomValue(1000, 99999);
+        unsigned int seed = worldSeed ? (worldSeed * 0x9e3779b9u + (unsigned int)dest * 7919u)
+                                      : (unsigned int)GetRandomValue(1000, 99999);
         infernoZone.generate(tilemap.width * Tilemap::tileSize,
                              tilemap.height * Tilemap::tileSize, seed);
     } else {

@@ -34,7 +34,7 @@ struct NetPeer {
 
 class NetClient {
 public:
-    bool enabled = false;
+    std::atomic<bool> enabled{false};
 
     // Inicia a thread de rede apontando para wsUrl (default ws://127.0.0.1:9000/ws).
     // authToken: JWT enviado no header Authorization do handshake (o servidor

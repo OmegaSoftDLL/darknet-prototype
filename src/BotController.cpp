@@ -782,9 +782,10 @@ BotController::BotDecision BotController::update(
         botTarget  = nearestPortalPos;
         clearTimer = 0.0f; // reset so we don't loop
 
-        // Track when we actually reach the portal
-        if (nearestPortalDist < 40.0f) {
+        // Track when we actually reach the portal (uma vez por posicao de portal)
+        if (nearestPortalDist < 40.0f && Vector2Distance(nearestPortalPos, lastAdvancePortalPos) > 80.0f) {
             zonesVisited++;
+            lastAdvancePortalPos = nearestPortalPos;
             addLog(TextFormat("ZONA AVANCADA! Total=%d", zonesVisited));
         }
 

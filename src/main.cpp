@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include <string>
 #include <cstdlib>
+#include <ctime>
 
 int main(int argc, char* argv[]) {
     printf("DARKNET v1.0\n");
@@ -35,7 +36,12 @@ int main(int argc, char* argv[]) {
 
     if (seed != 0) {
         SetRandomSeed(seed);
+        srand(seed);
         printf("SEED FIXA: %u (mundo reprodutivel)\n", seed);
+    } else {
+        unsigned t = (unsigned)time(nullptr);
+        SetRandomSeed(t);
+        srand(t);
     }
 
     // Headless e start-phase precisam ser setados ANTES de construir Game:

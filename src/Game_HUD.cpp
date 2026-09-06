@@ -1091,4 +1091,8 @@ void Game::drawMinimap() const {
         float alpha = std::min(0.55f, eliteFlashTimer * 2.2f);
         DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(WHITE, alpha));
     }
+
+    // Tutorial and achievement overlays
+    tutorial.render(screenWidth, screenHeight);
+    achievements.renderPopup(screenWidth, screenHeight);
 }

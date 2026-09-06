@@ -134,6 +134,7 @@ public:
 
     float walkAnimTimer = 0.0f;
     bool  isMoving      = false;
+    bool  moveRequested = false;  // input recebido neste frame (game feel)
     int   facing        = 1;
     bool  leveledUp     = false;   // SO efeito visual (fica true por levelUpTimer)
     float levelUpTimer  = 0.0f;
@@ -195,6 +196,9 @@ public:
     void  addXP(int amount);   // acumula em unclaimedLevels
     void  takeDamage(float amount);
     void  increaseBaseMaxHP(float amount);
+    void  increaseBaseAttackDamage(float amount);
+    void  increaseBaseSpeed(float amount);
+    void  increaseBaseAttackRange(float amount);
     void  increaseBaseDefense(float amount);
     void  refreshSkillVectors();   // recalcula dano/alcance/cooldown das skills (idempotente)
     void  equipItem(const Equipment& equip);
@@ -214,7 +218,6 @@ private:
     float baseAttackDamage = 25.0f;
     float baseAttackRange  = 90.0f;
     float baseDefense      = 8.0f;   // defesa base da classe (armadura soma por cima)
-    bool  moveRequested    = false;  // input recebido neste frame (game feel)
 
     std::vector<float> baseSkillDamage;  // dano base das skills (p/ aplicar skillPower idempotente)
     std::vector<float> baseSkillRange;    // alcance base das skills (perks recomputam dos originais)

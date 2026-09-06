@@ -1,4 +1,5 @@
 #include "Achievement.h"
+#include "Player.h"
 #include <cmath>
 #include <algorithm>
 
@@ -88,6 +89,10 @@ void AchievementSystem::unlock(const std::string& id) {
     popupText  = std::string("[CONQUISTA] ") + a->icon + " " + a->title;
     popupTimer = 4.0f;
     popupColor = {255, 200, 0, 255};
+    if (playerPtr) {
+        playerPtr->xp       += a->rewardXP;
+        playerPtr->credits  += a->rewardCredits;
+    }
 }
 
 void AchievementSystem::checkProgress(const std::string& id, int value) {

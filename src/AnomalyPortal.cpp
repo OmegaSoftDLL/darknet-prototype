@@ -368,7 +368,8 @@ void StormSystem::render(int screenW, int screenH) const {
 
 // ─── AnomalySystem ───────────────────────────────────────────────────────────
 
-void AnomalySystem::spawnWave(int zoneW, int zoneH, Vector2 playerPos) {
+void AnomalySystem::spawnWave(int zoneW, int zoneH, Vector2 playerPos,
+                              Vector2 diskCenter, float diskRadius) {
     portals.clear();
     waveActive = true;
     waveNumber++;
@@ -378,19 +379,31 @@ void AnomalySystem::spawnWave(int zoneW, int zoneH, Vector2 playerPos) {
     const float CX = (float)zoneW * 0.5f;
     const float CY = (float)zoneH * 0.5f;
     float margin = 320.0f;
-    Vector2 candidates[] = {
-        {margin,           margin},
-        {CX,               margin},
-        {(float)zoneW - margin, margin},
-        {margin,           CY},
-        {(float)zoneW - margin, CY},
-        {margin,           (float)zoneH - margin},
-        {CX,               (float)zoneH - margin},
-        {(float)zoneW - margin, (float)zoneH - margin},
-        {CX * 0.5f,        CY},
-        {CX * 1.5f,        CY},
-    };
+    Vector2 candidates[10];
     int numCandidates = 10;
+
+    if (diskRadius > 0.0f) {
+        // Open world: candidates inside the phase disk around diskCenter.
+        for (int i = 0; i < numCandidates; ++i) {
+            float angle = (float)i / (float)numCandidates * PI * 2.0f +
+                          (float)GetRandomValue(-300, 300) / 1000.0f;
+            float rad = margin + (float)GetRandomValue(0, 1000) / 1000.0f *
+                                std::max(0.0f, diskRadius - margin * 2.0f);
+            candidates[i] = { diskCenter.x + std::cos(angle) * rad,
+                              diskCenter.y + std::sin(angle) * rad };
+        }
+    } else {
+        candidates[0] = {margin,           margin};
+        candidates[1] = {CX,               margin};
+        candidates[2] = {(float)zoneW - margin, margin};
+        candidates[3] = {margin,           CY};
+        candidates[4] = {(float)zoneW - margin, CY};
+        candidates[5] = {margin,           (float)zoneH - margin};
+        candidates[6] = {CX,               (float)zoneH - margin};
+        candidates[7] = {(float)zoneW - margin, (float)zoneH - margin};
+        candidates[8] = {CX * 0.5f,        CY};
+        candidates[9] = {CX * 1.5f,        CY};
+    }
 
     // How many portals and tiers by wave
     struct PortalSpec { int tier; };
@@ -511,13 +524,19 @@ bool AnomalySystem::checkProjectileHit(Vector2 projPos, float projRadius, float 
     return false;
 }
 
-bool AnomalySystem::pollSpawn(int& outEnemyTypeInt, Vector2& outPos) {
+bool AnomalySystem::pollSpawn(int& outEnemyTypeInt, Vector2& outPos,
+                              const std::function<bool(Vector2)>& isFree) {
     for (auto& p : portals) {
         if (!p.isActive()) continue;
         if (p.spawnTimer >= p.spawnRate) {
             p.spawnTimer = 0.0f;
             p.totalSpawned++;
             outPos = p.getSpawnPosition();
+            if (isFree) {
+                for (int tries = 0; tries < 8 && !isFree(outPos); ++tries) {
+                    outPos = p.getSpawnPosition();
+                }
+            }
 
             int r = GetRandomValue(0, 99);
             int type;

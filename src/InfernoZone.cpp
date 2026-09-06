@@ -19,15 +19,16 @@ void InfernoZoneSystem::generate(int mapW, int mapH, unsigned int seed) {
     mapWidth  = mapW;
     mapHeight = mapH;
     active    = true;
+    rngSeed   = seed;
 
     // Scatter lava pools across the map, avoiding the centre spawn area
-    int poolCount = 8 + (int)(frand(seed) * 5);  // 8-12 pools
+    int poolCount = 8 + (int)(frand(rngSeed) * 5);  // 8-12 pools
     for (int i = 0; i < poolCount; ++i) {
         LavaPool p;
-        p.position.x = 200.0f + frand(seed) * (mapW - 400);
-        p.position.y = 200.0f + frand(seed) * (mapH - 400);
-        p.radius    = 55.0f + frand(seed) * 90.0f;  // 55-145px
-        p.glowPulse = frand(seed) * 6.28f;
+        p.position.x = 200.0f + frand(rngSeed) * (mapW - 400);
+        p.position.y = 200.0f + frand(rngSeed) * (mapH - 400);
+        p.radius    = 55.0f + frand(rngSeed) * 90.0f;  // 55-145px
+        p.glowPulse = frand(rngSeed) * 6.28f;
         // Alternate between orange and red-orange lava
         if (i % 3 == 0)
             p.color = {255, 60, 0, 220};
@@ -39,28 +40,28 @@ void InfernoZoneSystem::generate(int mapW, int mapH, unsigned int seed) {
     }
 
     // Geysers — spread around map
-    int geyserCount = 5 + (int)(frand(seed) * 4);  // 5-8 geysers
+    int geyserCount = 5 + (int)(frand(rngSeed) * 4);  // 5-8 geysers
     for (int i = 0; i < geyserCount; ++i) {
         LavaGeyser g;
-        g.position.x = 150.0f + frand(seed) * (mapW - 300);
-        g.position.y = 150.0f + frand(seed) * (mapH - 300);
+        g.position.x = 150.0f + frand(rngSeed) * (mapW - 300);
+        g.position.y = 150.0f + frand(rngSeed) * (mapH - 300);
         g.radius    = 22.0f;
-        g.cooldown  = 2.0f + frand(seed) * 8.0f;  // first eruption 2-10s
+        g.cooldown  = 2.0f + frand(rngSeed) * 8.0f;  // first eruption 2-10s
         g.erupting  = 0.0f;
-        g.phase     = frand(seed) * 6.28f;
+        g.phase     = frand(rngSeed) * 6.28f;
         geysers.push_back(g);
     }
 
     // Seed some initial ash particles
     for (int i = 0; i < 60; ++i) {
         AshParticle a;
-        a.position.x = frand(seed) * (float)mapW;
-        a.position.y = frand(seed) * (float)mapH;
-        a.velocity.x = (frand(seed) - 0.5f) * 18.0f;
-        a.velocity.y = -(4.0f + frand(seed) * 14.0f);
-        a.maxLife    = 4.0f + frand(seed) * 6.0f;
-        a.life       = frand(seed) * a.maxLife;  // staggered start
-        a.size       = 1.5f + frand(seed) * 3.0f;
+        a.position.x = frand(rngSeed) * (float)mapW;
+        a.position.y = frand(rngSeed) * (float)mapH;
+        a.velocity.x = (frand(rngSeed) - 0.5f) * 18.0f;
+        a.velocity.y = -(4.0f + frand(rngSeed) * 14.0f);
+        a.maxLife    = 4.0f + frand(rngSeed) * 6.0f;
+        a.life       = frand(rngSeed) * a.maxLife;  // staggered start
+        a.size       = 1.5f + frand(rngSeed) * 3.0f;
         ash.push_back(a);
     }
 }
@@ -80,7 +81,7 @@ void InfernoZoneSystem::update(float dt, Vector2 playerPos,
             g.cooldown -= dt;
             if (g.cooldown <= 0.0f) {
                 g.erupting = 1.2f;
-                g.cooldown = 4.0f + (float)(rand() % 700) / 100.0f;  // 4-11s between
+                g.cooldown = 4.0f + frand(rngSeed) * 7.0f;  // 4-11s between
                 // Damage player if near erupting geyser
                 if (!playerShielded && Vector2Distance(playerPos, g.position) < 80.0f) {
                     playerHP -= 25.0f;
@@ -116,20 +117,20 @@ void InfernoZoneSystem::update(float dt, Vector2 playerPos,
     if (ashSpawnTimer >= 0.15f) {
         ashSpawnTimer = 0.0f;
         if (!pools.empty()) {
-            spawnAsh(pools[rand() % pools.size()].position);
+            spawnAsh(pools[(int)(frand(rngSeed) * pools.size())].position);
         }
     }
 }
 
 void InfernoZoneSystem::spawnAsh(Vector2 near) {
     AshParticle a;
-    a.position.x = near.x + (float)(rand() % 200 - 100);
-    a.position.y = near.y + (float)(rand() % 60);
-    a.velocity.x = (float)(rand() % 30 - 15);
-    a.velocity.y = -(5.0f + (float)(rand() % 20));
-    a.maxLife    = 3.0f + (float)(rand() % 500) / 100.0f;
+    a.position.x = near.x + (frand(rngSeed) * 200.0f - 100.0f);
+    a.position.y = near.y + frand(rngSeed) * 60.0f;
+    a.velocity.x = frand(rngSeed) * 30.0f - 15.0f;
+    a.velocity.y = -(5.0f + frand(rngSeed) * 20.0f);
+    a.maxLife    = 3.0f + frand(rngSeed) * 5.0f;
     a.life       = a.maxLife;
-    a.size       = 1.5f + (float)(rand() % 30) / 10.0f;
+    a.size       = 1.5f + frand(rngSeed) * 3.0f;
     ash.push_back(a);
 }
 
