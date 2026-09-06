@@ -125,6 +125,7 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
 // ─── Constructor / Destructor ────────────────────────────────────────────────
 
 bool Game::headless = false;   // definicao do static (main.cpp seta antes de construir)
+int  Game::startPhaseOverride = -1; // definicao do static (main.cpp seta antes de construir)
 
 Game::Game() {
     // Headless (CI sem display/GPU): pula TODO o bloco grafico do construtor
@@ -163,55 +164,60 @@ Game::Game() {
                               (int)mpos.y + std::max(0, (mh - winH) / 2 - 16));
         }
     }
-    gameTarget = LoadRenderTexture(screenWidth, screenHeight);
+    gameTarget = GfxRenderTexture(LoadRenderTexture(screenWidth, screenHeight));
     // POINT (nearest) deixa o texto NITIDO ao escalar para tela cheia (BILINEAR borrava).
-    SetTextureFilter(gameTarget.texture, TEXTURE_FILTER_POINT);
-    tempEntityTarget = LoadRenderTexture(128, 128);
-    SetTextureFilter(tempEntityTarget.texture, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gameTarget.get().texture, TEXTURE_FILTER_POINT);
+    tempEntityTarget = GfxRenderTexture(LoadRenderTexture(128, 128));
+    SetTextureFilter(tempEntityTarget.get().texture, TEXTURE_FILTER_POINT);
     initPostFX();       // bloom + tonemap
     initWorldShader();  // luz direcional + rim + nevoa nos modelos 3D
+    {   // textura branca 1x1 para materiais cor-por-vertice (voxels de personagens)
+        Image white = GenImageColor(1, 1, WHITE);
+        m_whiteTex = GfxTexture(LoadTextureFromImage(white));
+        UnloadImage(white);
+    }
     lightSystem.init(screenWidth, screenHeight);
 
     SpriteBank::get().init();   // gera os sprites pixel-art (precisa de contexto GL)
 
     // Carrega modelos 3D para graficos reais
     if (FileExists("resources/models/house.obj")) {
-        m_houseModel = LoadModel("resources/models/house.obj");
-        m_houseTex = LoadTexture("resources/models/house_diffuse.png");
-        m_houseModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_houseTex;
+        m_houseModel = GfxModel(LoadModel("resources/models/house.obj"));
+        m_houseTex = GfxTexture(LoadTexture("resources/models/house_diffuse.png"));
+        m_houseModel.get().materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_houseTex.get();
     }
     if (FileExists("resources/models/turret.obj")) {
-        m_turretModel = LoadModel("resources/models/turret.obj");
-        m_turretTex = LoadTexture("resources/models/turret_diffuse.png");
-        m_turretModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_turretTex;
+        m_turretModel = GfxModel(LoadModel("resources/models/turret.obj"));
+        m_turretTex = GfxTexture(LoadTexture("resources/models/turret_diffuse.png"));
+        m_turretModel.get().materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_turretTex.get();
     }
     if (FileExists("resources/models/barracks.obj")) {
-        m_barracksModel = LoadModel("resources/models/barracks.obj");
-        m_barracksTex = LoadTexture("resources/models/barracks_diffuse.png");
-        m_barracksModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_barracksTex;
+        m_barracksModel = GfxModel(LoadModel("resources/models/barracks.obj"));
+        m_barracksTex = GfxTexture(LoadTexture("resources/models/barracks_diffuse.png"));
+        m_barracksModel.get().materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_barracksTex.get();
     }
     if (FileExists("resources/models/castle.obj")) {
-        m_castleModel = LoadModel("resources/models/castle.obj");
-        m_castleTex = LoadTexture("resources/models/castle_diffuse.png");
-        m_castleModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_castleTex;
+        m_castleModel = GfxModel(LoadModel("resources/models/castle.obj"));
+        m_castleTex = GfxTexture(LoadTexture("resources/models/castle_diffuse.png"));
+        m_castleModel.get().materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_castleTex.get();
     }
     if (FileExists("resources/models/market.obj")) {
-        m_marketModel = LoadModel("resources/models/market.obj");
-        m_marketTex = LoadTexture("resources/models/market_diffuse.png");
-        m_marketModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_marketTex;
+        m_marketModel = GfxModel(LoadModel("resources/models/market.obj"));
+        m_marketTex = GfxTexture(LoadTexture("resources/models/market_diffuse.png"));
+        m_marketModel.get().materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_marketTex.get();
     }
     if (FileExists("resources/models/well.obj")) {
-        m_wellModel = LoadModel("resources/models/well.obj");
-        m_wellTex = LoadTexture("resources/models/well_diffuse.png");
-        m_wellModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_wellTex;
+        m_wellModel = GfxModel(LoadModel("resources/models/well.obj"));
+        m_wellTex = GfxTexture(LoadTexture("resources/models/well_diffuse.png"));
+        m_wellModel.get().materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = m_wellTex.get();
     }
     if (FileExists("resources/models/old_car_new.glb")) {
-        m_carModel = LoadModel("resources/models/old_car_new.glb");
+        m_carModel = GfxModel(LoadModel("resources/models/old_car_new.glb"));
     }
     {
-        auto _fit = [](Model m, float target)->float {
-            if (m.meshCount <= 0) return 1.0f;
-            BoundingBox bb = GetModelBoundingBox(m);
+        auto _fit = [](const GfxModel& m, float target)->float {
+            if (!m.valid()) return 1.0f;
+            BoundingBox bb = GetModelBoundingBox(m.get());
             float d = fmaxf(bb.max.y - bb.min.y, fmaxf(bb.max.x - bb.min.x, bb.max.z - bb.min.z));
             return (d > 0.001f) ? target / d : 1.0f;
         };
@@ -243,8 +249,9 @@ Game::Game() {
     // bioma (currentZone) da fase. Com o raio no default (3000) as regioes
     // nasciam menores que a barreira e o anel externo era populado por chunks
     // com outra densidade — a borda da primeira fase lia diferente do resto.
-    const PhaseDef& p0 = phaseDef(0);
-    owPhase = 0; owPhaseKills = 0; owKillsAtStart = 0;
+    int startPhase = (startPhaseOverride >= 0) ? startPhaseOverride : 0;
+    const PhaseDef& p0 = phaseDef(startPhase);
+    owPhase = startPhase; owPhaseKills = 0; owKillsAtStart = 0;
     owPhaseGoal = p0.goal; owPhaseRadius = p0.radius;
     owBossPhase = p0.boss; owBossDown = false; owPortalOpen = false;
     openWorldMode = true;
@@ -283,43 +290,11 @@ Game::~Game() {
         audio.shutdown();   // sem contexto GL: nao ha GPU/texturas/modelos para liberar
         return;
     }
-    UnloadRenderTexture(gameTarget);
-    UnloadRenderTexture(tempEntityTarget);
+    // Os wrappers RAII (GfxRenderTexture, GfxModel, GfxTexture, GfxShader) liberam
+    // seus recursos automaticamente no destrutor, mesmo que excecoes tenham ocorrido.
     lightSystem.shutdown();
     SpriteBank::get().shutdown();
     audio.shutdown();
-
-    // Desaloca modelos 3D e texturas correspondentes
-    if (m_modelsLoaded) {
-        if (m_houseModel.meshCount > 0) {
-            UnloadModel(m_houseModel);
-            UnloadTexture(m_houseTex);
-        }
-        if (m_turretModel.meshCount > 0) {
-            UnloadModel(m_turretModel);
-            UnloadTexture(m_turretTex);
-        }
-        if (m_barracksModel.meshCount > 0) {
-            UnloadModel(m_barracksModel);
-            UnloadTexture(m_barracksTex);
-        }
-        if (m_castleModel.meshCount > 0) {
-            UnloadModel(m_castleModel);
-            UnloadTexture(m_castleTex);
-        }
-        if (m_marketModel.meshCount > 0) {
-            UnloadModel(m_marketModel);
-            UnloadTexture(m_marketTex);
-        }
-        if (m_wellModel.meshCount > 0) {
-            UnloadModel(m_wellModel);
-            UnloadTexture(m_wellTex);
-        }
-        if (m_carModel.meshCount > 0) UnloadModel(m_carModel);
-    }
-    // Libera os modelos VOXEL gerados em runtime (eram leak de CPU+GPU).
-    for (auto& kv : m_voxModels) if (kv.second.meshCount > 0) UnloadModel(kv.second);
-    m_voxModels.clear();
     unloadPostFX();
 
     CloseWindow();
@@ -332,7 +307,7 @@ const DifficultySettings& Game::getDifficulty() const {
 }
 
 void Game::drawDifficultyScreen() const {
-    BeginTextureMode(gameTarget);  // overlay on top of menu (no ClearBackground)
+    BeginTextureMode(gameTarget.get());  // overlay on top of menu (no ClearBackground)
 
     float t = (float)GetTime();
 
@@ -857,7 +832,7 @@ void Game::startNewGame() {
 }
 
 void Game::drawCharacterSelectScreen() const {
-    BeginTextureMode(gameTarget);  // overlay sobre o menu
+    BeginTextureMode(gameTarget.get());  // overlay sobre o menu
     float t = (float)GetTime();
     int cx = screenWidth / 2;
 

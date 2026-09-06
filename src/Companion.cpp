@@ -135,9 +135,12 @@ void Companion::update(float dt, Vector2 playerPos, const std::vector<Enemy*>& n
         return;
     }
 
+    // Guarda posicao ANTES da movimentacao para sincronizar animacao com distancia.
+    Vector2 posBefore = position;
+
     // Estado de alerta + emote ao avistar inimigos
     bool wasAlerted = alerted;
-    alerted = (findNearestEnemy(nearbyEnemies, 360.f) != nullptr);
+    alerted = (findNearestEnemy(nearbyEnemies, 450.f) != nullptr);
     if (alerted && !wasAlerted) {
         const char* lines[] = {"Inimigos!", "Em guarda!", "Eu cubro voce!", "Vamos nessa!"};
         emote(lines[GetRandomValue(0,3)], 1.6f);
@@ -155,7 +158,6 @@ void Companion::update(float dt, Vector2 playerPos, const std::vector<Enemy*>& n
     if (health < maxHealth * 0.25f && alerted) {
         retreatTo(dt, playerPos);
         if (GetRandomValue(0, 400) == 0) emote("Preciso recuar!");
-        walkTimer += dt;
         // ainda pode atirar de longe se for atirador
         if (type == CompanionType::MarcoVeil || type == CompanionType::Sniper) {
             Enemy* t = findNearestEnemy(nearbyEnemies, shootRange);
@@ -166,6 +168,8 @@ void Companion::update(float dt, Vector2 playerPos, const std::vector<Enemy*>& n
             }
         }
         if (shootCooldown > 0.f) shootCooldown -= dt;
+        // animacao proporcional ao movimento (nao desliza parado)
+        walkTimer += Vector2Distance(position, posBefore) * 0.12f;
         return;
     }
 
@@ -178,7 +182,10 @@ void Companion::update(float dt, Vector2 playerPos, const std::vector<Enemy*>& n
         case CompanionType::Healer:    updateHealer   (dt, playerPos, nearbyEnemies); break;
         case CompanionType::LootDrone: updateLootDrone(dt, playerPos, nearbyEnemies); break;
     }
-    walkTimer += dt;
+    // Animacao de passo sincronizada com distancia real percorrida. Antes walkTimer
+    // subia o tempo todo, entao as pernas animavam mesmo quando o companion estava
+    // parado — isso é o "deslizamento" que o jogador enxerga.
+    walkTimer += Vector2Distance(position, posBefore) * 0.12f;
 }
 
 void Companion::updateMarcoVeil(float dt, Vector2 playerPos, const std::vector<Enemy*>& nearbyEnemies) {
@@ -189,21 +196,43 @@ void Companion::updateMarcoVeil(float dt, Vector2 playerPos, const std::vector<E
     if (shootCooldown > 0.f) shootCooldown -= dt;
     if (skillCooldown > 0.f) skillCooldown -= dt;
 
-    Enemy* target = findNearestEnemy(nearbyEnemies, shootRange);
+    // Marco Veil é atirador de apoio: autonomo, range longo, kiting suave.
+    // Aumentamos o alcance de busca para que ele não fique so seguindo o player
+    // enquanto inimigos atacam de longe.
+    Enemy* target = findNearestEnemy(nearbyEnemies, 520.f);
     if (target) {
         Vector2 dir = Vector2Normalize(Vector2Subtract(target->position, position));
         facing = (dir.x >= 0.f) ? 1 : -1;
         float distToEnemy = Vector2Distance(position, target->position);
-        // Kiting: mantem distancia media (~150px)
-        if (distToEnemy < 130.f) { position.x -= dir.x * speed * 0.7f * dt; position.y -= dir.y * speed * 0.7f * dt; }
-        else if (distToEnemy > 240.f) { position.x += dir.x * speed * 0.5f * dt; position.y += dir.y * speed * 0.5f * dt; }
-        if (shootCooldown <= 0.f && burstCount == 0) { shootCooldown = shootRate2; wantsToShoot = true; shootDir = dir; }
-        if (skillCooldown <= 0.f && burstCount == 0) {
-            skillCooldown = skillRate; burstCount = 2; burstTimer = burstInterval;
+        // Kiting: mantem distancia otima (~180px). Se o inimigo chegar perto, recua;
+        // se estiver longe demais para atirar, avanca até entrar no range efetivo.
+        const float IDEAL_DIST = 180.f;
+        if (distToEnemy < 110.f) {
+            position.x -= dir.x * speed * 0.85f * dt;
+            position.y -= dir.y * speed * 0.85f * dt;
+        } else if (distToEnemy > 240.f) {
+            position.x += dir.x * speed * 0.75f * dt;
+            position.y += dir.y * speed * 0.75f * dt;
+        } else {
+            // Na zona ideal: pequena correção lateral para não ficar sobreposto ao player
+            Vector2 side = { -dir.y, dir.x };
+            position.x += side.x * speed * 0.25f * dt;
+            position.y += side.y * speed * 0.25f * dt;
+        }
+        // Dispara o mais rapido possivel quando tem alvo valido.
+        if (shootCooldown <= 0.f && burstCount == 0 && distToEnemy <= shootRange) {
+            shootCooldown = shootRate2; wantsToShoot = true; shootDir = dir;
+        }
+        // Skill: rajada de 3 tiros quando o alvo estiver na mira.
+        if (skillCooldown <= 0.f && burstCount == 0 && distToEnemy <= shootRange) {
+            skillCooldown = skillRate; burstCount = 3; burstTimer = burstInterval;
             wantsToShoot = true; shootDir = dir; wantsSkill = true; skillFlash = 0.3f;
             emote("Rajada!");
         }
-    } else followFormation(dt, playerPos, 70.f);
+    } else {
+        // Sem inimigo: segue o player numa posicao de cobertura.
+        followFormation(dt, playerPos, 70.f);
+    }
 }
 
 void Companion::updateSteel(float dt, Vector2 playerPos, const std::vector<Enemy*>& nearbyEnemies) {
@@ -331,8 +360,9 @@ void Companion::revive(Vector2 pos) {
 // ─── Render ──────────────────────────────────────────────────────────────────
 
 void Companion::renderHpBar() const {
+    if (g_voxelCapture) return;
     int bw = 36, bx = (int)position.x - bw/2, by = (int)position.y - (int)radius - 16;
-    float pct = health / maxHealth;
+    float pct = (maxHealth > 0.0f) ? (health / maxHealth) : 0.0f;
     DrawRectangle(bx, by, bw, 6, {30,30,30,200});
     Color hp = (pct>0.5f)?Color{0,220,60,255}:(pct>0.25f)?Color{220,180,0,255}:Color{220,40,40,255};
     DrawRectangle(bx, by, (int)(bw*pct), 6, hp);
@@ -343,6 +373,7 @@ void Companion::renderHpBar() const {
 }
 
 void Companion::renderEmote() const {
+    if (g_voxelCapture) return;
     if (emoteTimer <= 0.f || emoteText.empty()) return;
     int w = MeasureText(emoteText.c_str(), 11);
     int ex = (int)position.x - w/2 - 4;
@@ -352,6 +383,7 @@ void Companion::renderEmote() const {
 }
 
 void Companion::renderSkillReady() const {
+    if (g_voxelCapture) return;
     if (skillFlash > 0.f) DrawCircleLines((int)position.x, (int)position.y,
         radius + 6.0f + skillFlash * 20.0f, ColorAlpha(projectileColor, skillFlash));
 }
@@ -396,8 +428,10 @@ void Companion::renderMarcoVeil() const {
     DrawRectangle(px-9, py-22, 18, 10, helmet); DrawRectangle(px-6, py-26, 12, 5, helmet);
     int rfx = px + (facing>=0?8:-8);
     DrawRectangle(rfx-2, py-5, 4, 14, {70,70,70,255}); DrawRectangle(rfx-1, py-3, 2, 18, {50,50,50,255});
-    int nw = MeasureText(name.c_str(),10);
-    DrawText(name.c_str(), px-nw/2, py-(int)radius-28, 10, {100,220,255,230});
+    if (!g_voxelCapture) {
+        int nw = MeasureText(name.c_str(),10);
+        DrawText(name.c_str(), px-nw/2, py-(int)radius-28, 10, {100,220,255,230});
+    }
 }
 
 void Companion::renderSteel() const {

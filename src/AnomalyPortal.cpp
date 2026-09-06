@@ -1,4 +1,4 @@
-﻿#include "AnomalyPortal.h"
+#include "AnomalyPortal.h"
 #include "Enemy.h"
 #include <raylib.h>
 #include <raymath.h>
@@ -168,7 +168,7 @@ void AnomalyPortal::renderActivePortal() const {
 
     // 6. HP bar (when player in range)
     if (playerInRange) {
-        float hpPct = health / maxHealth;
+        float hpPct = (maxHealth > 0.0f) ? (health / maxHealth) : 0.0f;
         int   bw    = (int)(r * 2.0f);
         int   bx    = (int)px - bw / 2;
         int   by    = (int)(py - r * 0.9f) - 20;

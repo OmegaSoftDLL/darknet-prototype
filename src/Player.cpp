@@ -1259,6 +1259,9 @@ void Player::equipFromBag(int idx) {
     if (slot) {
         if (!slot->isEmpty()) equipBag.push_back(*slot); // o antigo volta p/ a bolsa
         *slot = chosen;
+    } else {
+        // Slot inválido: devolve o item à bolsa em vez de perdê-lo.
+        equipBag.push_back(chosen);
     }
     if (selectedBagEquip >= (int)equipBag.size())
         selectedBagEquip = std::max(0, (int)equipBag.size() - 1);

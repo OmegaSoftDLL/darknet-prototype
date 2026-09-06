@@ -5,16 +5,18 @@
 
 int main(int argc, char* argv[]) {
     printf("DARKNET v1.0\n");
-    printf("Uso: darknet.exe [--autobot|--autotest] [--test-seconds=N] [--seed=N]\n");
+    printf("Uso: darknet.exe [--autobot|--autotest] [--test-seconds=N] [--seed=N] [--start-phase=N]\n");
     printf("  --autotest        bot de teste automatico\n");
     printf("  --test-seconds=N  encerra o teste em N segundos e grava o relatorio\n");
     printf("  --seed=N          mundo REPRODUTIVEL (mesmo seed = mesmo mapa)\n");
+    printf("  --start-phase=N   inicia diretamente na fase N (0..N-1; util p/ auditoria)\n");
     printf("  --headless        sem janela/GPU (CI): so a simulacao do bot\n\n");
 
     bool     autoTest = false;
     float    testSecs = 0.0f;   // 0 = usa o padrao (2h)
     unsigned seed     = 0;      // 0 = aleatorio
     bool     headless = false;
+    int      startPhase = -1;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--autotest" || arg == "--autobot") autoTest = true;
@@ -26,6 +28,9 @@ int main(int argc, char* argv[]) {
         // Sem seed fixa todo relatorio de bug virava anedota irreproduzivel.
         else if (arg.rfind("--seed=", 0) == 0)
             seed = (unsigned)strtoul(arg.substr(7).c_str(), nullptr, 10);
+        // Pular para fase avancada (auditoria das fases 5-11).
+        else if (arg.rfind("--start-phase=", 0) == 0)
+            startPhase = atoi(arg.substr(14).c_str());
     }
 
     if (seed != 0) {
@@ -33,14 +38,15 @@ int main(int argc, char* argv[]) {
         printf("SEED FIXA: %u (mundo reprodutivel)\n", seed);
     }
 
-    // Headless precisa ser setado ANTES de construir Game: o construtor decide
-    // quais recursos sobem (sem janela/GL, ha contextos de GPU invalidos no CI).
+    // Headless e start-phase precisam ser setados ANTES de construir Game:
+    // o construtor decide quais recursos sobem e qual fase/carrega.
     Game::headless = headless;
+    Game::startPhaseOverride = startPhase;
     if (headless) printf("HEADLESS: sem janela/GPU (modo CI)\n");
 
     Game game;
-    game.worldSeed       = seed;
-    game.autoTestSeconds = testSecs;
+    game.worldSeed          = seed;
+    game.autoTestSeconds    = testSecs;
     game.runAutoTest(autoTest);
 
     // Exit code = veredito do portao de validacao (so no autoteste): qualquer

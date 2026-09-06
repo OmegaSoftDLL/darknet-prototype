@@ -7,7 +7,9 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <cmath>
 #include <chrono>
+#include <random>
 #include <nlohmann/json.hpp>   // vendored em third_party/nlohmann/json.hpp
 
 #pragma comment(lib, "ws2_32.lib")
@@ -53,6 +55,15 @@ static std::string base64(const unsigned char* data, int len) {
     return out;
 }
 
+// Gerador aleatório seguro para máscaras WebSocket e Sec-WebSocket-Key.
+static std::mt19937& wsRng() {
+    static std::mt19937 rng(std::random_device{}());
+    return rng;
+}
+static unsigned char randomByte() {
+    return static_cast<unsigned char>(std::uniform_int_distribution<int>(0, 255)(wsRng()));
+}
+
 // ── Envia todos os bytes (lida com sends parciais) ───────────────────────────
 static bool sendAll(SOCKET s, const char* data, int len) {
     int sent = 0;
@@ -82,10 +93,7 @@ static bool wsSendText(SOCKET s, const std::string& payload) {
         frame.push_back((char)(0x80 | 127));
         for (int i = 7; i >= 0; --i) frame.push_back((char)((len >> (8 * i)) & 0xff));
     }
-    unsigned char mask[4] = {
-        (unsigned char)(rand() & 0xff), (unsigned char)(rand() & 0xff),
-        (unsigned char)(rand() & 0xff), (unsigned char)(rand() & 0xff)
-    };
+    unsigned char mask[4] = { randomByte(), randomByte(), randomByte(), randomByte() };
     frame.append((const char*)mask, 4);
     size_t base = frame.size();
     frame.resize(base + len);
@@ -99,10 +107,7 @@ static bool wsSendControl(SOCKET s, unsigned char opcode, const std::string& pay
     std::string frame;
     frame.push_back((char)(0x80 | opcode));
     frame.push_back((char)(0x80 | (payload.size() & 0x7f)));
-    unsigned char mask[4] = {
-        (unsigned char)(rand() & 0xff), (unsigned char)(rand() & 0xff),
-        (unsigned char)(rand() & 0xff), (unsigned char)(rand() & 0xff)
-    };
+    unsigned char mask[4] = { randomByte(), randomByte(), randomByte(), randomByte() };
     frame.append((const char*)mask, 4);
     size_t base = frame.size();
     frame.resize(base + payload.size());
@@ -163,7 +168,6 @@ void NetClient::shutdown() {
 
 void NetClient::sendState(float x, float y, int charClass, int facing, bool moving) {
     if (!enabled) return;
-    sendAccum_ += SEND_PERIOD; // chamado ~todo frame; aproxima 10x/s via contador
     // throttle real: usa relógio para não depender do dt do raylib
     auto now = std::chrono::steady_clock::now();
     float elapsed = std::chrono::duration<float>(now - lastSend_).count();
@@ -172,13 +176,18 @@ void NetClient::sendState(float x, float y, int charClass, int facing, bool movi
 
     // anim_state compacto: "i"=idle, "wl"=andando p/ esquerda, "wr"=p/ direita
     const char* a = moving ? (facing < 0 ? "wl" : "wr") : "i";
-    char buf[256];
-    std::snprintf(buf, sizeof(buf),
-        "{\"t\":\"state\",\"id\":%u,\"x\":%.1f,\"y\":%.1f,\"a\":\"%s\",\"c\":%d,\"n\":\"%s\"}",
-        myId_, x, y, a, charClass, myName_);
+    nlohmann::json j = {
+        {"t", "state"},
+        {"id", myId_},
+        {"x", std::round(x * 10.0f) / 10.0f},
+        {"y", std::round(y * 10.0f) / 10.0f},
+        {"a", a},
+        {"c", charClass},
+        {"n", myName_}
+    };
 
     std::lock_guard<std::mutex> lk(mtx_);
-    if (outQueue_.size() < 32) outQueue_.push_back(buf);
+    if (outQueue_.size() < 32) outQueue_.push_back(j.dump());
 }
 
 void NetClient::joinParty(const std::string& room) {
@@ -186,7 +195,7 @@ void NetClient::joinParty(const std::string& room) {
     std::lock_guard<std::mutex> lk(mtx_);
     room_ = room;
     peersShared_.clear();          // limpa peers da sala anterior
-    outQueue_.push_back(std::string("{\"t\":\"join\",\"room\":\"") + room + "\"}");
+    outQueue_.push_back(nlohmann::json{{"t", "join"}, {"room", room}}.dump());
 }
 
 std::string NetClient::currentRoom() const {
@@ -272,14 +281,16 @@ void NetClient::netThreadMain() {
 
         // ── Handshake WebSocket ───────────────────────────────────────────────
         unsigned char keyBytes[16];
-        for (int i = 0; i < 16; ++i) keyBytes[i] = (unsigned char)(rand() & 0xff);
+        for (int i = 0; i < 16; ++i) keyBytes[i] = randomByte();
         std::string key = base64(keyBytes, 16);
         // JWT no header Authorization: o servidor valida no UPGRADE e recusa
         // com 401 (sem token valido o socket nem abre). Nunca no corpo JSON.
         std::string authHeader;
         if (!token_.empty()) authHeader = "Authorization: Bearer " + token_ + "\r\n";
-        char req[1024];
-        int reqLen = std::snprintf(req, sizeof(req),
+        // Buffer dinamico: cabeçalho fixo ~170 bytes + strings variaveis.
+        int baseSize = 256 + (int)path_.size() + (int)host_.size() + (int)authHeader.size() + (int)key.size();
+        std::vector<char> req(baseSize);
+        int reqLen = std::snprintf(req.data(), req.size(),
             "GET %s HTTP/1.1\r\n"
             "Host: %s:%d\r\n"
             "Upgrade: websocket\r\n"
@@ -288,8 +299,8 @@ void NetClient::netThreadMain() {
             "Sec-WebSocket-Key: %s\r\n"
             "Sec-WebSocket-Version: 13\r\n\r\n",
             path_.c_str(), host_.c_str(), port_, authHeader.c_str(), key.c_str());
-        if (reqLen <= 0 || reqLen >= (int)sizeof(req)) reqLen = (int)std::strlen(req);
-        if (!sendAll(s, req, reqLen)) { closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue; }
+        if (reqLen <= 0 || reqLen >= (int)req.size()) { closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue; }
+        if (!sendAll(s, req.data(), reqLen)) { closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue; }
 
         // lê resposta até \r\n\r\n
         std::string resp;
@@ -312,7 +323,7 @@ void NetClient::netThreadMain() {
         // socket com timeout de recv curto p/ não bloquear o loop
         DWORD rcvTo = 50; setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&rcvTo, sizeof(rcvTo));
         { std::string r; { std::lock_guard<std::mutex> lk(mtx_); r = room_; }
-          wsSendText(s, std::string("{\"t\":\"join\",\"room\":\"") + r + "\"}"); }
+          wsSendText(s, nlohmann::json{{"t", "join"}, {"room", r}}.dump()); }
 
         std::string rx;
         // se sobrou corpo após o cabeçalho do handshake, processa
@@ -349,6 +360,9 @@ void NetClient::netThreadMain() {
                 alive = false; break;
             }
             rx.append(tmp, n);
+            // Proteção contra peer malicioso/servidor com falha.
+            static constexpr size_t MAX_RX = 8 * 1024 * 1024;
+            if (rx.size() > MAX_RX) { alive = false; break; }
 
             // parser de frames
             for (;;) {

@@ -6,7 +6,11 @@
 Projectile::Projectile(Vector2 start, Vector2 direction, float dmg, float rng,
                         float spd, Color col, bool grenade)
     : position(start), speed(spd), damage(dmg), maxRange(rng), color(col), isGrenade(grenade) {
-    velocity = Vector2Scale(Vector2Normalize(direction), speed);
+    if (direction.x == 0.0f && direction.y == 0.0f) {
+        active = false; // direcao invalida: projétil nao deve existir
+    } else {
+        velocity = Vector2Scale(Vector2Normalize(direction), speed);
+    }
 }
 
 void Projectile::update(float dt) {

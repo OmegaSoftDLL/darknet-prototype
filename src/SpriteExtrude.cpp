@@ -36,7 +36,7 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     const int W = img.width, H = img.height;
     Color* px = LoadImageColors(img);
 
-    std::vector<float>          verts, norms;
+    std::vector<float>          verts, norms, uvs;
     std::vector<unsigned char>  cols;
     std::vector<unsigned short> idx;
     verts.reserve(4096); idx.reserve(8192);
@@ -66,6 +66,7 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
                 const float* vv = p[id[j]];
                 verts.push_back(vv[0]); verts.push_back(vv[1]); verts.push_back(vv[2]);
                 norms.push_back(nx); norms.push_back(ny); norms.push_back(nz);
+                uvs.push_back(0.0f); uvs.push_back(0.0f);
                 cols.push_back(sc.r); cols.push_back(sc.g); cols.push_back(sc.b); cols.push_back(255);
                 idx.push_back((unsigned short)(b + j));
             }
@@ -108,12 +109,30 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     memcpy(mesh.vertices, verts.data(), verts.size() * sizeof(float));
     mesh.normals  = (float*)RL_MALLOC(norms.size() * sizeof(float));
     memcpy(mesh.normals, norms.data(), norms.size() * sizeof(float));
+    mesh.texcoords = (float*)RL_MALLOC(uvs.size() * sizeof(float));
+    memcpy(mesh.texcoords, uvs.data(), uvs.size() * sizeof(float));
     mesh.colors   = (unsigned char*)RL_MALLOC(cols.size());
     memcpy(mesh.colors, cols.data(), cols.size());
     mesh.indices  = (unsigned short*)RL_MALLOC(idx.size() * sizeof(unsigned short));
     memcpy(mesh.indices, idx.data(), idx.size() * sizeof(unsigned short));
-    UploadMesh(&mesh, false);
-    return LoadModelFromMesh(mesh);
+    // LoadModelFromMesh já faz UploadMesh internamente; chamar UploadMesh antes
+    // gerava o warning "VAO: Trying to re-load an already loaded mesh".
+    Model model = LoadModelFromMesh(mesh);
+
+    // Garante uma textura difusa VALIDA no material. Em alguns drivers/GPU a malha
+    // sem textura (ou com a textura default compartilhada) aparece branca ou
+    // invisivel; uma textura 1x1 branca propria forca o shader a multiplicar
+    // corretamente pelas cores por vertice.
+    static Texture2D whiteTex = [](){
+        Image img = GenImageColor(1, 1, WHITE);
+        Texture2D t = LoadTextureFromImage(img);
+        UnloadImage(img);
+        return t;
+    }();
+    if (model.materialCount > 0) {
+        model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = whiteTex;
+    }
+    return model;
 }
 
 } // namespace SpriteExtrude

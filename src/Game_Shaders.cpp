@@ -18,28 +18,33 @@
 void Game::initWorldShader() {
     m_worldLit = false;
     if (!FileExists("resources/shaders/world.fs")) return;
-    m_shWorld = LoadShader("resources/shaders/world.vs", "resources/shaders/world.fs");
-    if (!IsShaderValid(m_shWorld)) {
+    m_shWorld = GfxShader(LoadShader("resources/shaders/world.vs", "resources/shaders/world.fs"));
+    if (!m_shWorld.valid()) {
         TraceLog(LOG_WARNING, "WORLDLIT: shader nao compilou - 3D segue sem luz");
         return;
     }
-    m_locLightDir  = GetShaderLocation(m_shWorld, "lightDir");
-    m_locLightCol  = GetShaderLocation(m_shWorld, "lightColor");
-    m_locAmbCol    = GetShaderLocation(m_shWorld, "ambientColor");
-    m_locCamPos    = GetShaderLocation(m_shWorld, "camPos");
-    m_locFogCol    = GetShaderLocation(m_shWorld, "fogColor");
-    m_locFogStart  = GetShaderLocation(m_shWorld, "fogStart");
-    m_locFogEnd    = GetShaderLocation(m_shWorld, "fogEnd");
-    m_locRim       = GetShaderLocation(m_shWorld, "rimStrength");
-    m_locSpecK     = GetShaderLocation(m_shWorld, "specularK");
-    m_locWorldPer  = GetShaderLocation(m_shWorld, "worldPeriod");
+    m_locLightDir  = GetShaderLocation(m_shWorld.get(), "lightDir");
+    m_locLightCol  = GetShaderLocation(m_shWorld.get(), "lightColor");
+    m_locAmbCol    = GetShaderLocation(m_shWorld.get(), "ambientColor");
+    m_locCamPos    = GetShaderLocation(m_shWorld.get(), "camPos");
+    m_locFogCol    = GetShaderLocation(m_shWorld.get(), "fogColor");
+    m_locFogStart  = GetShaderLocation(m_shWorld.get(), "fogStart");
+    m_locFogEnd    = GetShaderLocation(m_shWorld.get(), "fogEnd");
+    m_locRim       = GetShaderLocation(m_shWorld.get(), "rimStrength");
+    m_locSpecK     = GetShaderLocation(m_shWorld.get(), "specularK");
+    m_locWorldPer  = GetShaderLocation(m_shWorld.get(), "worldPeriod");
     m_worldLit = true;
     TraceLog(LOG_INFO, "WORLDLIT: iluminacao 3D ATIVA");
 }
 
 void Game::applyWorldShader(Model& m) const {
     if (!m_worldLit || m.materialCount <= 0) return;
-    for (int i = 0; i < m.materialCount; ++i) m.materials[i].shader = m_shWorld;
+    for (int i = 0; i < m.materialCount; ++i) m.materials[i].shader = m_shWorld.get();
+}
+
+void Game::applyWorldShader(GfxModel& m) const {
+    if (!m.valid()) return;
+    applyWorldShader(m.get());
 }
 
 void Game::updateWorldShaderUniforms() {
@@ -72,16 +77,16 @@ void Game::updateWorldShaderUniforms() {
     // mapa fixo: os tiles nao tem grid, usa 480). A fbm gera manchas coerentes
     // e SEM repeticao visivel a cada chunk.
     float per = openWorldMode && currentZone == ZoneID::LARuins ? 950.0f : 480.0f;
-    SetShaderValue(m_shWorld, m_locLightDir, &ld,   SHADER_UNIFORM_VEC3);
-    SetShaderValue(m_shWorld, m_locLightCol, &lcV,  SHADER_UNIFORM_VEC3);
-    SetShaderValue(m_shWorld, m_locAmbCol,   &ambV, SHADER_UNIFORM_VEC3);
-    SetShaderValue(m_shWorld, m_locCamPos,   &cam,  SHADER_UNIFORM_VEC3);
-    SetShaderValue(m_shWorld, m_locFogCol,   &fog,  SHADER_UNIFORM_VEC3);
-    SetShaderValue(m_shWorld, m_locFogStart, &fs,   SHADER_UNIFORM_FLOAT);
-    SetShaderValue(m_shWorld, m_locFogEnd,   &fe,   SHADER_UNIFORM_FLOAT);
-    SetShaderValue(m_shWorld, m_locRim,      &rim,  SHADER_UNIFORM_FLOAT);
-    SetShaderValue(m_shWorld, m_locSpecK,    &sk,   SHADER_UNIFORM_FLOAT);
-    SetShaderValue(m_shWorld, m_locWorldPer, &per,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld.get(), m_locLightDir, &ld,   SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld.get(), m_locLightCol, &lcV,  SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld.get(), m_locAmbCol,   &ambV, SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld.get(), m_locCamPos,   &cam,  SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld.get(), m_locFogCol,   &fog,  SHADER_UNIFORM_VEC3);
+    SetShaderValue(m_shWorld.get(), m_locFogStart, &fs,   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld.get(), m_locFogEnd,   &fe,   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld.get(), m_locRim,      &rim,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld.get(), m_locSpecK,    &sk,   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shWorld.get(), m_locWorldPer, &per,  SHADER_UNIFORM_FLOAT);
 }
 
 void Game::initPostFX() {
@@ -90,53 +95,51 @@ void Game::initPostFX() {
         TraceLog(LOG_WARNING, "POSTFX: resources/shaders ausente - seguindo sem bloom");
         return;
     }
-    m_shBright = LoadShader(0, "resources/shaders/bloom_bright.fs");
-    m_shBlur   = LoadShader(0, "resources/shaders/blur.fs");
-    m_shGrade  = LoadShader(0, "resources/shaders/grade.fs");
-    if (!IsShaderValid(m_shBright) || !IsShaderValid(m_shBlur) || !IsShaderValid(m_shGrade)) {
+    m_shBright = GfxShader(LoadShader(0, "resources/shaders/bloom_bright.fs"));
+    m_shBlur   = GfxShader(LoadShader(0, "resources/shaders/blur.fs"));
+    m_shGrade  = GfxShader(LoadShader(0, "resources/shaders/grade.fs"));
+    if (!m_shBright.valid() || !m_shBlur.valid() || !m_shGrade.valid()) {
         TraceLog(LOG_WARNING, "POSTFX: shader nao compilou - seguindo sem bloom");
         unloadPostFX();
         return;
     }
-    m_locThreshold  = GetShaderLocation(m_shBright, "threshold");
-    m_locKnee       = GetShaderLocation(m_shBright, "knee");
-    m_locBlurDir    = GetShaderLocation(m_shBlur,   "direction");
-    m_locBloomTex   = GetShaderLocation(m_shGrade,  "texture1");
-    m_locBloomStr   = GetShaderLocation(m_shGrade,  "bloomStrength");
-    m_locExposure   = GetShaderLocation(m_shGrade,  "exposure");
-    m_locSaturation = GetShaderLocation(m_shGrade,  "saturation");
-    m_locContrast   = GetShaderLocation(m_shGrade,  "contrast");
+    m_locThreshold  = GetShaderLocation(m_shBright.get(), "threshold");
+    m_locKnee       = GetShaderLocation(m_shBright.get(), "knee");
+    m_locBlurDir    = GetShaderLocation(m_shBlur.get(),   "direction");
+    m_locBloomTex   = GetShaderLocation(m_shGrade.get(),  "texture1");
+    m_locBloomStr   = GetShaderLocation(m_shGrade.get(),  "bloomStrength");
+    m_locExposure   = GetShaderLocation(m_shGrade.get(),  "exposure");
+    m_locSaturation = GetShaderLocation(m_shGrade.get(),  "saturation");
+    m_locContrast   = GetShaderLocation(m_shGrade.get(),  "contrast");
 
     // 1/4 de resolucao: o borrao e largo de proposito, resolucao cheia so custaria
     // fillrate. BILINEAR e o que faz o halo subir de escala liso, sem serrilha.
-    m_bloomA = LoadRenderTexture(screenWidth / 4, screenHeight / 4);
-    m_bloomB = LoadRenderTexture(screenWidth / 4, screenHeight / 4);
-    SetTextureFilter(m_bloomA.texture, TEXTURE_FILTER_BILINEAR);
-    SetTextureFilter(m_bloomB.texture, TEXTURE_FILTER_BILINEAR);
+    m_bloomA = GfxRenderTexture(LoadRenderTexture(screenWidth / 4, screenHeight / 4));
+    m_bloomB = GfxRenderTexture(LoadRenderTexture(screenWidth / 4, screenHeight / 4));
+    SetTextureFilter(m_bloomA.get().texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(m_bloomB.get().texture, TEXTURE_FILTER_BILINEAR);
 
     float thr = 0.62f, knee = 0.30f;
-    SetShaderValue(m_shBright, m_locThreshold, &thr,  SHADER_UNIFORM_FLOAT);
-    SetShaderValue(m_shBright, m_locKnee,      &knee, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shBright.get(), m_locThreshold, &thr,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shBright.get(), m_locKnee,      &knee, SHADER_UNIFORM_FLOAT);
     // Com tonemap no fim da cadeia a cena NAO precisa mais ser desenhada clara:
     // exposicao perto de 1.0 + contraste alto = pretos com pe e ilhas de luz
     // (o visual do genero), em vez do cinza chapado de antes.
     float bs = 1.15f, ex = 1.06f, sat = 1.28f, con = 1.16f;
-    SetShaderValue(m_shGrade, m_locBloomStr,   &bs,  SHADER_UNIFORM_FLOAT);
-    SetShaderValue(m_shGrade, m_locExposure,   &ex,  SHADER_UNIFORM_FLOAT);
-    SetShaderValue(m_shGrade, m_locSaturation, &sat, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(m_shGrade, m_locContrast,   &con, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shGrade.get(), m_locBloomStr,   &bs,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shGrade.get(), m_locExposure,   &ex,  SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shGrade.get(), m_locSaturation, &sat, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(m_shGrade.get(), m_locContrast,   &con, SHADER_UNIFORM_FLOAT);
     m_postFX = true;
     TraceLog(LOG_INFO, "POSTFX: bloom + tonemap ATIVO");
 }
 
 void Game::unloadPostFX() {
-    if (IsShaderValid(m_shBright)) UnloadShader(m_shBright);
-    if (IsShaderValid(m_shBlur))   UnloadShader(m_shBlur);
-    if (IsShaderValid(m_shGrade))  UnloadShader(m_shGrade);
-    m_shBright = {}; m_shBlur = {}; m_shGrade = {};
-    if (m_bloomA.id > 0) UnloadRenderTexture(m_bloomA);
-    if (m_bloomB.id > 0) UnloadRenderTexture(m_bloomB);
-    m_bloomA = {}; m_bloomB = {};
+    m_shBright.reset();
+    m_shBlur.reset();
+    m_shGrade.reset();
+    m_bloomA.reset();
+    m_bloomB.reset();
     m_postFX = false;
 }
 
@@ -154,47 +157,47 @@ void Game::presentFrame() const {
 
     if (m_postFX) {
         // 1) BRILHO: extrai so os pixels acima do threshold, ja em 1/4 de res.
-        Rectangle bDst = { 0.f, 0.f, (float)m_bloomA.texture.width,
-                                     (float)m_bloomA.texture.height };
-        BeginTextureMode(m_bloomA);
+        Rectangle bDst = { 0.f, 0.f, (float)m_bloomA.get().texture.width,
+                                     (float)m_bloomA.get().texture.height };
+        BeginTextureMode(m_bloomA.get());
             ClearBackground(BLACK);
-            BeginShaderMode(m_shBright);
-                DrawTexturePro(gameTarget.texture, srcFull, bDst, {0,0}, 0.0f, WHITE);
+            BeginShaderMode(m_shBright.get());
+                DrawTexturePro(gameTarget.get().texture, srcFull, bDst, {0,0}, 0.0f, WHITE);
             EndShaderMode();
         EndTextureMode();
 
         // 2) BORRAO em duas passadas (separavel): horizontal A->B, vertical B->A.
-        Rectangle bSrc = { 0.f, 0.f, (float)m_bloomA.texture.width,
-                                    -(float)m_bloomA.texture.height };
-        Vector2 dirH = { 1.0f / (float)m_bloomA.texture.width, 0.0f };
-        Vector2 dirV = { 0.0f, 1.0f / (float)m_bloomA.texture.height };
-        BeginTextureMode(m_bloomB);
+        Rectangle bSrc = { 0.f, 0.f, (float)m_bloomA.get().texture.width,
+                                    -(float)m_bloomA.get().texture.height };
+        Vector2 dirH = { 1.0f / (float)m_bloomA.get().texture.width, 0.0f };
+        Vector2 dirV = { 0.0f, 1.0f / (float)m_bloomA.get().texture.height };
+        BeginTextureMode(m_bloomB.get());
             ClearBackground(BLACK);
-            SetShaderValue(m_shBlur, m_locBlurDir, &dirH, SHADER_UNIFORM_VEC2);
-            BeginShaderMode(m_shBlur);
-                DrawTexturePro(m_bloomA.texture, bSrc, bDst, {0,0}, 0.0f, WHITE);
+            SetShaderValue(m_shBlur.get(), m_locBlurDir, &dirH, SHADER_UNIFORM_VEC2);
+            BeginShaderMode(m_shBlur.get());
+                DrawTexturePro(m_bloomA.get().texture, bSrc, bDst, {0,0}, 0.0f, WHITE);
             EndShaderMode();
         EndTextureMode();
-        BeginTextureMode(m_bloomA);
+        BeginTextureMode(m_bloomA.get());
             ClearBackground(BLACK);
-            SetShaderValue(m_shBlur, m_locBlurDir, &dirV, SHADER_UNIFORM_VEC2);
-            BeginShaderMode(m_shBlur);
-                DrawTexturePro(m_bloomB.texture, bSrc, bDst, {0,0}, 0.0f, WHITE);
+            SetShaderValue(m_shBlur.get(), m_locBlurDir, &dirV, SHADER_UNIFORM_VEC2);
+            BeginShaderMode(m_shBlur.get());
+                DrawTexturePro(m_bloomB.get().texture, bSrc, bDst, {0,0}, 0.0f, WHITE);
             EndShaderMode();
         EndTextureMode();
 
         // 3) COMPOSICAO: cena + halo, tonemap filmico, contraste e saturacao.
         BeginDrawing();
             ClearBackground(BLACK);
-            SetShaderValueTexture(m_shGrade, m_locBloomTex, m_bloomA.texture);
-            BeginShaderMode(m_shGrade);
-                DrawTexturePro(gameTarget.texture, srcFull, dstFull, {0,0}, 0.0f, WHITE);
+            SetShaderValueTexture(m_shGrade.get(), m_locBloomTex, m_bloomA.get().texture);
+            BeginShaderMode(m_shGrade.get());
+                DrawTexturePro(gameTarget.get().texture, srcFull, dstFull, {0,0}, 0.0f, WHITE);
             EndShaderMode();
         EndDrawing();
     } else {
         BeginDrawing();
         ClearBackground(BLACK);
-        DrawTexturePro(gameTarget.texture, srcFull, dstFull, {0, 0}, 0.0f, WHITE);
+        DrawTexturePro(gameTarget.get().texture, srcFull, dstFull, {0, 0}, 0.0f, WHITE);
         EndDrawing();
     }
     // TEMP-SHOT: no autotest, salva um frame a cada 30s p/ inspecao visual.

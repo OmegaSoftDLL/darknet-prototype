@@ -110,27 +110,99 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
 
     rlSetTexture(rlGetTextureIdDefault());   // P0: religa branca p/ não vazar textura nas primitivas
 }
+// Adiciona contorno preto de 1px ao redor dos pixels opacos de uma imagem RGBA.
+// O contorno fica EMBUTIDO na textura: isso elimina z-fighting e piscar que
+// acontece quando se desenha um billboard maior por tras do principal.
+static Image AddSpriteOutline(Image src) {
+    ImageFormat(&src, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    int w = src.width, h = src.height;
+    Image out = GenImageColor(w, h, BLANK);
+    ImageFormat(&out, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    Color* s = LoadImageColors(src);
+    Color* d = (Color*)out.data;
+    const int dx[8] = {-1,-1,-1,0,0,1,1,1};
+    const int dy[8] = {-1,0,1,-1,1,-1,0,1};
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            int i = y * w + x;
+            if (s[i].a > 30) {
+                d[i] = s[i];
+            } else {
+                bool edge = false;
+                for (int k = 0; k < 8 && !edge; ++k) {
+                    int nx = x + dx[k], ny = y + dy[k];
+                    if (nx >= 0 && nx < w && ny >= 0 && ny < h && s[ny * w + nx].a > 30)
+                        edge = true;
+                }
+                d[i] = edge ? Color{0, 0, 0, 200} : Color{0, 0, 0, 0};
+            }
+        }
+    }
+    UnloadImageColors(s);
+    return out;
+}
+
+// Recorta a imagem aoredor do bbox dos pixels opacos, com margem para o contorno.
+// Remove o espaço vazio embaixo do sprite para que os pés fiquem na base da textura.
+static Image CropToOpaque(Image src, int margin) {
+    ImageFormat(&src, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    int w = src.width, h = src.height;
+    Color* p = LoadImageColors(src);
+    int minX = w, minY = h, maxX = 0, maxY = 0;
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            if (p[y * w + x].a > 30) {
+                if (x < minX) minX = x; if (x > maxX) maxX = x;
+                if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+        }
+    }
+    UnloadImageColors(p);
+    if (minX > maxX) return ImageCopy(src);
+    Rectangle rec = { (float)(minX - margin), (float)(minY - margin),
+                      (float)(maxX - minX + 1 + margin * 2),
+                      (float)(maxY - minY + 1 + margin * 2) };
+    if (rec.x < 0) { rec.width += rec.x; rec.x = 0; }
+    if (rec.y < 0) { rec.height += rec.y; rec.y = 0; }
+    if (rec.x + rec.width > w) rec.width = (float)w - rec.x;
+    if (rec.y + rec.height > h) rec.height = (float)h - rec.y;
+    return ImageFromImage(src, rec);
+}
+
 void Game::ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn) {
-    // hasVoxel() ja filtrou no call site — aqui e so cinto de seguranca.
-    if (m_voxModels.count(key)) return;
+    // Gera sprite 2D (e voxel 3D como bonus). Se o sprite ja existe e e valido,
+    // nao precisamos fazer nada. O render 3D depende EXCLUSIVAMENTE do sprite.
+    auto spIt = m_voxSprites.find(key);
+    if (spIt != m_voxSprites.end() && spIt->second.valid()) return;
     if (m_voxGenBudget <= 0) return;   // amortiza: poucas geracoes por frame (anti-engasgo)
     m_voxGenBudget--;
     g_voxelCapture = true;
-    Image img = SpriteExtrude::CaptureToImage(96, capPos, drawFn);
+    // 128px = sprite mais detalhado e maior no mundo; o capture centraliza a arte.
+    Image img = SpriteExtrude::CaptureToImage(128, capPos, drawFn);
     g_voxelCapture = false;
-    // ESCALA — o unico lugar que define o tamanho de TODO personagem em 3D.
-    // A captura tem 96px e a malha e reamostrada pra 34 celulas, entao
-    // voxelSize = 2.82 reproduz EXATAMENTE o tamanho do sprite 2D em unidades de
-    // mundo (1px 2D = 1 unidade). 3.4 deixava o personagem 20% MAIOR que a arte
-    // 2D — perto da casa (110u) e do carro (40u) ele lia como gigante.
-    // 1.95 = ~70% da arte 2D: heroi com ~28u (0,45 tile), ~1/4 da casa.
-    const float VOX = 1.95f;    // tamanho do voxel (altura do personagem)
-    const float VOX_DEPTH = 11.0f;  // espessura: com 7.5 o corpo lia como tabua/poste
-    m_voxModels[key] = SpriteExtrude::BuildVoxelModel(img, VOX, VOX_DEPTH);
-    applyWorldShader(m_voxModels[key]);
+
+    // Prepara sprite 2D: contorno embutido + crop para tirar espaço vazio.
+    // O crop faz os pés do personagem coincidirem com a base da textura,
+    // eliminando o efeito "voando" quando o billboard é posicionado no chao.
+    Image outlined = AddSpriteOutline(img);
+    Image crop = CropToOpaque(outlined, 2);
+
+    // Sprite 2D: o render 3D depende dele. Sobrescreve se ja existia mas era invalido.
+    Texture2D spriteTex = LoadTextureFromImage(crop);
+    SetTextureFilter(spriteTex, TEXTURE_FILTER_POINT);   // pixel art nítido, nao borrado
+    SetTextureWrap(spriteTex, TEXTURE_WRAP_CLAMP);
+    m_voxSprites[key] = GfxTexture(spriteTex);
+
+    // Voxel 3D real: cacheado mas NAO renderizado no hardware deste usuario.
+    // Mantemos a geracao porque o sistema foi construido em torno dele.
+    const float VOX = 2.20f;
+    const float VOX_DEPTH = 11.0f;
+    m_voxModels[key] = GfxModel(SpriteExtrude::BuildVoxelModel(crop, VOX, VOX_DEPTH));
+    UnloadImage(crop);
+    UnloadImage(outlined);
     {   // MEDIDA (nao chute): tamanho real do personagem em unidades de mundo,
-        // pra comparar com casa/carro. tile = 64u.
-        BoundingBox bb = GetModelBoundingBox(m_voxModels[key]);
+        // pra comparar com casa/carro.
+        BoundingBox bb = GetModelBoundingBox(m_voxModels[key].get());
         TraceLog(LOG_INFO, "VOXSIZE key=%d  L=%.1f  A=%.1f  P=%.1f", key,
                  bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z);
     }
@@ -437,72 +509,83 @@ static void drawAmbientDrones(const Vector3& tgt) {
     }
 }
 
+static void DrawCrossBillboard(Camera3D cam, Texture2D tex, Vector3 center, float width, Color tint);
+
+// Tamanho base do sprite no mundo, em unidades de largura. Calibrado para
+// nao parecer uma formiga perto das construcoes (casa ~175u) nem um poste.
+static float EntityBaseWidth(int base) {
+    if      (base >= 1000) return 52.0f;   // player
+    else if (base >= 500)  return 48.0f;   // companion
+    else if (base >= 300)  return 44.0f;   // NPC
+    else if (base >= 100)  return 48.0f;   // enemy
+    return 48.0f;
+}
+
 void Game::drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase, bool moving) {
-    // Quadro do passo pela fase da caminhada da PROPRIA entidade (nao pelo relogio):
-    // parado = pose 0, andando = ciclo de VOX_POSES quadros.
+    // Quadro do passo pela fase da caminhada da PROPRIA entidade.
     int pose = 0;
     if (moving) {
         float w = walkPhase * (float)VOX_POSES / (2.0f * PI);
         pose = ((int)floorf(w) % VOX_POSES + VOX_POSES) % VOX_POSES;
     }
-    auto it = m_voxModels.find(voxKey(base, pose));
-    if (it == m_voxModels.end()) it = m_voxModels.find(voxKey(base, 0));   // pose ainda nao gerada
-    if (it == m_voxModels.end() || it->second.meshCount == 0) return;
-    Model& mdl = it->second;
+    int key = voxKey(base, pose);
 
-    // LOD de custo: alem de 600u o contorno escuro e a sombra de contato nao se
-    // distinguem mais — economiza 2 draw calls por entidade distante (restam a
-    // silhueta projetada, que le o relevo da sombra, e o modelo).
-    float vdx = pos.x - camera3D.target.x, vdz = pos.y - camera3D.target.z;
-    bool  vNear = (vdx*vdx + vdz*vdz) < 600.0f*600.0f;
+    auto spIt = m_voxSprites.find(key);
+    if (spIt == m_voxSprites.end()) spIt = m_voxSprites.find(voxKey(base, 0));
+    if (spIt == m_voxSprites.end() || !spIt->second.valid()) return;
+    Texture2D tex = spIt->second.get();
 
-    // SOMBRA REAL: projeta a SILHUETA do modelo no chão, deslocada pela DIREÇÃO da
-    // luz (matriz de projeção em y=0). Não é disco — tem o formato do personagem.
-    const Vector3 L = { -0.42f, -1.0f, -0.30f };       // direção da luz (de cima/frente)
-    Matrix saved = mdl.transform;
-    Matrix sm = MatrixIdentity();
-    sm.m4 = -L.x / L.y;   // x deslocado pela altura (alonga na direção oposta à luz)
-    sm.m5 = 0.0f;         // achata a altura (projeta no chão)
-    sm.m6 = -L.z / L.y;   // z deslocado pela altura
-    mdl.transform = sm;
-    rlDisableDepthMask();                               // evita z-fight da silhueta
-    DrawModel(mdl, { pos.x, 0.07f, pos.y }, 1.0f, ColorAlpha(BLACK, 0.42f));
+    // COR por tipo: define anel de leitura e halo sutil por baixo do sprite.
+    Color ringC = WHITE;
+    if      (base >= 1000) ringC = { 0, 220, 255, 255 };   // player
+    else if (base >= 500)  ringC = { 0, 200, 255, 255 };   // companion
+    else if (base >= 300)  ringC = { 255, 220, 0, 255 };   // NPC
+    else if (base >= 100)  ringC = { 255, 60, 60, 255 };   // enemy
+
+    float t = (float)GetTime();
+    float breath = 1.0f + sinf(t * 2.4f + pos.x * 0.05f) * 0.025f;
+    float step   = moving ? fabsf(sinf(walkPhase)) : 0.0f;
+    breath += step * 0.050f;
+    rotDeg  += moving ? sinf(walkPhase) * 3.0f : 0.0f;
+
+    float baseW = EntityBaseWidth(base) * breath;
+    float aspect = (tex.width > 0) ? (float)tex.height / (float)tex.width : 1.0f;
+    float h = baseW * aspect;
+
+    // Direcao da luz vinda de cima-esquerda-frente: inclina o sprite levemente
+    // para dar sensacao de volume e direcao, sem depender de normal mapping.
+    Vector3 lightDir = Vector3Normalize(Vector3{ -0.5f, 1.0f, -0.3f });
+    Vector3 camRight = Vector3Normalize(Vector3CrossProduct(
+        Vector3Subtract(camera3D.position, camera3D.target), camera3D.up));
+    float lean = Vector3DotProduct(lightDir, camRight) * 4.0f;
+
+    // Transparencia precisa de depth test MAS sem escrever no Z-buffer.
+    rlDisableBackfaceCulling();
+    rlDisableDepthMask();
+
+    // HALO de identificacao no chao (por baixo do personagem).
+    DrawCylinderEx({ pos.x, 0.06f, pos.y }, { pos.x, 0.07f, pos.y },
+                   16.0f, 16.0f, 20, ColorAlpha(ringC, 0.35f));
+
+    // SOMBRA PROJETADA: copia achatada do sprite deslocada no chao.
+    // Da a sensacao de que o personagem ocupa espaco e esta ancorado no mundo.
+    Vector3 shadowOrigin = { pos.x - lightDir.x * 10.0f, 0.02f, pos.y - lightDir.z * 10.0f };
+    DrawBillboardPro(camera3D, tex,
+                     Rectangle{ 0.0f, 0.0f, (float)tex.width, (float)tex.height },
+                     shadowOrigin, Vector3{ 0.0f, 1.0f, 0.0f },
+                     Vector2{ baseW * 1.05f, h * 0.28f },
+                     Vector2{ 0.5f, 1.0f }, rotDeg, ColorAlpha(BLACK, 0.38f));
+
+    // SPRITE PRINCIPAL: billboard orientado a camera, com leve inclinacao de luz.
+    Vector3 up = Vector3Normalize(Vector3{ lightDir.x * 0.08f + lean * 0.02f, 1.0f, lightDir.z * 0.08f });
+    Vector3 origin = { pos.x, 0.0f, pos.y };
+    DrawBillboardPro(camera3D, tex,
+                     Rectangle{ 0.0f, 0.0f, (float)tex.width, (float)tex.height },
+                     origin, up, Vector2{ baseW, h * (1.0f + sinf(t * 2.4f + pos.x * 0.05f) * 0.015f) },
+                     Vector2{ 0.5f, 1.0f }, rotDeg, WHITE);
+
     rlEnableDepthMask();
-    mdl.transform = saved;
-
-    // Sombra de CONTATO: mancha curta EXATAMENTE sob os pes. A silhueta projetada
-    // acima da a direcao da luz; esta aqui e a que prega o personagem no chao.
-    if (vNear)
-        DrawCylinderEx({ pos.x, 2.30f, pos.y }, { pos.x, 2.34f, pos.y },
-                       9.0f, 9.0f, 12, ColorAlpha(BLACK, 0.34f));
-
-    // "Respiro" em ESCALA, nunca em translacao: o bob antigo levantava o modelo
-    // inteiro (ate 1.2u) enquanto a sombra ficava parada no chao - era isso que
-    // fazia TODO personagem/NPC parecer flutuar. Agora os pes ficam colados e so
-    // o corpo estica ~1,5%. SINK afunda um tico pra nao sobrar fresta sob os pes.
-    float breath = 1.0f + sinf((float)GetTime() * 2.4f + pos.x * 0.05f) * 0.015f;
-    // Balanco do passo: o corpo sobe no meio da passada e desce no apoio. Some
-    // quando parado, entao nao volta a parecer que flutua.
-    float step = moving ? fabsf(sinf(walkPhase)) : 0.0f;
-    breath += step * 0.040f;   // pisada visivel sem levantar o modelo (pes colados)
-    rotDeg  += moving ? sinf(walkPhase) * 3.0f : 0.0f;   // leve gingado
-    const float SINK = 0.6f;
-    Vector3 at = { pos.x, -SINK, pos.y };
-    // CONTORNO: mesma malha 6% maior, escura, desenhada ANTES. O modelo real
-    // cobre o miolo e sobra so uma borda - separa o personagem do cenario, que
-    // e o que faltava pra ele nao sumir no verde da floresta.
-    // RIM LIGHT noturno: de noite o contorno escuro apaga JUNTO com o chao.
-    // Conforme o ambiente fecha, a borda vira um fio de luar frio — a silhueta
-    // do heroi e dos inimigos continua lendo no escuro (auditoria 2, P2).
-    float rimK = (lightSystem.ambientDark - 0.30f) / 0.22f;  // 0 de dia, ~1 na noite fechada
-    rimK = fminf(1.0f, fmaxf(0.0f, rimK));
-    Color outlineC = { (unsigned char)(10.0f + rimK * 62.0f),
-                       (unsigned char)(12.0f + rimK * 84.0f),
-                       (unsigned char)(18.0f + rimK * 128.0f), 255 };
-    if (vNear)
-        DrawModelEx(mdl, at, { 0.0f, 1.0f, 0.0f }, rotDeg,
-                    { 1.06f, 1.05f * breath, 1.06f }, outlineC);
-    DrawModelEx(mdl, at, { 0.0f, 1.0f, 0.0f }, rotDeg, { 1.0f, breath, 1.0f }, WHITE);
+    rlEnableBackfaceCulling();
 }
 
 // Teste esfera × frustum da camera 3D, em espaco de VIEW (raylib: frente = -Z).
@@ -618,7 +701,7 @@ void Game::renderWorld3D() {
     // Prepare light mask before drawing (uses screen-space projection of 3D lights)
     lightSystem.prepareMask3D(camera3D, screenWidth, screenHeight);
 
-    BeginTextureMode(gameTarget);
+    BeginTextureMode(gameTarget.get());
     {   // Ceu/horizonte com MATIZ PROPRIO por fase (skyColorFor): o ceu vermelho
         // do inferno e o azul-noite da cidade fantasma sao metade da leitura do
         // bioma. A MESMA cor alimenta o fog do shader (updateWorldShaderUniforms),
@@ -715,7 +798,7 @@ void Game::renderWorld3D() {
                 bool hasSprite = (sb.ready && obj.type >= 0 && obj.type < SpriteBank::NUM_SCENERY);
 
                 // Estruturas grandes = MODELOS 3D REAIS (não billboard 2.5D).
-                Model* mdl = nullptr; float mscale = 40.0f;
+                GfxModel* mdl = nullptr; float mscale = 40.0f;
                 switch (obj.type) {
                     case 0: mdl = &m_houseModel;    mscale = m_houseScale; break; // casa
                     case 1: mdl = &m_barracksModel; mscale = m_barracksScale; break; // celeiro
@@ -723,7 +806,7 @@ void Game::renderWorld3D() {
                     case 8: mdl = &m_wellModel;     mscale = m_wellScale; break; // silo
                     default: break;
                 }
-                if (mdl && m_modelsLoaded && mdl->meshCount > 0) {
+                if (mdl && m_modelsLoaded && mdl->valid()) {
                     float s = mscale * (obj.scale > 0.01f ? obj.scale : 1.0f);
                     // SOMBRA PROJETADA do predio: mesma malha achatada em y=0 e
                     // cisalhada pela direcao da luz (o truque usado nos personagens).
@@ -761,7 +844,7 @@ void Game::renderWorld3D() {
                     float odx = fabsf(obj.position.x - player.position.x);
                     float odz = obj.position.y - player.position.y;
                     bool  occludes = (odz > 0.0f && odz < 620.0f && odx < 230.0f);
-                    DrawModelEx(*mdl, { obj.position.x, 0.0f, obj.position.y }, { 0.0f, 1.0f, 0.0f },
+                    DrawModelEx(mdl->get(), { obj.position.x, 0.0f, obj.position.y }, { 0.0f, 1.0f, 0.0f },
                                 obj.rotation * RAD2DEG, { s, s, s },
                                 occludes ? ColorAlpha(zt, 0.30f) : zt);
                     w = s; h = s;
@@ -2106,6 +2189,24 @@ void Game::renderWorld3D() {
         // ── DRONES DE VIGILANCIA (vida aerea sci-fi, so visual) ──
         if (openWorldMode) {
             drawAmbientDrones(camera3D.target);
+        }
+
+        // ── IMPACTO DISTANTE (código de guerra): clarão no horizonte + coluna
+        //    de luz + anel de choque no chao — o mundo "continua bombardeador". ──
+        if (openWorldMode && owWarFlash > 0.0f) {
+            float k = 1.0f - owWarFlash / 0.9f;            // 0 -> 1 durante o flash
+            float xf = owWarPos.x, zf = owWarPos.y;
+            float fade = 1.0f - k;
+            float rad  = 26.0f + k * 150.0f;
+            DrawSphereEx({ xf, 5.0f, zf }, rad * 0.5f, 8, 8,
+                         ColorAlpha(Color{ 255, 165, 85, 255 }, 0.35f * fade));
+            DrawCylinderEx({ xf, 0.0f, zf }, { xf, 18.0f + k * 80.0f, zf },
+                           rad * 0.28f, rad * 0.08f, 8,
+                           ColorAlpha(Color{ 250, 205, 150, 255 }, 0.5f * fade));
+            DrawCircle3D({ xf, 0.6f, zf }, rad, { 0.0f, 1.0f, 0.0f }, 0.0f,
+                         ColorAlpha(Color{ 255, 195, 125, 255 }, 0.6f * fade));
+            DrawCircle3D({ xf, 0.5f, zf }, rad * 0.7f, { 0.0f, 1.0f, 0.0f }, 0.0f,
+                         ColorAlpha(Color{ 255, 220, 180, 255 }, 0.5f * fade));
         }
 
         // ── VIDA AMBIENTE: partículas flutuando (poeira/brasas/pólen) por TEMA ──

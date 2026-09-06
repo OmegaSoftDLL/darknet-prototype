@@ -327,6 +327,33 @@ void Game::update(float dt) {
     // Mundo infinito: auto-gera/descarrega cenário em chunks ao redor do player.
     updateSceneryChunks(player.position);
 
+    // Eventos de guerra ambiente (Ruínas de LA / Cidade Fantasma): a cada 20-30s
+    // um impacto distante cruza o céu — flash no horizonte, estrondo abafado e um
+    // micro-tremor. Só visual/audio; nao toca vida/dano, entao o autoteste segue
+    // determinista (o bot colhe/atira em coordenadas de mundo, nao do offset).
+    if (openWorldMode &&
+        (currentZone == ZoneID::LARuins || currentZone == ZoneID::GhostCity)) {
+        if (owWarFlash > 0.0f) {
+            owWarFlash -= dt;
+            if (owWarFlash <= 0.0f) {
+                if (shakeTimer <= 0.01f) triggerShake(1.8f, 0.22f);
+                SetSoundVolume(audio.sfxExplosionBig, 0.12f);
+                PlaySound(audio.sfxExplosionBig);
+                SetSoundVolume(audio.sfxExplosionBig, 1.0f);
+            }
+        }
+        owWarTimer -= dt;
+        if (owWarTimer <= 0.0f) {   // agenda o proximo impacto
+            auto rf = []() { return (float)GetRandomValue(0, 1000) / 1000.0f; };
+            owWarTimer = 20.0f + rf() * 12.0f;
+            owWarFlash = 0.9f;
+            owWarSeed  = rf() * 6.2832f;
+            float d = 1100.0f + rf() * 420.0f;
+            owWarPos  = { player.position.x + cosf(owWarSeed) * d,
+                          player.position.y + sinf(owWarSeed) * d };
+        }
+    }
+
     // Open World region detection (SEM clamp de câmera — mundo é infinito)
     if (openWorldMode) {
         ZoneID newRegion = getRegionAt(player.position);

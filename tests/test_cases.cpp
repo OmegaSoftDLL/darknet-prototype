@@ -8,6 +8,9 @@
 #include "Enemy.h"
 #include "Equipment.h"
 #include "SaveManager.h"
+#include "Player.h"
+#include "Projectile.h"
+#include "Tilemap.h"
 
 #include <doctest/doctest.h>
 
@@ -288,4 +291,179 @@ TEST_CASE("SaveManager - V4 legado carrega equipamento por nome de exibicao") {
     CHECK(loaded.credits == 500);
 
     SaveManager::deleteSave(slot);
+}
+
+TEST_CASE("SaveManager - valores de enum fora da faixa sao clampados") {
+    const int slot = 2;
+    SaveManager::deleteSave(slot);
+
+    {
+        FILE* f = fopen("saves/darknet_slot2.txt", "w");
+        REQUIRE(f != nullptr);
+        fprintf(f, "DARKNET_SAVE_V6\nslot 2\nsaveDate 2026-09-05 10:00:00\n");
+        fprintf(f, "posX 10.0\nposY 20.0\nhealth 80.0\nmaxHealth 100.0\n");
+        fprintf(f, "attackDamage 15.0\nattackRange 90.0\nspeed 250.0\ndefense 0.0\n");
+        fprintf(f, "charClass 99\nlevel 1\nxp 0\nxpToNext 100\ncredits 0\nzone 9999\n");
+        fprintf(f, "evolutionPath -5\nevolutionTier 0\nskillPoints 0\nperkMask 0\n");
+        fprintf(f, "weaponId none\narmorId none\nimplantId none\n");
+        fprintf(f, "questCount 0\ninventory 0\n");
+        fclose(f);
+    }
+
+    Player loaded;
+    std::vector<Quest> quests;
+    ZoneID zone = ZoneID::LARuins;
+    REQUIRE(SaveManager::load(loaded, quests, zone, slot));
+
+    CHECK(static_cast<int>(zone) <= static_cast<int>(ZoneID::InfernoZone));
+    CHECK(loaded.evolutionPath == EvolutionPath::None);
+    CHECK(static_cast<int>(loaded.getCharClass()) < static_cast<int>(CharacterClass::COUNT));
+
+    SaveManager::deleteSave(slot);
+    CHECK_FALSE(SaveManager::hasSave(slot));
+}
+
+TEST_CASE("SaveManager - slot invalido nao cria arquivo estranho") {
+    SaveManager::deleteSave(-1);
+    SaveManager::deleteSave(999);
+    // Nao deve existir arquivo com slot -1 ou 999.
+    CHECK_FALSE(SaveManager::hasSave(-1));
+    CHECK_FALSE(SaveManager::hasSave(999));
+}
+
+// ── Projectile ───────────────────────────────────────────────────────────────
+
+TEST_CASE("Projectile - move e atinge alcance maximo") {
+    Projectile p({0, 0}, {1, 0}, 10.0f, 100.0f, 50.0f, RED, false);
+    CHECK(p.active);
+    CHECK(p.velocity.x == doctest::Approx(50.0f));
+    CHECK(p.velocity.y == doctest::Approx(0.0f));
+
+    p.update(1.0f);          // move 50 unidades
+    CHECK(p.position.x == doctest::Approx(50.0f));
+    CHECK_FALSE(p.isOutOfRange());
+
+    p.update(1.0f);          // mais 50 = 100 = alcance maximo
+    CHECK(p.position.x == doctest::Approx(100.0f));
+    CHECK(p.isOutOfRange());
+}
+
+TEST_CASE("Projectile - direcao zero fica inativo") {
+    Projectile p({0, 0}, {0, 0}, 10.0f, 100.0f, 50.0f, RED, false);
+    CHECK_FALSE(p.active);
+}
+
+// ── Player: regras puras de stats ────────────────────────────────────────────
+
+TEST_CASE("Player - applyClass define stats base distintos") {
+    Player soldado;
+    soldado.applyClass(CharacterClass::Soldado);
+    CHECK(soldado.getCharClass() == CharacterClass::Soldado);
+    float soldadoHP = soldado.maxHealth;
+
+    Player mago;
+    mago.applyClass(CharacterClass::Mago);
+    CHECK(mago.maxHealth < soldadoHP);          // mago tem menos vida
+    CHECK(mago.attackRange > soldado.attackRange); // mago tem mais alcance
+}
+
+TEST_CASE("Player - takeDamage respeita defesa e clampa em zero") {
+    Player p;
+    p.applyClass(CharacterClass::Soldado);
+    float hp = p.health;
+    p.defense = 10.0f;
+    p.takeDamage(50.0f);   // reducao de 10% -> 45 de dano efetivo
+    CHECK(p.health == doctest::Approx(hp - 45.0f));
+
+    p.takeDamage(9999.0f); // overkill
+    CHECK(p.health == doctest::Approx(0.0f));
+    CHECK(p.health <= 0.0f);
+}
+
+TEST_CASE("Player - heal nao ultrapassa maxHealth") {
+    Player p;
+    p.applyClass(CharacterClass::Soldado);
+    p.health = 10.0f;
+    p.heal(500.0f);
+    CHECK(p.health == doctest::Approx(p.maxHealth));
+}
+
+TEST_CASE("Player - addXP sobe de nivel") {
+    Player p;
+    p.applyClass(CharacterClass::Soldado);
+    int startLevel = p.level;
+    p.addXP(150);          // suficiente para subir pelo menos 1 nivel
+    CHECK(p.level > startLevel);
+}
+
+TEST_CASE("Player - equipItem aplica stats") {
+    Player p;
+    p.applyClass(CharacterClass::Soldado);
+    float baseDmg = p.attackDamage;
+    p.equipItem(EDB::rifleEnergia());
+    CHECK(p.equippedWeapon.id == EDB::rifleEnergia().id);
+    CHECK(p.attackDamage > baseDmg);
+}
+
+TEST_CASE("Player - usePotion cura e ativa cooldown") {
+    Player p;
+    p.applyClass(CharacterClass::Soldado);
+    p.health = 10.0f;
+    p.usePotion();
+    CHECK(p.health > 10.0f);
+    CHECK_FALSE(p.potionReady());
+}
+
+TEST_CASE("Player - equipFromBag devolve item com slot invalido") {
+    Player p;
+    p.applyClass(CharacterClass::Soldado);
+    Equipment bug = EDB::pistolaPlas();
+    bug.slot = EquipSlot::None;   // simula item corrompido/invalido
+    p.equipBag.push_back(bug);
+    size_t before = p.equipBag.size();
+    p.equipFromBag(0);
+    CHECK(p.equipBag.size() == before);   // nao perdeu o item
+}
+
+// ── Tilemap ──────────────────────────────────────────────────────────────────
+
+TEST_CASE("Tilemap - generate cria dimensoes corretas e paredes") {
+    Tilemap tm;
+    tm.generate(ZoneID::LARuins);
+    CHECK(tm.width == 40);
+    CHECK(tm.height == 40);
+    REQUIRE(tm.tiles.size() == static_cast<size_t>(tm.height));
+    REQUIRE(tm.tiles[0].size() == static_cast<size_t>(tm.width));
+
+    int walls = 0;
+    for (int y = 0; y < tm.height; ++y)
+        for (int x = 0; x < tm.width; ++x)
+            if (tm.isWall(x, y)) ++walls;
+    CHECK(walls > 0);
+}
+
+TEST_CASE("Tilemap - isWallAtPosition dentro e fora dos limites") {
+    Tilemap tm;
+    tm.generate(ZoneID::LARuins);
+    Vector2 inside = { tm.tileSize * 2.0f, tm.tileSize * 2.0f };
+    // nao garante que seja floor, mas nao deve crashar
+    bool r = tm.isWallAtPosition(inside);
+    (void)r;
+
+    // Mapa fechado: fora dos limites e considerado parede (nao pode sair).
+    Vector2 outside = { -1000.0f, -1000.0f };
+    CHECK(tm.isWallAtPosition(outside));
+
+    // Mundo aberto: fora dos limites e chao livre.
+    Tilemap ow;
+    ow.generateOpenWorld();
+    CHECK_FALSE(ow.isWallAtPosition(outside));
+}
+
+TEST_CASE("Tilemap - generateOpenWorld cria layout 3x3") {
+    Tilemap tm;
+    tm.generateOpenWorld();
+    CHECK(tm.openWorld);
+    CHECK(tm.width == Tilemap::OW_ZONE_W * Tilemap::OW_COLS);
+    CHECK(tm.height == Tilemap::OW_ZONE_H * Tilemap::OW_ROWS);
 }

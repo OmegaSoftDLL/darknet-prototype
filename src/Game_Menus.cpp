@@ -1,4 +1,4 @@
-﻿// Game_Menus.cpp — telas de menu principal, pausa, level-up e evolucao.
+// Game_Menus.cpp — telas de menu principal, pausa, level-up e evolucao.
 // Modularizacao: extraido de Game.cpp (que estava com ~7000 linhas). Mesma classe Game.
 #include "Game.h"
 #include <raylib.h>
@@ -7,7 +7,7 @@
 #include <cmath>
 #include <algorithm>
 void Game::drawMainMenu() const {
-    BeginTextureMode(gameTarget);
+    BeginTextureMode(gameTarget.get());
     ClearBackground({2, 4, 8, 255});
 
     float t = (float)GetTime();
