@@ -36,7 +36,13 @@ void Game::startStore() {
     if (storeStarted) return;
     storeStarted = true;
     applyApiConfig(store);
-    store.loginAsync(Player::className(player.charClass)); // login -> token + saldo
+    // Auth real: usa DARKNET_LOGIN_EMAIL/PASSWORD se definidas; senao, credenciais
+    // dummy. A loja premium so funciona apos registro real no servidor.
+    const char* envEmail = getenv("DARKNET_LOGIN_EMAIL");
+    const char* envPass  = getenv("DARKNET_LOGIN_PASSWORD");
+    std::string email = envEmail ? envEmail : "player@darknet.local";
+    std::string pass  = envPass  ? envPass  : "dummy123";
+    store.loginAsync(email, pass); // login -> token + saldo
     store.fetchStoreAsync();                                // catalogo de itens/packs
 }
 

@@ -88,13 +88,14 @@ std::string StoreClient::token() const {
     std::lock_guard<std::mutex> lk(mtx_); return token_;
 }
 
-// ── login: POST /auth/login {name} -> {token,id} ─────────────────────────────
-void StoreClient::loginAsync(const std::string& name) {
-    std::string h = host; int p = port; std::string nm = name;
+// ── login: POST /auth/login {email,password} -> {token,id,name} ───────────────
+void StoreClient::loginAsync(const std::string& email, const std::string& password) {
+    std::string h = host; int p = port;
+    std::string em = email; std::string pw = password;
     bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    startThread(std::thread([this, h, p, tls, pre, nm]() {
-        std::string body = nlohmann::json{{"name", nm}}.dump();
+    startThread(std::thread([this, h, p, tls, pre, em, pw]() {
+        std::string body = nlohmann::json{{"email", em}, {"password", pw}}.dump();
         HttpResponse r = HttpClient::post(h, p, pre + "/auth/login", body, "", tls);
         if (r.status == 200) {
             nlohmann::json j = jParse(r.body);
@@ -110,7 +111,7 @@ void StoreClient::loginAsync(const std::string& name) {
             }
         } else {
             setMsg(r.status == 0 ? "Backend offline (loja premium indisponivel)"
-                                 : "Falha no login da loja");
+                                 : "Credenciais invalidas (registre-se no servidor)");
         }
         activeThreads_.fetch_sub(1);
     }));

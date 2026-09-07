@@ -31,6 +31,7 @@ import { WebSocketServer } from "ws";
 import http from "http";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 const PORT       = process.env.PORT || 9000;
 // Sem JWT_SECRET, gera um segredo aleatorio por boot. Nunca um default fixo:
@@ -100,9 +101,11 @@ if (process.env.DATABASE_URL) {
     // Esquema normalizado — FONTE ÚNICA DE VERDADE do DDL (CREATE TABLE IF NOT EXISTS
     // garante o schema mesmo sem o server/db/init.sql, que só roda no 1º boot do volume).
     await pool.query(`CREATE TABLE IF NOT EXISTS accounts (
-      id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE, pass_hash TEXT,
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, pass_hash TEXT NOT NULL,
       gems INTEGER NOT NULL DEFAULT 0, inv_slots INTEGER NOT NULL DEFAULT 40,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+    // Migracao: remove contas orfas do stub antigo (sem email/senha real).
+    await pool.query(`DELETE FROM accounts WHERE email IS NULL OR pass_hash IS NULL`);
     await pool.query(`CREATE TABLE IF NOT EXISTS inventory (
       id BIGSERIAL PRIMARY KEY, account TEXT REFERENCES accounts(id),
       item_id TEXT NOT NULL, qty INTEGER NOT NULL DEFAULT 1)`);
@@ -153,7 +156,9 @@ async function getPlayer(id, name = "Operador") {
     return { id: p.id, name: p.name, gems: p.gems, inventory };
   }
   if (!memPlayers.has(id)) memPlayers.set(id, { id, name, gems: 0, inventory: [] });
-  return memPlayers.get(id);
+  const p = memPlayers.get(id);
+  // Nunca expoe hash de senha nas respostas autenticadas.
+  return { id: p.id, name: p.name, email: p.email, gems: p.gems, inventory: p.inventory || [] };
 }
 
 async function savePlayer(p) {
@@ -340,17 +345,75 @@ app.post("/store/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 // A partir daqui, JSON normal.
 app.use(express.json());
 
-// ── Auth (stub — em produção: OAuth / e-mail+senha com hash) ─────────────────
-// Com rate limit: 20 logins/min por IP (mitiga abuso de criação de contas).
-app.post("/auth/login", rateLimit(60_000, 20), async (req, res) => {
-  const name = cleanName(String((req.body || {}).name));
+// ── Auth real: e-mail + senha + bcrypt ──────────────────────────────────────
+// Rate limit: 20 tentativas/min por IP (mitiga forca bruta e spam de cadastro).
+const BCRYPT_ROUNDS = 12;
+
+function isValidEmail(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s));
+}
+
+async function findAccountByEmail(email) {
+  const e = String(email).toLowerCase().trim();
+  if (pool) {
+    const r = await pool.query("SELECT id,name,pass_hash FROM accounts WHERE email=$1", [e]);
+    return r.rows[0] || null;
+  }
+  for (const p of memPlayers.values()) if (p.email === e) return p;
+  return null;
+}
+
+async function createAccount(name, email, password) {
   const id = "u_" + crypto.randomBytes(6).toString("hex");
-  await getPlayer(id, name);
-  console.log(`[auth] login: ${name} -> ${id}`);
-  // O token carrega id E nome — o servidor usa ESTES p/ identificar peers/chat
-  // (o nome vindoo do JSON do cliente nunca é confiável).
-  const token = jwt.sign({ id, name }, JWT_SECRET, { expiresIn: "30d" });
-  res.json({ token, id, name });
+  const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const acc = { id, name, email: String(email).toLowerCase().trim(), gems: 0, inventory: [], pass_hash: hash };
+  if (pool) {
+    await pool.query(
+      "INSERT INTO accounts(id,name,email,pass_hash,gems) VALUES($1,$2,$3,$4,0)",
+      [acc.id, acc.name, acc.email, acc.pass_hash]);
+  } else {
+    memPlayers.set(id, acc);
+  }
+  return acc;
+}
+
+app.post("/auth/register", rateLimit(60_000, 20), async (req, res) => {
+  try {
+    const body = req.body || {};
+    const email = String(body.email || "").trim();
+    const password = String(body.password || "");
+    const name = cleanName(body.name);
+    if (!isValidEmail(email)) return res.status(400).json({ error: "e-mail invalido" });
+    if (password.length < 8) return res.status(400).json({ error: "senha muito curta (minimo 8 caracteres)" });
+    const existing = await findAccountByEmail(email);
+    if (existing) return res.status(409).json({ error: "e-mail ja cadastrado" });
+    const acc = await createAccount(name, email, password);
+    const token = jwt.sign({ id: acc.id, name: acc.name }, JWT_SECRET, { expiresIn: "30d" });
+    console.log(`[auth] register: ${acc.email} -> ${acc.id}`);
+    res.status(201).json({ token, id: acc.id, name: acc.name });
+  } catch (e) {
+    console.error("[auth] register error:", e.message);
+    res.status(500).json({ error: "erro interno" });
+  }
+});
+
+app.post("/auth/login", rateLimit(60_000, 20), async (req, res) => {
+  try {
+    const body = req.body || {};
+    const email = String(body.email || "").trim();
+    const password = String(body.password || "");
+    if (!isValidEmail(email) || !password) return res.status(400).json({ error: "credenciais invalidas" });
+    const acc = await findAccountByEmail(email);
+    if (!acc) return res.status(401).json({ error: "credenciais invalidas" });
+    const ok = await bcrypt.compare(password, acc.pass_hash);
+    if (!ok) return res.status(401).json({ error: "credenciais invalidas" });
+    const token = jwt.sign({ id: acc.id, name: acc.name }, JWT_SECRET, { expiresIn: "30d" });
+    console.log(`[auth] login: ${email} -> ${acc.id}`);
+    res.json({ token, id: acc.id, name: acc.name });
+  } catch (e) {
+    console.error("[auth] login error:", e.message);
+    res.status(500).json({ error: "erro interno" });
+  }
 });
 
 function auth(req, res, next) {
