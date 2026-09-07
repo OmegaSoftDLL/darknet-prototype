@@ -1,6 +1,6 @@
 #version 330
-// Passo 1 do bloom: isola so o que e REALMENTE brilhante (laser, fogo, luz, HUD
-// aceso). Threshold com joelho suave pra nao criar borda dura no que passa.
+// Bloom pass 1: isolate only what is REALLY bright (lasers, fire, lights, lit HUD).
+// Smooth knee threshold so bright objects do not produce a hard edge in later passes.
 in vec2 fragTexCoord;
 in vec4 fragColor;
 uniform sampler2D texture0;

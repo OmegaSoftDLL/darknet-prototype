@@ -1,13 +1,13 @@
 #version 330
-// Modelo de luz do mundo: half-lambert direcional (sol/lua) + ambiente colorido
-// pela zona + rim light (separa a silhueta do fundo, truque padrao de ARPG
-// isometrico) + nevoa de distancia ate a cor do horizonte.
+// World lighting model: directional half-Lambert (sun/moon) + environment tinted
+// by zone + rim light (separates the silhouette from the background, a standard
+// isometric ARPG trick) + distance fog that fades toward the horizon color.
 //
-// Camada "anti-plastico" (evolucao): as grandes faces opacas deixam de ser um
-// muro plano de cor unica — ganham variacao sutil e coerente no ESPACO do
-// mundo (fbm de 3 oitavas na coordenada global, NAO no UV), quebrando o
-// "plastic look" sem custar textura. Superficies com extremo brilho recebem
-// um especular seco (horizontes metalicos/enforcers) que devolve "venda".
+// "Anti-plastic" layer (evolution): large opaque faces stop looking like a flat
+// wall of uniform color and gain subtle, coherent variation in WORLD space
+// (3-octave FBM in global coordinates, NOT in UV space), breaking the plastic
+// look without adding texture cost. Extremely glowing surfaces get a tight
+// specular highlight (metal horizons/enforcers) that adds a bit of "pop".
 in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 fragNormal;
@@ -16,7 +16,7 @@ in vec3 fragPosW;
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
 
-uniform vec3  lightDir;      // direcao QUE A LUZ VIAJA (do sol para a cena)
+uniform vec3  lightDir;      // direction the light travels (from sun/moon into the scene)
 uniform vec3  lightColor;
 uniform vec3  ambientColor;
 uniform vec3  camPos;
@@ -24,8 +24,8 @@ uniform vec3  fogColor;
 uniform float fogStart;
 uniform float fogEnd;
 uniform float rimStrength;
-uniform float specularK;     // forca do brilho especular (0 = sem)
-uniform float worldPeriod;   // "tamanho" do mundo p/ a escala da variacao global
+uniform float specularK;     // specular highlight strength (0 = none)
+uniform float worldPeriod;   // world "size" used to scale the global variation
 
 out vec4 finalColor;
 
@@ -56,32 +56,34 @@ void main() {
     vec3  V   = normalize(camPos - fragPosW);
     vec3  H   = normalize(L + V);
     float ndl = max(dot(N, L), 0.0);
-    // half-lambert: o lado na sombra escurece mas NAO vira preto chapado
+    // Half-Lambert: the shadow side darkens but does NOT turn into flat black
     float lam = ndl * 0.5 + 0.5;
 
-    // ── anti-plastico: variacao coerente no espaco do mundo ──────────────────
-    // So para superficie OPAQUA (alpha > 0.999): chao, paredes, corpos metalicos.
-    // Decal semi-transparente (chao pintado, sombra projetada) nao recebe —
-    // senao a "sujeira" vira listra sobre o que e flat de proposito.
+    // ── anti-plastic: coherent variation in world space ─────────────────────
+    // Only for OPAQUE surfaces (alpha > 0.999): floors, walls, metal bodies.
+    // Semi-transparent decals (painted floor, projected shadow) skip it —
+    // otherwise a dirt patch would turn into a streak across intentionally flat
+    // surfaces.
     float detail = 0.0;
     if (base.a > 0.999) {
         float pw = 1.06 / max(worldPeriod, 1.0);
         vec2  wp = vec2(fragPosW.x * pw, fragPosW.z * pw * 0.87);
-        float cloud = fbm2(wp);                    // manchas grandes/medias
+        float cloud = fbm2(wp);                    // large/medium blotches
         float shaft = 0.5 + 0.5 * sin(fragPosW.x * 0.017 + fragPosW.z * 0.013);
         detail = (cloud - 0.5) * 0.13 + (shaft - 0.5) * 0.05;
     }
 
     vec3 lit = base.rgb * (ambientColor + lightColor * lam * 0.95) * (1.0 + detail);
 
-    // Rim: so em superficie que ja tem cor (senao a SOMBRA projetada, que e
-    // desenhada preta, ganharia um contorno brilhante).
+    // Rim: only on surfaces that already have color (otherwise a projected
+    // shadow, which is drawn black, would get a bright outline).
     float rim  = pow(1.0 - max(dot(N, V), 0.0), 3.0);
     float lumi = max(base.r, max(base.g, base.b));
     lit += lightColor * rim * rimStrength * lumi;
 
-    // ── especular: rodela seca em superficie clara e opaca ───────────────────
-    // Espelha o sol/lua em materiaopa: da "venda" em metal, lataria e placas.
+    // ── specular: tight highlight on bright opaque surfaces ────────────────
+    // Mirrors the sun/moon on opaque material: adds "pop" to metal, sheet
+    // metal and plates.
     float sp = pow(max(dot(N, H), 0.0), 26.0);
     if (base.a > 0.999) lit += lightColor * sp * specularK * lumi;
 

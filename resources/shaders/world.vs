@@ -1,6 +1,7 @@
 #version 330
-// Passa normal e posicao de MUNDO para o fragment: sem isso nao existe luz
-// direcional nem nevoa por distancia — era o que faltava para o 3D ter volume.
+// Pass world-space normal and position to the fragment shader. Without these,
+// directional light and distance fog do not work — this was missing for the 3D
+// scene to feel volumetric.
 in vec3 vertexPosition;
 in vec2 vertexTexCoord;
 in vec3 vertexNormal;

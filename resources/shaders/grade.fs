@@ -1,11 +1,11 @@
 #version 330
-// Composicao final: cena + bloom, tonemap filmico (ACES aproximado), correcao de
-// exposicao/contraste/saturacao. E aqui que a cena deixa de ser "chapada e
-// escura" e ganha faixa dinamica — sem apagar as sombras.
+// Final composite: scene + bloom, filmic tonemap (approximated ACES), plus
+// exposure/contrast/saturation correction. This is where the scene stops looking
+// flat and dark and gains dynamic range — without crushing the shadows.
 in vec2 fragTexCoord;
 in vec4 fragColor;
-uniform sampler2D texture0;   // cena
-uniform sampler2D texture1;   // bloom borrado
+uniform sampler2D texture0;   // scene
+uniform sampler2D texture1;   // blurred bloom
 uniform vec4 colDiffuse;
 uniform float bloomStrength;
 uniform float exposure;
@@ -23,12 +23,12 @@ void main() {
     vec3 bloom = texture(texture1, fragTexCoord).rgb;
     vec3 col   = scene + bloom * bloomStrength;
     col = aces(col * exposure);
-    // contraste em torno do cinza medio (nao do preto: nao afunda as sombras)
+    // contrast around medium gray (not black, so shadows do not get crushed)
     col = clamp((col - 0.5) * contrast + 0.5, 0.0, 1.0);
     float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
     col = clamp(mix(vec3(l), col, saturation), 0.0, 1.0);
-    // ── vinheta: enquadramento cinematografico. Leve — so segura as bordas que
-    // o bloom estouraria, nao "escurece o jogo".
+    // ── vignette: cinematic framing. Kept light — it only reins in edges where
+    // bloom would blow out, rather than darkening the whole image.
     vec2 vc = fragTexCoord - 0.5;
     float vd = length(vc) * 1.35;
     float vig = 1.0 - smoothstep(0.52, 0.95, vd) * 0.32;
