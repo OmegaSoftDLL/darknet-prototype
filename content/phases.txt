@@ -1,24 +1,24 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# FASES DO DARKNET — conteudo em DADO, nao em codigo.
-# Editar este arquivo muda a campanha SEM recompilar: e o que permite o jogo
-# evoluir por IA (ou por voce) sem tocar em C++.
+# DARKNET PHASES — data-driven content, not hard-coded.
+# Editing this file changes the campaign WITHOUT recompiling: it is what allows
+# the game to evolve via AI (or by you) without touching C++.
 #
-# formato:  zona | abates | chefe(0/1) | raio | titulo
+# format: zone | kills | boss(0/1) | radius | title
 #
-# zona:    LARuins CursedFarm DarkForest Cemetery GhostCity Bunker
+# zone:    LARuins CursedFarm DarkForest Cemetery GhostCity Bunker
 #          Catacombs AbandonedManor KronosForge InfernoZone KronosNexus
-# abates:  quantos inimigos abrir o portal exige
-# chefe:   1 = o portal so abre depois de derrotar o chefe da fase
-# raio:    tamanho do mundo da fase (unidades a partir do refugio)
+# kills:   how many enemies opening the portal requires
+# boss:    1 = portal only opens after defeating the phase boss
+# radius:  size of the phase world (units from the shelter)
 # ─────────────────────────────────────────────────────────────────────────────
-LARuins        | 20  | 0 | 5200 | Ruinas de Los Angeles
-CursedFarm     | 28  | 0 | 5460 | Fazenda Maldita
-DarkForest     | 36  | 1 | 5720 | Floresta Negra
-Cemetery       | 44  | 0 | 5980 | Cemiterio dos Caidos
-GhostCity      | 52  | 0 | 6240 | Cidade Fantasma
-Bunker         | 60  | 1 | 6500 | Bunker NEXUS
-Catacombs      | 68  | 0 | 6760 | Catacumbas
-AbandonedManor | 76  | 0 | 7020 | Mansao Abandonada
-KronosForge    | 84  | 1 | 7280 | A Forja de KRONOS
-InfernoZone    | 92  | 0 | 7540 | Zona Inferno
-KronosNexus    | 100 | 1 | 7800 | Nucleo KRONOS
+LARuins        | 20  | 0 | 5200 | Ruins of Los Angeles
+CursedFarm     | 28  | 0 | 5460 | Cursed Farm
+DarkForest     | 36  | 1 | 5720 | Dark Forest
+Cemetery       | 44  | 0 | 5980 | Cemetery of the Fallen
+GhostCity      | 52  | 0 | 6240 | Ghost City
+Bunker         | 60  | 1 | 6500 | NEXUS Bunker
+Catacombs      | 68  | 0 | 6760 | Catacombs
+AbandonedManor | 76  | 0 | 7020 | Abandoned Manor
+KronosForge    | 84  | 1 | 7280 | The Forge of KRONOS
+InfernoZone    | 92  | 0 | 7540 | Inferno Zone
+KronosNexus    | 100 | 1 | 7800 | KRONOS Nexus
