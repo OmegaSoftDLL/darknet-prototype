@@ -1,5 +1,5 @@
-// Testes automatizados do auth real (email + senha + bcrypt).
-// Inicia o game-server em porta isolada, registra, loga e verifica falhas.
+// Tests automatizados of the auth real (email + password + bcrypt).
+// Inicia the game-server in door isolated, registra, loga and checks failures.
 import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -28,7 +28,7 @@ async function run() {
     stdio: "pipe",
   });
 
-  // Aguarda servidor subir (polling em /store).
+  // Aguarda server go up (polling in /store).
   await new Promise((resolve, reject) => {
     server.stdout.on("data", (d) => {});
     server.stderr.on("data", (d) => console.error("[server err]", d.toString().trim()));
@@ -39,7 +39,7 @@ async function run() {
         const r = await fetch(BASE + "/store");
         if (r.status === 200) return resolve();
       } catch {}
-      if (attempts > 50) return reject(new Error("timeout ao subir servidor"));
+      if (attempts > 50) return reject(new Error("timeout to the go up server"));
       setTimeout(tryReady, 200);
     };
     tryReady();
@@ -51,8 +51,8 @@ async function run() {
       await fn();
       console.log(`✅ ${name}`);
       passed++;
-    } catch (e) {
-      console.log(`❌ ${name}: ${e.message}`);
+    } catch (and) {
+      console.log(`❌ ${name}: ${and.message}`);
       failed++;
     }
   };
@@ -61,14 +61,14 @@ async function run() {
   const password = "senhaSegura123";
   let token = null;
 
-  await check("registro com credenciais validas", async () => {
+  await check("register with credenciais validas", async () => {
     const r = await post("/auth/register", { email, password, name: "Testador" });
     if (r.status !== 201) throw new Error(`status ${r.status}`);
     const j = await r.json();
     if (!j.token || !j.id) throw new Error("faltam token/id");
   });
 
-  await check("login com credenciais validas", async () => {
+  await check("login with credenciais validas", async () => {
     const r = await post("/auth/login", { email, password });
     if (r.status !== 200) throw new Error(`status ${r.status}`);
     const j = await r.json();
@@ -76,7 +76,7 @@ async function run() {
     token = j.token;
   });
 
-  await check("GET /me retorna dados sem pass_hash", async () => {
+  await check("GET /me returns data without pass_hash", async () => {
     const r = await get("/me", token);
     if (r.status !== 200) throw new Error(`status ${r.status}`);
     const j = await r.json();
@@ -84,33 +84,33 @@ async function run() {
     if (j.email !== email.toLowerCase()) throw new Error("email incorreto");
   });
 
-  await check("login com senha errada falha", async () => {
+  await check("login with password errada failure", async () => {
     const r = await post("/auth/login", { email, password: "errada" });
     if (r.status !== 401) throw new Error(`status ${r.status}`);
   });
 
-  await check("registro de email duplicado falha", async () => {
+  await check("register of email duplicado failure", async () => {
     const r = await post("/auth/register", { email, password: "outraSenha123" });
     if (r.status !== 409) throw new Error(`status ${r.status}`);
   });
 
-  await check("registro com email invalido falha", async () => {
+  await check("register with email invalid failure", async () => {
     const r = await post("/auth/register", { email: "naoemail", password });
     if (r.status !== 400) throw new Error(`status ${r.status}`);
   });
 
-  await check("registro com senha curta falha", async () => {
-    const r = await post("/auth/register", { email: `outro${Date.now()}@darknet.local`, password: "123" });
+  await check("register with password curta failure", async () => {
+    const r = await post("/auth/register", { email: `other${Date.now()}@darknet.local`, password: "123" });
     if (r.status !== 400) throw new Error(`status ${r.status}`);
   });
 
-  await check("login com payload antigo (name) falha", async () => {
+  await check("login with payload antigo (name) failure", async () => {
     const r = await post("/auth/login", { name: "Testador" });
     if (r.status !== 400) throw new Error(`status ${r.status}`);
   });
 
-  await check("token invalido e rejeitado", async () => {
-    const r = await get("/me", "token-invalido");
+  await check("token invalid and rejeitado", async () => {
+    const r = await get("/me", "token-invalid");
     if (r.status !== 401) throw new Error(`status ${r.status}`);
   });
 
@@ -119,4 +119,4 @@ async function run() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-run().catch((e) => { console.error(e); process.exit(1); });
+run().catch((and) => { console.error(and); process.exit(1); });

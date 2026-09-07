@@ -38,9 +38,9 @@ jobs:
           cd build/Release
           ./darknet.exe --autotest --test-seconds=120 --seed=7 --headless > validate.log 2>&1
           code=$?
-          grep -E "VALIDACAO|FASES:|POSTFX|WORLDLIT" validate.log | head -20
+          grep -E "VALIDATION|PHASES:|POSTFX|WORLDLIT" validate.log | head -20
           test "$code" -eq 0
-          test "$(grep -c 'VALIDACAO: PASSOU' validate.log)" -ge 1
+          test "$(grep -c 'VALIDATION: PASSED' validate.log)" -ge 1
 
       - name: Validate seed 20260821 (bot 120s) - cycle gate
         shell: bash
@@ -48,6 +48,6 @@ jobs:
           cd build/Release
           ./darknet.exe --autotest --test-seconds=120 --seed=20260821 --headless > validate2.log 2>&1
           code=$?
-          grep -E "VALIDACAO|FASES:|POSTFX|WORLDLIT" validate2.log | head -20
+          grep -E "VALIDATION|PHASES:|POSTFX|WORLDLIT" validate2.log | head -20
           test "$code" -eq 0
-          test "$(grep -c 'VALIDACAO: PASSOU' validate2.log)" -ge 1
+          test "$(grep -c 'VALIDATION: PASSED' validate2.log)" -ge 1

@@ -19,7 +19,7 @@ A comprehensive design document covering:
 
 The narrative bible for the Darknet universe:
 
-- Setting: a dystopian Earth after the KRONOS AI uprising.
+- Setting: the dystopian Earth after the KRONOS AI uprising.
 - Main characters: VANCE RIOS, ZARA, KANE, LUNA, DR. CHEN, STEEL, and others.
 - Act structure, major plot beats, and faction lore.
 - Side quests, secret endings, and New Game+ content.
@@ -31,7 +31,7 @@ Milestone planning from prototype to release, including:
 - Engine and rendering milestones.
 - Gameplay systems (combat, AI, world generation).
 - Backend, multiplayer, and store integration.
-- Polish, localization, and distribution targets.
+- polish, localization, and distribution targets.
 
 ### [`DISTRIBUTION.md`](../DISTRIBUTION.md) — Distribution & Marketing Plan (English)
 
@@ -52,5 +52,5 @@ A multi-domain audit covering architecture, gameplay, rendering, networking, sav
 If you want to improve these documents or add new ones:
 
 1. Open an issue to discuss the change.
-2. Create a PR with the updated file and keep the English surface consistent.
-3. Update this index if you add or remove a core document.
+2. Create the PR with the updated file and keep the English surface consistent.
+3. Update this index if you add or removes the core document.

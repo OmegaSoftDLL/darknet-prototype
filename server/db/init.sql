@@ -1,14 +1,14 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- DARKNET — esquema do banco (Cyber Station)
+-- DARKNET — database schema (Cyber Station)
 --
--- ATENÇÃO: a FONTE ÚNICA DE VERDADE do DDL é o bloco CREATE TABLE IF NOT EXISTS
--- em `server/game-server/src/index.js` (executado em TODO boot do game-server,
--- inclusive com a migração idempotente de inventory.qty e o índice único
--- (account,item_id)). Este arquivo existe apenas porque é montado em
--- /docker-entrypoint-initdb.d/ pelo docker-compose — e o Postgres exige que o
--- diretório de init não seja vazio de propósito.
+-- ATTENTION: the SINGLE SOURCE OF TRUTH for the DDL is the CREATE TABLE IF NOT EXISTS
+-- block in `server/game-server/src/index.js` (executed on EVERY game-server boot,
+-- including the idempotent migration of inventory.qty and the unique index
+-- (account,item_id)). This file exists only because it is mounted in
+-- /docker-entrypoint-initdb.d/ by docker-compose — and Postgres requires the
+-- init directory not to be empty on purpose.
 --
--- NÃO duplique o DDL aqui: manter duas cópias foi o que causou divergência no
--- passado. Qualquer mudança de schema deve ser feita no index.js.
+-- DO NOT duplicate the DDL here: maintaining two copies was what caused divergence in
+-- the past. Any schema change must be made in index.js.
 -- ─────────────────────────────────────────────────────────────────────────────
-SELECT 'darknet: schema criado pelo game-server (ver server/game-server/src/index.js)' AS info;
+SELECT 'darknet: schema created by game-server (see server/game-server/src/index.js)' AS info;

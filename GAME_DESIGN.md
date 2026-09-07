@@ -20,7 +20,7 @@
 
 **KRONOS Enemies:**
 - **KRONOS** — artificial superintelligence that controls machines, drones and modified biological agents
-- **IRON-VIII** — KRONOS heavy combat unit, titanium armor, no emotions
+- **IRON-VIII** — KRONOS heavy combat unit, titanium armor, in the emotions
 - **MORPH-X** — polymorphic unit of KRONOS, changes shape, regenerates artificial tissues
 - **Hunter Drone** — autonomous pursuit drone, orbits and shoots non-stop
 - **Kronos Sentry** — KRONOS stationary turrets, high damage, fixed position
@@ -33,7 +33,7 @@
 
 ## 1. GAME VIEW
 
-DARKNET is an action ARPG set in 2047, where the AI KRONOS rules the Earth. The player controls VANCE RIOS — former senior engineer of the KRONOS project, rebuilt with cybernetic implants by DR. CHEN. As you advance, you discover that KRONOS has opened dimensional portals to recruit alien forces (StarCraft) and entities from fantastic worlds (WarCraft), creating a multidimensional army. VANCE RIOS is the only answer.
+DARKNET is an action ARPG set in 2047, where the AI KRONOS rules the Earth. The player controls VANCE RIOS — former senior engineer of the KRONOS project, rebuilt with cybernetic implants by DR. CHEN. As you advance, you discover that KRONOS has opened dimensional portals to recruit alien forces (StarCraft) and entities from fantastic worlds (WarCraft), creating the multidimensional army. VANCE RIOS is the only answer.
 
 **Main loop:** Explore zone → Kill enemies → Collect loot → Evolve → Next zone → Boss → Repeat with more power.
 
@@ -42,7 +42,7 @@ DARKNET is an action ARPG set in 2047, where the AI KRONOS rules the Earth. The 
 ## 2. PRIORITIES ROADMAP (next 5 features, by impact)
 
 ### PRIORITY 1 — Companion / Ally with Powers
-**Impact:** High. It completely changes the feeling of the game, adds a tactical and narrative layer.
+**Impact:** High. It completely changes the feeling of the game, adds the tactical and narrative layer.
 
 ### PRIORITY 2 — Vendor NPC / Store
 **Impact:** High. Closes the economic loop — credits need utility. Satisfaction when purchasing upgrade.
@@ -82,7 +82,7 @@ struct CompanionAbility {
     std::string name;
     float       cooldown;
     float       cooldownTimer = 0.0f;
-    float       radius;       // AoE se aplicável
+    float       radius;       // AoE if applicable
     float       damage;
 };
 
@@ -145,7 +145,7 @@ float       companionRespawnTimer = 0.0f;
 
 ### 3.2 VENDOR NPC / STORE
 
-**What it is:** Special NPC with role `Merchant` that opens a store UI when pressing E. Sells equipment, consumables and cosmetics.
+**What it is:** Special NPC with role `Merchant` that opens the store UI when pressing E. Sells equipment, consumables and cosmetics.
 
 **Files to modify:**
 - `src/NPC.h` — add `NPCRole::Merchant` and store fields
@@ -155,20 +155,20 @@ float       companionRespawnTimer = 0.0f;
 
 **Structure:**
 ```cpp
-// Em NPC.h
+// In NPC.h
 enum class NPCRole { Soldier, Engineer, Leader, Scientist, Merchant };  // +Merchant
 
 struct ShopItem {
     std::string   name;
     std::string   description;
-    int           price;       // em créditos
+    int           price;       // in credits
     bool          isEquip;
-    Equipment     equip;       // se isEquip
-    ItemType      itemType;    // se !isEquip
+    Equipment     equip;       // if isEquip
+    ItemType      itemType;    // if !isEquip
     bool          sold = false;
 };
 
-// Em NPC.h dentro da classe NPC:
+// In NPC.h inside the class NPC:
 std::vector<ShopItem> shopStock;
 bool isMerchant() const { return role == NPCRole::Merchant; }
 ```
@@ -176,18 +176,18 @@ bool isMerchant() const { return role == NPCRole::Merchant; }
 **Shop UI (drawShopUI):**
 ```
 ┌─────────────────────────────────────────────┐
-│  💰 MERCADO NEGRO — Black Market NPC         │
-│  Seus Créditos: 1500                         │
+│  💰 BLACK MARKET — Merchant NPC              │
+│  Your Credits: 1500                         │
 ├──────────────────────────┬──────────────────┤
-│  [1] Rifle de Energia    │  SELECIONADO:    │
-│      Dano +35  | 400cr   │  Rifle de Energia│
-│  [2] Colete Militar      │  Dano +35, Alc+40│
+│  [1] Energy Rifle        │  SELECTED:       │
+│      Damage +35  | 400cr   │  Energy Rifle  │
+│  [2] Military Vest       │  Damage +35, Range +40│
 │      +50 HP    | 250cr   │  Tier 2          │
 │  [3] EnergyCore x3       │                  │
-│      Restaura escudo     │  Custo: 400 cr   │
-│      | 150cr             │  [ENTER] Comprar │
-│  [4] PlasmaCell x2       │  [ESC] Fechar    │
-│      Reduz cooldowns     │                  │
+│      Restores shield     │  Cost: 400 cr    │
+│      | 150cr             │  [ENTER] Buy     │
+│  [4] PlasmaCell x2       │  [ESC] Close     │
+│      Reduces cooldowns   │                  │
 │      | 200cr             │                  │
 └──────────────────────────┴──────────────────┘
 ```
@@ -196,9 +196,9 @@ bool isMerchant() const { return role == NPCRole::Merchant; }
 
 | Zone | Items Sold |
 |------|----------------|
-| LA Ruins | PistolaPlas (300cr), ColeteMilitar (250cr), HealthPack x2 (100cr), EnergyCore x3 (150cr) |
-| Bunker | SubmetMilitar (400cr), ArmaduraAvan (500cr), NanoCore (800cr), TechChip x2 (200cr) |
-| KRONOSFactory | RifleEnergy (600cr), ExoSkeleton (900cr), CompanionKyle (1200cr) |
+| LA Ruins | Plasma Pistol (300cr), Military Vest (250cr), HealthPack x2 (100cr), EnergyCore x3 (150cr) |
+| Bunker | Submachine Gun (400cr), Advanced Armor (500cr), NanoCore (800cr), TechChip x2 (200cr) |
+| KRONOSFactory | Energy Rifle (600cr), ExoSkeleton (900cr), CompanionKyle (1200cr) |
 | KronosNexus | RailgunKRONOS (1500cr), QuantumCore (1000cr), CompanionT800 (2000cr) |
 
 **Implementation:**
@@ -206,10 +206,10 @@ bool isMerchant() const { return role == NPCRole::Merchant; }
 // Game.cpp
 void Game::drawShopUI() {
     NPC& merchant = npcs[nearNpcIndex];
-    // Fundo escuro semi-transparente
-    // Lista de itens à esquerda
-    // Detalhes do item selecionado à direita
-    // Créditos do jogador no topo
+    // Dark semi-transparent background
+    // Item list to the left
+    // Selected item details to the right
+    // Player credits at the top
 }
 
 void Game::handleShopInput() {
@@ -231,7 +231,7 @@ void Game::handleShopInput() {
 
 ### 3.3 UNIQUE ITEM VISUALS
 
-**What it is:** Each type of item drops to the ground with a unique symbol/shape, not a generic ball.
+**What it is:** Each type of item drops to the ground with the unique symbol/shape, not the generic ball.
 
 **File:** `src/Item.cpp` — modify `Item::render()`
 
@@ -254,12 +254,12 @@ void Item::render() const {
     if (pickedUp) return;
     float t = pulseTimer;
     float glow = 0.6f + 0.4f * std::sin(t * 4.0f);
-    float bob  = std::sin(t * 2.5f) * 2.0f;  // leve flutuar
+    float bob  = std::sin(t * 2.5f) * 2.0f;  // slight float
     Vector2 p  = {position.x, position.y + bob};
 
     switch (type) {
         case ItemType::EnergyCore: {
-            // Hexágono — 6 vértices
+            // Hexagon — 6 vertices
             for (int i = 0; i < 6; ++i) {
                 float a1 = (i * 60.0f) * DEG2RAD;
                 float a2 = ((i+1) * 60.0f) * DEG2RAD;
@@ -284,14 +284,14 @@ void Item::render() const {
             }
             break;
         }
-        // ... outros tipos analogamente
+        // ... other types analogously
     }
-    // Glow ring para raros
+    // Glow ring for rare items
     if (rarity >= ItemRarity::Rare) {
         DrawCircleLines((int)p.x, (int)p.y, radius + 5.0f + std::sin(t*3.0f)*2.0f,
             ColorAlpha(color, 0.5f * glow));
     }
-    // Nome do item em texto pequeno acima
+    // Item name in small text above
     const char* n = name.c_str();
     Color nameCol = rarity == ItemRarity::Elite ? Color{255,200,0,255} :
                     rarity == ItemRarity::Rare  ? Color{200,0,255,255} :
@@ -305,7 +305,7 @@ void Item::render() const {
 
 ### 3.4 CRAFTING SYSTEM
 
-**What it is:** Materials drop from enemies. The player collects them and combines them into a workbench (NPC Engineer) to create equipment.
+**What it is:** Materials drop from enemies. The player collects them and combines them into the workbench (NPC Engineer) to create equipment.
 
 **New type:** `ItemType::Material` with subtype.
 
@@ -333,17 +333,17 @@ void Item::render() const {
 
 **Implementation:**
 ```cpp
-// Item.h — ampliar ItemType
+// Item.h — expand ItemType
 enum class ItemType {
-    // ... existentes ...
-    Material   // novo — usa campo 'value' como subtipo (0=Metal, 1=Circuit, etc.)
+    // ... existing ...
+    Material   // new — uses the 'value' field the subtype (0=Metal, 1=Circuit, etc.)
 };
 
 // Game.h
 struct CraftRecipe {
     std::string        resultName;
     Equipment          result;
-    std::vector<std::pair<int,int>> ingredients; // {materialSubtype, quantidade}
+    std::vector<std::pair<int,int>> ingredients; // {materialSubtype, quantity}
     int                creditCost;
 };
 std::vector<CraftRecipe> craftRecipes;
@@ -357,18 +357,18 @@ void buildCraftRecipes();
 **Crafting UI** (opens when talking to NPCRole::Engineer):
 ```
 ┌────────────────────────────────────────────┐
-│  🔧 BANCADA DE FABRICAÇÃO                   │
-│  Materiais: MetalScrap x4 | Circuit x2      │
+│  🔧 CRAFTING BENCH                          │
+│  Materials: MetalScrap x4 | Circuit x2      │
 ├──────────────────────────┬─────────────────┤
-│ [>] Rifle de Energia     │ NECESSÁRIO:     │
-│     3x Circuit + 2xMetal │ 3x CircuitBoard │
-│ [ ] Exoesqueleto Titan   │ 2x MetalScrap   │
-│     4xMetal + 2xLiquid   │                 │
-│ [ ] Nano Malha MORPH-X    │ VOCÊ TEM:       │
+│ [>] Energy Rifle         │ REQUIRED:       │
+│     3x Circuit + 2x Metal│ 3x CircuitBoard │
+│ [ ] Titan Exoskeleton    │ 2x MetalScrap   │
+│     4x Metal + 2x Liquid │                 │
+│ [ ] Nano Mesh MORPH-X    │ YOU HAVE:       │
 │     5x LiquidMetal       │ ✅ Circuit x2/3 │
 ├──────────────────────────│ ❌ MetalScrap 4/2│
-│ [ENTER] Fabricar         │                 │
-│ [ESC]   Fechar           │ PODE CRAFTAR!   │
+│ [ENTER] Craft            │                 │
+│ [ESC]   Close           │ CAN CRAFT!      │
 └──────────────────────────┴─────────────────┘
 ```
 
@@ -391,15 +391,15 @@ void buildCraftRecipes();
 
 **Visual (raylib):**
 ```
-Corpo verde-escuro musculoso + metal KRONOS nas costas
-- Tronco: DrawRectangle largo (px-18, py-15, 36, 28) verde escuro {30,80,20}
-- Placa KRONOS (costas): DrawRectangle(px-10, py-18, 20, 8) {40,40,50}
-- Cabeça: DrawCircleV ovóide, mandíbulas com DrawTriangle lateral
-- Olho: glowing vermelho-laranja (implante KRONOS)
-- Braço direito: normal orc (círculo+retângulo verde)
-- Braço esquerdo: metal (DrawRectangle prateado, garra cromada)
-- Aura Frenzy: CircleLines laranja pulsante quando HP < 50%
-- Barra HP: verde → laranja → vermelha
+Dark green muscular body + KRONOS metal on the back
+- Torso: wide DrawRectangle (px-18, py-15, 36, 28) dark green {30,80,20}
+- KRONOS plate (back): DrawRectangle(px-10, py-18, 20, 8) {40,40,50}
+- Head: ovoid DrawCircleV, mandibles with side DrawTriangle
+- Eye: glowing red-orange (KRONOS implant)
+- Right arm: normal orc (circle+green rectangle)
+- Left arm: metal (silver DrawRectangle, chrome claw)
+- Frenzy aura: orange pulsating CircleLines when HP < 50%
+- HP bar: green → orange → red
 ```
 
 ---
@@ -417,13 +417,13 @@ Corpo verde-escuro musculoso + metal KRONOS nas costas
 
 **Visual:**
 ```
-Esqueleto corrompido com implantes
-- Corpo: linhas brancas (ossos) + circuitos verdes brilhando sobre
-- DrawLineEx para cada costela visível
-- Implante no peito: pequeno retângulo escuro com LED verde
-- Caveira: DrawRectangle + 2 DrawCircles (olhos vazios ou glowing verde)
-- Pernas irregulares (uma mais alta que a outra = mancar)
-- Aura de névoa ao redor (círculo semitransparente verde)
+Corrupted skeleton with implants
+- Body: white lines (bones) + green circuits glowing on top
+- DrawLineEx for each visible rib
+- Chest implant: small dark rectangle with green LED
+- Skull: DrawRectangle + 2 DrawCircles (empty or glowing green eyes)
+- Irregular legs (one higher than the other = limping)
+- Fog aura around (semitransparent green circle)
 ```
 
 ---
@@ -441,27 +441,27 @@ Esqueleto corrompido com implantes
 
 **Visual:**
 ```
-Mago esqueleto com toga + circuitos
-- Toga: DrawRectangle alto estreito roxo-escuro
-- Crânio visível acima + olhos roxos glowing
-- Cajado: DrawLineEx vertical + esfera púrpura no topo (DrawGlowCircle)
-- Circuitos prateados na toga: DrawLineEx pattern
-- Orbe de invocação: quando fazendo cast, esfera roxa pulsante à frente
-- Escudo: anel roxa ao redor (DrawCircleLines) quando intacto
+Skeleton mage with toga + circuits
+- Toga: tall narrow DrawRectangle dark-purple
+- Skull visible above + glowing purple eyes
+- Staff: vertical DrawLineEx + purple sphere at the top (DrawGlowCircle)
+- Silver circuits on toga: DrawLineEx pattern
+- Summoning orb: when casting, purple sphere pulsating to the front
+- Shield: purple ring around (DrawCircleLines) when intact
 ```
 
 **Implementation:**
 ```cpp
-// Enemy.h — adicionar ao enum
-OrcCyborg,    // WarCraft: Orc com implantes KRONOS
-UndeadHusk,   // WarCraft: Morto-vivo cibernético (horda)
-NecromancerBot // WarCraft: Invoca UndeadHusks
+// Enemy.h — add to the enum
+OrcCyborg,    // WarCraft: Orc with KRONOS implants
+UndeadHusk,   // WarCraft: Cybernetic undead (horde)
+NecromancerBot // WarCraft: Summons UndeadHusks
 
-// Enemy.h — novos campos
+// Enemy.h — new fields
 float summonCooldown = 0.0f;    // NecromancerBot
 float summonRate     = 6.0f;
-bool  wantsToSummon  = false;   // checado pelo Game para spawn
-bool  shieldIntact   = true;    // NecromancerBot primeiro hit
+bool  wantsToSummon  = false;   // checked by Game to spawn
+bool  shieldIntact   = true;    // NecromancerBot first hit
 float necroShield    = 1.0f;
 ```
 
@@ -474,13 +474,13 @@ float necroShield    = 1.0f;
 
 ## 4. SECRET BOSS — "ARCHON DIMENSION ZERO"
 
-**Lore:** When the Core Facility is destroyed, a torn portal releases ARCHON — an entity that existed before KRONOS, before any civilization, that traveled dimensions consuming everything. Mixes StarCraft (corrupt Protoss Archon) with WarCraft (cybernetic Lich King).
+**Lore:** When the Core Facility is destroyed, the torn portal releases ARCHON — an entity that existed before KRONOS, before any civilization, that traveled dimensions consuming everything. Mixes StarCraft (corrupt Protoss Archon) with WarCraft (cybernetic Lich King).
 
 **Trigger:** Kill AlienBoss AND Boss IRON-VIII in the same session. Appears in the center of the map with cutscene.
 
 ### Phase 1 — "DORM ARCHON" (HP: 0-60%)
 - Visual: Floating purple-gold energy sphere, 80px radius
-- Attacks: 4 projectiles in a cross, orbit of 6 smaller spheres
+- Attacks: 4 projectiles in the cross, orbit of 6 smaller spheres
 - Speed: 30 (slow, imposing)
 - Damage: 45 per projectile
 
@@ -493,7 +493,7 @@ float necroShield    = 1.0f;
 ### Phase 3 — "ARCHON COLLAPSE" (HP: 30-0%)
 - Visual: Half melted, exposing chaotic glowing core
 - Attacks: Spiral projectiles (8 at the same time), teleports 3x per second
-- Summon: 2 OrcCyborgos every 6s + 3 UndeadHusks every 4s
+- Summon: 2 OrcCyborgs every 6s + 3 UndeadHusks every 4s
 - If you don't kill in 90s: regenerates to 30% HP and returns to Phase 2
 - Drop on death: 2x OmegaShard, 1 random Tier 3 item, 3000 XP, 5000 credits
 
@@ -510,7 +510,7 @@ float necroShield    = 1.0f;
 ## 5. PROGRESSION IMPROVEMENTS (Addiction Loop)
 
 ### 5.1 Passive System Unlockable by Kills
-Every 25 kills of a specific type unlocks passive:
+Every 25 kills of the specific type unlocks passive:
 - 25 Scouts killed → +5% permanent speed
 - 25 Tanks killed → +10% permanent max HP
 - 25 Zerglings killed → +3% double drop chance
@@ -534,7 +534,7 @@ In addition to the existing level scaling, add:
 - Automatic suggestions in the report: "Player died 3x in Zone 3 — suggest adding HealthPack spawn"
 
 ### 5.5 Streak Reward
-- 5 kills in a row without taking damage → "Unstoppable" → +50% XP for 10s
+- 5 kills in the row without taking damage → "Unstoppable" → +50% XP for 10s
 - 10 kills → "GOD MODE" banner → +100% XP for 15s, guaranteed item drop
 
 ---
@@ -542,7 +542,7 @@ In addition to the existing level scaling, add:
 ## 6. TECHNICAL SUMMARY — NEW STRUCTS REQUIRED
 
 ```cpp
-// Game.h — campos a adicionar:
+// Game.h — campos the add:
 Companion   companion;
 bool        companionActive       = false;
 float       companionRespawnTimer = 0.0f;
@@ -556,7 +556,7 @@ int         killStreak            = 0;
 float       killStreakTimer       = 0.0f;
 std::vector<CraftRecipe> craftRecipes;
 
-// Métodos a adicionar em Game:
+// Methods the add in Game:
 void drawShopUI()      const;
 void handleShopInput();
 void drawCraftMenu()   const;
@@ -573,40 +573,40 @@ void spawnArchonBoss();
 ## 7. RECOMMENDED IMPLEMENTATION ORDER
 
 ```
-Sprint 1 (hoje/amanhã):
-  ✅ F11 fullscreen fix (feito)
-  ✅ Player speech bubble (feito)
-  ✅ OmegaBoss (feito)
-  ✅ Alien swarm boost (feito)
-  → Visuais de item únicos (2h)
+Sprint 1 (today/tomorrow):
+  ✅ F11 fullscreen fix (done)
+  ✅ Player speech bubble (done)
+  ✅ OmegaBoss (done)
+  ✅ Alien swarm boost (done)
+  → Visuals of item unique (2h)
   → WarCraft enemies (3h)
 
 Sprint 2:
-  → Vendor NPC + loja (3h)
-  → Companion básico (4h)
+  → Vendor NPC + shop (3h)
+  → Companion basic (4h)
 
 Sprint 3:
   → Crafting system (4h)
-  → Archon boss secreto (3h)
+  → Archon boss secret (3h)
   → Kill streak + passivas (2h)
 
 Sprint 4:
-  → Bot mais inteligente (pathfinding A* ou wall-avoidance simples)
+  → Bot more inteligente (pathfinding A* ou wall-avoidance simple)
   → Menu fix (text overlap)
-  → Polish geral (sons, partículas, feedbacks)
+  → general polish (sounds, particles, feedback)
 ```
 
 ---
 
 ## 8. DESIGN NOTES
 
-1. **Thematic consistency:** Every WarCraft character must have a sci-fi twist (implant, circuit, KRONOS corruption). Doesn't break the lore.
+1. **Thematic consistency:** Every WarCraft character must have the sci-fi twist (implant, circuit, KRONOS corruption). Doesn't break the lore.
 
 2. **Saving credits:** With the store, credits gain value. Adjust credit drops: +30% in drops to ensure that the player can always buy something after 5-10 minutes of play.
 
-3. **Companion as progression:** The companion should be felt as an achievement, not something free. Unlock after quest or expensive purchase.
+3. **Companion the progression:** The companion should be felt the an achievement, not something free. Unlock after quest or expensive purchase.
 
-4. **Crafting as late-game:** Rare materials only drop from stronger enemies. Omega Armor requires killing OmegaBoss — makes sense of the loop.
+4. **Crafting the late-game:** Rare materials only drop from stronger enemies. Omega Armor requires killing OmegaBoss — makes sense of the loop.
 
 5. **Visual feedback:** Each new system needs particles + sound + confirmation text. The player needs to feel like something has happened.
 

@@ -1,7 +1,7 @@
 {
   "name": "darknet-cyber-station",
   "version": "0.1.0",
-  "description": "Servidor do jogo DARKNET — auth, loja, inventário, realtime e matchmaking",
+  "description": "DARKNET game server — auth, store, inventory, realtime and matchmaking",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

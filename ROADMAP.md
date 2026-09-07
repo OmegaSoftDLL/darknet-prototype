@@ -2,7 +2,7 @@
 
 Single document of project status and direction. Replaces cross-reading
 `ROADMAP_EXECUTIVO_CLAUDE.md`, `BACKLOG_IMPLEMENTACAO_CLAUDE.md` and
-`obsidian-vault/Roadmap and Backlog.md` (kept as history/detail).
+`obsidian-vault/Roadmap and Backlog.md` (kept the history/detail).
 
 **Current status:** 3D isometric (voxel) ARPG in C++/raylib, playable offline, with
 backend Node.js (auth, premium store, realtime WS) in Docker containers.
@@ -43,7 +43,7 @@ backend Node.js (auth, premium store, realtime WS) in Docker containers.
 - Idempotent migration on boot: consolidates legacy duplicates and creates single index
   `(account,item_id)`.
 - Consolidated DDL: `index.js` is the single source of truth (`CREATE TABLE IF NOT EXISTS`
-  on every boot); `db/init.sql` became just a pointer — end of the divergence.
+  on every boot); `db/init.sql` became just the pointer — end of the divergence.
 - Removed Redis from `docker-compose.yml` (was orphaned: matchmaking is `Map` in memory);
   comment logs when to reintroduce (distributed sessions/multiple instances).
 - `PUBLIC_URL` fixed default to `http://localhost:8080` (gateway port) —
@@ -60,7 +60,7 @@ backend Node.js (auth, premium store, realtime WS) in Docker containers.
 - **Stable IDs in SaveManager**: `resolveEquipByName` uses `strcmp` for display name —
   migrate to immutable internal IDs.
 - **Nomenclature standardization**: prefix `m_` in members, without obscure abbreviations.
-- **Visually apply purchased premium cosmetics**: skins/paints do not render
+- **Visually apply purchased premium cosmetics**: skins/paints of the not render
   in `Player.cpp` — check and link premium inventory to player render
   (includes Pet Drone spawn).
 
@@ -94,10 +94,10 @@ Any relevant change must go through:
 # Build
 cmake --build build --config Release
 
-# Autotest (bot joga sozinho por 120s)
+# Autotest (bot plays alone for 120s)
 ./build/Release/darknet.exe --autotest --test-seconds=120
 ```
 
-- The autotest should exit with **exit 0** and print `VALIDACAO: PASSOU`.
+- The autotest should exit with **exit 0** and print `VALIDATION: PASSED`.
 - No FPS regression (post-optimization benchmark: average ~58–59, minimum 44–52).
 - Backend: `node --check server/game-server/src/index.js` should pass.

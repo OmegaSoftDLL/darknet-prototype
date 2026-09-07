@@ -1,17 +1,17 @@
 #pragma once
 // ─────────────────────────────────────────────────────────────────────────────
-// Wrapper STUB do Steamworks. Quando você tiver o App ID e baixar o Steamworks SDK,
-// defina USE_STEAMWORKS e implemente os corpos em SteamIntegration.cpp chamando o SDK
-// (steam_api.h). Sem o SDK, tudo vira no-op para o jogo compilar normalmente.
-// Idêntico pode ser feito para Epic (EOS SDK).
+// Steamworks STUB wrapper. When you have the App ID and download the Steamworks SDK,
+// define USE_STEAMWORKS and implement the bodies in SteamIntegration.cpp calling the SDK
+// (steam_api.h). Without the SDK, everything becomes the in the-op only the game compiles normally.
+// The same can be done for Epic (EOS SDK).
 // ─────────────────────────────────────────────────────────────────────────────
 #include <string>
 
 namespace SteamIntegration {
-    bool init();                      // SteamAPI_Init — false se Steam não rodando
+    bool init();                      // SteamAPI_Init — false if Steam not running
     void shutdown();                  // SteamAPI_Shutdown
-    void runCallbacks();              // chamar a cada frame
+    void runCallbacks();              // call every frame
     void unlockAchievement(const std::string& id);
-    std::string playerName();         // nome do usuário Steam
+    std::string playerName();         // Steam user name
     bool overlayActive();
 }

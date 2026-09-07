@@ -1,6 +1,6 @@
-// Ponto de entrada dos testes (doctest). Fica num TU SEPARADO dos casos de
-// teste porque a implementacao do doctest inclui <windows.h> (mesmo com
-// WIN32_LEAN_AND_MEAN), que declara CloseWindow/ShowCursor/Rectangle e
-// conflita com a raylib. Aqui nao entra nenhum header do jogo.
+// Test entry point (doctest). Kept in the SEPARATE TU from the test cases
+// because the doctest implementation includes <windows.h> (same with
+// WIN32_LEAN_AND_MEAN), which declares CloseWindow/ShowCursor/Rectangle and
+// conflicts with raylib. Here in the game header is included.
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>

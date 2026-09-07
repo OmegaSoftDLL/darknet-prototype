@@ -1,6 +1,6 @@
 #include "SteamIntegration.h"
 
-// Defina USE_STEAMWORKS e adicione o SDK ao build quando tiver o App ID.
+// Define USE_STEAMWORKS and add the SDK to the build when you have the App ID.
 #ifdef USE_STEAMWORKS
   #include "steam/steam_api.h"
 #endif
@@ -9,10 +9,10 @@ namespace SteamIntegration {
 
 bool init() {
 #ifdef USE_STEAMWORKS
-    // steam_appid.txt no dir do exe em dev (ou via launcher em produção)
+    // steam_appid.txt in the exe dir in dev (or via launcher in production)
     return SteamAPI_Init();
 #else
-    return false; // sem SDK: roda normal, sem recursos Steam
+    return false; // in the SDK: runs normally, without Steam features
 #endif
 }
 
@@ -43,7 +43,7 @@ std::string playerName() {
 #ifdef USE_STEAMWORKS
     if (SteamFriends()) return SteamFriends()->GetPersonaName();
 #endif
-    return "Operador";
+    return "Operator";
 }
 
 bool overlayActive() {

@@ -1,9 +1,9 @@
-// Casos de teste das regras PURAS do jogo — sem janela raylib.
-// Roda em: cmake --build build --config Release --target darknet_tests
-//          ./build/Release/darknet_tests.exe   (ou: ctest --test-dir build -C Release)
+// Pure game rule test cases — in the raylib window.
+// Build with: cmake --build build --config Release --target darknet_tests
+//          ./build/Release/darknet_tests.exe   (or: ctest --test-dir build -C Release)
 //
-// Neste TU entra a raylib (via headers do jogo) MAS NAO a implementacao do
-// doctest — por isso nao ha conflito com <windows.h> (ver tests/test_main.cpp).
+// This TU includes raylib (via game headers) BUT NOT doctest's implementation,
+// only there is in the conflict with <windows.h> (see tests/test_main.cpp).
 #include "CraftingSystem.h"
 #include "Enemy.h"
 #include "Equipment.h"
@@ -14,8 +14,8 @@
 
 #include <doctest/doctest.h>
 
-// Global definido em Game.cpp no jogo; Enemy.cpp referencia via `extern`.
-// Nos testes nao capturamos voxel, entao fica false.
+// Global defined in Game.cpp; Enemy.cpp references it via `extern`.
+// In tests we of the not capture voxels, only it stays false.
 bool g_voxelCapture = false;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -31,47 +31,47 @@ static void appendTo(std::vector<Item>& bag, ItemType t, int n) {
 
 // ── CraftingSystem ───────────────────────────────────────────────────────────
 
-TEST_CASE("CraftingSystem::canCraft - materiais suficientes e insuficientes") {
+TEST_CASE("CraftingSystem::canCraft - sufficient and insufficient materials") {
     CraftingSystem cs;
     cs.buildRecipes();
     REQUIRE(!cs.recipes.empty());
 
-    // "Faca de Combate": 3x MetalScrap
+    // "Combat Knife" (Faca of Combat): 3x MetalScrap
     int idx = -1;
     for (int i = 0; i < (int)cs.recipes.size(); ++i)
-        if (cs.recipes[i].name == "Faca de Combate") { idx = i; break; }
+        if (cs.recipes[i].name == "Faca of Combat") { idx = i; break; }
     REQUIRE(idx >= 0);
 
     std::vector<Item> bag;
-    CHECK_FALSE(cs.canCraft(bag, idx));                    // bag vazia
+    CHECK_FALSE(cs.canCraft(bag, idx));                    // empty bag
     bag = makeBag(ItemType::MetalScrap, 2);
     CHECK_FALSE(cs.canCraft(bag, idx));                    // 2 < 3
     appendTo(bag, ItemType::MetalScrap, 1);
-    CHECK(cs.canCraft(bag, idx));                          // exato: 3
+    CHECK(cs.canCraft(bag, idx));                          // exact: 3
     appendTo(bag, ItemType::MetalScrap, 5);
-    CHECK(cs.canCraft(bag, idx));                          // sobra nao atrapalha
+    CHECK(cs.canCraft(bag, idx));                          // extras of the not hurt
 }
 
-TEST_CASE("CraftingSystem::canCraft - receita multi-ingrediente e indice invalido") {
+TEST_CASE("CraftingSystem::canCraft - multi-ingredient recipe and invalid index") {
     CraftingSystem cs;
     cs.buildRecipes();
 
-    // "Lancador Acido": 3x AlienCarapace + 1x PlasmaCore
+    // "Acid Launcher" (Lancador Acid): 3x AlienCarapace + 1x PlasmaCore
     int idx = -1;
     for (int i = 0; i < (int)cs.recipes.size(); ++i)
-        if (cs.recipes[i].name == "Lancador Acido") { idx = i; break; }
+        if (cs.recipes[i].name == "Lancador Acid") { idx = i; break; }
     REQUIRE(idx >= 0);
 
     std::vector<Item> bag = makeBag(ItemType::AlienCarapace, 3);
-    CHECK_FALSE(cs.canCraft(bag, idx));                    // falta PlasmaCore
+    CHECK_FALSE(cs.canCraft(bag, idx));                    // missing PlasmaCore
     appendTo(bag, ItemType::PlasmaCore, 1);
-    CHECK(cs.canCraft(bag, idx));                          // completo
+    CHECK(cs.canCraft(bag, idx));                          // complete
 
-    CHECK_FALSE(cs.canCraft(bag, -1));                     // indices invalidos
+    CHECK_FALSE(cs.canCraft(bag, -1));                     // invalid indices
     CHECK_FALSE(cs.canCraft(bag, (int)cs.recipes.size()));
 }
 
-TEST_CASE("CraftingSystem::countMaterial conta so o tipo pedido") {
+TEST_CASE("CraftingSystem::countMaterial counts only the requested type") {
     std::vector<Item> bag = makeBag(ItemType::MetalScrap, 4);
     appendTo(bag, ItemType::NanoFiber, 2);
 
@@ -80,7 +80,7 @@ TEST_CASE("CraftingSystem::countMaterial conta so o tipo pedido") {
     CHECK(CraftingSystem::countMaterial(bag, ItemType::OmegaEssence) == 0);
 }
 
-TEST_CASE("CraftingSystem::getFilteredIndices filtra por categoria") {
+TEST_CASE("CraftingSystem::getFilteredIndices filters by category") {
     CraftingSystem cs;
     cs.buildRecipes();
 
@@ -95,9 +95,9 @@ TEST_CASE("CraftingSystem::getFilteredIndices filtra por categoria") {
         CHECK(cs.recipes[i].category == CraftCategory::Weapons);
 }
 
-// ── Enemy: classificacao de tipo (pura, inline no header) ────────────────────
+// ── Enemy: type classification (pure, inline in header) ─────────────────────
 
-TEST_CASE("Enemy::isBoss classifica todos os bosses") {
+TEST_CASE("Enemy::isBoss classifies all bosses") {
     CHECK(Enemy({0,0}, EnemyType::Boss).isBoss());
     CHECK(Enemy({0,0}, EnemyType::AlienBoss).isBoss());
     CHECK(Enemy({0,0}, EnemyType::OmegaBoss).isBoss());
@@ -115,7 +115,7 @@ TEST_CASE("Enemy::isBoss classifica todos os bosses") {
     CHECK_FALSE(Enemy({0,0}, EnemyType::GhostElite).isBoss()); // elite != boss
 }
 
-TEST_CASE("Enemy sobrenatural vs flutuante (zumbis NAO flutuam)") {
+TEST_CASE("Enemy supernatural vs floating (zombies of the NOT float)") {
     Enemy ghost({0,0}, EnemyType::Ghost);
     CHECK(ghost.isSupernatural());
     CHECK(ghost.isFloating());
@@ -126,37 +126,37 @@ TEST_CASE("Enemy sobrenatural vs flutuante (zumbis NAO flutuam)") {
 
     Enemy zombie({0,0}, EnemyType::Zombie);
     CHECK(zombie.isSupernatural());
-    CHECK_FALSE(zombie.isFloating());   // corporeo: anda no chao
+    CHECK_FALSE(zombie.isFloating());   // corporeal: walks on floor
 
     Enemy scout({0,0}, EnemyType::Scout);
     CHECK_FALSE(scout.isSupernatural());
     CHECK_FALSE(scout.isFloating());
 }
 
-TEST_CASE("Enemy::getGlobalScaling - base, bonus e cap de +300%") {
+TEST_CASE("Enemy::getGlobalScaling - base, bonus and +300% cap") {
     CHECK(Enemy::getGlobalScaling(0, 0) == doctest::Approx(1.0));
-    CHECK(Enemy::getGlobalScaling(50, 0) == doctest::Approx(1.05));  // 1 grupo de 50 kills
+    CHECK(Enemy::getGlobalScaling(50, 0) == doctest::Approx(1.05));  // 1 group of 50 kills
     CHECK(Enemy::getGlobalScaling(0, 10) == doctest::Approx(1.8));   // 10 * 0.08
     CHECK(Enemy::getGlobalScaling(100, 5) == doctest::Approx(1.5));  // 0.10 + 0.40
     CHECK(Enemy::getGlobalScaling(100000, 1000) == doctest::Approx(4.0)); // cap 4.0
 }
 
-TEST_CASE("Enemy::takeDamage - morte, loot e clamp de HP") {
-    Enemy e({0,0}, EnemyType::Scout);
-    CHECK_FALSE(e.isDead());
+TEST_CASE("Enemy::takeDamage - death, loot and HP clamp") {
+    Enemy and({0,0}, EnemyType::Scout);
+    CHECK_FALSE(and.isDead());
 
-    e.takeDamage(e.maxHealth + 50.0f);   // overkill
-    CHECK(e.health == doctest::Approx(0.0)); // clamp em 0
-    CHECK(e.isDead());
-    CHECK(e.shouldDropLoot());
+    and.takeDamage(and.maxHealth + 50.0f);   // overkill
+    CHECK(and.health == doctest::Approx(0.0)); // clamp at 0
+    CHECK(and.isDead());
+    CHECK(and.shouldDropLoot());
 
-    e.markLootDropped();
-    CHECK_FALSE(e.shouldDropLoot());     // loot so dropa uma vez
+    and.markLootDropped();
+    CHECK_FALSE(and.shouldDropLoot());     // loot drops only once
 }
 
-// ── Equipment: matematica de upgrade (inline no header) ──────────────────────
+// ── Equipment: upgrade math (inline in header) ───────────────────────────────
 
-TEST_CASE("Equipment - stats efetivos escalam +30% por nivel de upgrade") {
+TEST_CASE("Equipment - effective stats scale +30% per upgrade level") {
     Equipment w = EDB::rifleEnergia();   // primary 35, secondary 40
     CHECK(w.getEffectivePrimary()   == doctest::Approx(35.0));
     CHECK(w.getEffectiveSecondary() == doctest::Approx(40.0));
@@ -168,7 +168,7 @@ TEST_CASE("Equipment - stats efetivos escalam +30% por nivel de upgrade") {
     CHECK(w.getEffectiveSecondary() == doctest::Approx(76.0));
 }
 
-TEST_CASE("Equipment - custo de upgrade e canUpgrade") {
+TEST_CASE("Equipment - upgrade cost and canUpgrade") {
     Equipment w = EDB::pistolaPlas();
     CHECK(w.canUpgrade());
     CHECK(w.upgradeCost() == 100);
@@ -178,16 +178,16 @@ TEST_CASE("Equipment - custo de upgrade e canUpgrade") {
     CHECK(w.upgradeCost() == 600);
     w.upgradeLevel = 3;
     CHECK(w.upgradeCost() == 0);
-    CHECK_FALSE(w.canUpgrade());         // maximo atingido
+    CHECK_FALSE(w.canUpgrade());         // maximum reached
 
-    Equipment vazio;
-    CHECK(vazio.isEmpty());
-    CHECK_FALSE(vazio.canUpgrade());     // slot vazio nao upa
+    Equipment empty;
+    CHECK(empty.isEmpty());
+    CHECK_FALSE(empty.canUpgrade());     // empty slot does not level up
 }
 
 // ── SaveManager: roundtrip V5 (slot) ─────────────────────────────────────────
 
-TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
+TEST_CASE("SaveManager - save/load roundtrip preserves full state (V7)") {
     const int slot = 2;
     SaveManager::deleteSave(slot);
 
@@ -202,10 +202,10 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     p.totalKills = 123;
 
     Equipment w = EDB::rifleEnergia(); w.upgradeLevel = 2; w.primary = 50; w.secondary = 70;
-    Equipment a = EDB::armaduraAvan(); a.upgradeLevel = 1; a.primary = 150; a.secondary = 20;
+    Equipment the = EDB::armaduraAvan(); the.upgradeLevel = 1; the.primary = 150; the.secondary = 20;
     Equipment i = EDB::neuralLink();   i.upgradeLevel = 3; i.primary = 55; i.secondary = 1.8f;
     p.equipItem(w);
-    p.equipItem(a);
+    p.equipItem(the);
     p.equipItem(i);
 
     p.equipBag.push_back(EDB::pistolaPlas());
@@ -219,7 +219,7 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     {
         Item leg{}; leg.type = ItemType::PlasmaRifle; leg.rarity = ItemRarity::Legendary;
         leg.value = 5000; leg.bonusDamage = 25; leg.bonusCrit = 0.15f;
-        leg.affixPrefix = "Flamejante"; leg.affixSuffix = "do Tita"; leg.baseName = "Rifle de Plasma";
+        leg.affixPrefix = "Flamejante"; leg.affixSuffix = "of the Tita"; leg.baseName = "Rifle of Plasma";
         p.inventory.push_back(leg);
     }
 
@@ -259,7 +259,7 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     CHECK(static_cast<int>(loadedZone) == static_cast<int>(ZoneID::Cemetery));
     CHECK(loadedGameTotalKills == 777);
 
-    // Equipment resolvido por ID estavel + upgrade/primary/secondary
+    // Equipment resolved by stable ID + upgrade/primary/secondary
     CHECK(loaded.equippedWeapon.id == EDB::rifleEnergia().id);
     CHECK(loaded.equippedWeapon.upgradeLevel == 2);
     CHECK(loaded.equippedWeapon.primary == doctest::Approx(50.0f));
@@ -273,7 +273,7 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     CHECK(loaded.equipBag[0].upgradeLevel == 1);
     CHECK(loaded.equipBag[1].id == EDB::exoesqueleto().id);
 
-    // Inventory (raridade/afixos preservados)
+    // Inventory (rarity/affixes preserved)
     REQUIRE(loaded.inventory.size() == 6);
     const Item& legLoaded = loaded.inventory.back();
     CHECK(legLoaded.type == ItemType::PlasmaRifle);
@@ -282,10 +282,10 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     CHECK(legLoaded.bonusDamage == doctest::Approx(25.0f));
     CHECK(legLoaded.bonusCrit == doctest::Approx(0.15f));
     CHECK(legLoaded.affixPrefix == "Flamejante");
-    CHECK(legLoaded.affixSuffix == "do Tita");
-    CHECK(legLoaded.baseName == "Rifle de Plasma");
+    CHECK(legLoaded.affixSuffix == "of the Tita");
+    CHECK(legLoaded.baseName == "Rifle of Plasma");
 
-    // Quests (match por id, estado restaurado)
+    // Quests (matched by id, state restored)
     REQUIRE(loadedQuests.size() == 2);
     CHECK(loadedQuests[0].current    == 6);
     CHECK_FALSE(loadedQuests[0].completed);
@@ -297,11 +297,11 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     CHECK_FALSE(SaveManager::hasSave(slot));
 }
 
-TEST_CASE("SaveManager - V4 legado carrega equipamento por nome de exibicao") {
+TEST_CASE("SaveManager - V4 legacy loads equipment by display name") {
     const int slot = 1;
     SaveManager::deleteSave(slot);
 
-    // Grava um save V4 a mao: IDs antigos nao existiam, equipamento por nome.
+    // Writes the V4 save by hand: old IDs did not exist, equipment was by name.
     std::string path = std::string("saves/darknet_slot1.txt");
     {
         FILE* f = fopen(path.c_str(), "w");
@@ -329,7 +329,7 @@ TEST_CASE("SaveManager - V4 legado carrega equipamento por nome de exibicao") {
     SaveManager::deleteSave(slot);
 }
 
-TEST_CASE("SaveManager - valores de enum fora da faixa sao clampados") {
+TEST_CASE("SaveManager - enum values outside the range are clamped") {
     const int slot = 2;
     SaveManager::deleteSave(slot);
 
@@ -359,39 +359,39 @@ TEST_CASE("SaveManager - valores de enum fora da faixa sao clampados") {
     CHECK_FALSE(SaveManager::hasSave(slot));
 }
 
-TEST_CASE("SaveManager - slot invalido nao cria arquivo estranho") {
+TEST_CASE("SaveManager - invalid slot does not create the stray file") {
     SaveManager::deleteSave(-1);
     SaveManager::deleteSave(999);
-    // Nao deve existir arquivo com slot -1 ou 999.
+    // No file with slot -1 or 999 should exist.
     CHECK_FALSE(SaveManager::hasSave(-1));
     CHECK_FALSE(SaveManager::hasSave(999));
 }
 
 // ── Projectile ───────────────────────────────────────────────────────────────
 
-TEST_CASE("Projectile - move e atinge alcance maximo") {
+TEST_CASE("Projectile - moves and reaches max range") {
     Projectile p({0, 0}, {1, 0}, 10.0f, 100.0f, 50.0f, RED, false);
     CHECK(p.active);
     CHECK(p.velocity.x == doctest::Approx(50.0f));
     CHECK(p.velocity.y == doctest::Approx(0.0f));
 
-    p.update(1.0f);          // move 50 unidades
+    p.update(1.0f);          // move 50 units
     CHECK(p.position.x == doctest::Approx(50.0f));
     CHECK_FALSE(p.isOutOfRange());
 
-    p.update(1.0f);          // mais 50 = 100 = alcance maximo
+    p.update(1.0f);          // another 50 = 100 = max range
     CHECK(p.position.x == doctest::Approx(100.0f));
     CHECK(p.isOutOfRange());
 }
 
-TEST_CASE("Projectile - direcao zero fica inativo") {
+TEST_CASE("Projectile - zero direction stays inactive") {
     Projectile p({0, 0}, {0, 0}, 10.0f, 100.0f, 50.0f, RED, false);
     CHECK_FALSE(p.active);
 }
 
-// ── Player: regras puras de stats ────────────────────────────────────────────
+// ── Player: pure stat rules ─────────────────────────────────────────────────
 
-TEST_CASE("Player - applyClass define stats base distintos") {
+TEST_CASE("Player - applyClass sets distinct base stats") {
     Player soldado;
     soldado.applyClass(CharacterClass::Soldado);
     CHECK(soldado.getCharClass() == CharacterClass::Soldado);
@@ -399,16 +399,16 @@ TEST_CASE("Player - applyClass define stats base distintos") {
 
     Player mago;
     mago.applyClass(CharacterClass::Mago);
-    CHECK(mago.maxHealth < soldadoHP);          // mago tem menos vida
-    CHECK(mago.attackRange > soldado.attackRange); // mago tem mais alcance
+    CHECK(mago.maxHealth < soldadoHP);          // mage has less health
+    CHECK(mago.attackRange > soldado.attackRange); // mage has more range
 }
 
-TEST_CASE("Player - takeDamage respeita defesa e clampa em zero") {
+TEST_CASE("Player - takeDamage respects defense and clamps at zero") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     float hp = p.health;
     p.defense = 10.0f;
-    p.takeDamage(50.0f);   // reducao de 10% -> 45 de dano efetivo
+    p.takeDamage(50.0f);   // 10% reduction -> 45 effective damage
     CHECK(p.health == doctest::Approx(hp - 45.0f));
 
     p.takeDamage(9999.0f); // overkill
@@ -416,7 +416,7 @@ TEST_CASE("Player - takeDamage respeita defesa e clampa em zero") {
     CHECK(p.health <= 0.0f);
 }
 
-TEST_CASE("Player - heal nao ultrapassa maxHealth") {
+TEST_CASE("Player - heal does not exceed maxHealth") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     p.health = 10.0f;
@@ -424,15 +424,15 @@ TEST_CASE("Player - heal nao ultrapassa maxHealth") {
     CHECK(p.health == doctest::Approx(p.maxHealth));
 }
 
-TEST_CASE("Player - addXP sobe de nivel") {
+TEST_CASE("Player - addXP levels up") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     int startLevel = p.level;
-    p.addXP(150);          // suficiente para subir pelo menos 1 nivel
+    p.addXP(150);          // enough to level up at least once
     CHECK(p.level > startLevel);
 }
 
-TEST_CASE("Player - equipItem aplica stats") {
+TEST_CASE("Player - equipItem applies stats") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     float baseDmg = p.attackDamage;
@@ -441,7 +441,7 @@ TEST_CASE("Player - equipItem aplica stats") {
     CHECK(p.attackDamage > baseDmg);
 }
 
-TEST_CASE("Player - usePotion cura e ativa cooldown") {
+TEST_CASE("Player - usePotion heals and triggers cooldown") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     p.health = 10.0f;
@@ -450,20 +450,20 @@ TEST_CASE("Player - usePotion cura e ativa cooldown") {
     CHECK_FALSE(p.potionReady());
 }
 
-TEST_CASE("Player - equipFromBag devolve item com slot invalido") {
+TEST_CASE("Player - equipFromBag returns item with invalid slot") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     Equipment bug = EDB::pistolaPlas();
-    bug.slot = EquipSlot::None;   // simula item corrompido/invalido
+    bug.slot = EquipSlot::None;   // simulate corrupted/invalid item
     p.equipBag.push_back(bug);
     size_t before = p.equipBag.size();
     p.equipFromBag(0);
-    CHECK(p.equipBag.size() == before);   // nao perdeu o item
+    CHECK(p.equipBag.size() == before);   // item was not lost
 }
 
 // ── Tilemap ──────────────────────────────────────────────────────────────────
 
-TEST_CASE("Tilemap - generate cria dimensoes corretas e paredes") {
+TEST_CASE("Tilemap - generate creates correct dimensions and walls") {
     Tilemap tm;
     tm.generate(ZoneID::LARuins);
     CHECK(tm.width == 40);
@@ -478,25 +478,25 @@ TEST_CASE("Tilemap - generate cria dimensoes corretas e paredes") {
     CHECK(walls > 0);
 }
 
-TEST_CASE("Tilemap - isWallAtPosition dentro e fora dos limites") {
+TEST_CASE("Tilemap - isWallAtPosition inside and outside bounds") {
     Tilemap tm;
     tm.generate(ZoneID::LARuins);
     Vector2 inside = { tm.tileSize * 2.0f, tm.tileSize * 2.0f };
-    // nao garante que seja floor, mas nao deve crashar
+    // does not ensure it is floor, but must not crash
     bool r = tm.isWallAtPosition(inside);
     (void)r;
 
-    // Mapa fechado: fora dos limites e considerado parede (nao pode sair).
+    // Closed map: outside bounds is considered wall (cannot leave).
     Vector2 outside = { -1000.0f, -1000.0f };
     CHECK(tm.isWallAtPosition(outside));
 
-    // Mundo aberto: fora dos limites e chao livre.
+    // Open world: outside bounds is free floor.
     Tilemap ow;
     ow.generateOpenWorld();
     CHECK_FALSE(ow.isWallAtPosition(outside));
 }
 
-TEST_CASE("Tilemap - generateOpenWorld cria layout 3x3") {
+TEST_CASE("Tilemap - generateOpenWorld creates 3x3 layout") {
     Tilemap tm;
     tm.generateOpenWorld();
     CHECK(tm.openWorld);
