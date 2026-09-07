@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <functional>
 #include <string>
+#include <utility>
 
 // Global definida em Game.cpp (sinal de captura de sprite p/ voxelizacao).
 extern bool g_voxelCapture;
@@ -170,7 +171,8 @@ static Image CropToOpaque(Image src, int margin) {
     return ImageFromImage(src, rec);
 }
 
-void Game::ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn) {
+template<typename Fn>
+void Game::ensureVoxel(int key, Vector2 capPos, Fn&& drawFn) {
     // Gera sprite 2D (e voxel 3D como bonus). Se o sprite ja existe e e valido,
     // nao precisamos fazer nada. O render 3D depende EXCLUSIVAMENTE do sprite.
     auto spIt = m_voxSprites.find(key);
@@ -179,7 +181,7 @@ void Game::ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn) {
     m_voxGenBudget--;
     g_voxelCapture = true;
     // 128px = sprite mais detalhado e maior no mundo; o capture centraliza a arte.
-    Image img = SpriteExtrude::CaptureToImage(128, capPos, drawFn);
+    Image img = SpriteExtrude::CaptureToImage(128, capPos, std::forward<Fn>(drawFn));
     g_voxelCapture = false;
 
     // Prepara sprite 2D: contorno embutido + crop para tirar espaço vazio.
@@ -549,10 +551,6 @@ void Game::drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase, bool 
         Vector3Subtract(camera3D.position, camera3D.target), camera3D.up));
     float lean = Vector3DotProduct(lightDir, camRight) * 4.0f;
 
-    // Transparencia precisa de depth test MAS sem escrever no Z-buffer.
-    rlDisableBackfaceCulling();
-    rlDisableDepthMask();
-
     // HALO de identificacao no chao (por baixo do personagem).
     DrawCylinderEx({ pos.x, 0.06f, pos.y }, { pos.x, 0.07f, pos.y },
                    16.0f, 16.0f, 20, ColorAlpha(ringC, 0.35f));
@@ -573,9 +571,6 @@ void Game::drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase, bool 
                      Rectangle{ 0.0f, 0.0f, (float)tex.width, (float)tex.height },
                      origin, up, Vector2{ baseW, h * (1.0f + sinf(t * 2.4f + pos.x * 0.05f) * 0.015f) },
                      Vector2{ 0.5f, 1.0f }, rotDeg, WHITE);
-
-    rlEnableDepthMask();
-    rlEnableBackfaceCulling();
 }
 
 // Teste esfera × frustum da camera 3D, em espaco de VIEW (raylib: frente = -Z).
@@ -1939,6 +1934,12 @@ void Game::renderWorld3D() {
             lightSystem.addLight(owPortalPos, 300.0f, 0.9f, Color{80,210,255,255}, true);
         }
 
+        // Todas as entidades sprites/voxel compartilham o mesmo estado de
+        // transparência: depth-test sem escrita no Z-buffer e sem backface culling.
+        // Em vez de alternar por entidade, setamos UMA vez para o grupo.
+        rlDisableBackfaceCulling();
+        rlDisableDepthMask();
+
         // Player — modelo voxel 3D do PRÓPRIO personagem do jogo (não genérico).
         // usa a VELOCIDADE real, NAO player.isMoving: Player::update zera a flag
         // depois do handleInput (que move o bot), entao a flag chega SEMPRE false
@@ -2160,6 +2161,10 @@ void Game::renderWorld3D() {
             drawVoxel(300 + (int)NPCRole::Soldier, s.position, 0.0f,
                       (float)GetTime() * 6.0f + s.position.x * 0.05f, true);
         }
+
+        // Restaura estados 3D para as primitivas/opacos que seguem.
+        rlEnableDepthMask();
+        rlEnableBackfaceCulling();
 
         // RTS Building Preview Ghost
         if (buildingSystem.buildModeActive) {

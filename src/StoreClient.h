@@ -31,7 +31,7 @@ public:
     std::string token() const;
 
     // Todas assíncronas (disparam thread de fundo, retornam imediatamente).
-    void loginAsync(const std::string& name);   // POST /auth/login -> token+id
+    void loginAsync(const std::string& email, const std::string& password); // POST /auth/login -> token+id
     void fetchStoreAsync();                      // GET  /store      -> catálogo
     void refreshAsync();                         // GET  /me         -> gems/inventário
     void buyItemAsync(const std::string& itemId);// POST /store/buy-item (server valida)

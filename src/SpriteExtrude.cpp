@@ -5,26 +5,6 @@
 
 namespace SpriteExtrude {
 
-// Captura o desenho 2D (drawFn) centrado em worldTarget para uma Image RGBA cap×cap.
-Image CaptureToImage(int cap, Vector2 worldTarget, std::function<void()> drawFn) {
-    RenderTexture2D rt = LoadRenderTexture(cap, cap);
-    BeginTextureMode(rt);
-    ClearBackground(BLANK);
-    Camera2D cam = { 0 };
-    cam.target   = worldTarget;
-    cam.offset   = { cap * 0.5f, cap * 0.5f };
-    cam.rotation = 0.0f;
-    cam.zoom     = 1.0f;
-    BeginMode2D(cam);
-    drawFn();
-    EndMode2D();
-    EndTextureMode();
-    Image img = LoadImageFromTexture(rt.texture);
-    ImageFlipVertical(&img);              // RenderTexture vem de cabeça pra baixo
-    UnloadRenderTexture(rt);
-    return img;
-}
-
 // Gera um Model 3D VOXEL a partir de uma Image RGBA: cada pixel opaco vira um
 // pequeno cubo extrudado em profundidade, com a COR exata do pixel. Resultado:
 // o desenho 2D do jogo, agora sólido em 3D real (pés em Y=0, centrado em X/Z).

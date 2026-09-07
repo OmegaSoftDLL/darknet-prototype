@@ -44,13 +44,9 @@ int main(int argc, char* argv[]) {
         srand(t);
     }
 
-    // Headless e start-phase precisam ser setados ANTES de construir Game:
-    // o construtor decide quais recursos sobem e qual fase/carrega.
-    Game::headless = headless;
-    Game::startPhaseOverride = startPhase;
     if (headless) printf("HEADLESS: sem janela/GPU (modo CI)\n");
 
-    Game game;
+    Game game(headless, startPhase);
     game.worldSeed          = seed;
     game.autoTestSeconds    = testSecs;
     game.runAutoTest(autoTest);

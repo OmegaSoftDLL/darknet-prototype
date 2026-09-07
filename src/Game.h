@@ -33,7 +33,6 @@
 #include <vector>
 #include <string>
 #include <raylib.h>
-#include <functional>
 #include <unordered_map>
 #include <set>
 
@@ -86,7 +85,7 @@ struct DifficultySettings {
 
 class Game {
 public:
-    Game();
+    Game(bool headless = false, int startPhaseOverride = -1);
     ~Game();
     void run();
     unsigned worldSeed    = 0;      // 0 = aleatorio; >0 = mundo reprodutivel
@@ -94,10 +93,9 @@ public:
     bool  autoTestPassed  = true;   // resultado do portao de validacao (vira exit code)
     void runAutoTest(bool autoTest);
     void runHeadless();
-    // Setados por main.cpp ANTES de construir Game.
-    static bool headless;          // roda SEM janela/GPU (CI)
-    static int  startPhaseOverride; // >=0: pula para esta fase no inicio (auditoria)
-    float  headlessFps = 0.0f;   // FPS medido do proprio loop headless (GetFPS()=0 sem janela)
+    bool  headless = false;          // roda SEM janela/GPU (CI)
+    int   startPhaseOverride = -1;   // >=0: pula para esta fase no inicio (auditoria)
+    float headlessFps = 0.0f;   // FPS medido do proprio loop headless (GetFPS()=0 sem janela)
 
 private:
     // Update
@@ -114,8 +112,6 @@ private:
     // Numeros flutuantes — COMPARTILHADO pelos 2 caminhos de render. No 3D projeta
     // a posicao do mundo pra tela (em coords de mundo ficavam invisiveis no 3D).
     void drawFloatingNumbers(bool project3D) const;
-    // Checar ANTES de chamar ensureVoxel: montar o std::function custa uma alocacao
-    // por entidade por frame, so pra sair no cache la dentro.
     // ANIMACAO 3D: cada tipo gera VOX_POSES modelos, um por quadro do passo.
     // Antes existia UM modelo congelado por tipo: o personagem so transladava,
     // ou seja, DESLIZAVA pelo cenario em vez de andar.
@@ -189,7 +185,8 @@ private:
     // Sprites 2D capturados por tipo — usados como textura nos billboards do mundo 3D.
     std::unordered_map<int, GfxTexture> m_voxSprites;
     int      m_voxGenBudget = 0;   // limite de geracoes de sprite por frame (anti-engasgo)
-    void     ensureVoxel(int key, Vector2 capPos, std::function<void()> drawFn);
+    template<typename Fn>
+    void     ensureVoxel(int key, Vector2 capPos, Fn&& drawFn);
     void     drawVoxel(int base, Vector2 pos, float rotDeg, float walkPhase = 0.0f,
                        bool moving = false);
 

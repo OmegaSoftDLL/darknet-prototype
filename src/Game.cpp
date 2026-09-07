@@ -124,10 +124,9 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
 
 // ─── Constructor / Destructor ────────────────────────────────────────────────
 
-bool Game::headless = false;   // definicao do static (main.cpp seta antes de construir)
-int  Game::startPhaseOverride = -1; // definicao do static (main.cpp seta antes de construir)
-
-Game::Game() {
+Game::Game(bool headless_, int startPhaseOverride_) {
+    headless = headless_;
+    startPhaseOverride = startPhaseOverride_;
     // Headless (CI sem display/GPU): pula TODO o bloco grafico do construtor
     // (janela, render textures, sprites, modelos e shaders) e so monta os dados
     // e a simulacao. O bot corre igual — cenario, inimigos, fases, colisao.

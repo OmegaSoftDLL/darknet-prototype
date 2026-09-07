@@ -11,7 +11,6 @@
 // Os modelos são gerados UMA vez por tipo e cacheados (caro só no 1º uso).
 // ─────────────────────────────────────────────────────────────────────────────
 #include <raylib.h>
-#include <functional>
 
 namespace SpriteExtrude {
     // Gera um Model 3D voxel a partir de uma Image RGBA (pixels opacos = sólidos).
@@ -21,5 +20,29 @@ namespace SpriteExtrude {
 
     // Captura o desenho 2D (drawFn) CENTRADO em worldTarget para uma Image RGBA
     // cap×cap (fundo transparente). drawFn desenha em coords de mundo normais.
-    Image CaptureToImage(int cap, Vector2 worldTarget, std::function<void()> drawFn);
+    // Template: evita std::function no hot path (uma alocacao por entidade por frame).
+    template<typename Fn>
+    Image CaptureToImage(int cap, Vector2 worldTarget, Fn&& drawFn);
+}
+
+#include "rlgl.h"
+
+template<typename Fn>
+Image SpriteExtrude::CaptureToImage(int cap, Vector2 worldTarget, Fn&& drawFn) {
+    RenderTexture2D rt = LoadRenderTexture(cap, cap);
+    BeginTextureMode(rt);
+    ClearBackground(BLANK);
+    Camera2D cam = { 0 };
+    cam.target   = worldTarget;
+    cam.offset   = { cap * 0.5f, cap * 0.5f };
+    cam.rotation = 0.0f;
+    cam.zoom     = 1.0f;
+    BeginMode2D(cam);
+    drawFn();
+    EndMode2D();
+    EndTextureMode();
+    Image img = LoadImageFromTexture(rt.texture);
+    ImageFlipVertical(&img);              // RenderTexture vem de cabeça pra baixo
+    UnloadRenderTexture(rt);
+    return img;
 }
