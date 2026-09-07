@@ -56,6 +56,7 @@ public:
     void   render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) const;  // 2.5D: chão (batch único) + paredes (DrawCube), com frustum culling
     bool   isWall(int x, int y) const;
     bool   isWallAtPosition(Vector2 pos) const;
+    bool   isWallAtPosition(Vector2 pos, float radius) const;
     bool   isPortalAtPosition(Vector2 pos, ZoneID& outDest) const;
     Rectangle getBounds(int x, int y) const;
 

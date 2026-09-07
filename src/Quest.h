@@ -3,10 +3,12 @@
 #include "Equipment.h"
 
 enum class QuestType {
-    Kill,     // matar N inimigos
-    KillBoss, // matar o boss
-    Collect,  // coletar N itens
-    Zone      // chegar a uma zona especifica
+    Kill,       // matar N inimigos
+    KillBoss,   // matar o boss
+    Collect,    // coletar N itens
+    CollectRare,// coletar N itens raros ou superiores
+    ClosePortal,// fechar N portais de anomalia
+    Zone        // chegar a uma zona especifica
 };
 
 struct Quest {

@@ -37,7 +37,8 @@ public:
              ParticleShape s = ParticleShape::Circle, bool glowing = false);
 
     void update(float dt);
-    void render() const;
+    void renderBase() const;
+    void renderGlow() const;
 };
 
 class ParticleSystem {

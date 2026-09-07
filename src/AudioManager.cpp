@@ -1,4 +1,4 @@
-﻿#include "AudioManager.h"
+#include "AudioManager.h"
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
@@ -461,109 +461,6 @@ std::vector<short> AudioManager::synthLARuins(int SR, int N) {
     // LARuins: cidade morta ao ar livre — brilho medio, sala grande
     st.cutoffHz = 4200.0f; st.room = 0.62f; st.wet = 0.30f; st.subAmp = 0.18f;
     return composeTrack(SR, N, st);
-
-    std::vector<short> s(N, 0);
-    float bpm  = 68.0f;
-    float beat = 60.0f / bpm;
-
-    // Chord progression: Am(55) â†’ G(49) â†’ Em(41.2) â†’ F(43.65) â€” low register
-    float roots[4] = {55.0f, 49.0f, 41.2f, 43.65f};
-    float chordLen  = beat * 6.0f; // 6 beats per chord change (slower, more tension)
-
-    // Haunting minor pentatonic melody â€” slow moving notes (Am pent: A C D E G)
-    float melNotes[8] = {220.0f, 261.6f, 293.7f, 329.6f, 392.0f,
-                         349.2f, 293.7f, 261.6f};
-    float melPeriod = beat * 16.0f; // full melody = 16 beats
-
-    for (int i = 0; i < N; ++i) {
-        float t   = (float)i / SR;
-        float v   = 0.0f;
-        int   ci  = (int)(t / chordLen) % 4;
-        float rt  = roots[ci];
-
-        // Deep sub-drone: pulsing breath of the apocalypse
-        float breathMod = 0.85f + 0.15f * std::sin(2*kPI*0.055f*t + 0.8f);
-        v += std::sin(2*kPI * rt * t) * 0.38f * breathMod;
-        v += std::sin(2*kPI * rt * 0.5f * t) * 0.28f * breathMod;
-
-        // Mid-bass pulse on every 2 beats
-        {
-            float p2  = fmodf(t, beat * 2.0f);
-            float env = std::exp(-p2 * 3.5f);
-            float ph  = fmodf(rt * 2.0f * t, 1.0f);
-            v += (2.0f*ph-1.0f) * env * 0.18f;
-        }
-
-        // Atmospheric string-pad: 4 detuned layers
-        float padBreath = 0.08f * (0.4f + 0.6f * std::sin(2*kPI*0.12f*t + 1.2f));
-        for (int k = 0; k < 4; ++k) {
-            float detune = -1.5f + k * 1.0f; // Hz offset
-            float ph = fmodf((rt*2.0f + detune)*t, 1.0f);
-            v += (2.0f*ph-1.0f) * padBreath * (k==0||k==3 ? 0.5f : 0.7f);
-        }
-        // 5th harmonic layer
-        v += std::sin(2*kPI * rt * 3.0f * t) * padBreath * 0.55f;
-
-        // Haunting lead melody â€” slow, human, eerily beautiful
-        {
-            float mp   = fmodf(t, melPeriod);
-            int   mi   = (int)(mp / (beat * 2.0f)) % 8;
-            float moff = fmodf(mp, beat * 2.0f);
-            float mEnv = moff < (beat*0.1f) ? moff/(beat*0.1f) : std::exp(-moff * 1.2f);
-            float melF = melNotes[mi];
-            v += std::sin(2*kPI * melF * t) * mEnv * 0.14f;
-            // slight octave shimmer
-            v += std::sin(2*kPI * melF * 2.0f * t) * mEnv * 0.04f;
-        }
-
-        // Sparse distant metallic percussion (debris, crumbling concrete)
-        {
-            // Clang every 7 beats
-            float pc7 = fmodf(t, beat * 7.0f);
-            float e7  = std::exp(-pc7 * 5.0f);
-            v += std::sin(2*kPI * 230.0f * t) * e7 * 0.10f;
-            v += rnd() * e7 * 0.07f;
-        }
-        {
-            // Rumble thud every 3.5 beats (asymmetric, unnerving)
-            float pt  = fmodf(t, beat * 3.5f);
-            float et  = std::exp(-pt * 40.0f);
-            float kf  = std::max(20.0f, 62.0f - pt * 85.0f);
-            v += std::sin(2*kPI * kf * t) * et * 0.32f;
-            v += rnd() * et * 0.08f;
-        }
-
-        // Wind and rain â€” layered noise, slow swell
-        float windBr = 0.5f + 0.5f * std::sin(2*kPI*0.07f*t + 0.5f);
-        float rainBr = 0.3f + 0.7f * std::sin(2*kPI*0.14f*t);
-        v += rnd() * 0.022f * windBr;       // wind
-        v += rnd() * 0.012f * rainBr;       // rain
-
-        // Eerie high shimmer â€” distant siren echo
-        float shimmer = 0.3f + 0.7f * std::sin(2*kPI*0.28f*t);
-        float shimF   = 880.0f + 40.0f * std::sin(2*kPI*0.06f*t);
-        v += std::sin(2*kPI*shimF*t) * 0.022f * shimmer;
-
-        // Glass/debris tinkle (random sparse high hits)
-        {
-            float pg = fmodf(t, beat * 11.0f);
-            float eg = std::exp(-pg * 18.0f);
-            v += std::sin(2*kPI * 1200.0f * t) * eg * 0.05f;
-        }
-
-        v = clamp1(v);
-        s[i] = (short)(v * 27000.0f);
-    }
-
-    // Double echo: 185ms primary + 340ms secondary (cavern reverb feel)
-    int echo1 = (int)(0.185f * SR);
-    int echo2 = (int)(0.340f * SR);
-    for (int i = echo1; i < N; ++i) {
-        int mixed = (int)s[i] + (int)(s[i-echo1] * 0.30f);
-        if (i >= echo2) mixed += (int)(s[i-echo2] * 0.14f);
-        s[i] = (short)std::max(-32767, std::min(32767, mixed));
-    }
-    return s;
 }
 
 // Bunker: Military war march â€” heavy boots, brass fanfare, combat urgency
@@ -574,91 +471,6 @@ std::vector<short> AudioManager::synthBunker(int SR, int N) {
     st.cutoffHz = 3000.0f; st.room = 0.30f; st.wet = 0.22f; st.subAmp = 0.24f;
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 1; st.echo = 0.20f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm  = 118.0f;
-    float beat = 60.0f / bpm;
-
-    // Bass riff: 8-note military march pattern (D minor feel)
-    float bassNotes[8] = {73.4f, 87.3f, 73.4f, 65.4f, 82.4f, 87.3f, 77.8f, 73.4f};
-    // Brass chord tones per section (changes every 8 beats)
-    float brassRoots[4] = {146.8f, 130.8f, 164.8f, 123.5f};
-
-    for (int i = 0; i < N; ++i) {
-        float t = (float)i / SR;
-        float v = 0.0f;
-        int   bi = (int)(t / (beat * 8.0f)) % 4;
-
-        // Driving bass riff â€” punchy sawtooth with gritty tone
-        {
-            int   ni  = (int)(t / (beat*0.5f)) % 8;
-            float nOff= fmodf(t, beat*0.5f);
-            float env = std::exp(-nOff * 7.0f) * (0.8f + 0.2f * std::sin(2*kPI*nOff*4));
-            float f   = bassNotes[ni];
-            float ph  = fmodf(f*t, 1.0f);
-            float saw = 2.0f*ph - 1.0f;
-            v += saw * env * 0.32f;
-            // Octave layer
-            v += std::sin(2*kPI*f*2*t) * env * 0.08f;
-        }
-
-        // Heavy STOMP kick on 1 and 3 (deep military footfall)
-        {
-            float p1 = fmodf(t, beat*2.0f);
-            float p3 = fmodf(t - beat, beat*2.0f);
-            float e1 = std::exp(-p1 * 28.0f);
-            float e3 = std::exp(-p3 * 28.0f);
-            float kf = 75.0f - p1 * 180.0f;
-            v += std::sin(2*kPI * kf * t) * (e1+e3) * 0.38f;
-            v += rnd() * (e1+e3) * 0.12f;
-        }
-
-        // Military snare on 2 and 4 â€” crisp, metallic
-        {
-            float ps = fmodf(t - beat, beat*2.0f);
-            float es = std::max(0.0f, 1.0f - ps/0.07f);
-            float es2= std::max(0.0f, 1.0f - ps/0.20f);
-            v += rnd() * es  * 0.28f;
-            v += std::sin(2*kPI*250.0f*t) * es2 * 0.10f; // snare body tone
-        }
-
-        // Hi-hat: tight 16ths with open accent on beats 1 & 3
-        {
-            float ph16 = fmodf(t, beat*0.25f);
-            float eh   = std::max(0.0f, 1.0f - ph16/0.025f);
-            float isAccent = (fmodf(t, beat) < 0.02f) ? 2.5f : 1.0f;
-            v += rnd() * eh * 0.065f * isAccent;
-        }
-
-        // Brass stab every 4 beats â€” triumphant fanfare
-        {
-            float pos = fmodf(t, beat*4.0f);
-            float env = std::max(0.0f, 0.65f - pos/0.5f);
-            float root= brassRoots[bi];
-            v += std::sin(2*kPI*root*t)       * env * 0.20f;
-            v += std::sin(2*kPI*root*1.25f*t) * env * 0.12f; // major 3rd
-            v += std::sin(2*kPI*root*1.5f*t)  * env * 0.10f; // perfect 5th
-            v += rnd() * env * 0.04f; // brass edge
-        }
-
-        // Rising tension pad underneath
-        float padEnv = 0.05f * (0.5f + 0.5f * std::sin(2*kPI*0.2f*t));
-        v += std::sin(2*kPI*brassRoots[bi]*0.5f*t) * padEnv;
-        v += std::sin(2*kPI*brassRoots[bi]*0.75f*t) * padEnv * 0.7f;
-
-        // Sub bass rumble
-        v += std::sin(2*kPI*40.0f*t) * 0.14f;
-
-        v = clamp1(v);
-        s[i] = (short)(v * 26500.0f);
-    }
-
-    // Short slap-back echo (60ms at 20%) for room feel
-    int echo1 = (int)(0.06f * SR);
-    for (int i = echo1; i < N; ++i) {
-        int mixed = (int)s[i] + (int)(s[i-echo1] * 0.20f);
-        s[i] = (short)std::max(-32767, std::min(32767, mixed));
-    }
-    return s;
 }
 
 // Kronos Forge: Brutal industrial metal â€” distorted riff, machine percussion, grinding
@@ -669,104 +481,6 @@ std::vector<short> AudioManager::synthFactory(int SR, int N) {
     st.cutoffHz = 6200.0f; st.room = 0.40f; st.wet = 0.20f; st.subAmp = 0.22f;
       st.bassWave = 1; st.arpWave = 1; st.leadWave = 1; st.echo = 0.18f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm  = 155.0f;
-    float beat = 60.0f / bpm;
-
-    // Power chord riff: E5 power chords with palm-mute feel
-    // Pattern: E-E-G-E-A-E-B-E (metal riff)
-    float riffNotes[8] = {82.4f, 82.4f, 98.0f, 82.4f, 110.0f, 82.4f, 123.5f, 82.4f};
-    float riffLen[8]   = {0.5f,  0.25f, 0.5f,  0.25f, 0.5f,   0.25f, 0.5f,   0.25f};
-    float riffAcc[8]   = {1.0f,  0.5f,  1.0f,  0.5f,  1.0f,   0.5f,  1.0f,   0.5f };
-
-    float riffPattern = 0.0f;
-    for (int k = 0; k < 8; ++k) riffPattern += riffLen[k] * beat;
-
-    for (int i = 0; i < N; ++i) {
-        float t = (float)i / SR;
-        float v = 0.0f;
-
-        // Distorted power chord riff â€” heavily clipped sawtooth
-        {
-            float rp = fmodf(t, riffPattern);
-            float acc = 0.0f;
-            int ni = 0;
-            for (int k = 0; k < 8; ++k) {
-                float dur = riffLen[k] * beat;
-                if (rp < acc + dur) { ni = k; break; }
-                acc += dur;
-            }
-            float nOff = fmodf(rp - acc, riffLen[ni]*beat);
-            float env  = std::exp(-nOff * 5.0f) * riffAcc[ni];
-            float f    = riffNotes[ni];
-            float ph   = fmodf(f*t, 1.0f);
-            float saw  = 2.0f*ph - 1.0f;
-            // Extreme distortion (waveshaping)
-            float dist = clamp1(saw * 6.0f);
-            v += dist * env * 0.25f;
-            // Power chord 5th
-            float ph5  = fmodf(f*1.5f*t, 1.0f);
-            v += clamp1((2.0f*ph5-1.0f) * 5.0f) * env * 0.14f;
-        }
-
-        // Double-kick pattern: 1/8 note kicks with strong accent on 1 and 3
-        {
-            float pos8 = fmodf(t, beat*0.5f);
-            float env8 = std::exp(-pos8 * 55.0f);
-            bool  isStrong = (fmodf(t, beat*2.0f) < 0.02f || fmodf(t - beat, beat*2.0f) < 0.02f);
-            float kMult = isStrong ? 1.6f : 0.9f;
-            float kickF = 88.0f - pos8 * 250.0f;
-            v += std::sin(2*kPI * kickF * t) * env8 * 0.35f * kMult;
-            v += rnd() * env8 * 0.10f * kMult;
-        }
-
-        // Metal snare on 2 and 4 â€” extra crunch
-        {
-            float ps = fmodf(t - beat, beat*2.0f);
-            float es = std::max(0.0f, 1.0f - ps/0.06f);
-            v += rnd() * es * 0.30f;
-            v += std::sin(2*kPI*200.0f*t) * es * 0.12f;
-            v += std::sin(2*kPI*350.0f*t) * es * 0.06f;
-        }
-
-        // Fast 16th hi-hats with open on beat
-        {
-            float ph16 = fmodf(t, beat*0.25f);
-            float eh   = std::max(0.0f, 1.0f - ph16/0.018f);
-            float isOpen = (fmodf(t, beat) < 0.04f) ? 4.0f : 1.0f;
-            v += rnd() * eh * 0.06f * isOpen;
-        }
-
-        // Industrial metal clang (every 2 beats, random pitch variation)
-        {
-            float pos = fmodf(t, beat*2.0f);
-            float env = std::exp(-pos * 7.0f);
-            v += std::sin(2*kPI*440.0f*t) * env * 0.10f;
-            v += std::sin(2*kPI*550.0f*t) * env * 0.06f;
-            v += rnd() * env * 0.07f;
-        }
-
-        // Grinding machine drone underneath
-        float grindF = 55.0f + 5.0f*std::sin(2*kPI*0.5f*t);
-        v += std::sin(2*kPI*grindF*t) * 0.12f;
-
-        // Machine hiss
-        v += rnd() * 0.015f;
-
-        v = clamp1(v);
-        s[i] = (short)(v * 26000.0f);
-    }
-
-    // Tight room reverb simulation (40ms at 22%)
-    int echo1 = (int)(0.04f * SR);
-    int echo2 = (int)(0.09f * SR);
-    for (int i = echo2; i < N; ++i) {
-        int mixed = (int)s[i]
-                  + (int)(s[i-echo1] * 0.22f)
-                  + (int)(s[i-echo2] * 0.10f);
-        s[i] = (short)std::max(-32767, std::min(32767, mixed));
-    }
-    return s;
 }
 
 // Core Facility: Epic boss rush â€” orchestral synth, battle arpeggio, war drums, alarm
@@ -778,111 +492,6 @@ std::vector<short> AudioManager::synthCore(int SR, int N) {
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 1;
       st.leadAmp = 0.18f; st.padAmp = 0.11f; st.echo = 0.35f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm  = 145.0f;
-    float beat = 60.0f / bpm;
-
-    // Heroic minor arpeggio (Am pentatonic, 2 octaves)
-    float arpNotes[16] = {
-        220.0f,261.6f,329.6f,392.0f,440.0f,392.0f,329.6f,261.6f,
-        220.0f,196.0f,174.6f,196.0f,220.0f,261.6f,294.0f,329.6f
-    };
-    // Chord roots that cycle every 8 beats: Am â†’ F â†’ C â†’ G
-    float chordRoots[4] = {55.0f, 87.3f, 65.4f, 98.0f};
-    float chordLen = beat * 8.0f;
-
-    for (int i = 0; i < N; ++i) {
-        float t   = (float)i / SR;
-        float v   = 0.0f;
-        int   ci  = (int)(t / chordLen) % 4;
-        float cr  = chordRoots[ci];
-
-        // Epic arpeggiated lead â€” fast 32nd note runs
-        {
-            int   ni  = (int)(t / (beat*0.25f)) % 16;
-            float nOff= fmodf(t, beat*0.25f);
-            float env = std::exp(-nOff * 14.0f);
-            float f   = arpNotes[ni];
-            v += std::sin(2*kPI*f*t)      * env * 0.18f;
-            v += std::sin(2*kPI*f*2.0f*t) * env * 0.06f;
-            // Slight detune for chorus shimmer
-            v += std::sin(2*kPI*f*1.003f*t) * env * 0.05f;
-        }
-
-        // Chord-based sub-bass pulse on every beat
-        {
-            float pos = fmodf(t, beat);
-            float env = std::exp(-pos * 18.0f);
-            v += std::sin(2*kPI * cr * t) * env * 0.38f;
-            v += rnd() * env * 0.06f;
-        }
-
-        // Epic "string ensemble" pad â€” detuned saw layers
-        {
-            float pEnv = 0.09f * (0.55f + 0.45f * std::sin(2*kPI*0.45f*t));
-            for (int k = 0; k < 4; ++k) {
-                float df  = -3.0f + k*2.0f;
-                float ph  = fmodf((cr*2.0f + df)*t, 1.0f);
-                v += (2.0f*ph-1.0f) * pEnv;
-                // 5th harmonic layer
-                float ph5 = fmodf((cr*3.0f + df)*t, 1.0f);
-                v += (2.0f*ph5-1.0f) * pEnv * 0.6f;
-            }
-        }
-
-        // Thunderous war kick on 1, 2, 3, 4 with accent on 1
-        {
-            float p = fmodf(t, beat);
-            float isDownbeat = (fmodf(t, beat*4.0f) < 0.02f) ? 1.5f : 1.0f;
-            float env = std::exp(-p * 32.0f) * isDownbeat;
-            float kickF = 90.0f - p*200.0f;
-            v += std::sin(2*kPI * kickF * t) * env * 0.36f;
-            v += rnd() * env * 0.10f;
-        }
-
-        // Powerful snare on beats 2 and 4
-        {
-            float ps = fmodf(t - beat, beat*2.0f);
-            float es = std::max(0.0f, 1.0f - ps/0.065f);
-            v += rnd() * es * 0.32f;
-            v += std::sin(2*kPI*180.0f*t) * es * 0.14f;
-        }
-
-        // Rapid hi-hat 32nds
-        {
-            float ph32 = fmodf(t, beat*0.125f);
-            float eh   = std::max(0.0f, 1.0f - ph32/0.015f);
-            v += rnd() * eh * 0.050f;
-        }
-
-        // KRONOS alarm sweep (ascending danger signal)
-        {
-            float sweep = 600.0f + 500.0f * std::sin(2*kPI*0.4f*t);
-            v += std::sin(2*kPI*sweep*t) * 0.035f * (0.4f + 0.6f * std::abs(std::sin(2*kPI*2.0f*t)));
-        }
-
-        // Electronic glitch hits every 3 beats
-        {
-            float pos = fmodf(t, beat*3.0f);
-            float env = std::exp(-pos * 20.0f);
-            v += std::sin(2*kPI*1200.0f*t) * env * 0.06f;
-            v += rnd() * env * 0.05f;
-        }
-
-        v = clamp1(v);
-        s[i] = (short)(v * 26500.0f);
-    }
-
-    // Rich reverb: two echoes for epic hall sound
-    int echo1 = (int)(0.08f * SR);
-    int echo2 = (int)(0.20f * SR);
-    for (int i = echo2; i < N; ++i) {
-        int mixed = (int)s[i]
-                  + (int)(s[i-echo1] * 0.28f)
-                  + (int)(s[i-echo2] * 0.14f);
-        s[i] = (short)std::max(-32767, std::min(32767, mixed));
-    }
-    return s;
 }
 
 // Main menu theme: epic cinematic â€” KRONOS-style sweeping intro
@@ -894,52 +503,6 @@ std::vector<short> AudioManager::synthMenu(int SR, int N) {
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 0;
       st.leadAmp = 0.19f; st.arpAmp = 0.11f; st.padAmp = 0.10f; st.echo = 0.30f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm  = 88.0f;
-    float beat = 60.0f / bpm;
-    float melody[8] = {146.8f, 164.8f, 146.8f, 130.8f,
-                       110.0f, 123.5f, 130.8f, 110.0f};
-    for (int i = 0; i < N; ++i) {
-        float t = (float)i / SR;
-        float v = 0.0f;
-        {   // Sub-bass epic pulse on every beat
-            float pos = fmodf(t, beat);
-            float env = std::exp(-pos * 20.0f);
-            v += std::sin(2*kPI*55.0f*t) * env * 0.40f;
-            v += rnd() * env * 0.06f;
-        }
-        {   // Slow bass melody
-            int ni = (int)(t / (beat*2.0f)) % 8;
-            v += std::sin(2*kPI*(melody[ni]*0.5f)*t) * 0.25f;
-        }
-        {   // Sweeping string-pad (3 detuned saws)
-            float pEnv = 0.12f*(0.5f+0.5f*std::sin(2*kPI*0.08f*t));
-            for (int k=0;k<3;++k){
-                float ph=fmodf((110.0f-3.0f+k*3.0f)*t,1.0f);
-                v+=(2.0f*ph-1.0f)*pEnv;
-            }
-        }
-        {   // Rising brass stab every 4 beats
-            float pos=fmodf(t,beat*4.0f);
-            float env=std::max(0.0f,0.6f-pos/0.8f);
-            int ni=(int)(t/(beat*4.0f))%8;
-            float f=melody[ni];
-            v+=std::sin(2*kPI*f*t)*env*0.20f;
-            v+=std::sin(2*kPI*f*1.5f*t)*env*0.10f;
-        }
-        {   // Metallic percussion every 2 beats
-            float pos=fmodf(t,beat*2.0f);
-            float env=std::exp(-pos*14.0f);
-            v+=(std::sin(2*kPI*220.0f*t)+rnd()*0.4f)*env*0.16f;
-        }
-        {   // High shimmer
-            float shimF=880.0f+120.0f*std::sin(2*kPI*0.12f*t);
-            v+=std::sin(2*kPI*shimF*t)*0.03f*(0.4f+0.6f*std::sin(2*kPI*0.25f*t));
-        }
-        v+=rnd()*0.015f*(0.3f+0.7f*std::sin(2*kPI*0.06f*t));
-        s[i]=(short)(clamp1(v)*27000.0f);
-    }
-    return s;
 }
 
 std::vector<short> AudioManager::synthCemetery(int SR, int N) {
@@ -949,24 +512,6 @@ std::vector<short> AudioManager::synthCemetery(int SR, int N) {
     st.cutoffHz = 2600.0f; st.room = 0.80f; st.wet = 0.42f; st.subAmp = 0.14f;
       st.padAmp = 0.13f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm = 52.0f, beat = 60.0f / bpm;
-    float bells[4] = {261.6f, 220.0f, 196.0f, 174.6f};
-    for (int i = 0; i < N; ++i) {
-        float t = (float)i / SR, v = 0.0f;
-        { float e = std::exp(-fmodf(t, beat*4)*1.8f);
-          int ni = (int)(t/(beat*4))%4;
-          float s1 = std::sin(2*kPI*bells[ni]*t);
-          float s2 = std::sin(2*kPI*bells[ni]*2.0f*t)*0.4f;
-          v += (s1+s2)*e*0.30f; }
-        { float dr = std::sin(2*kPI*40.0f*t)*0.2f*(0.5f+0.5f*std::sin(2*kPI*0.07f*t));
-          v += dr; }
-        { float wind = rnd()*0.08f*(0.3f+0.7f*std::sin(2*kPI*0.04f*t)); v += wind; }
-        { float pos=fmodf(t,beat*2); float e2=std::exp(-pos*12.0f);
-          v += (std::sin(2*kPI*110.0f*t)+rnd()*0.3f)*e2*0.12f; }
-        s[i] = (short)(clamp1(v)*27000.0f);
-    }
-    return s;
 }
 
 std::vector<short> AudioManager::synthCursedFarm(int SR, int N) {
@@ -976,21 +521,6 @@ std::vector<short> AudioManager::synthCursedFarm(int SR, int N) {
     st.cutoffHz = 3600.0f; st.room = 0.50f; st.wet = 0.26f; st.subAmp = 0.16f;
       st.arpAmp = 0.05f; st.leadAmp = 0.11f; st.leadWave = 0; st.echo = 0.36f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    for (int i = 0; i < N; ++i) {
-        float t = (float)i / SR, v = 0.0f;
-        { float env = 0.3f + 0.2f*std::sin(2*kPI*0.05f*t);
-          for (int k=0;k<3;++k){
-              float ph=fmodf((58.0f-2.0f+k*2.0f)*t,1.0f);
-              v+=(2.0f*ph-1.0f)*env*0.12f;
-          }}
-        { float crow=std::sin(2*kPI*800.0f*t)*std::exp(-fmodf(t,3.7f)*8.0f)*0.10f; v+=crow; }
-        { float rus=rnd()*0.06f*(0.2f+0.8f*std::sin(2*kPI*0.12f*t)); v+=rus; }
-        { float buzz=std::sin(2*kPI*55.0f*t+std::sin(2*kPI*2.2f*t)*3.0f)*0.15f
-                      *(0.4f+0.6f*std::sin(2*kPI*0.09f*t)); v+=buzz; }
-        s[i] = (short)(clamp1(v)*27000.0f);
-    }
-    return s;
 }
 
 std::vector<short> AudioManager::synthGhostCity(int SR, int N) {
@@ -1000,24 +530,6 @@ std::vector<short> AudioManager::synthGhostCity(int SR, int N) {
     st.cutoffHz = 3200.0f; st.room = 0.72f; st.wet = 0.36f; st.subAmp = 0.16f;
       st.arpAmp = 0.06f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.44f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm=60.0f, beat=60.0f/bpm;
-    float notes[6]={130.8f,146.8f,123.5f,116.5f,110.0f,130.8f};
-    for (int i = 0; i < N; ++i) {
-        float t=(float)i/SR, v=0.0f;
-        { int ni=(int)(t/(beat*2))%6;
-          float pEnv=0.15f*(0.4f+0.6f*std::sin(2*kPI*0.06f*t));
-          for(int k=0;k<3;++k){
-              float dFreq=notes[ni]*(1.0f+(k-1)*0.007f);
-              v+=std::sin(2*kPI*dFreq*t)*pEnv;
-          }}
-        { float wind=rnd()*0.05f*(0.5f+0.5f*std::sin(2*kPI*0.03f*t)); v+=wind; }
-        { float pos=fmodf(t,beat*3); float e=std::exp(-pos*6.0f);
-          float echo=std::sin(2*kPI*220.0f*t)*e*0.08f; v+=echo; }
-        { float bass=std::sin(2*kPI*55.0f*t)*0.18f*(0.3f+0.7f*std::sin(2*kPI*0.08f*t)); v+=bass; }
-        s[i]=(short)(clamp1(v)*27000.0f);
-    }
-    return s;
 }
 
 std::vector<short> AudioManager::synthDarkForest(int SR, int N) {
@@ -1027,20 +539,6 @@ std::vector<short> AudioManager::synthDarkForest(int SR, int N) {
     st.cutoffHz = 2800.0f; st.room = 0.66f; st.wet = 0.34f; st.subAmp = 0.15f;
       st.padAmp = 0.13f; st.leadAmp = 0.10f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    for (int i = 0; i < N; ++i) {
-        float t=(float)i/SR, v=0.0f;
-        { float dr=std::sin(2*kPI*38.0f*t+std::sin(2*kPI*0.15f*t)*0.8f)*0.25f
-                   *(0.6f+0.4f*std::sin(2*kPI*0.05f*t)); v+=dr; }
-        { float cr=rnd()*0.04f*std::exp(-fmodf(t,0.23f)*40.0f); v+=cr; }
-        { float owl=std::sin(2*kPI*(320.0f+40.0f*std::sin(2*kPI*0.4f*t))*t)
-                    *0.07f*std::exp(-fmodf(t,5.3f)*3.0f); v+=owl; }
-        { float amb=rnd()*0.03f*(0.4f+0.6f*std::sin(2*kPI*0.07f*t)); v+=amb; }
-        { float tremolo=std::sin(2*kPI*82.0f*t)*0.12f
-                        *(0.5f+0.5f*std::sin(2*kPI*4.5f*t)); v+=tremolo; }
-        s[i]=(short)(clamp1(v)*27000.0f);
-    }
-    return s;
 }
 
 std::vector<short> AudioManager::synthCatacombs(int SR, int N) {
@@ -1050,21 +548,6 @@ std::vector<short> AudioManager::synthCatacombs(int SR, int N) {
     st.cutoffHz = 2200.0f; st.room = 0.88f; st.wet = 0.46f; st.subAmp = 0.18f;
       st.padAmp = 0.14f; st.leadAmp = 0.10f; st.leadWave = 0; st.echo = 0.46f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm=44.0f, beat=60.0f/bpm;
-    for (int i = 0; i < N; ++i) {
-        float t=(float)i/SR, v=0.0f;
-        { float bass=std::sin(2*kPI*32.0f*t)*0.30f
-                     *(0.6f+0.4f*std::sin(2*kPI*0.04f*t)); v+=bass; }
-        { float pos=fmodf(t,beat); float e=std::exp(-pos*10.0f);
-          v+=(std::sin(2*kPI*90.0f*t)+rnd()*0.3f)*e*0.14f; }
-        { float drip=std::sin(2*kPI*1200.0f*t)*std::exp(-fmodf(t,2.1f)*18.0f)*0.06f; v+=drip; }
-        { float moan=std::sin(2*kPI*(55.0f+5.0f*std::sin(2*kPI*0.03f*t))*t)
-                     *0.10f*(0.3f+0.7f*std::sin(2*kPI*0.06f*t)); v+=moan; }
-        { float rev=rnd()*0.02f*(0.2f+0.8f*std::sin(2*kPI*0.09f*t)); v+=rev; }
-        s[i]=(short)(clamp1(v)*27000.0f);
-    }
-    return s;
 }
 
 std::vector<short> AudioManager::synthManor(int SR, int N) {
@@ -1074,23 +557,6 @@ std::vector<short> AudioManager::synthManor(int SR, int N) {
     st.cutoffHz = 3000.0f; st.room = 0.70f; st.wet = 0.36f; st.subAmp = 0.15f;
       st.arpAmp = 0.05f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm=56.0f, beat=60.0f/bpm;
-    float chord[4]={65.4f, 77.8f, 87.3f, 98.0f};
-    for (int i = 0; i < N; ++i) {
-        float t=(float)i/SR, v=0.0f;
-        { for(int k=0;k<4;++k){
-              float ph=fmodf(chord[k]*t,1.0f);
-              float saw=(2.0f*ph-1.0f)*0.10f*(0.4f+0.6f*std::sin(2*kPI*0.05f*t));
-              v+=saw;
-          }}
-        { float pos=fmodf(t,beat*2); float e=std::exp(-pos*4.0f);
-          v+=std::sin(2*kPI*98.0f*t)*e*0.16f; }
-        { float toll=std::sin(2*kPI*220.0f*t)*std::exp(-fmodf(t,beat*8)*0.8f)*0.12f; v+=toll; }
-        { v+=rnd()*0.02f*(0.3f+0.7f*std::sin(2*kPI*0.04f*t)); }
-        s[i]=(short)(clamp1(v)*27000.0f);
-    }
-    return s;
 }
 
 std::vector<short> AudioManager::synthInferno(int SR, int N) {
@@ -1100,22 +566,6 @@ std::vector<short> AudioManager::synthInferno(int SR, int N) {
     st.cutoffHz = 5600.0f; st.room = 0.44f; st.wet = 0.24f; st.subAmp = 0.28f;
       st.bassWave = 1; st.arpWave = 1; st.leadWave = 1; st.echo = 0.16f;
       return composeTrack(SR, N, st); }
-    std::vector<short> s(N, 0);
-    float bpm=140.0f, beat=60.0f/bpm;
-    for (int i = 0; i < N; ++i) {
-        float t=(float)i/SR, v=0.0f;
-        { float bass=std::sin(2*kPI*55.0f*t+std::sin(2*kPI*55.0f*t)*2.5f)
-                     *0.30f*(0.7f+0.3f*std::sin(2*kPI*0.1f*t)); v+=bass; }
-        { float pos=fmodf(t,beat); float e=std::exp(-pos*22.0f);
-          v+=(std::sin(2*kPI*110.0f*t)+rnd()*0.5f)*e*0.22f; }
-        { float crackle=rnd()*0.10f*(0.3f+0.7f*std::sin(2*kPI*0.25f*t)); v+=crackle; }
-        { float flame=std::sin(2*kPI*(220.0f+rnd()*80.0f)*t)*0.06f
-                      *(0.4f+0.6f*std::sin(2*kPI*0.18f*t)); v+=flame; }
-        { float dist=std::sin(2*kPI*880.0f*t)*0.05f
-                     *(0.2f+0.8f*std::sin(2*kPI*0.07f*t)); v+=dist; }
-        s[i]=(short)(clamp1(v)*27000.0f);
-    }
-    return s;
 }
 
 std::vector<unsigned char> AudioManager::buildMusicForZone(ZoneID zone, float dur, int SR) {
@@ -1965,6 +1415,7 @@ void AudioManager::playExplosion(bool large)    const { large ? PlaySound(sfxExp
 void AudioManager::playEnemyHit()               const { playPitched(sfxHit, 0.93f, 1.07f); }
 void AudioManager::playEnemyDeath(bool isBoss)  const { isBoss ? PlaySound(sfxBossRoar) : PlaySound(sfxAlienScream); }
 void AudioManager::playPlayerHurt()             const { if (voiceEnabled) playPitched(sfxPlayerHurt, 0.95f, 1.05f); }
+void AudioManager::playPlayerDeath()            const { if (voiceEnabled) PlaySound(sfxPlayerDeath); }
 void AudioManager::playEvolve()                 const { PlaySound(sfxEvolve); }
 void AudioManager::playHeal()                   const { PlaySound(sfxHeal); }
 void AudioManager::playItemPickup(int rarity)   const {

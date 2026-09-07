@@ -135,6 +135,10 @@ public:
     void render(Vector2 playerPos, Vector2 mouseWorldPos) const;
     void renderBuildMenu(int screenW, int screenH) const;
 
+    // Persistência: serializa/deserializa estado em linhas de texto.
+    void save(std::vector<std::string>& out) const;
+    bool load(const std::vector<std::string>& in);
+
     void toggleBuildMode();
     bool tryPlace(Vector2 worldPos, int playerCredits, int playerMetal, int playerCarapace,
                   int& outCreditCost, int& outMetalCost, int& outCarapaceCost);

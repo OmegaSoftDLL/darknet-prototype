@@ -23,6 +23,7 @@ public:
     float                    popupTimer  = 0.0f;
     Color                    popupColor  = {255, 200, 0, 255};
     class Player*            playerPtr   = nullptr;
+    class AudioManager*      audioPtr    = nullptr;
 
     void init();
     void update(float dt);

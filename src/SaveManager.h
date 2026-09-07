@@ -28,9 +28,11 @@ public:
     static void save(const Player& player, const std::vector<Quest>& quests, ZoneID zone,
                      int slot = 0, float playMinutes = 0.f, int totalKills = 0,
                      int totalDeaths = 0, int bossesKilled = 0, int portalsSealed = 0,
-                     int difficultyLevel = 0, int gameTotalKills = 0);
+                     int difficultyLevel = 0, int gameTotalKills = 0,
+                     const std::vector<std::string>* buildingLines = nullptr);
     static bool load(Player& player, std::vector<Quest>& quests, ZoneID& zone, int slot = 0,
-                     int* gameTotalKillsOut = nullptr);
+                     int* gameTotalKillsOut = nullptr,
+                     std::vector<std::string>* buildingLinesOut = nullptr);
     static bool hasSave(int slot = 0);
     static void deleteSave(int slot = 0);
     static SaveSlotInfo getSlotInfo(int slot);

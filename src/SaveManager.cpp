@@ -4,6 +4,9 @@
 #include <cstring>
 #include <ctime>
 #include <cmath>
+#include <cstdint>
+#include <sstream>
+#include <cstdlib>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
@@ -17,6 +20,22 @@
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 static bool isValidSlot(int slot) { return slot >= 0 && slot < SAVE_SLOTS; }
+
+static uint32_t checksumPayload(const std::string& s) {
+    // FNV-1a 32-bit — suficiente para detectar edicao/corrosao accidental.
+    uint32_t h = 0x811c9dc5u;
+    for (char c : s) {
+        h ^= static_cast<uint8_t>(c);
+        h *= 0x01000193u;
+    }
+    return h;
+}
+
+static int parseVersionHeader(const char* header) {
+    int v = 0;
+    if (std::sscanf(header, "DARKNET_SAVE_V%d", &v) == 1) return v;
+    return 0;
+}
 
 static ZoneID clampZone(int v) {
     const int max = static_cast<int>(ZoneID::InfernoZone);
@@ -95,103 +114,123 @@ static const char* equipSaveToken(const Equipment& eq) {
 void SaveManager::save(const Player& player, const std::vector<Quest>& quests, ZoneID zone,
                        int slot, float playMinutes, int totalKills,
                        int totalDeaths, int bossesKilled, int portalsSealed,
-                       int difficultyLevel, int gameTotalKills) {
+                       int difficultyLevel, int gameTotalKills,
+                       const std::vector<std::string>* buildingLines) {
     ensureSavesDir();
     std::string path = slotPath(slot);
-    FILE* f = fopen(path.c_str(), "w");
-    if (!f) return;
 
-    // Header
-    fprintf(f, "DARKNET_SAVE_V%d\n", SAVE_VERSION);
-    fprintf(f, "slot %d\n", slot);
+    // Build payload in memory so we can checksum it and write atomically.
+    std::ostringstream out;
+
+    out << "slot " << slot << "\n";
 
     // Timestamp
     time_t now = time(nullptr);
     struct tm* tm_info = localtime(&now);
     char dateBuf[32];
     strftime(dateBuf, sizeof(dateBuf), "%Y-%m-%d %H:%M:%S", tm_info);
-    fprintf(f, "saveDate %s\n", dateBuf);
+    out << "saveDate " << dateBuf << "\n";
 
     // Player core
-    fprintf(f, "posX %f\n",         player.position.x);
-    fprintf(f, "posY %f\n",         player.position.y);
-    fprintf(f, "health %f\n",       player.health);
-    fprintf(f, "maxHealth %f\n",    player.maxHealth);
-    fprintf(f, "attackDamage %f\n", player.attackDamage);
-    fprintf(f, "attackRange %f\n",  player.attackRange);
-    fprintf(f, "speed %f\n",        player.speed);
-    fprintf(f, "defense %f\n",      player.defense);
+    out << "posX "         << player.position.x   << "\n";
+    out << "posY "         << player.position.y   << "\n";
+    out << "health "       << player.health       << "\n";
+    out << "maxHealth "    << player.maxHealth    << "\n";
+    out << "attackDamage " << player.attackDamage << "\n";
+    out << "attackRange "  << player.attackRange  << "\n";
+    out << "speed "        << player.speed        << "\n";
+    out << "defense "      << player.defense      << "\n";
     // Classe + stats BASE (efetivos sao recalculados; sem isso o "continuar" quebra)
-    fprintf(f, "charClass %d\n",        (int)player.getCharClass());
-    fprintf(f, "baseMaxHealth %f\n",    player.getBaseMaxHealth());
-    fprintf(f, "baseAttackDamage %f\n", player.getBaseAttackDamage());
-    fprintf(f, "baseSpeed %f\n",        player.getBaseSpeed());
-    fprintf(f, "baseAttackRange %f\n",  player.getBaseAttackRange());
-    fprintf(f, "baseDefense %f\n",      player.getBaseDefense());
-    fprintf(f, "level %d\n",        player.level);
-    fprintf(f, "xp %d\n",           player.xp);
-    fprintf(f, "xpToNext %d\n",     player.xpToNextLevel);
-    fprintf(f, "credits %d\n",      player.credits);
-    fprintf(f, "zone %d\n",         static_cast<int>(zone));
+    out << "charClass "        << (int)player.getCharClass()        << "\n";
+    out << "baseMaxHealth "    << player.getBaseMaxHealth()         << "\n";
+    out << "baseAttackDamage " << player.getBaseAttackDamage()      << "\n";
+    out << "baseSpeed "        << player.getBaseSpeed()             << "\n";
+    out << "baseAttackRange "  << player.getBaseAttackRange()       << "\n";
+    out << "baseDefense "      << player.getBaseDefense()           << "\n";
+    out << "level "        << player.level        << "\n";
+    out << "xp "           << player.xp           << "\n";
+    out << "xpToNext "     << player.xpToNextLevel << "\n";
+    out << "credits "      << player.credits      << "\n";
+    out << "zone "         << static_cast<int>(zone) << "\n";
 
     // Evolution
-    fprintf(f, "evolutionPath %d\n", static_cast<int>(player.evolutionPath));
-    fprintf(f, "evolutionTier %d\n", player.evolutionTier);
+    out << "evolutionPath " << static_cast<int>(player.evolutionPath) << "\n";
+    out << "evolutionTier " << player.evolutionTier << "\n";
 
     // Hack Tree (skill tree de perks)
-    fprintf(f, "skillPoints %d\n", player.skillPoints);
-    fprintf(f, "perkMask %d\n",    player.perkMask);
+    out << "skillPoints " << player.skillPoints << "\n";
+    out << "perkMask "    << player.perkMask    << "\n";
 
     // Stats
-    fprintf(f, "totalKills %d\n",    totalKills > 0 ? totalKills : player.totalKills);
-    fprintf(f, "gameTotalKills %d\n", gameTotalKills);
-    fprintf(f, "totalDeaths %d\n",   totalDeaths);
-    fprintf(f, "bossesKilled %d\n",  bossesKilled);
-    fprintf(f, "portalsSealed %d\n", portalsSealed);
-    fprintf(f, "difficultyLevel %d\n", difficultyLevel);
-    fprintf(f, "playMinutes %f\n",   playMinutes);
+    out << "totalKills "    << (totalKills > 0 ? totalKills : player.totalKills) << "\n";
+    out << "gameTotalKills "<< gameTotalKills << "\n";
+    out << "totalDeaths "   << totalDeaths    << "\n";
+    out << "bossesKilled "  << bossesKilled   << "\n";
+    out << "portalsSealed " << portalsSealed  << "\n";
+    out << "difficultyLevel " << difficultyLevel << "\n";
+    out << "playMinutes "   << playMinutes    << "\n";
 
     // Equipment (V7: ID + upgrade + primary/secondary; V5/V6 liam so o ID)
     auto writeEquip = [&](const char* idKey, const char* upKey, const char* priKey, const char* secKey, const Equipment& eq) {
-        fprintf(f, "%s %s\n", idKey, equipSaveToken(eq));
-        fprintf(f, "%s %d\n", upKey, eq.upgradeLevel);
-        fprintf(f, "%s %f\n", priKey, eq.primary);
-        fprintf(f, "%s %f\n", secKey, eq.secondary);
+        out << idKey << " " << equipSaveToken(eq) << "\n";
+        out << upKey << " " << eq.upgradeLevel    << "\n";
+        out << priKey << " " << eq.primary        << "\n";
+        out << secKey << " " << eq.secondary      << "\n";
     };
     writeEquip("weaponId", "weaponUpgrade", "weaponPrimary", "weaponSecondary", player.equippedWeapon);
     writeEquip("armorId",  "armorUpgrade",  "armorPrimary",  "armorSecondary",  player.equippedArmor);
     writeEquip("implantId","implantUpgrade","implantPrimary","implantSecondary",player.equippedImplant);
 
     // EquipBag (V7)
-    fprintf(f, "equipBagCount %zu\n", player.equipBag.size());
+    out << "equipBagCount " << player.equipBag.size() << "\n";
     for (const auto& eq : player.equipBag)
-        fprintf(f, "equipBag %s %d %f %f %d\n",
-                equipSaveToken(eq), eq.upgradeLevel, eq.primary, eq.secondary, (int)eq.slot);
+        out << "equipBag " << equipSaveToken(eq) << " " << eq.upgradeLevel << " "
+            << eq.primary << " " << eq.secondary << " " << (int)eq.slot << "\n";
 
     // Quests
-    fprintf(f, "questCount %d\n", (int)quests.size());
+    out << "questCount " << quests.size() << "\n";
     for (const auto& q : quests)
-        fprintf(f, "quest %s %d %d %d\n", q.id.c_str(), q.current, q.completed?1:0, q.rewardGiven?1:0);
+        out << "quest " << q.id << " " << q.current << " "
+            << (q.completed?1:0) << " " << (q.rewardGiven?1:0) << "\n";
 
     // Inventory (V5/V6: so type; V7: full state)
-    fprintf(f, "inventoryV2 %zu\n", player.inventory.size());
+    out << "inventoryV2 " << player.inventory.size() << "\n";
     for (const auto& item : player.inventory) {
-        fprintf(f, "invItm %d %d %d %f %f %f %f %f %f\n",
-                (int)item.type, (int)item.rarity, item.value,
-                item.bonusDamage, item.bonusHealth, item.bonusSpeed,
-                item.bonusDefense, item.bonusCrit, item.bonusVampirism);
-        fprintf(f, "invPrefix %s\n", item.affixPrefix.c_str());
-        fprintf(f, "invSuffix %s\n", item.affixSuffix.c_str());
-        fprintf(f, "invBaseName %s\n", item.baseName.c_str());
+        out << "invItm " << (int)item.type << " " << (int)item.rarity << " " << item.value << " "
+            << item.bonusDamage << " " << item.bonusHealth << " " << item.bonusSpeed << " "
+            << item.bonusDefense << " " << item.bonusCrit << " " << item.bonusVampirism << "\n";
+        out << "invPrefix "  << item.affixPrefix  << "\n";
+        out << "invSuffix "  << item.affixSuffix  << "\n";
+        out << "invBaseName "<< item.baseName     << "\n";
     }
 
+    // BuildingSystem (V7+)
+    if (buildingLines) {
+        out << "buildingLineCount " << buildingLines->size() << "\n";
+        for (const auto& line : *buildingLines)
+            out << "bdg " << line << "\n";
+    }
+
+    std::string payload = out.str();
+    uint32_t chk = checksumPayload(payload);
+
+    // Atomic write: temp file then rename.
+    std::string tmpPath = path + ".tmp";
+    FILE* f = fopen(tmpPath.c_str(), "w");
+    if (!f) return;
+    fprintf(f, "DARKNET_SAVE_V%d\n", SAVE_VERSION);
+    fprintf(f, "checksum %08x\n", chk);
+    fwrite(payload.c_str(), 1, payload.size(), f);
     fclose(f);
+    std::remove(path.c_str());
+    std::rename(tmpPath.c_str(), path.c_str());
 }
 
 // ─── Load ────────────────────────────────────────────────────────────────────
 
 bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone, int slot,
-                       int* gameTotalKillsOut) {
+                       int* gameTotalKillsOut,
+                       std::vector<std::string>* buildingLinesOut) {
     std::string path = slotPath(slot);
     FILE* f = fopen(path.c_str(), "r");
 
@@ -201,10 +240,27 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     }
     if (!f) return false;
 
-    // Read header line
+    // Read and validate header version.
     char header[64] = {};
-    fgets(header, sizeof(header), f);
-    // Accept any DARKNET_SAVE_V* version
+    if (!fgets(header, sizeof(header), f)) { fclose(f); return false; }
+    int version = parseVersionHeader(header);
+    if (version == 0 || version > SAVE_VERSION || version < 4) {
+        fclose(f);
+        return false;   // unknown, future or too-old format
+    }
+
+    // Optional checksum line (V7+). If present, validate the payload.
+    long payloadOffset = ftell(f);
+    uint32_t expectedChecksum = 0;
+    bool hasChecksum = false;
+    char line[64] = {};
+    if (fgets(line, sizeof(line), f)) {
+        if (std::strncmp(line, "checksum ", 9) == 0) {
+            expectedChecksum = static_cast<uint32_t>(std::strtoul(line + 9, nullptr, 16));
+            hasChecksum = true;
+            payloadOffset = ftell(f);
+        }
+    }
 
     int  slotRead = 0, zoneInt = 0;
     char dateBuf[256] = {};
@@ -218,16 +274,17 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     Equipment loadedWeapon, loadedArmor, loadedImplant;
     int   equipBagRemaining = 0;
     int   inventoryV2Remaining = 0;
+    int   buildingLinesRemaining = 0;
     Item  inventoryV2Item;
 
     // Limpa listas para evitar contaminacao de estado anterior (P0)
     player.equipBag.clear();
     player.inventory.clear();
+    if (buildingLinesOut) buildingLinesOut->clear();
     loadedWeapon = loadedArmor = loadedImplant = Equipment{};
 
-    // Re-read from start for simple line-by-line parsing
-    rewind(f);
-    fgets(header, sizeof(header), f); // skip version line
+    // Parse payload from after the header (and optional checksum line).
+    std::fseek(f, payloadOffset, SEEK_SET);
 
     while (fscanf(f, " %63s", key) == 1) {
         if (strcmp(key,"slot")==0)          { fscanf(f," %d",&slotRead); }
@@ -393,8 +450,37 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
             player.inventory.push_back(inventoryV2Item);
             --inventoryV2Remaining;
         }
+        else if (strcmp(key,"buildingLineCount")==0){
+            fscanf(f," %d",&buildingLinesRemaining);
+            if (buildingLinesRemaining < 0) buildingLinesRemaining = 0;
+            if (buildingLinesRemaining > 8192) buildingLinesRemaining = 8192;
+            if (buildingLinesOut) buildingLinesOut->clear();
+        }
+        else if (strcmp(key,"bdg")==0 && buildingLinesRemaining > 0){
+            char buf[1024] = {}; fscanf(f," %1023[^\n]",buf);
+            if (buildingLinesOut) {
+                if (buf[0]==' ') buildingLinesOut->push_back(buf+1);
+                else buildingLinesOut->push_back(buf);
+            }
+            --buildingLinesRemaining;
+        }
         else {
             skipRestOfLine(f);   // pula so o resto DESTA linha (o formato antigo com espaco engolia a PROXIMA)
+        }
+    }
+
+    // Validate checksum if present (V7+). Corrupted/tampered payload is rejected.
+    if (hasChecksum) {
+        std::fseek(f, payloadOffset, SEEK_SET);
+        uint32_t computed = 0x811c9dc5u;
+        int c;
+        while ((c = std::fgetc(f)) != EOF) {
+            computed ^= static_cast<uint32_t>(static_cast<uint8_t>(c));
+            computed *= 0x01000193u;
+        }
+        if (computed != expectedChecksum) {
+            fclose(f);
+            return false;
         }
     }
 

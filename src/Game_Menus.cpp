@@ -324,6 +324,7 @@ void Game::applyLevelUpChoice(int idx) {
 }
 
 void Game::applyEvolutionPath(int pathIdx) {
+    audio.playEvolve();
     if (pathIdx<0||pathIdx>2) pathIdx=1;
     player.evolutionPath = static_cast<EvolutionPath>(pathIdx+1);
     player.evolutionTier++;

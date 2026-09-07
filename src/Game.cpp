@@ -797,6 +797,7 @@ void Game::startNewGame() {
     tutorial.init();
     tutorialRewardGiven = false;
     achievements.playerPtr = &player;
+    achievements.audioPtr = &audio;
     buildQuests();
     currentZone   = ZoneID::LARuins;
     currentRegion = ZoneID::LARuins;
@@ -971,7 +972,22 @@ void Game::drawCharacterSelectScreen() const {
 void Game::startLoadedGame() {
     // Carrega o save e entra direto no jogo — SEM tela de dificuldade.
     // A dificuldade salva e mantida (so muda em Novo Jogo ou pelo menu de pause).
-    if (SaveManager::exists()) SaveManager::load(player, quests, currentZone, 0, &totalKills);
+    std::vector<std::string> buildingLines;
+    if (SaveManager::exists()) SaveManager::load(player, quests, currentZone, 0, &totalKills, &buildingLines);
+
+    // Limpa estado residual da sessao anterior antes de reconstruir o mundo.
+    enemies.clear();
+    items.clear();
+    projectiles.clear();
+    enemyProjectiles.clear();
+    xpOrbs.clear();
+    groundEquips.clear();
+    companions.clear();
+    damageNumbers.clear();
+    particles.particles.clear();
+    anomalySystem.portals.clear();
+    anomalySystem.waveActive = false;
+
     // Ow phase state nao fica no .json: reconstruo owPhase/raio/meta/boss a partir
     // da ZONA salva, senao as regioes nascem para a fase 1 (raio 5200) num save de
     // phase 10 (raio 7800) — grid menor que a barreira, anel externo sem cenario.
@@ -996,6 +1012,10 @@ void Game::startLoadedGame() {
         tilemap.generate(currentZone);
     }
     setupZoneNPCs(currentZone);
+
+    // Restaura construcoes e unidades aliadas do save.
+    if (!buildingLines.empty()) buildingSystem.load(buildingLines);
+
     spawnInterval = getZoneInfo(currentZone).spawnInterval / getDifficulty().spawnRateMult;
     inMainMenu = false;
     selectingDifficulty = false;
@@ -1012,6 +1032,7 @@ void Game::restartRun() {
     tutorial.init();
     tutorialRewardGiven = false;
     achievements.playerPtr = &player;
+    achievements.audioPtr = &audio;
 
     // Limpa todas as entidades em jogo
     enemies.clear();
@@ -1106,6 +1127,7 @@ void Game::restartRun() {
 void Game::grantQuestRewards(Quest& q) {
     q.complete();
     if (q.rewardHP  > 0.0f) player.heal(q.rewardHP);
+    audio.playHeal();
     if (q.rewardXP  > 0)    player.addXP(q.rewardXP);
     if (!q.rewardEquip.isEmpty()) player.equipItem(q.rewardEquip);
     particles.spawnLevelUp(player.position);
@@ -1226,6 +1248,7 @@ void Game::checkCollisions() {
             tutorial.onItemPickedUp();
             switch (it->type) {
                 case ItemType::HealthPack:
+    audio.playHeal();
                     player.heal(30.0f);
                     damageNumbers.push_back({it->position, 30.0f, {0,210,80,255}, 1.2f, "+"});
                     break;
@@ -1240,6 +1263,7 @@ void Game::checkCollisions() {
                     damageNumbers.push_back({it->position, 50.0f, {0,200,255,255}, 1.4f, "XP+"});
                     break;
                 case ItemType::NanoCore:
+    audio.playHeal();
                     player.increaseBaseMaxHP(25.0f);
                     player.heal(25.0f);
                     damageNumbers.push_back({it->position, 25.0f, {255,80,200,255}, 1.6f, "HP+"});
@@ -1248,6 +1272,7 @@ void Game::checkCollisions() {
                 case ItemType::PlasmaCell:
                     for (auto& s : player.skills) s.currentCooldown *= 0.3f;
                     damageNumbers.push_back({it->position, 0.0f, {180,0,255,255}, 1.2f, "CD-"});
+    audio.playHeal();
                     break;
                 case ItemType::ScrapMetal:
                     player.heal(8.0f);
@@ -1295,17 +1320,24 @@ void Game::checkCollisions() {
             }
 
             // Quest tracking — quests de Collect avancam ao pegar QUALQUER item
-            // (exceto creditos). Garante que as barras de coleta enchem.
+            // (exceto creditos). CollectRare avanca apenas em raros ou superiores.
             if (it->type != ItemType::Credits) {
+                bool isRareOrBetter = static_cast<int>(it->rarity) >= static_cast<int>(ItemRarity::Rare);
                 for (auto& q : quests) {
-                    if (!q.completed && q.active && q.type == QuestType::Collect) {
+                    if (q.completed || !q.active) continue;
+                    if (q.type == QuestType::Collect) {
                         q.updateProgress(1);
-                        if (q.isComplete() && !q.rewardGiven) grantQuestRewards(q);
+                    } else if (q.type == QuestType::CollectRare && isRareOrBetter) {
+                        q.updateProgress(1);
                     }
+                    if (q.isComplete() && !q.rewardGiven) grantQuestRewards(q);
                 }
             }
 
-            audio.playPickup();
+            if (it->type != ItemType::Credits && static_cast<int>(it->rarity) >= static_cast<int>(ItemRarity::Rare))
+                audio.playItemPickup(static_cast<int>(it->rarity));
+            else
+                audio.playPickup();
             it = items.erase(it);
         } else {
             ++it;
@@ -1366,7 +1398,7 @@ void Game::updateProjectiles(float dt) {
     for (auto it = projectiles.begin(); it != projectiles.end();) {
         it->update(dt);
 
-        bool hitWall = tilemap.isWallAtPosition(it->position);
+        bool hitWall = tilemap.isWallAtPosition(it->position, it->radius) || isOutsideOpenWorldBounds(it->position);
 
         if (it->isGrenade && (hitWall || it->isOutOfRange())) {
             // Grenade explosion
@@ -1398,11 +1430,12 @@ void Game::updateEnemyProjectiles(float dt) {
     for (auto it = enemyProjectiles.begin(); it != enemyProjectiles.end();) {
         it->update(dt);
 
-        bool hitWall = tilemap.isWallAtPosition(it->position);
+        bool hitWall = tilemap.isWallAtPosition(it->position, it->radius) || isOutsideOpenWorldBounds(it->position);
 
         if (it->hitsPlayer(player.position, player.radius)) {
             if (!player.isShielded()) {
                 player.takeDamage(it->damage);
+                audio.playPlayerHurt();
                 noteHurtDir(it->position);
                 hitFlashTimer = 0.30f;
                 particles.spawnHit(player.position, RED, 6);
@@ -1427,10 +1460,12 @@ void Game::noteHurtDir(Vector2 src) {
 }
 
 void Game::autoSave() {
+    std::vector<std::string> buildingLines;
+    buildingSystem.save(buildingLines);
     SaveManager::save(player, quests, currentZone, 0,
                       sessionTime / 60.0f, player.totalKills,
                       totalDeaths, totalBossesKilled, totalPortalsClosed,
-                      (int)difficulty, totalKills);
+                      (int)difficulty, totalKills, &buildingLines);
 }
 
 void Game::showStoryBanner(const std::string& title, const std::string& sub, float dur) {

@@ -301,6 +301,7 @@ void Game::updateAnimals(float dt) {
             move = Vector2Normalize(Vector2Subtract(player.position, a.position));
             if (distToPlayer < 40.0f && a.attackCD <= 0.f && !player.isShielded()) {
                 player.takeDamage(8.0f); noteHurtDir(a.position); hitFlashTimer = 0.2f; a.attackCD = 1.2f;
+                audio.playPlayerHurt();
             }
         } else if (a.fleeing || (!a.hostile && distToPlayer < 160.0f)) {
             // foge do player

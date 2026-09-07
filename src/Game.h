@@ -515,6 +515,27 @@ private:
         return (dx*dx + dy*dy) <= (safeZoneRadius * safeZoneRadius);
     }
 
+    // Retorna true se a posicao estiver fora do disco da fase no mundo aberto.
+    bool      isOutsideOpenWorldBounds(Vector2 pos) const {
+        if (!openWorldMode) return false;
+        float dx = pos.x - safeZoneCenter.x, dy = pos.y - safeZoneCenter.y;
+        return (dx*dx + dy*dy) > (owPhaseRadius * owPhaseRadius);
+    }
+
+    // Projeta a posicao de volta para dentro do limite da fase, se necessario.
+    void      clampInsideOpenWorldBounds(Vector2& pos, float margin) const {
+        if (!openWorldMode) return;
+        float dx = pos.x - safeZoneCenter.x, dy = pos.y - safeZoneCenter.y;
+        float l2 = dx*dx + dy*dy;
+        float limit = owPhaseRadius - margin;
+        if (limit < 0.0f) limit = 0.0f;
+        if (l2 > limit * limit) {
+            float l = sqrtf(l2); if (l < 1.0f) { dx = 1.0f; dy = 0.0f; l = 1.0f; }
+            pos.x = safeZoneCenter.x + dx / l * limit;
+            pos.y = safeZoneCenter.y + dy / l * limit;
+        }
+    }
+
     // ── Coleta de recursos naturais (madeira/pedra/ferro/prata/ouro) ──────────
     enum class ResourceType { Wood = 0, Stone, Iron, Silver, Gold, COUNT };
     struct ResourceNode {

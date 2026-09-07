@@ -691,6 +691,7 @@ void Game::update(float dt) {
             float dmg = enemy.attackIfReady(dt, player.position);
             if (dmg > 0.0f) {
                 player.takeDamage(dmg);
+                audio.playPlayerHurt();
                 noteHurtDir(enemy.position);
                 // Mutador LUA DE SANGUE: o inimigo se cura ao te atingir
                 if (mutatorBloodMoon())
@@ -727,6 +728,7 @@ void Game::update(float dt) {
             if (dist <= explodeRadius && !player.isShielded()) {
                 float falloff = 1.0f - dist / explodeRadius;
                 float dmg = isZergling ? 35.0f : enemy.damage;
+                audio.playPlayerHurt();
                 player.takeDamage(dmg * falloff);
                 noteHurtDir(enemy.position);
                 hitFlashTimer = 0.35f;
@@ -875,6 +877,14 @@ void Game::update(float dt) {
         achievements.onCreditsEarned(totalCreditsEarned);
         player.addXP(2500);
         triggerPlayerSpeech("Todas anomalias fechadas! Zona segura.", 3.5f);
+
+        // Quest tracking: ClosePortal avanca ao fechar uma wave de portais.
+        for (auto& q : quests) {
+            if (!q.completed && q.active && q.type == QuestType::ClosePortal) {
+                q.updateProgress(1);
+                if (q.isComplete() && !q.rewardGiven) grantQuestRewards(q);
+            }
+        }
     }
     // ──────────────────────────────────────────────────────────────────────────
 
@@ -912,7 +922,7 @@ void Game::update(float dt) {
             dyingCryCooldown -= dt;
             if (dyingCryCooldown <= 0.0f) {
                 dyingCryCooldown = 4.0f;
-                audio.playDeathCry();
+                audio.playPlayerDeath();
                 triggerPlayerSpeech("ESTOU MORRENDO! ME AJUDE!", 3.0f);
             }
         } else if (hpPct >= 0.30f) {
@@ -922,7 +932,7 @@ void Game::update(float dt) {
 
     // Player death - respawn (na Arca, se houver uma construida)
     if (player.health <= 0.0f) {
-        audio.playDeathCry();
+        audio.playPlayerDeath();
         triggerPlayerSpeech("NAO... nao acabou ainda!", 3.0f);
         totalDeaths++;
         achievements.onDeathCount(totalDeaths);
@@ -1240,6 +1250,7 @@ void Game::update(float dt) {
                         other.takeDamage(it->maxHealth * 0.4f);
                     }
                 }
+                audio.playPlayerHurt();
                 if (Vector2Distance(it->position, player.position) < aoe && !player.isShielded()) {
                     player.takeDamage(30.0f);
                     noteHurtDir(it->position);

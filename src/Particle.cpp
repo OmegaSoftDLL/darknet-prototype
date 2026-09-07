@@ -20,46 +20,38 @@ void Particle::update(float dt) {
     if (lifetime <= 0.0f) active = false;
 }
 
-void Particle::render() const {
-    float t     = lifetime / maxLifetime;          // 1 -> 0 ao longo da vida
-    float alpha = t * t;                            // fade quadratico (suave)
+namespace {
+    inline float particleAlpha(const Particle& p) {
+        float t = p.lifetime / p.maxLifetime;
+        return t * t;
+    }
+    inline float particleRadius(const Particle& p) {
+        float t = p.lifetime / p.maxLifetime;
+        float sizeMul;
+        if (std::fabs(p.scaleEnd - 1.0f) < 0.01f) sizeMul = t;
+        else sizeMul = 1.0f + (p.scaleEnd - 1.0f) * (1.0f - t);
+        float r = p.radius * sizeMul;
+        return r < 0.0f ? 0.0f : r;
+    }
+}
 
-    // Tamanho: scaleEnd==1 mantem o "encolher" classico (radius*t); caso
-    // contrario interpola de 1.0 (nascimento) ate scaleEnd (morte) — assim
-    // fumaca expande (scaleEnd>1) e aneis colapsam (scaleEnd<1) DE VERDADE.
-    float sizeMul;
-    if (std::fabs(scaleEnd - 1.0f) < 0.01f) sizeMul = t;
-    else                                    sizeMul = 1.0f + (scaleEnd - 1.0f) * (1.0f - t);
-    float r = radius * sizeMul;
-    if (r < 0.0f) r = 0.0f;
-
+void Particle::renderBase() const {
+    float alpha = particleAlpha(*this);
+    float r = particleRadius(*this);
     Color c = ColorAlpha(color, alpha);
 
     switch (shape) {
         case ParticleShape::Circle:
-            if (glow) {
-                // Glow aditivo para faiscas/energia brilharem de verdade
-                BeginBlendMode(BLEND_ADDITIVE);
-                DrawCircleV(position, r * 3.2f, ColorAlpha(color, alpha * 0.05f));
-                DrawCircleV(position, r * 1.9f, ColorAlpha(color, alpha * 0.14f));
-                EndBlendMode();
-            }
             DrawCircleV(position, r, c);
             DrawCircleV(position, r * 0.4f, ColorAlpha(WHITE, alpha * 0.7f));
             break;
 
         case ParticleShape::Spark: {
-            // Faisca = risco fino e nitido na direcao do movimento + nucleo branco
             float speed = std::sqrt(velocity.x*velocity.x + velocity.y*velocity.y);
             float trail = std::min(0.05f, 14.0f / (speed + 1.0f));
             Vector2 tail = {position.x - velocity.x * trail,
                             position.y - velocity.y * trail};
             float thick = std::max(1.0f, r * 0.5f);
-            if (glow) {
-                BeginBlendMode(BLEND_ADDITIVE);
-                DrawLineEx(tail, position, thick * 2.6f, ColorAlpha(color, alpha * 0.18f));
-                EndBlendMode();
-            }
             DrawLineEx(tail, position, thick, c);
             DrawCircleV(position, std::max(1.0f, r * 0.55f), ColorAlpha(WHITE, alpha));
             break;
@@ -67,13 +59,37 @@ void Particle::render() const {
 
         case ParticleShape::Square: {
             float s2 = r * 1.4f;
-            if (glow) {
-                BeginBlendMode(BLEND_ADDITIVE);
-                DrawCircleV(position, s2 * 1.2f, ColorAlpha(color, alpha * 0.12f));
-                EndBlendMode();
-            }
             DrawRectanglePro({position.x, position.y, s2, s2},
                              {s2 * 0.5f, s2 * 0.5f}, rotation, c);
+            break;
+        }
+    }
+}
+
+void Particle::renderGlow() const {
+    if (!glow) return;
+    float alpha = particleAlpha(*this);
+    float r = particleRadius(*this);
+
+    switch (shape) {
+        case ParticleShape::Circle:
+            DrawCircleV(position, r * 3.2f, ColorAlpha(color, alpha * 0.05f));
+            DrawCircleV(position, r * 1.9f, ColorAlpha(color, alpha * 0.14f));
+            break;
+
+        case ParticleShape::Spark: {
+            float speed = std::sqrt(velocity.x*velocity.x + velocity.y*velocity.y);
+            float trail = std::min(0.05f, 14.0f / (speed + 1.0f));
+            Vector2 tail = {position.x - velocity.x * trail,
+                            position.y - velocity.y * trail};
+            float thick = std::max(1.0f, r * 0.5f);
+            DrawLineEx(tail, position, thick * 2.6f, ColorAlpha(color, alpha * 0.18f));
+            break;
+        }
+
+        case ParticleShape::Square: {
+            float s2 = r * 1.4f;
+            DrawCircleV(position, s2 * 1.2f, ColorAlpha(color, alpha * 0.12f));
             break;
         }
     }
@@ -545,5 +561,8 @@ void ParticleSystem::update(float dt) {
 }
 
 void ParticleSystem::render() const {
-    for (const auto& p : particles) p.render();
+    for (const auto& p : particles) p.renderBase();
+    BeginBlendMode(BLEND_ADDITIVE);
+    for (const auto& p : particles) p.renderGlow();
+    EndBlendMode();
 }

@@ -4,6 +4,9 @@
 #include <raymath.h>
 #include <cmath>
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
 
 // ─── Cost table ──────────────────────────────────────────────────────────────
 
@@ -1130,4 +1133,147 @@ void BuildingSystem::renderBuildMenu(int screenW, int screenH) const {
         // Short desc
         DrawText(COSTS[i].desc, cx + 6, cy + 36, 8, {140, 140, 160, 255});
     }
+}
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+
+void BuildingSystem::save(std::vector<std::string>& out) const {
+    out.clear();
+    out.push_back("BDG_V1");
+    out.push_back("buildingCount " + std::to_string(buildings.size()));
+    for (const auto& b : buildings) {
+        char buf[512];
+        snprintf(buf, sizeof(buf),
+                 "bld %f %f %d %f %f %d %d %f %f %d %f %f %f %f %f",
+                 b.position.x, b.position.y,
+                 static_cast<int>(b.type),
+                 b.health, b.maxHealth,
+                 b.level,
+                 b.built ? 1 : 0,
+                 b.buildTimer,
+                 b.productionTimer,
+                 b.spawnQueue,
+                 b.spawnTimer,
+                 b.genTimer,
+                 b.shootCooldown,
+                 b.healTimer,
+                 b.animTimer);
+        out.push_back(buf);
+    }
+    out.push_back("tankCount " + std::to_string(tanks.size()));
+    for (const auto& t : tanks) {
+        char buf[256];
+        snprintf(buf, sizeof(buf),
+                 "tnk %f %f %f %d %f %f",
+                 t.position.x, t.position.y,
+                 t.health,
+                 t.active ? 1 : 0,
+                 t.shootCooldown,
+                 t.orbitAngle);
+        out.push_back(buf);
+    }
+    out.push_back("soldierCount " + std::to_string(soldiers.size()));
+    for (const auto& s : soldiers) {
+        char buf[256];
+        snprintf(buf, sizeof(buf),
+                 "sol %f %f %f %d %f",
+                 s.position.x, s.position.y,
+                 s.health,
+                 s.active ? 1 : 0,
+                 s.shootCooldown);
+        out.push_back(buf);
+    }
+}
+
+bool BuildingSystem::load(const std::vector<std::string>& in) {
+    if (in.empty() || in[0] != "BDG_V1") return false;
+    buildings.clear();
+    tanks.clear();
+    soldiers.clear();
+    pendingCredits = 0;
+    pendingMaterials = 0;
+
+    size_t i = 1;
+    auto nextInt = [&](int& out) -> bool {
+        if (i >= in.size()) return false;
+        out = std::atoi(in[i].c_str());
+        ++i;
+        return true;
+    };
+
+    int buildingCount = 0;
+    while (i < in.size() && in[i].find("buildingCount ") != 0) ++i;
+    if (i >= in.size()) return false;
+    buildingCount = std::atoi(in[i].c_str() + 14);
+    ++i;
+    for (int b = 0; b < buildingCount && i < in.size(); ++b, ++i) {
+        const std::string& line = in[i];
+        if (line.rfind("bld ", 0) != 0) { --b; continue; }
+        float x=0,y=0,health=0,maxHealth=0,buildTimer=0,productionTimer=0,spawnTimer=0,genTimer=0,shootCooldown=0,healTimer=0,animTimer=0;
+        int typeInt=0,level=0,builtInt=0,spawnQueue=0;
+        if (sscanf(line.c_str(),
+                   "bld %f %f %d %f %f %d %d %f %f %d %f %f %f %f %f",
+                   &x, &y, &typeInt, &health, &maxHealth, &level, &builtInt,
+                   &buildTimer, &productionTimer, &spawnQueue, &spawnTimer,
+                   &genTimer, &shootCooldown, &healTimer, &animTimer) < 11) continue;
+        BuildingType t = static_cast<BuildingType>(typeInt);
+        if (typeInt < 0 || typeInt >= NUM_TYPES) t = BuildingType::House;
+        Building bd(Vector2{x,y}, t);
+        bd.health = health;
+        bd.maxHealth = maxHealth;
+        bd.level = level;
+        bd.built = builtInt != 0;
+        bd.buildTimer = buildTimer;
+        bd.productionTimer = productionTimer;
+        bd.spawnQueue = spawnQueue;
+        bd.spawnTimer = spawnTimer;
+        bd.genTimer = genTimer;
+        bd.shootCooldown = shootCooldown;
+        bd.healTimer = healTimer;
+        bd.animTimer = animTimer;
+        applyLevelStats(bd);
+        buildings.push_back(bd);
+    }
+
+    while (i < in.size() && in[i].find("tankCount ") != 0) ++i;
+    if (i < in.size()) {
+        int tankCount = std::atoi(in[i].c_str() + 10);
+        ++i;
+        for (int t = 0; t < tankCount && i < in.size(); ++t, ++i) {
+            const std::string& line = in[i];
+            if (line.rfind("tnk ", 0) != 0) { --t; continue; }
+            float x=0,y=0,health=0,shootCooldown=0,orbitAngle=0;
+            int active=0;
+            if (sscanf(line.c_str(), "tnk %f %f %f %d %f %f",
+                       &x, &y, &health, &active, &shootCooldown, &orbitAngle) < 4) continue;
+            FriendlyTank ft;
+            ft.position = {x,y};
+            ft.health = health;
+            ft.active = active != 0;
+            ft.shootCooldown = shootCooldown;
+            ft.orbitAngle = orbitAngle;
+            tanks.push_back(ft);
+        }
+    }
+
+    while (i < in.size() && in[i].find("soldierCount ") != 0) ++i;
+    if (i < in.size()) {
+        int soldierCount = std::atoi(in[i].c_str() + 13);
+        ++i;
+        for (int s = 0; s < soldierCount && i < in.size(); ++s, ++i) {
+            const std::string& line = in[i];
+            if (line.rfind("sol ", 0) != 0) { --s; continue; }
+            float x=0,y=0,health=0,shootCooldown=0;
+            int active=0;
+            if (sscanf(line.c_str(), "sol %f %f %f %d %f",
+                       &x, &y, &health, &active, &shootCooldown) < 4) continue;
+            FriendlySoldier fs;
+            fs.position = {x,y};
+            fs.health = health;
+            fs.active = active != 0;
+            fs.shootCooldown = shootCooldown;
+            soldiers.push_back(fs);
+        }
+    }
+    return true;
 }

@@ -1019,14 +1019,6 @@ void Enemy::updateZergling(float dt, Vector2 target) {
         facing = (dir.x >= 0) ? 1 : -1;
     }
     if (len <= radius + 15.0f) wantsToExplode = true;
-    if (knockback.x != 0.0f || knockback.y != 0.0f) {
-        position.x  += knockback.x * dt;
-        position.y  += knockback.y * dt;
-        float decay  = std::exp(-8.0f * dt);
-        knockback.x *= decay; knockback.y *= decay;
-        if (std::abs(knockback.x) < 0.5f) knockback.x = 0.0f;
-        if (std::abs(knockback.y) < 0.5f) knockback.y = 0.0f;
-    }
     if (hitFlashTimer > 0.0f) hitFlashTimer -= dt;
 }
 
@@ -1057,14 +1049,6 @@ void Enemy::updateHydra(float dt, Vector2 target) {
     } else {
         wantsToShoot = false;
     }
-    if (knockback.x != 0.0f || knockback.y != 0.0f) {
-        position.x  += knockback.x * dt;
-        position.y  += knockback.y * dt;
-        float decay  = std::exp(-8.0f * dt);
-        knockback.x *= decay; knockback.y *= decay;
-        if (std::abs(knockback.x) < 0.5f) knockback.x = 0.0f;
-        if (std::abs(knockback.y) < 0.5f) knockback.y = 0.0f;
-    }
 }
 
 void Enemy::updateBroodmother(float dt, Vector2 target) {
@@ -1081,14 +1065,6 @@ void Enemy::updateBroodmother(float dt, Vector2 target) {
     if (dist < 500.0f && dist > radius + 20.0f) {
         position.x += dir.x * speed * dt;
         position.y += dir.y * speed * dt;
-    }
-    if (knockback.x != 0.0f || knockback.y != 0.0f) {
-        position.x  += knockback.x * dt;
-        position.y  += knockback.y * dt;
-        float decay  = std::exp(-6.0f * dt);
-        knockback.x *= decay; knockback.y *= decay;
-        if (std::abs(knockback.x) < 0.5f) knockback.x = 0.0f;
-        if (std::abs(knockback.y) < 0.5f) knockback.y = 0.0f;
     }
 }
 
@@ -1219,13 +1195,6 @@ void Enemy::updateAlienBoss(float dt, Vector2 target) {
         wantsToShoot   = true;
         shootDirection = dir;
     } else wantsToShoot = false;
-    if (knockback.x != 0.0f || knockback.y != 0.0f) {
-        position.x  += knockback.x * dt; position.y  += knockback.y * dt;
-        float decay  = std::exp(-8.0f * dt);
-        knockback.x *= decay; knockback.y *= decay;
-        if (std::fabs(knockback.x) < 0.5f) knockback.x = 0.0f;
-        if (std::fabs(knockback.y) < 0.5f) knockback.y = 0.0f;
-    }
 }
 
 // ─── WarCraft Cyberpunk update functions ──────────────────────────────────────
@@ -1261,13 +1230,6 @@ void Enemy::updateOrcCibernetico(float dt, Vector2 target) {
 
     attackCooldown -= dt;
 
-    if (knockback.x != 0.0f || knockback.y != 0.0f) {
-        position.x  += knockback.x * dt; position.y  += knockback.y * dt;
-        float decay  = std::exp(-6.0f * dt);
-        knockback.x *= decay; knockback.y *= decay;
-        if (std::fabs(knockback.x) < 0.5f) knockback.x = 0.0f;
-        if (std::fabs(knockback.y) < 0.5f) knockback.y = 0.0f;
-    }
 }
 
 void Enemy::updatePaladinCorrompido(float dt, Vector2 target) {
@@ -1310,13 +1272,6 @@ void Enemy::updatePaladinCorrompido(float dt, Vector2 target) {
         wantsToShoot = false;
     }
 
-    if (knockback.x != 0.0f || knockback.y != 0.0f) {
-        position.x  += knockback.x * dt; position.y  += knockback.y * dt;
-        float decay  = std::exp(-7.0f * dt);
-        knockback.x *= decay; knockback.y *= decay;
-        if (std::fabs(knockback.x) < 0.5f) knockback.x = 0.0f;
-        if (std::fabs(knockback.y) < 0.5f) knockback.y = 0.0f;
-    }
 }
 
 void Enemy::updateUndeadEnforcer(float dt, Vector2 target) {
@@ -1343,13 +1298,6 @@ void Enemy::updateUndeadEnforcer(float dt, Vector2 target) {
 
     attackCooldown -= dt;
 
-    if (knockback.x != 0.0f || knockback.y != 0.0f) {
-        position.x  += knockback.x * dt; position.y  += knockback.y * dt;
-        float decay  = std::exp(-8.0f * dt);
-        knockback.x *= decay; knockback.y *= decay;
-        if (std::fabs(knockback.x) < 0.5f) knockback.x = 0.0f;
-        if (std::fabs(knockback.y) < 0.5f) knockback.y = 0.0f;
-    }
 }
 
 // ─── WarCraft Cyberpunk render functions ──────────────────────────────────────
