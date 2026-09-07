@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Build + testes + validate (2 seeds)
+    name: Build + tests + validate (2 seeds)
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
@@ -23,16 +23,16 @@ jobs:
       - name: Configure (raylib 5.5 via FetchContent)
         run: cmake -B build -A x64
 
-      - name: Build Release (darknet + testes)
+      - name: Build Release (darknet + tests)
         run: cmake --build build --config Release --target darknet darknet_tests
 
       - name: Build Debug (darknet)
         run: cmake --build build --config Debug --target darknet
 
-      - name: Testes unitarios (doctest 26 casos / 159 asserts)
+      - name: Unit tests (doctest 26 cases / 159 assertions)
         run: build\Release\darknet_tests.exe
 
-      - name: Validate seed 7 (bot 120s) - portao do ciclo
+      - name: Validate seed 7 (bot 120s) - cycle gate
         shell: bash
         run: |
           cd build/Release
@@ -42,7 +42,7 @@ jobs:
           test "$code" -eq 0
           test "$(grep -c 'VALIDACAO: PASSOU' validate.log)" -ge 1
 
-      - name: Validate seed 20260821 (bot 120s) - portao do ciclo
+      - name: Validate seed 20260821 (bot 120s) - cycle gate
         shell: bash
         run: |
           cd build/Release

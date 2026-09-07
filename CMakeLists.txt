@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(DarknetPrototype LANGUAGES CXX)
 
-# Compat: raylib 5.0 declara um cmake_minimum_required antigo que o CMake >= 3.31
-# rejeita. Mantém a populacao do FetchContent funcionando em toolchains novas.
+# Compat: raylib 5.0 declares an old cmake_minimum_required that CMake >= 3.31
+# rejects. Keeps FetchContent working on newer toolchains.
 if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
@@ -82,25 +82,25 @@ if (WIN32)
     target_link_libraries(darknet PRIVATE winmm ws2_32 winhttp shell32)
 endif()
 
-# ── Testes unitarios (doctest, vendored em third_party/doctest) ──────────────
-# Compila APENAS os .cpp das classes testadas (regras puras) — nao o jogo
-# inteiro. Linka raylib porque Enemy/CraftingSystem chamam funcoes da raylib
-# nos renders (nunca executados nos testes; nenhuma janela e aberta).
+# ── Unit tests (doctest, vendored in third_party/doctest) ─────────────────────
+# Compiles ONLY the .cpp files of the tested classes (pure rules) — not the
+# whole game. Links raylib because Enemy/CraftingSystem call raylib functions
+# in their renders (never executed in tests; no window is opened).
 enable_testing()
 add_executable(darknet_tests
     tests/test_main.cpp
     tests/test_cases.cpp
     src/CraftingSystem.cpp
     src/Enemy.cpp
-    src/SpriteGen.cpp     # SpriteBank, referenciado por Enemy::render (nao executado)
-    src/SaveManager.cpp   # save/load roundtrip (V5 + legado V4) — regras puras de arquivo
-    src/Player.cpp        # usado por SaveManager::load (equipItem/applyClass/loadSavedProgress)
-    src/Item.cpp          # Item::createRandom no load de inventario
-    src/Quest.cpp         # construcao/update de quests nos testes
-    src/Skill.cpp         # Player::update/useSkill referenciam Skill
-    src/SkillTree.cpp     # Player::refreshSkillVectors/getEffectiveDamage usam perks
-    src/Projectile.cpp    # testes de projéteis
-    src/Tilemap.cpp       # testes de tilemap
+    src/SpriteGen.cpp     # SpriteBank, referenced by Enemy::render (not executed)
+    src/SaveManager.cpp   # save/load roundtrip (V5 + legacy V4) — pure file rules
+    src/Player.cpp        # used by SaveManager::load (equipItem/applyClass/loadSavedProgress)
+    src/Item.cpp          # Item::createRandom on inventory load
+    src/Quest.cpp         # quest construction/update in tests
+    src/Skill.cpp         # Player::update/useSkill reference Skill
+    src/SkillTree.cpp     # Player::refreshSkillVectors/getEffectiveDamage use perks
+    src/Projectile.cpp    # projectile tests
+    src/Tilemap.cpp       # tilemap tests
 )
 target_include_directories(darknet_tests PRIVATE src third_party)
 target_link_libraries(darknet_tests PRIVATE raylib)
@@ -109,20 +109,20 @@ if (WIN32)
 endif()
 add_test(NAME darknet_tests COMMAND darknet_tests)
 
-# Copia os recursos para o diretório do executável (Release/Debug) — assim o jogo
-# roda mesmo ao executar o .exe diretamente (não só do diretório do projeto).
-# content/ = conteudo em DADO (fases etc). Vai junto do exe para poder ser
-# editado sem recompilar - e a base do "motor que evolui sem tocar em C++".
+# Copy resources to the executable directory (Release/Debug) so the game runs
+# when launched directly, not only from the project directory.
+# content/ = DATA content (phases etc). It ships with the exe so it can be edited
+# without recompiling — the basis of the "engine that evolves without touching C++".
 if (EXISTS "${CMAKE_SOURCE_DIR}/content")
     add_custom_command(TARGET darknet POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${CMAKE_SOURCE_DIR}/content" "$<TARGET_FILE_DIR:darknet>/content"
-        COMMENT "Copiando content/ para o diretorio do executavel")
+        COMMENT "Copying content/ to the executable directory")
 endif()
 
 if (EXISTS "${CMAKE_SOURCE_DIR}/resources")
     add_custom_command(TARGET darknet POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${CMAKE_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:darknet>/resources"
-        COMMENT "Copiando resources/ para o diretorio do executavel")
+        COMMENT "Copying resources/ to the executable directory")
 endif()
