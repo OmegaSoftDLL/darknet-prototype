@@ -29,7 +29,7 @@ jobs:
       - name: Build Debug (darknet)
         run: cmake --build build --config Debug --target darknet
 
-      - name: Testes unitarios (doctest 12 casos / 109 asserts)
+      - name: Testes unitarios (doctest 26 casos / 159 asserts)
         run: build\Release\darknet_tests.exe
 
       - name: Validate seed 7 (bot 120s) - portao do ciclo
