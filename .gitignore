@@ -48,6 +48,9 @@ Thumbs.db
 obsidian-vault/
 AUDITORIA_COMPLETA.md
 BACKLOG_IMPLEMENTACAO_CLAUDE.md
+
+# Release packages (generated locally and uploaded to GitHub Releases)
+*.zip
 CLAUDE_CODE_GUIDELINES.md
 COORDENACAO.md
 DARKNET_VICIO_E_MARKETING.md
