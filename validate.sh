@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# ─────────────────────────────────────────────────────────────────────────────
-# PORTAO DE VALIDACAO do Darknet.
-# Compila as DUAS configuracoes (o jogo e aberto pelo Release: Debug passando nao
-# prova nada) e roda o bot com seed fixa. Sai != 0 se a build nao ficou jogavel.
-#   uso: ./validate.sh [segundos] [seed] [headless]
-#   headless=1 roda sem janela/GPU (mesmo modo da CI)
-# ─────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
+# Darknet validation gate.
+# Builds both configurations (the game must run in Release; Debug-only proves
+# nothing) and runs the bot with a fixed seed. Exits non-zero if the build is
+# not playable.
+#   usage: ./validate.sh [seconds] [seed] [headless]
+#   headless=1 runs without window/GPU (same mode as CI)
+# ------------------------------------------------------------------------------
 set -u
 SECS="${1:-100}"
 SEED="${2:-20260821}"
@@ -18,20 +19,20 @@ FAIL=0
 for CFG in Debug Release; do
   echo "== build $CFG =="
   if ! "$CMAKE" --build "$ROOT/build" --config "$CFG" 2>&1 | grep -E "error C|error LNK|darknet.vcxproj ->"; then
-    echo "  (sem saida relevante do build)"
+    echo "  (no relevant build output)"
   fi
   if [ ! -f "$ROOT/build/$CFG/darknet.exe" ]; then
-    echo "FALHOU: $CFG nao gerou executavel"; FAIL=1; continue
+    echo "FAILED: $CFG did not produce executable"; FAIL=1; continue
   fi
 done
 
-echo "== teste jogavel (Release, ${SECS}s, seed $SEED) $EXTRA =="
+echo "== playable test (Release, ${SECS}s, seed $SEED) $EXTRA =="
 ( cd "$ROOT/build/Release" && ./darknet.exe --autotest --test-seconds="$SECS" --seed="$SEED" $EXTRA > validate.log 2>&1 )
 CODE=$?
 grep -E "VALIDACAO|FASES:|POSTFX|WORLDLIT" "$ROOT/build/Release/validate.log" | head -20
 if [ "$CODE" -ne 0 ]; then
-  echo "REPROVADO (exit $CODE) - motivos acima"; FAIL=1
+  echo "REPROVED (exit $CODE) - reasons above"; FAIL=1
 else
-  echo "APROVADO"
+  echo "APPROVED"
 fi
 exit $FAIL
