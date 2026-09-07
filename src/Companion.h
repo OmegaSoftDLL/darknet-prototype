@@ -8,14 +8,14 @@ class Enemy;
 
 enum class CompanionType {
     // ── Existentes (ordem PRESERVADA — Game usa F2/F3/F4) ────────────────────
-    MarcoVeil,    // humano NEXUS — atirador de precisao (sharpshooter)
-    Steel,        // robo reprogramado — tanque/guardiao com pisada AoE
-    Rex,          // cao robotico — flanqueador veloz corpo-a-corpo
-    // ── Novos (precisam o Game ligar tecla p/ invocar; ver flags abaixo) ─────
-    Guardian,     // escudo pesado — fica ENTRE o player e a ameaca (body-block)
-    Sniper,       // atirador de elite — alcance enorme, dano alto, recarga lenta
-    Healer,       // dron medico — regenera o player (usa wantsHeal — Game precisa ler)
-    LootDrone,    // dron coletor — pega itens/loot (usa wantsCollect — Game precisa ler)
+    MarcoVeil,    // humano NEXUS — shooter of precisao (sharpshooter)
+    Steel,        // robo reprogramado — tank/guardiao with pisada AoE
+    Rex,          // cao robotico — flanqueador veloz body-the-body
+    // ── Novos (precisam the Game ligar key p/ invocar; see flags below) ─────
+    Guardian,     // shield heavy — stays ENTRE the player and the ameaca (body-block)
+    Sniper,       // shooter of elite — range enorme, damage high, recharge slow
+    Healer,       // dron medico — regenera the player (usa wantsHeal — Game precisa read)
+    LootDrone,    // dron coletor — gets items/loot (usa wantsCollect — Game precisa read)
 };
 
 struct Companion {
@@ -38,8 +38,8 @@ struct Companion {
     float    skillCooldown  = 0.f;
     float    skillRate       = 8.f;
     bool     wantsSkill      = false;
-    bool     alerted         = false;   // ha inimigos por perto
-    float    formationPhase  = 0.f;     // angulo proprio na formacao ao redor do player
+    bool     alerted         = false;   // ha enemies by near
+    float    formationPhase  = 0.f;     // angle own in the formation around of the player
 
     // Shooting
     bool     wantsToShoot   = false;
@@ -55,7 +55,7 @@ struct Companion {
 
     // Death / revive
     float    deadTimer      = 0.f;          // counts up while dead
-    static constexpr float deadDuration = 9.f;  // segundos caido antes de reviver
+    static constexpr float deadDuration = 9.f;  // seconds caido before reviver
 
     // DogAI rush state
     bool     isRushing      = false;
@@ -72,24 +72,24 @@ struct Companion {
     float    aoeRadius      = 80.f;
     float    aoeDamage      = 30.f;
 
-    // ── NOVAS interacoes (Game pode LER e aplicar; default = inertes) ────────
-    bool     wantsHeal      = false;   // Healer: o Game deve curar o player
-    float    healAmount     = 0.f;     //  quanto curar neste frame
+    // ── NOVAS interacoes (Game can LER and aplicar; default = inertes) ────────
+    bool     wantsHeal      = false;   // Healer: the Game must heal the player
+    float    healAmount     = 0.f;     //  the heal neste frame
     float    healRadius     = 200.f;
-    bool     taunting       = false;   // Guardian/Steel em postura de guarda
-    bool     wantsCollect   = false;   // LootDrone: sinaliza coleta de itens proximos
+    bool     taunting       = false;   // Guardian/Steel in postura of guard
+    bool     wantsCollect   = false;   // LootDrone: sinaliza coleta of items proximos
     float    collectRadius  = 160.f;
 
-    // ── Personalidade (emotes) — self-contained, render proprio ──────────────
+    // ── Personalidade (emotes) — self-contained, render own ──────────────
     std::string emoteText;
     float       emoteTimer  = 0.f;
     float       idleEmoteCD = 6.f;
-    float       skillFlash  = 0.f;     // brilho ao usar skill
+    float       skillFlash  = 0.f;     // glow to the usar skill
 
     explicit Companion(CompanionType t);
 
-    // Reseta o contador de "vagas" de formacao entre partidas (restartRun) —
-    // antes era um static de .cpp que nunca voltava a zero.
+    // Reseta the contador of "slots" of formation between partidas (restartRun) —
+    // before era um static of .cpp that never voltava the zero.
     static void resetSpawnIndex();
 
     void update(float dt, Vector2 playerPos, const std::vector<Enemy*>& nearbyEnemies);
@@ -117,9 +117,9 @@ private:
     void renderEmote    () const;
     void renderSkillReady() const;
 
-    // Movimento: orbita o player numa "vaga" de formacao (espalha companheiros)
+    // Movement: orbita the player numa "slot" of formation (espalha companheiros)
     void followFormation(float dt, Vector2 playerPos, float desiredDist);
-    void retreatTo(float dt, Vector2 playerPos);    // recua p/ perto do player (HP baixo)
+    void retreatTo(float dt, Vector2 playerPos);    // retreats p/ near the player (HP down)
     void emote(const char* txt, float dur = 2.2f);
     Enemy* findNearestEnemy(const std::vector<Enemy*>& enemies, float maxRange) const;
     int    countEnemies(const std::vector<Enemy*>& enemies, Vector2 center, float r) const;

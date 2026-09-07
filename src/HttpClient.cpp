@@ -1,4 +1,4 @@
-// HttpClient — implementação sobre WinHTTP.
+// HttpClient — implementation about WinHTTP.
 #include <winsock2.h>
 #include <windows.h>
 #include <winhttp.h>
@@ -26,8 +26,8 @@ HttpResponse request(const std::string& method, const std::string& host, int por
                                      WINHTTP_ACCESS_TYPE_NO_PROXY,
                                      WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hSession) return out;
-    // Timeouts (ms): resolve/connect/send/receive — sem isso uma rede ruim trava a
-    // thread indefinidamente (e o destrutor do StoreClient esperando por ela).
+    // Timeouts (ms): resolve/connect/send/receive — without isso uma network ruim trava the
+    // thread indefinidamente (and the destrutor of the StoreClient esperando by ela).
     WinHttpSetTimeouts(hSession, 4000, 4000, 5000, 5000);
 
     HINTERNET hConnect = WinHttpConnect(hSession, widen(host).c_str(), (INTERNET_PORT)port, 0);
@@ -35,9 +35,9 @@ HttpResponse request(const std::string& method, const std::string& host, int por
 
     std::wstring wmethod = widen(method);
     std::wstring wpath   = widen(path);
-    // WINHTTP_FLAG_SECURE => https (validação de certificado do Windows).
-    // Sem ele, conexão em texto puro. Chamar com useTls=true apenas quando a
-    // URL de API for https:// (ex.: gateway de produção com certificado real).
+    // WINHTTP_FLAG_SECURE => https (validation of certificate of the Windows).
+    // Sem ele, connection in text puro. Call with useTls=true only when the
+    // URL of API for https:// (ex.: gateway of production with certificate real).
     DWORD flags = useTls ? WINHTTP_FLAG_SECURE : 0;
     HINTERNET hRequest = WinHttpOpenRequest(hConnect, wmethod.c_str(), wpath.c_str(),
                                             nullptr, WINHTTP_NO_REFERER,

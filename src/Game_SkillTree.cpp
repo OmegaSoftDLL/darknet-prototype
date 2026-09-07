@@ -42,10 +42,10 @@ void Game::drawSkillTreePanel() const {
     DrawPanel(px, py, pw, ph, Color{0, 235, 255, 255});
     DrawRectangle(px, py, pw, 3, ColorAlpha({0, 235, 255, 255}, 0.8f));
 
-    DrawText("HACK TREE // SISTEMA DE INVASAO", px + 24, py + 12, 22, Color{235, 245, 255, 255});
+    DrawText("HACK TREE // INVASION SYSTEM", px + 24, py + 12, 22, Color{235, 245, 255, 255});
     DrawRectangle(px + 24, py + 40, (int)(pw * 0.62f), 2, ColorAlpha({0, 235, 255, 255}, 0.35f));
     DrawRectangle(px + 24 + (int)(pw * 0.62f), py + 38, 8, 6, ColorAlpha({255, 180, 40, 255}, 0.9f));
-    DrawText(TextFormat("Pontos de hack: %d", player.skillPoints), px + pw - 300, py + 16, 16,
+    DrawText(TextFormat("Points of hack: %d", player.skillPoints), px + pw - 300, py + 16, 16,
              player.skillPoints > 0 ? Color{0, 255, 200, 255} : Color{120, 130, 160, 255});
 
     const int colW = 320;
@@ -82,7 +82,7 @@ void Game::drawSkillTreePanel() const {
                 DrawLine(cx+colW-sc, ry+rowH, cx+colW, ry+rowH-sc, ColorAlpha({0, 235, 255, 255}, 0.9f));
             }
 
-            DrawText(owned ? "COMPRADO" : (canGo ? "COMPRAVEL" : "BLOQUEADO"),
+            DrawText(owned ? "COMPRADO" : (canGo ? "COMPRASPEED" : "BLOQUEADO"),
                      cx + 12, ry + 6, 13,
                      owned ? Color{0, 255, 200, 255}
                            : (canGo ? Color{255, 220, 120, 255} : Color{110, 120, 145, 255}));
@@ -91,11 +91,11 @@ void Game::drawSkillTreePanel() const {
                                                         : ColorAlpha(WHITE, 0.9f));
             DrawText(pk.desc, cx + 12, ry + 44, 11,
                      owned ? ColorAlpha(WHITE, 0.65f) : ColorAlpha(WHITE, 0.55f));
-            DrawText(TextFormat("CUSTO: 1 ponto  (T%d)", pk.tier + 1), cx + 12, ry + 72, 10,
+            DrawText(TextFormat("COST: 1 point  (T%d)", pk.tier + 1), cx + 12, ry + 72, 10,
                      ColorAlpha(owned ? Color{0, 255, 200, 255} : bc, 0.8f));
         }
     }
 
-    DrawText("W/S navegar   ENTER comprar   X/ESC fechar", px + 28, py + ph - 26, 13,
+    DrawText("W/S navegar   ENTER buy   X/ESC close", px + 28, py + ph - 26, 13,
              Color{200, 210, 230, 255});
 }

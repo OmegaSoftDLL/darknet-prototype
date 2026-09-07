@@ -1,5 +1,5 @@
-// Game_Bot.cpp — decisoes do bot/autotest (extraido de Game::handleInput).
-// Mesma classe Game.
+// Game_Bot.cpp — decisoes of the bot/autotest (extraido of Game::handleInput).
+// Same class Game.
 #include "Game.h"
 #include "SkillTree.h"
 #include <raylib.h>
@@ -15,7 +15,7 @@ void Game::updateBotControl(float dt) {
     if (botController.active) {
         std::vector<Vector2> enemyPos;
         enemyPos.reserve(enemies.size());
-        for (const auto& e : enemies) enemyPos.push_back(e.position);
+        for (const auto& and : enemies) enemyPos.push_back(and.position);
 
         std::vector<Vector2> itemPos;
         itemPos.reserve(items.size() + xpOrbs.size());
@@ -26,7 +26,7 @@ void Game::updateBotControl(float dt) {
         for (int si2 = 0; si2 < 6 && si2 < (int)player.skills.size(); ++si2)
             skillsReady[si2] = player.skills[si2].isReady();
 
-        // Sensores de parede — 8 direcoes ao redor do player (alinhado a k8DirAngles)
+        // Sensores of wall — 8 directions around of the player (alinhado the k8DirAngles)
         {
             static const float k8[8] = {
                 0.0f, (float)(PI*0.25), (float)(PI*0.5), (float)(PI*0.75),
@@ -41,37 +41,37 @@ void Game::updateBotControl(float dt) {
             }
         }
 
-        // ── Diagnostico de FPS: picos de entidades + snapshot no FPS mais baixo ──
+        // ── Diagnostic of FPS: picos of entidades + snapshot in the FPS more down ──
         {
-            int ne = (int)enemies.size(), ni = (int)items.size(), no = (int)xpOrbs.size();
+            int ne = (int)enemies.size(), ni = (int)items.size(), in the = (int)xpOrbs.size();
             int np = (int)projectiles.size(), nep = (int)enemyProjectiles.size();
             int nu = (int)buildingSystem.tanks.size() + (int)buildingSystem.soldiers.size();
             if (ne  > botController.peakEnemies)     botController.peakEnemies = ne;
             if (ni  > botController.peakItems)       botController.peakItems = ni;
-            if (no  > botController.peakOrbs)        botController.peakOrbs = no;
+            if (in the  > botController.peakOrbs)        botController.peakOrbs = in the;
             if (np  > botController.peakProjectiles) botController.peakProjectiles = np;
             if (nep > botController.peakEnemyProj)   botController.peakEnemyProj = nep;
             if (nu  > botController.peakUnits)        botController.peakUnits = nu;
             float fps = headless ? headlessFps : (float)GetFPS();
             if (fps > 0.0f && fps < botController.fpsLowValue &&
-                botController.fpsQuarantine <= 0.0f && dt <= 0.25f) {   // ignora janela pos-carga
+                botController.fpsQuarantine <= 0.0f && dt <= 0.25f) {   // ignora window pos-load
                 botController.fpsLowValue     = fps;
                 botController.fpsLowEnemies   = ne;
                 botController.fpsLowProj      = np + nep;
-                botController.fpsLowParticles = 0; // preenchido abaixo se disponivel
+                botController.fpsLowParticles = 0; // preenchido below if available
             }
         }
 
-        // Pathfinding do bot. A consulta antiga era so `tilemap.isWallAtPosition`:
-        // ignorava as estruturas de chunk (m_chunkSolids) E a barreira da fase, entao
-        // o BFS tracava rota atravessando predio e parede de energia. O bot encostava,
-        // era empurrado de volta e repetia - foram os 4 travamentos >10s que o portao
-        // de validacao acusou.
+        // Pathfinding of the bot. A consulta antiga era only `tilemap.isWallAtPosition`:
+        // ignorava the estruturas of chunk (m_chunkSolids) E the barrier of the phase, entao
+        // the BFS tracava route atravessando building and wall of energy. O bot encostava,
+        // era empurrado of returns and repetia - foram the 4 travamentos >10s that the portao
+        // of validation acusou.
         if (!botController.wallQuery)
             botController.wallQuery = [this](Vector2 p) {
-                // Testa o CORPO, nao um ponto: existe fresta com o centro do tile
-                // livre por onde o personagem (raio ~22u) nao passa. A rota mandava
-                // atravessar, a colisao barrava, e o bot empurrava parede pra sempre.
+                // Testa the BODY, not um point: existe fresta with the center of the tile
+                // livre by where the character (radius ~22u) not passes. A route mandava
+                // atravessar, the collision barrava, and the bot empurrava wall to always.
                 const float BR = 24.0f;
                 if (isBlocked(p)) return true;
                 if (isBlocked({ p.x + BR, p.y })) return true;
@@ -79,24 +79,24 @@ void Game::updateBotControl(float dt) {
                 if (isBlocked({ p.x, p.y + BR })) return true;
                 if (isBlocked({ p.x, p.y - BR })) return true;
                 float dx = p.x - safeZoneCenter.x, dy = p.y - safeZoneCenter.y;
-                float lim = owPhaseRadius - 60.0f;          // margem: nao colar na barreira
+                float lim = owPhaseRadius - 60.0f;          // margem: not colar in the barrier
                 return openWorldMode && (dx*dx + dy*dy > lim*lim);
             };
-        // Centro para o escape: o REFUGIO da fase. Antes apontava para o centro do
-        // mapa fixo (12288,12288), fora da barreira - o "escape" jogava o bot contra
-        // a parede em vez de tirar dele.
+        // Center for the escape: the REFUGE of the phase. Antes apontava for the center of the
+        // map fixed (12288,12288), outside the barrier - the "escape" jogava the bot contra
+        // the wall instead of tirar dele.
         botController.worldCenter = safeZoneCenter;
-        botController.worldRadius = owPhaseRadius;   // o bot conhece o tamanho da fase
-        // Zona segura: inimigos so existem FORA dela — o bot usa isso para
-        // forcar a exploracao para fora do refugio (era a causa de 0 abates).
+        botController.worldRadius = owPhaseRadius;   // the bot conhece the size of the phase
+        // Zone segura: enemies only existem FORA dela — the bot usa isso to
+        // force the exploracao to outside the refuge (era the causa of 0 kills).
         botController.safeZoneCenter = safeZoneCenter;
         botController.safeZoneRadius = safeZoneRadius;
-        // Portal de fase do mundo aberto — sem isto o bot nunca avancava de fase:
-        // recebia so tilemap.portals (sistema antigo, vazio no mundo aberto).
+        // Portal of phase of the world open — without isto the bot never avancava of phase:
+        // recebia only tilemap.portals (system old, empty in the world open).
         botController.owPortalPos  = owPortalPos;
         botController.owPortalOpen = owPortalOpen;
 
-        // Portais de saida da zona — para o bot avancar de fase (AdvancePhase).
+        // Portals of output of the zone — for the bot advance of phase (AdvancePhase).
         std::vector<Vector2> portalPos;
         portalPos.reserve(tilemap.portals.size());
         for (const auto& zp : tilemap.portals) portalPos.push_back(zp.position);
@@ -109,35 +109,35 @@ void Game::updateBotControl(float dt) {
             (headless ? headlessFps : (float)GetFPS()),
             enemyPos, itemPos, skillsReady, portalPos, 0);
 
-        // Pedido de avanco de fase do bot — consumido por updatePhasePortal
-        // (que tambem aceita a tecla E do jogador humano).
+        // Pedido of avanco of phase of the bot — consumido by updatePhasePortal
+        // (that also accepted the key E of the player humano).
         if (dec.shouldUsePortal) botWantsPortal = true;
 
         if (dec.shouldQuit) {
-            botController.writeReport("bot_report_final.txt");   // relativo ao CWD
+            botController.writeReport("bot_report_final.txt");   // relativo to the CWD
             quitRequested = true;
             return;
         }
 
-        // Auto-save parcial a cada 5 minutos de teste
+        // Auto-save partial the cada 5 minutes of test
         if (botController.autoTest) {
             botReportSaveTimer += dt;
             if (botReportSaveTimer >= 300.0f) {
                 botReportSaveTimer = 0.0f;
                 int minElapsed = (int)(botController.testTimer / 60.0f);
-                std::string rpath = "bot_report_" +   // relativo ao CWD
+                std::string rpath = "bot_report_" +   // relativo to the CWD
                                     std::to_string(minElapsed) + "min.txt";
                 botController.writeReport(rpath);
-                botController.addLog("Relatorio parcial salvo (" + std::to_string(minElapsed) + "min)");
+                botController.addLog("Report partial saved (" + std::to_string(minElapsed) + "min)");
             }
         }
 
         if (dec.shouldMove) {
-            // Stuck e pathfinding sao gerenciados DENTRO do BotController
-            // (updateStuckTracking com janela de 0.5s + BFS em computePathDir).
-            // O tracker duplicado que havia aqui media deslocamento de 1 frame
-            // (moved < 2.5px) e o botFindPath local disputava a rota com o BFS
-            // do bot — removidos; o alvo do bot ja vem roteado.
+            // Stuck and pathfinding sao gerenciados DENTRO of the BotController
+            // (updateStuckTracking with window of 0.5s + BFS in computePathDir).
+            // O tracker duplicado that havia here media deslocamento of 1 frame
+            // (moved < 2.5px) and the botFindPath local disputava the route with the BFS
+            // of the bot — removidos; the alvo of the bot already comes roteado.
             moveTarget = dec.moveTarget;
             hasTarget  = true;
         }
@@ -152,9 +152,9 @@ void Game::updateBotControl(float dt) {
             if (len > 0.001f) botAimDir = {toE.x/len, toE.y/len};
         }
         // Skill 1 — Laser
-        // Contagem de disparo AQUI (apos a re-verificacao isReady): antes o
-        // BotController ja contava ao DECIDIR, inflando skillsFired mesmo
-        // quando a skill nao saia por cooldown.
+        // Contagem of shot AQUI (after the re-verificacao isReady): before the
+        // BotController already contava to the DECIDIR, inflando skillsFired same
+        // when the skill not saia by cooldown.
         if (dec.shouldUseSkill1 && (int)player.skills.size() > 0 && player.skills[0].isReady()) {
             player.useSkill(0, dec.nearestEnemyPos);
             float dmgL = player.getEffectiveDamage() + player.skills[0].damage;
@@ -164,8 +164,8 @@ void Game::updateBotControl(float dt) {
             float baseA = std::atan2(botAimDir.y, botAimDir.x);
             for (int k = 1; k <= spread; ++k) {
                 for (int s : {-1, 1}) {
-                    float a = baseA + s * 0.12f * (float)k;
-                    Vector2 d = {std::cos(a), std::sin(a)};
+                    float the = baseA + s * 0.12f * (float)k;
+                    Vector2 d = {std::cos(the), std::sin(the)};
                     projectiles.emplace_back(player.position, d, dmgL * 0.6f, 550.0f, 560.0f,
                                              Color{0,200,255,180});
                 }
@@ -198,7 +198,7 @@ void Game::updateBotControl(float dt) {
             botController.skillsFired++;
             botController.skillUsageCounts[2]++;
         }
-        // Skill 4 — Sobrecarga
+        // Skill 4 — Overload
         if (dec.shouldUseSkill4 && (int)player.skills.size() > 3 && player.skills[3].isReady()) {
             player.useSkill(3, dec.nearestEnemyPos);
             player.overloadTimer = 8.0f + SkillTree::statsFor(player.perkMask).overloadBonus;
@@ -207,7 +207,7 @@ void Game::updateBotControl(float dt) {
             botController.skillsFired++;
             botController.skillUsageCounts[3]++;
         }
-        // Skill 5 — Barreira
+        // Skill 5 — Barrier
         if (dec.shouldUseSkill5 && (int)player.skills.size() > 4 && player.skills[4].isReady()) {
             player.useSkill(4, dec.nearestEnemyPos);
             player.shieldTimer = 3.0f;
@@ -215,7 +215,7 @@ void Game::updateBotControl(float dt) {
             botController.skillsFired++;
             botController.skillUsageCounts[4]++;
         }
-        // Skill 6 — Rajada
+        // Skill 6 — Burst
         if (dec.shouldUseSkill6 && (int)player.skills.size() > 5 && player.skills[5].isReady()) {
             player.useSkill(5, dec.nearestEnemyPos);
             float baseAngle6 = std::atan2(botAimDir.y, botAimDir.x);
@@ -235,14 +235,14 @@ void Game::updateBotControl(float dt) {
         botAimTarget = dec.moveTarget;
 
         // ════════════════════════════════════════════════════════════════════
-        // BOT: exercita TODOS os sistemas — convoca aliados, constroi tanques/
-        // torres/quarteis, produz unidades e auto-evolui as estruturas.
+        // BOT: exercita TODOS the sistemas — convoca aliados, constroi tanques/
+        // torres/quarteis, produz unidades and auto-evolui the estruturas.
         // ════════════════════════════════════════════════════════════════════
         {
-            // Timers sao MEMBROS do Game (eram static de funcao: sobreviviam
-            // ao restartRun e a automacao voltava "adiantada" na nova partida).
-            // Em autoTest garante um fluxo de recursos para conseguir exercitar
-            // construcoes/evolucoes mesmo em fases iniciais.
+            // Timers sao MEMBROS of the Game (eram static of function: sobreviviam
+            // to the restartRun and the automacao voltava "adiantada" in the new match).
+            // Em autoTest ensures um fluxo of resources to manage exercitar
+            // structures/evolucoes same in phases iniciais.
             if (botController.autoTest) {
                 botStipendTimer += dt;
                 if (botStipendTimer >= 5.0f) {
@@ -266,7 +266,7 @@ void Game::updateBotControl(float dt) {
                 }
             }
 
-            // 2) Construir estruturas variadas num anel ao redor do bot
+            // 2) Construir estruturas variadas num anel around of the bot
             botBuildTimer -= dt;
             if (botBuildTimer <= 0.0f && (int)buildingSystem.buildings.size() < 12) {
                 botBuildTimer = 6.0f;
@@ -291,14 +291,14 @@ void Game::updateBotControl(float dt) {
                         player.credits   -= cc;
                         materialMetal    -= mc;
                         materialCarapace -= ac;
-                        botController.addLog(TextFormat("Estrutura construida (tipo %d)",
+                        botController.addLog(TextFormat("Struct built (type %d)",
                                                         buildingSystem.selectedType));
                         break;
                     }
                 }
             }
 
-            // 3) Produzir unidades das fabricas/quarteis existentes
+            // 3) Produzir unidades of the fabricas/quarteis existentes
             botProduceTimer -= dt;
             if (botProduceTimer <= 0.0f && !buildingSystem.buildings.empty()) {
                 botProduceTimer = 7.0f;
@@ -306,19 +306,19 @@ void Game::updateBotControl(float dt) {
                     if (b.type == BuildingType::TankFactory ||
                         b.type == BuildingType::Barracks) {
                         if (buildingSystem.clickProduce(b.position, player.credits) == 1) {
-                            botController.addLog("Unidade produzida");
+                            botController.addLog("Unidade produced");
                             break;
                         }
                     }
                 }
             }
 
-            // 4) Auto-evolucao: evolui a estrutura mais proxima
+            // 4) Auto-evolution: evolui the struct more next
             botUpgradeTimer -= dt;
             if (botUpgradeTimer <= 0.0f) {
                 botUpgradeTimer = 15.0f;
                 if (buildingSystem.upgradeNearby(player.position, player.credits) == 1)
-                    botController.addLog("Estrutura evoluida");
+                    botController.addLog("Struct evoluida");
             }
         }
     }

@@ -11,14 +11,14 @@
 // ─── Cost table ──────────────────────────────────────────────────────────────
 
 const BuildingCost BuildingSystem::COSTS[BuildingSystem::NUM_TYPES] = {
-    { 200, 0,  0,  "Arca",           "Nucleo da base. Renasce aqui. Cura + aura de bonus."     },
-    { 80,  0,  0,  "Base de Apoio",  "Gera 10 creditos a cada 8s. Sua fonte de renda."         },
-    { 150, 5,  0,  "Quartel",        "Produz soldados aliados que atacam inimigos."             },
-    { 300, 8,  3,  "Fabrica de Tank","Produz tanques amigos a cada 30s."                       },
-    { 120, 3,  1,  "Torre",          "Atira automaticamente nos inimigos em 220px."             },
-    { 100, 4,  2,  "Extrator",       "Gera MetalScrap passivamente."                           },
-    { 50,  2,  0,  "Parede",         "Barreira que bloqueia inimigos. 800 HP."                 },
-    { 180, 6,  0,  "MedBay",         "Cura jogador e companions em 120px a cada 3s."           },
+    { 200, 0,  0,  "Arca",           "Core of the base. Renasce here. Healing + aura of bonus."     },
+    { 80,  0,  0,  "Base of Apoio",  "Generates 10 credits the cada 8s. Your fonte of renda."         },
+    { 150, 5,  0,  "Quartel",        "Produz soldados aliados that atacam enemies."             },
+    { 300, 8,  3,  "Fabrica of Tank","Produz tanques amigos the cada 30s."                       },
+    { 120, 3,  1,  "Torre",          "Atira automaticamente in the enemies in 220px."             },
+    { 100, 4,  2,  "Extrator",       "Generates MetalScrap passivamente."                           },
+    { 50,  2,  0,  "Wall",         "Barrier that bloqueia enemies. 800 HP."                 },
+    { 180, 6,  0,  "MedBay",         "Healing player and companions in 120px the cada 3s."           },
 };
 
 // ─── Building constructor ─────────────────────────────────────────────────────
@@ -27,7 +27,7 @@ Building::Building(Vector2 pos, BuildingType t) : position(pos), type(t) {
     switch (t) {
         case BuildingType::Ark:
             health = maxHealth = 600.f;
-            healRadius = 240.f; healAmount = 35.f; healRate = 2.0f; // cura mais forte + raio maior
+            healRadius = 240.f; healAmount = 35.f; healRate = 2.0f; // healing more strong + radius maior
             tintColor = {0, 255, 200, 255};
             break;
         case BuildingType::House:
@@ -116,8 +116,8 @@ void BuildingSystem::update(float dt, Vector2 playerPos,
         updateBuilding(b, dt, playerPos, enemies);
     }
 
-    // Projecteis inimigos derrubam construcoes e unidades aliadas.
-    // Paredes barram o tiro; predios comuns levam dano mas deixa o projétil passar.
+    // Projecteis enemies derrubam structures and unidades aliadas.
+    // Walls barram the shot; buildings comuns levam damage mas deixa the projectile pass.
     if (enemyProj) {
         for (auto& ep : *enemyProj) {
             bool wallHit = false;
@@ -131,7 +131,7 @@ void BuildingSystem::update(float dt, Vector2 playerPos,
                     b.health -= ep.damage;
                     if (isWall) { ep.active = false; wallHit = true; }
                     if (b.health <= 0.f) b.active = false;
-                    break;   // primeira construcao atingida por este projetil
+                    break;   // first structure atingida by this projectile
                 }
             }
             if (wallHit) continue;
@@ -148,7 +148,7 @@ void BuildingSystem::update(float dt, Vector2 playerPos,
         }
     }
 
-    // Remove dead buildings
+    // Removes dead buildings
     buildings.erase(std::remove_if(buildings.begin(), buildings.end(),
         [](const Building& b){ return !b.active; }), buildings.end());
 
@@ -156,7 +156,7 @@ void BuildingSystem::update(float dt, Vector2 playerPos,
     for (auto& t : tanks) {
         if (!t.active) continue;
         t.update(dt, enemies);
-        // Aura da Arca: regenera HP e da +50% de dano nos tiros
+        // Aura of the Arca: regenera HP and of the +50% of damage in the shots
         bool aura = isInArkAura(t.position);
         if (aura && t.health < t.maxHealth) t.health = fminf(t.maxHealth, t.health + 12.f * dt);
         if (t.wantsToShoot) {
@@ -224,8 +224,8 @@ void BuildingSystem::updateBuilding(Building& b, float dt, Vector2 playerPos,
 
         case BuildingType::Turret: {
             b.shootCooldown -= dt;
-            // Otimizacao: so varre inimigos quando a torre pode atirar (evita um
-            // scan O(inimigos) por torre a cada frame — critico com muitas torres).
+            // Optimization: only varre enemies when the tower can shoot (evita um
+            // scan O(enemies) by tower the cada frame — critical with many torres).
             if (b.shootCooldown <= 0.f) {
                 const Enemy* target = nearestEnemy(b.position, b.shootRange, enemies);
                 if (target) {
@@ -257,11 +257,11 @@ void BuildingSystem::updateBuilding(Building& b, float dt, Vector2 playerPos,
         default: break;
     }
 
-    // ── Fila de producao ── base de produção constrói a unidade ao longo do
-    // tempo (spawnTime); ela NAO nasce pronto na hora.
+    // ── Queue of production ── base of production constroi the unit along of the
+    // time (spawnTime); ela NOT nasce ready in the hour.
     if (b.spawnQueue > 0 && (b.type == BuildingType::Barracks ||
                              b.type == BuildingType::TankFactory)) {
-        float m = 1.0f + (b.level - 1) * 0.5f;   // nivel reduz o tempo de producao
+        float m = 1.0f + (b.level - 1) * 0.5f;   // level reduz the time of production
         b.spawnTimer += dt;
         if (b.spawnTimer >= b.spawnTime / m) {
             b.spawnTimer = 0.f;
@@ -313,17 +313,17 @@ const Enemy* BuildingSystem::nearestEnemy(Vector2 from, float range,
                                            const std::vector<Enemy*>& enemies) const {
     const Enemy* best = nullptr;
     float bestDist = range;
-    for (const auto* e : enemies) {
-        if (!e || e->isDead()) continue;
-        float d = Vector2Distance(from, e->position);
-        if (d < bestDist) { bestDist = d; best = e; }
+    for (const auto* and : enemies) {
+        if (!and || and->isDead()) continue;
+        float d = Vector2Distance(from, and->position);
+        if (d < bestDist) { bestDist = d; best = and; }
     }
     return best;
 }
 
 void BuildingSystem::spawnTank(Vector2 factoryPos) {
     FriendlyTank t;
-    // Angulo deterministico (sem GetRandomValue) — mantem o world-state reproduzivel
+    // Angle deterministic (without GetRandomValue) — mantem the world-state reproduzivel
     float angle = (float)tanks.size() * 1.7f + 2.0f;
     t.position   = {factoryPos.x + cosf(angle) * 55.f, factoryPos.y + sinf(angle) * 55.f};
     t.factoryPos = factoryPos;
@@ -340,11 +340,11 @@ int BuildingSystem::clickProduce(Vector2 worldPos, int& playerCredits) {
         if (Vector2Distance(worldPos, b.position) > 60.0f) continue;
 
         if (isFactory) {
-            if ((int)tanks.size() + b.spawnQueue >= 8) return 3;   // limite
+            if ((int)tanks.size() + b.spawnQueue >= 8) return 3;   // limit
             int cost = 40;
-            if (playerCredits < cost) return 2;          // sem creditos
+            if (playerCredits < cost) return 2;          // without credits
             playerCredits -= cost;
-            b.spawnQueue++;                              // entra na fila de producao
+            b.spawnQueue++;                              // enters in the queue of production
         } else {
             if ((int)soldiers.size() + b.spawnQueue >= 12) return 3;
             int cost = 20;
@@ -354,10 +354,10 @@ int BuildingSystem::clickProduce(Vector2 worldPos, int& playerCredits) {
         }
         return 1; // enfileirou
     }
-    return 0; // nao clicou em predio de producao
+    return 0; // not clicou in building of production
 }
 
-// ── Evolucao de predios ──────────────────────────────────────────────────────
+// ── Evolution of buildings ──────────────────────────────────────────────────────
 
 void BuildingSystem::applyLevelStats(Building& b) {
     float m = 1.0f + (b.level - 1) * 0.5f;             // Lv1=1.0 Lv2=1.5 Lv3=2.0
@@ -382,7 +382,7 @@ void BuildingSystem::applyLevelStats(Building& b) {
         case BuildingType::MedBay:
             b.maxHealth = 250.f * m; b.healAmount = 15.f * m; b.healRadius = 120.f + (lv-1)*40.f; break;
     }
-    b.health = b.maxHealth * hpFrac;  // preserva a fracao de vida
+    b.health = b.maxHealth * hpFrac;  // preserva the fracao of health
 }
 
 int BuildingSystem::upgradeCostFor(const Building& b) const {
@@ -397,7 +397,7 @@ int BuildingSystem::upgradeNearby(Vector2 playerPos, int& playerCredits) {
         if (d < best) { best = d; nearest = &b; }
     }
     if (!nearest) return 0;
-    if (nearest->level >= Building::MAX_LEVEL) return 3;
+    if (nearest->level >= Building::MAX_LESPEED) return 3;
     int cost = upgradeCostFor(*nearest);
     if (playerCredits < cost) return 2;
     playerCredits -= cost;
@@ -410,12 +410,12 @@ void BuildingSystem::renderBuildingInfo(Vector2 playerPos) const {
     for (const auto& b : buildings) {
         if (!b.built) continue;
         const char* name = COSTS[(int)b.type].name;
-        // Badge de nivel sempre visivel
+        // Badge of level always visible
         const char* lvTxt = TextFormat("Lv%d", b.level);
         DrawText(lvTxt, (int)(b.position.x + 16), (int)(b.position.y - 38), 11,
-                 b.level >= Building::MAX_LEVEL ? Color{255,215,0,255} : Color{120,220,255,255});
+                 b.level >= Building::MAX_LESPEED ? Color{255,215,0,255} : Color{120,220,255,255});
 
-        // Painel completo quando o jogador esta perto
+        // Painel complete when the player is near
         if (Vector2Distance(playerPos, b.position) > 120.f) continue;
         int   px = (int)b.position.x;
         int   py = (int)b.position.y - 92;
@@ -423,15 +423,15 @@ void BuildingSystem::renderBuildingInfo(Vector2 playerPos) const {
         DrawRectangle(px - pw/2, py, pw, ph, ColorAlpha(BLACK, 0.8f));
         DrawRectangleLinesEx({(float)(px-pw/2),(float)py,(float)pw,(float)ph}, 1.0f,
                              ColorAlpha(Color{0,200,255,255}, 0.7f));
-        DrawText(TextFormat("%s  [Lv %d/%d]", name, b.level, Building::MAX_LEVEL),
+        DrawText(TextFormat("%s  [Lv %d/%d]", name, b.level, Building::MAX_LESPEED),
                  px - pw/2 + 6, py + 4, 12, Color{0,220,255,255});
         DrawText(COSTS[(int)b.type].desc, px - pw/2 + 6, py + 20, 9, Color{200,200,210,255});
-        if (b.level < Building::MAX_LEVEL) {
+        if (b.level < Building::MAX_LESPEED) {
             DrawText(TextFormat("[U] Evoluir Lv%d->Lv%d  ($%d)",
                      b.level, b.level+1, upgradeCostFor(b)),
                      px - pw/2 + 6, py + 44, 11, Color{255,215,0,255});
         } else {
-            DrawText("NIVEL MAXIMO", px - pw/2 + 6, py + 44, 11, Color{255,215,0,255});
+            DrawText("LESPEED MAXIMO", px - pw/2 + 6, py + 44, 11, Color{255,215,0,255});
         }
     }
 }
@@ -439,7 +439,7 @@ void BuildingSystem::renderBuildingInfo(Vector2 playerPos) const {
 // ── Controle RTS ─────────────────────────────────────────────────────────────
 
 int BuildingSystem::selectUnitsInBox(Rectangle box) {
-    // Normaliza caixa (largura/altura positivas)
+    // Normaliza caixa (width/height positivas)
     if (box.width  < 0) { box.x += box.width;  box.width  = -box.width; }
     if (box.height < 0) { box.y += box.height; box.height = -box.height; }
     int count = 0;
@@ -460,7 +460,7 @@ void BuildingSystem::clearSelection() {
 }
 
 void BuildingSystem::orderMove(Vector2 dest) {
-    // Espalha as unidades num pequeno raio ao redor do destino (formacao)
+    // Espalha the unidades num small radius around of the destino (formation)
     int idx = 0;
     auto place = [&](Vector2& order, bool& has) {
         float ang = idx * 0.7f;
@@ -505,23 +505,23 @@ void BuildingSystem::renderUnitPrompts() const {
         int n   = isFactory ? (int)tanks.size()    : (int)soldiers.size();
         int cap = isFactory ? 8                      : 12;
         int cost= isFactory ? 40                     : 20;
-        const char* unit = isFactory ? "Tanque" : "Soldado";
+        const char* unit = isFactory ? "Tanque" : "Soldier";
 
         float bx = b.position.x, by = b.position.y - 56.0f;
         // Fundo
-        const char* lbl = TextFormat("[CLIQUE] %s  $%d   %d/%d", unit, cost, n + b.spawnQueue, cap);
+        const char* lbl = TextFormat("[CLICK] %s  $%d   %d/%d", unit, cost, n + b.spawnQueue, cap);
         int tw = MeasureText(lbl, 11);
         DrawRectangle((int)(bx - tw/2 - 4), (int)(by - 2), tw + 8, 16, ColorAlpha(BLACK, 0.7f));
         DrawRectangleLines((int)(bx - tw/2 - 4), (int)(by - 2), tw + 8, 16,
                            ColorAlpha(Color{120,200,255,255}, 0.7f));
         DrawText(lbl, (int)(bx - tw/2), (int)by, 11, Color{180,220,255,255});
 
-        // Barra de producao: unidade em construcao (cyan) ou ciclo automatico (amarelo)
+        // Barra of production: unit in structure (cyan) ou ciclo automatic (yellow)
         if (b.spawnQueue > 0) {
             float pct = fminf(1.0f, (float)b.spawnTimer / b.spawnTime);
             DrawRectangle((int)(bx - 26), (int)(by + 16), 52, 4, ColorAlpha(BLACK, 0.6f));
             DrawRectangle((int)(bx - 26), (int)(by + 16), (int)(52 * pct), 4, Color{80,220,255,255});
-            DrawText(TextFormat("Construindo... %d na fila", b.spawnQueue),
+            DrawText(TextFormat("Construindo... %d in the queue", b.spawnQueue),
                      (int)(bx - 34), (int)(by + 22), 9, Color{140,220,255,255});
         } else {
             float pct = b.productionTimer / b.productionRate;
@@ -533,7 +533,7 @@ void BuildingSystem::renderUnitPrompts() const {
 
 void BuildingSystem::spawnSoldier(Vector2 barracksPos) {
     FriendlySoldier s;
-    // Angulo deterministico (sem GetRandomValue) — mantem o world-state reproduzivel
+    // Angle deterministic (without GetRandomValue) — mantem the world-state reproduzivel
     float angle = (float)soldiers.size() * 0.9f + 7.0f;
     s.position   = {barracksPos.x + cosf(angle) * 50.f, barracksPos.y + sinf(angle) * 50.f};
     s.barracksPos = barracksPos;
@@ -548,14 +548,14 @@ void FriendlyTank::update(float dt, const std::vector<Enemy*>& enemies) {
     // Find nearest enemy
     const Enemy* target = nullptr;
     float bestDist = shootRange;
-    for (const auto* e : enemies) {
-        if (!e || e->isDead()) continue;
-        float d = Vector2Distance(position, e->position);
-        if (d < bestDist) { bestDist = d; target = e; }
+    for (const auto* and : enemies) {
+        if (!and || and->isDead()) continue;
+        float d = Vector2Distance(position, and->position);
+        if (d < bestDist) { bestDist = d; target = and; }
     }
 
-    // Ordem de mover (RTS) tem prioridade — attack-move: anda ate o destino mas
-    // ainda atira em inimigos no alcance pelo caminho.
+    // Ordem of move (RTS) has prioridade — attack-move: anda until the destino mas
+    // still atira in enemies in the range pelo path.
     if (hasMoveOrder) {
         Vector2 toDest = Vector2Subtract(moveOrder, position);
         float d = Vector2Length(toDest);
@@ -566,7 +566,7 @@ void FriendlyTank::update(float dt, const std::vector<Enemy*>& enemies) {
         } else {
             hasMoveOrder = false; // chegou
         }
-        // dispara em inimigos no alcance sem desviar do destino
+        // dispara in enemies in the range without desviar of the destino
         if (target) {
             shootCooldown -= dt;
             if (shootCooldown <= 0.f && bestDist <= shootRange) {
@@ -586,7 +586,7 @@ void FriendlyTank::update(float dt, const std::vector<Enemy*>& enemies) {
             shootCooldown = 1.0f / shootRate;
         }
     } else {
-        // Orbit factory when no enemies
+        // Orbit factory when in the enemies
         orbitAngle += dt * 0.5f;
         float dist = 80.f;
         Vector2 orbitTarget = {
@@ -606,17 +606,17 @@ void FriendlyTank::update(float dt, const std::vector<Enemy*>& enemies) {
 void FriendlyTank::render() const {
     if (!active || isDead()) return;
 
-    // ── APC Void-Tech — casco escuro + nucleo neon ─────────────────────────────
+    // ── APC Void-Tech — casco dark + core neon ─────────────────────────────
     Color hullC = {42, 48, 66, 255};
     Color coreC = {0, 240, 255, 255};
     DrawRectangle((int)(position.x - 18), (int)(position.y - 12), 36, 24, hullC);
     DrawRectangleLinesEx({position.x - 18, position.y - 12, 36, 24}, 1.f,
                          ColorAlpha(coreC, 0.4f));
     DrawRectangle((int)(position.x - 14), (int)(position.y - 8),  28, 16, {56, 62, 82, 255});
-    // Nucleo de energia central
+    // Core of energy central
     DrawCircle((int)position.x, (int)position.y, 7.f, {0, 200, 255, 255});
     DrawCircleLines((int)position.x, (int)position.y, 9.f, ColorAlpha(coreC, 0.5f));
-    // Canhao de energia
+    // Canhao of energy
     Vector2 barrelEnd = {position.x + shootDir.x * 18.f, position.y + shootDir.y * 18.f};
     DrawLineEx(position, barrelEnd, 4.f, {0, 220, 255, 255});
     // HP bar
@@ -633,13 +633,13 @@ void FriendlySoldier::update(float dt, Vector2 playerPos, const std::vector<Enem
 
     const Enemy* target = nullptr;
     float bestDist = shootRange;
-    for (const auto* e : enemies) {
-        if (!e || e->isDead()) continue;
-        float d = Vector2Distance(position, e->position);
-        if (d < bestDist) { bestDist = d; target = e; }
+    for (const auto* and : enemies) {
+        if (!and || and->isDead()) continue;
+        float d = Vector2Distance(position, and->position);
+        if (d < bestDist) { bestDist = d; target = and; }
     }
 
-    // Ordem de mover (RTS) tem prioridade — attack-move
+    // Ordem of move (RTS) has prioridade — attack-move
     if (hasMoveOrder) {
         Vector2 toDest = Vector2Subtract(moveOrder, position);
         float d = Vector2Length(toDest);
@@ -684,15 +684,15 @@ void FriendlySoldier::update(float dt, Vector2 playerPos, const std::vector<Enem
 
 void FriendlySoldier::render() const {
     if (!active || isDead()) return;
-    // ── Infantaria Void — armadura escura + visor neon ─────────────────────────
-    // Helmet com visor
+    // ── Infantaria Void — armor dark + view neon ─────────────────────────
+    // Helmet with view
     DrawCircle((int)position.x, (int)(position.y - 8), 8.f, {34, 40, 56, 255});
     DrawCircleLines((int)position.x, (int)(position.y - 8), 8.f,
                     ColorAlpha({0, 240, 255, 255}, 0.35f));
     DrawCircle((int)position.x, (int)(position.y - 9), 3.f, {0, 240, 255, 255});
-    // Torso de armadura
+    // Torso of armor
     DrawRectangle((int)(position.x - 5), (int)position.y, 10, 16, {28, 34, 50, 255});
-    // Rifle de energia
+    // Rifle of energy
     Vector2 rifleEnd = {position.x + shootDir.x * 16.f, position.y - 8.f + shootDir.y * 16.f};
     DrawLineEx({position.x, position.y - 8.f}, rifleEnd, 2.5f, {0, 220, 255, 255});
     // HP
@@ -757,10 +757,10 @@ void BuildingSystem::renderArkBuilding(const Building& b) const {
     float pulse = 0.5f + 0.5f * sinf(b.animTimer * 2.0f);
 
     if (!b.built) {
-        // Scaffold holografico sob construcao
+        // Scaffold holografico sob structure
         DrawRectangleLinesEx({b.position.x - 36, b.position.y - 36, 72, 72}, 1.5f,
                              ColorAlpha({0, 220, 255, 255}, 0.4f + pulse * 0.4f));
-        float prog = b.buildTimer * 72.f;   // era (int) num float: truncava e gerava C4244
+        float prog = b.buildTimer * 72.f;   // era (int) num float: truncava and gerava C4244
         DrawRectangle((int)(b.position.x - 36), (int)(b.position.y + 28), (int)prog, 8,
                       Color{0, 255, 220, 255});
         DrawText("MONTANDO...", (int)(b.position.x - 36), (int)(b.position.y - 50), 12,
@@ -797,7 +797,7 @@ void BuildingSystem::renderHouseBuilding(const Building& b) const {
     float pulse = 0.5f + 0.5f * sinf(b.animTimer * 2.2f);
 
     if (!b.built) {
-        // Scaffold holografico de construcao
+        // Scaffold holografico of structure
         DrawRectangleLinesEx({b.position.x - 24, b.position.y - 24, 48, 48}, 1.5f,
                              ColorAlpha({0, 220, 255, 255}, 0.4f + pulse * 0.4f));
         DrawRectangle((int)(b.position.x - 24), (int)(b.position.y + 18), (int)(b.buildTimer * 48), 6,
@@ -807,13 +807,13 @@ void BuildingSystem::renderHouseBuilding(const Building& b) const {
         return;
     }
 
-    // ── Base de Apoio (relay de energia) — nada de fazenda ────────────────────
-    // Plataforma escura com painel
+    // ── Base of Apoio (relay of energy) — nada of farm ────────────────────
+    // Plataforma dark with painel
     DrawRectangle((int)(b.position.x - 22), (int)(b.position.y - 12), 44, 30, {26, 32, 48, 255});
     DrawRectangleLinesEx({b.position.x - 22, b.position.y - 12, 44, 30}, 1.5f,
                          ColorAlpha({0, 200, 255, 255}, 0.35f + pulse * 0.3f));
 
-    // Núcleo de energia acima da plataforma
+    // Core of energy above the plataforma
     DrawCircle((int)b.position.x, (int)(b.position.y - 18), 9.f + pulse * 2.f,
                ColorAlpha({0, 220, 255, 255}, 0.18f));
     DrawCircle((int)b.position.x, (int)(b.position.y - 18), 5.f, {130, 230, 255, 255});
@@ -824,14 +824,14 @@ void BuildingSystem::renderHouseBuilding(const Building& b) const {
     DrawLineEx({b.position.x, b.position.y - 12.f}, {b.position.x, b.position.y + 2.f}, 2.f,
                {0, 220, 255, 255});
 
-    // Condutos de energia nas laterais
+    // Condutos of energy in the laterais
     for (int i = -1; i <= 1; i += 2) {
         DrawLineEx({b.position.x + i * 14.f, b.position.y - 8.f},
                    {b.position.x + i * 20.f, b.position.y + 14.f}, 2.f,
                    ColorAlpha({80, 180, 255, 255}, 0.5f + pulse * 0.4f));
     }
 
-    // Barra de geracao de creditos (cyan)
+    // Barra of geracao of credits (cyan)
     float genPct = b.genTimer / b.genRate;
     DrawRectangle((int)(b.position.x - 20), (int)(b.position.y + 22), (int)(40 * genPct), 4,
                   {0, 220, 255, 200});
@@ -852,29 +852,29 @@ void BuildingSystem::renderBarracks(const Building& b) const {
         return;
     }
 
-    // ── Quartel holografico — casco escuro + viga de energia ──────────────────
+    // ── Quartel holografico — casco dark + viga of energy ──────────────────
     DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 20), 64, 40, {24, 30, 46, 255});
     DrawRectangleLinesEx({b.position.x - 32, b.position.y - 20, 64, 40}, 1.5f,
                          ColorAlpha({0, 200, 255, 255}, 0.35f + pulse * 0.3f));
 
-    // Costelas de energia ao longo do casco
+    // Ribs of energy along of the casco
     for (int x = -24; x <= 24; x += 12) {
         DrawLineEx({b.position.x + x, b.position.y - 18.f},
                    {b.position.x + x, b.position.y + 18.f}, 1.5f,
                    ColorAlpha({80, 200, 255, 255}, 0.3f + pulse * 0.25f));
     }
 
-    // Porta de deploy — arco luminoso
+    // Door of deploy — arco luminoso
     DrawRectangleLinesEx({b.position.x - 9, b.position.y + 0, 18, 20}, 2.f,
                          ColorAlpha({0, 220, 255, 255}, 0.45f + pulse * 0.5f));
 
-    // Antena no teto
+    // Antena in the ceiling
     DrawLineEx({b.position.x, b.position.y - 20.f}, {b.position.x, b.position.y - 30.f}, 2.f,
                {0, 220, 255, 255});
     DrawCircle((int)b.position.x, (int)(b.position.y - 32), 2.f,
                ColorAlpha({0, 255, 220, 255}, 0.4f + pulse * 0.6f));
 
-    DrawText("QUARTEL", (int)(b.position.x - 26), (int)(b.position.y + 24), 10, {80, 220, 255, 255});
+    DrawText("BARRACKS", (int)(b.position.x - 26), (int)(b.position.y + 24), 10, {80, 220, 255, 255});
 }
 
 void BuildingSystem::renderTankFactory(const Building& b) const {
@@ -890,19 +890,19 @@ void BuildingSystem::renderTankFactory(const Building& b) const {
         return;
     }
 
-    // ── Fabrica Void-Tech — casco escuro + nucleo de energia ───────────────────
+    // ── Fabrica Void-Tech — casco dark + core of energy ───────────────────
     DrawRectangle((int)(b.position.x - 40), (int)(b.position.y - 28), 80, 56, {34, 28, 26, 255});
     DrawRectangleLinesEx({b.position.x - 40, b.position.y - 28, 80, 56}, 1.5f,
                          ColorAlpha({255, 150, 30, 255}, 0.35f + pulse * 0.3f));
 
-    // Nucleo de energia central pulsante
+    // Core of energy central pulsante
     DrawCircle((int)b.position.x, (int)(b.position.y - 2), 13.f + pulse * 3.f,
                ColorAlpha({255, 150, 30, 255}, 0.16f));
     DrawCircle((int)b.position.x, (int)(b.position.y - 2), 7.f, {255, 180, 70, 255});
     DrawCircleLines((int)b.position.x, (int)(b.position.y - 2), 11.f,
                     ColorAlpha({255, 150, 30, 255}, 0.55f + pulse * 0.45f));
 
-    // Condutos de energia para as bordas
+    // Condutos of energy to the bordas
     DrawLineEx({b.position.x - 6.f, b.position.y - 2.f},
                {b.position.x - 36.f, b.position.y - 2.f}, 2.5f,
                ColorAlpha({255, 160, 50, 255}, 0.4f + pulse * 0.4f));
@@ -910,19 +910,19 @@ void BuildingSystem::renderTankFactory(const Building& b) const {
                {b.position.x + 36.f, b.position.y - 2.f}, 2.5f,
                ColorAlpha({255, 160, 50, 255}, 0.4f + pulse * 0.4f));
 
-    // Particulas de carga subindo (substitui a fumaca)
+    // Particles of load subindo (substitui the smoke)
     for (int i = 0; i < 3; i++) {
         float y = b.position.y - 26.f - fmodf(b.animTimer * 14.f + i * 8.f, 30.f);
         DrawCircle((int)(b.position.x - 24 + i * 24), (int)y, 2.5f - i * 0.6f,
                    ColorAlpha({255, 190, 90, 255}, 0.5f - i * 0.12f));
     }
 
-    // Barra de producao
+    // Barra of production
     float prodPct = b.productionTimer / b.productionRate;
     DrawRectangle((int)(b.position.x - 36), (int)(b.position.y + 32), (int)(72 * prodPct), 5,
                   {255, 160, 50, 200});
     DrawRectangleLinesEx({b.position.x - 36, b.position.y + 32, 72, 5}, 1.f, {220, 120, 30, 255});
-    DrawText("FABRICA", (int)(b.position.x - 26), (int)(b.position.y + 40), 10, {255, 160, 50, 255});
+    DrawText("FACTORY", (int)(b.position.x - 26), (int)(b.position.y + 40), 10, {255, 160, 50, 255});
 }
 
 void BuildingSystem::renderTurret(const Building& b) const {
@@ -999,12 +999,12 @@ void BuildingSystem::renderWall(const Building& b) const {
     Color coreC = pct > 0.5f ? Color{0, 220, 255, 255} :
                   pct > 0.25f ? Color{255, 190, 60, 255} : Color{255, 90, 60, 255};
 
-    // Barra de metal escuro
+    // Barra of metal dark
     DrawRectangle((int)(b.position.x - 32), (int)(b.position.y - 8), 64, 16, {32, 38, 52, 255});
     DrawRectangleLinesEx({b.position.x - 32, b.position.y - 8, 64, 16}, 1.f,
                          ColorAlpha(coreC, 0.55f + pulse * 0.45f));
 
-    // Rendagem de energia (grade holografica)
+    // Rendagem of energy (grade holografica)
     for (int x = -28; x <= 28; x += 7) {
         DrawLineEx({b.position.x + x, b.position.y - 6.f},
                    {b.position.x + x, b.position.y + 6.f}, 1.f,
@@ -1013,7 +1013,7 @@ void BuildingSystem::renderWall(const Building& b) const {
     DrawLineEx({b.position.x - 30, b.position.y}, {b.position.x + 30, b.position.y}, 1.f,
                ColorAlpha(coreC, 0.4f + pulse * 0.3f));
 
-    // Pilones de energia no topo
+    // Pilones of energy at the top
     for (int i = -2; i <= 2; i++) {
         DrawCircle((int)(b.position.x + i * 12), (int)(b.position.y - 12), 2.5f,
                    ColorAlpha(coreC, 0.5f + pulse * 0.5f));
@@ -1039,18 +1039,18 @@ void BuildingSystem::renderMedBay(const Building& b) const {
         return;
     }
 
-    // ── Nano-MedBay — capsula elastica com cruz de bio-reparo ──────────────────
+    // ── Nano-MedBay — capsula elastica with cruz of bio-reparo ──────────────────
     DrawRectangle((int)(b.position.x - 24), (int)(b.position.y - 20), 48, 40, {30, 42, 40, 255});
     DrawRectangleLinesEx({b.position.x - 24, b.position.y - 20, 48, 40}, 1.5f,
                          ColorAlpha({80, 255, 140, 255}, 0.35f + pulse * 0.3f));
 
-    // Cruz de bio-reparo pulsante
+    // Cruz of bio-reparo pulsante
     DrawRectangle((int)(b.position.x - 3), (int)(b.position.y - 14), 6, 18,
                   ColorAlpha({80, 255, 140, 255}, 0.8f + pulse * 0.2f));
     DrawRectangle((int)(b.position.x - 9), (int)(b.position.y - 8), 18, 6,
                   ColorAlpha({80, 255, 140, 255}, 0.8f + pulse * 0.2f));
 
-    // Aneis de nano-reparo
+    // Aneis of nano-reparo
     DrawCircleLines((int)b.position.x, (int)b.position.y, 30.f + pulse * 2.f,
                     ColorAlpha({80, 255, 140, 255}, 0.25f + pulse * 0.2f));
 
@@ -1068,7 +1068,7 @@ int BuildingSystem::menuCellAt(Vector2 m, int screenW, int screenH) const {
     const int menuW = 360, menuH = 240;
     const int mx = (screenW - menuW) / 2;
     const int my = screenH - menuH - 10;
-    // Fora do painel? nao e clique de menu
+    // Outside the painel? not and click of menu
     if (m.x < mx || m.x > mx + menuW || m.y < my || m.y > my + menuH) return -1;
     const int cols = 4;
     const int cellW = menuW / cols;
@@ -1097,7 +1097,7 @@ void BuildingSystem::renderBuildMenu(int screenW, int screenH) const {
     DrawRectangleLinesEx({(float)mx, (float)my, (float)menuW, (float)menuH}, 2.f,
                          {0, 200, 255, 200});
 
-    DrawText("[ B ] CONSTRUCOES  - Clique para selecionar / Clique no mapa para colocar",
+    DrawText("[ B ] CONSTRUCOES  - Click to select / Click in the map to put",
              mx + 8, my + 6, 10, {0, 200, 255, 200});
 
     // Grid 4 columns x 2 rows

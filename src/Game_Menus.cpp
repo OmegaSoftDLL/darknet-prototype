@@ -1,5 +1,5 @@
-// Game_Menus.cpp — telas de menu principal, pausa, level-up e evolucao.
-// Modularizacao: extraido de Game.cpp (que estava com ~7000 linhas). Mesma classe Game.
+// Game_Menus.cpp — telas of menu main, pausa, level-up and evolution.
+// Modularizacao: extraido of Game.cpp (that was with ~7000 lines). Same class Game.
 #include "Game.h"
 #include "Effects.h"
 #include <raylib.h>
@@ -15,7 +15,7 @@ void Game::drawMainMenu() const {
     int   cx = screenWidth  / 2;
     int   cy = screenHeight / 2;
 
-    // ── Fundo: gradiente profundo (neon dark) ──────────────────────────────
+    // ── Fundo: gradiente deep (neon dark) ──────────────────────────────
     for (int i = 0; i < 64; ++i) {
         float v = (float)i / 63.0f;
         Color c = { (unsigned char)(6 + (int)(4.0f * v)),
@@ -25,7 +25,7 @@ void Game::drawMainMenu() const {
                       screenHeight / 64 + 1, c);
     }
 
-    // ── Moldura de camera (cantos neon) ─────────────────────────────────────
+    // ── Moldura of camera (cantos neon) ─────────────────────────────────────
     Color frm = ColorAlpha({0,235,255,255}, 0.16f);
     DrawRectangle(6, 6, 26, 3, frm);  DrawRectangle(6, 6, 3, 26, frm);
     DrawRectangle(screenWidth-32, 6, 26, 3, frm);  DrawRectangle(screenWidth-9, 6, 3, 26, frm);
@@ -33,7 +33,7 @@ void Game::drawMainMenu() const {
     DrawRectangle(screenWidth-32, screenHeight-9, 26, 3, frm);
     DrawRectangle(screenWidth-9, screenHeight-32, 3, 26, frm);
 
-    // ── Contadores HUD de fundo (decorativos) ───────────────────────────────
+    // ── Contadores HUD of fundo (decorativos) ───────────────────────────────
     DrawText("KRN.LOG // 2047", 18, 14, 12, ColorAlpha({120,160,200,255}, 0.45f));
     DrawText("NEXUS ONLINE", screenWidth - MeasureText("NEXUS ONLINE", 12) - 18, 14, 12,
              ColorAlpha({0,235,255,255}, 0.45f + 0.2f * std::sin(t * 1.1f)));
@@ -53,7 +53,7 @@ void Game::drawMainMenu() const {
     DrawRectangle(0, scanY, screenWidth, 2, ColorAlpha({0,235,255,255}, 0.10f));
     DrawRectangle(0, scanY + 2, screenWidth, 10, ColorAlpha({0,235,255,255}, 0.03f));
 
-    // ── IRON-VIII SKULL (esquerda, fora do titulo) ──────────────────────────
+    // ── IRON-VIII SKULL (left, outside the title) ──────────────────────────
     int sx = cx - 440;
     int sy = cy - 165;
     DrawEllipse(sx, sy, 75, 90, {18, 22, 36, 255});
@@ -80,7 +80,7 @@ void Game::drawMainMenu() const {
     float eyeGlow = 0.08f + 0.05f * std::sin(t * 3.5f);
     DrawCircleV({(float)(sx), (float)(sy)}, 120.0f, ColorAlpha({255,40,60,255}, eyeGlow * 0.25f));
 
-    // ── TITULO: DARKNET com extrusao + aura neon ────────────────────────────
+    // ── TITLE: DARKNET with extrusao + aura neon ────────────────────────────
     float titlePulse = 0.86f + 0.14f * std::sin(t * 1.4f);
     int   titleFont  = 92;
     int   titleW     = MeasureText("DARKNET", titleFont);
@@ -94,7 +94,7 @@ void Game::drawMainMenu() const {
     DrawText("DARKNET", titleX, titleY, titleFont,
              ColorAlpha({185,245,255,255}, titlePulse));
 
-    // Sub-titulo em vermelho neon
+    // Sub-title in red neon
     int subFont = 26;
     int subW    = MeasureText("GUERRA CONTRA KRONOS", subFont);
     DrawText("GUERRA CONTRA KRONOS", cx - subW/2, titleY + titleFont + 12, subFont,
@@ -105,7 +105,7 @@ void Game::drawMainMenu() const {
                  ColorAlpha({140,170,205,255}, 0.55f));
     }
 
-    // Separador com pontas angulares (canto chanfrado)
+    // Separador with pontas angulares (canto chanfrado)
     int sepY = titleY + titleFont + 64;
     DrawLine(cx - 240, sepY, cx + 240, sepY, ColorAlpha({0,235,255,255}, 0.45f));
     DrawLine(cx - 246, sepY - 5, cx - 246, sepY + 5, ColorAlpha({0,235,255,255}, 0.6f));
@@ -113,11 +113,11 @@ void Game::drawMainMenu() const {
     DrawLine(cx - 240, sepY, cx - 246, sepY + 5, ColorAlpha({0,235,255,255}, 0.75f + 0.1f*t));
     DrawRectangle(cx - 246, sepY - 5, 2, 10, ColorAlpha({255,180,40,255}, 0.9f));
 
-    const char* tagline = "2047 - KRONOS domina. O NEXUS e a ultima esperanca.";
+    const char* tagline = "2047 - KRONOS domina. O NEXUS and the last esperanca.";
     int tagW = MeasureText(tagline, 17);
     DrawText(tagline, cx - tagW / 2, sepY + 12, 17, ColorAlpha({175,195,220,255}, 0.78f));
 
-    // ── BOTOES (painel angular + trilho neon + badge de tecla) ──────────────
+    // ── BOTOES (painel angular + trilho neon + badge of key) ──────────────
     bool hasSave = SaveManager::exists();
     Vector2 mouse = virtualizeMousePos(GetMousePosition());
     int bw = 392;
@@ -136,9 +136,9 @@ void Game::drawMainMenu() const {
                       : (hover ? neon : ColorAlpha({0, 130, 180, 255}, 0.9f));
         Color bg = (hover || primary) ? ColorAlpha({8, 17, 34, 255}, 0.92f)
                                       : ColorAlpha({6, 12, 24, 255}, 0.82f);
-        // Corpo do botao
+        // Body of the button
         DrawRectangle(bx, y - 3, bw, bh, bg);
-        // Trilho neon esquerdo (energia)
+        // Trilho neon esquerdo (energy)
         DrawRectangle(bx, y - 3, 3, bh, ColorAlpha(primary ? amber : neon, 0.9f));
         // Cantos chanfrados (estilo DrawPanel)
         int c = 7;
@@ -150,7 +150,7 @@ void Game::drawMainMenu() const {
         DrawLine(bx + bw - c, y - 3, bx + bw, y - 3 + c, brd);
         DrawLine(bx, y + bh - 3 - c, bx + c, y + bh - 3, brd);
         DrawLine(bx + bw - c, y + bh - 3, bx + bw, y + bh - 3 - c, brd);
-        // Badge da tecla (com recesso chanfrado)
+        // Badge of the key (with recesso chanfrado)
         int keyFont = 15;
         int keyW    = MeasureText(key, keyFont);
         int badgeX  = bx + 12;
@@ -164,7 +164,7 @@ void Game::drawMainMenu() const {
         DrawText(label, labelX, y + 7, 18,
                  (hover || primary) ? Color{235,245,255,255}
                                     : ColorAlpha({155,180,205,255}, 0.9f));
-        // Indicador de selecao (seta pulsante)
+        // Indicador of selecao (seta pulsante)
         if (hover || primary) {
             float px = 0.6f + 0.4f * std::sin(t * 3.0f);
             DrawText("»", bx + bw - 26, y + 6, 20, ColorAlpha(primary ? amber : neon, px));
@@ -174,19 +174,19 @@ void Game::drawMainMenu() const {
     };
 
     if (hasSave) {
-        drawMenuBtn(cy - 2,  "ENTER", "Continuar partida salva", true);
-        drawMenuBtn(cy + 44, "N",     "Novo jogo",               false);
-        drawMenuBtn(cy + 90, "ESC",   "Sair",                    false);
+        drawMenuBtn(cy - 2,  "ENTER", "Continue match saves", true);
+        drawMenuBtn(cy + 44, "N",     "Novo game",               false);
+        drawMenuBtn(cy + 90, "ESC",   "Leave",                    false);
     } else {
-        drawMenuBtn(cy + 20,  "ENTER", "Iniciar novo jogo",      true);
-        drawMenuBtn(cy + 66,  "ESC",   "Sair",                   false);
+        drawMenuBtn(cy + 20,  "ENTER", "Start new game",      true);
+        drawMenuBtn(cy + 66,  "ESC",   "Leave",                   false);
     }
 
-    // ── Rodape: chips de recursos (sem sobreposicao de largura) ─────────────
+    // ── Rodape: chips of resources (without sobreposicao of width) ─────────────
     DrawLine(0, screenHeight - 32, screenWidth, screenHeight - 32,
              ColorAlpha({0,235,255,255}, 0.10f));
-    const char* feat[] = { "MUNDO ABERTO", "51 INIMIGOS", "CONSTRUCAO RTS",
-                           "CRAFTING", "HISTORIA COMPLETA" };
+    const char* feat[] = { "OPEN WORLD", "51 INIMIGOS", "CONSTRUCAO RTS",
+                           "CRAFTING", "STORY COMPLETA" };
     int fs = 12, sepChip = 34, featW = 0;
     for (int i = 0; i < 5; ++i) featW += MeasureText(feat[i], fs) + sepChip;
     int fx = cx - featW / 2;
@@ -208,7 +208,7 @@ void Game::drawPauseMenu() const {
     int cx  = screenWidth / 2;
     float tp = 0.9f + 0.1f * std::sin((float)GetTime() * 1.6f);
 
-    // Titulo embracado ([ PAUSADO ]) com sublinha neon
+    // Titulo embracado ([ PAUSADO ]) with sublinha neon
     const char* title = "PAUSADO";
     int tFont = 44;
     int tw = MeasureText(title, tFont);
@@ -225,21 +225,21 @@ void Game::drawPauseMenu() const {
     int pbw = 340, pbh = 32, pgap = 6;
     int pnlTop = pby - 14, pnlH = 9 * (pbh + pgap) + 36;
 
-    // Painel acolchoa a lista
+    // Painel acolchoa the list
     DrawPanel(cx - pbw/2 - 18, pnlTop, pbw + 36, pnlH, {0,235,255,255}, 0.72f);
 
     auto onoff = [](bool b){ return b ? "ON" : "OFF"; };
     struct Opt { const char* label; Color col; };
     const Opt opts[9] = {
-        {"Continuar",        {0,235,255,255}},
-        {"Salvar  [F5]",     {120,220,140,255}},
+        {"Continue",        {0,235,255,255}},
+        {"Save  [F5]",     {120,220,140,255}},
         {TextFormat("Dificuldade: %s", getDifficulty().name), {255,180,40,255}},
         {TextFormat("Trilha sonora: %s", onoff(audio.musicEnabled)), {120,200,255,255}},
-        {TextFormat("Todos os sons: %s", onoff(audio.allSoundOn)),   {120,200,255,255}},
-        {TextFormat("Vozes/personagens: %s", onoff(audio.voiceEnabled)), {120,200,255,255}},
-        {"Reiniciar partida",{255,200,80,255}},
-        {"Voltar ao menu",   {200,180,255,255}},
-        {"Sair do jogo",     {255,110,110,255}},
+        {TextFormat("All the sounds: %s", onoff(audio.allSoundOn)),   {120,200,255,255}},
+        {TextFormat("Vozes/characters: %s", onoff(audio.voiceEnabled)), {120,200,255,255}},
+        {"Restart match",{255,200,80,255}},
+        {"Return to the menu",   {200,180,255,255}},
+        {"Leave of the game",     {255,110,110,255}},
     };
 
     for (int i = 0; i < 9; ++i) {
@@ -250,7 +250,7 @@ void Game::drawPauseMenu() const {
         DrawRectangle(cx - pbw/2, y, pbw, pbh, bg);
         if (hov) DrawRectangle(cx - pbw/2, y, 3, pbh, brd);   // trilho neon
         int c = 5;
-        if (hov) {  // cantos chanfrados no item focado
+        if (hov) {  // cantos chanfrados in the item focado
             DrawLine(cx-pbw/2 + c, y,     cx+pbw/2 - c, y,     brd);
             DrawLine(cx-pbw/2,     y + c, cx-pbw/2,     y+pbh-c, brd);
             DrawLine(cx-pbw/2 + c, y+pbh, cx+pbw/2 - c, y+pbh, brd);
@@ -267,7 +267,7 @@ void Game::drawPauseMenu() const {
         if (hov) DrawText("»", cx - pbw/2 + 12, y + 5, 19, opts[i].col);
     }
 
-    DrawText("Setas/Mouse  -  ENTER/Clique confirma  -  ESC continua",
+    DrawText("Setas/Mouse  -  ENTER/Click confirma  -  ESC continuous",
              cx - 210, pnlTop + pnlH + 8, 13, ColorAlpha(WHITE, 0.5f));
 }
 
@@ -276,17 +276,17 @@ void Game::drawPauseMenu() const {
 void Game::generateLevelUpChoices() {
     struct CT { const char* title; const char* desc; int stat; float amt; };
     static const CT pool[] = {
-        { "+30 HP Maximo",     "Blindagem reforcada",           0, 30.0f },
-        { "+10 Dano",          "Nucleo de combate expandido",   1, 10.0f },
-        { "+15 Velocidade",    "Implante motor ativado",        2, 15.0f },
-        { "+8% Armadura",      "Placa defensiva instalada",     3,  8.0f },
-        { "+20 Alcance",       "Amplificador de alcance",       4, 20.0f },
-        { "+50 HP Maximo",     "Blindagem pesada instalada",    0, 50.0f },
-        { "+18 Dano",          "Protocolo de ataque avancado",  1, 18.0f },
-        { "+25 Velocidade",    "Motores de combate ativados",   2, 25.0f },
-        { "+12% Armadura",     "Blindagem ceramica implantada", 3, 12.0f },
-        { "+35 Alcance",       "Mira laser estendida",          4, 35.0f },
-        { "+20 HP + 8 Dano",   "Upgrade hibrido de combate",   0, 20.0f },
+        { "+30 HP Maximum",     "Blindagem reforcada",           0, 30.0f },
+        { "+10 Damage",          "Core of combat expandido",   1, 10.0f },
+        { "+15 Speed",    "Implant motor enabled",        2, 15.0f },
+        { "+8% Armor",      "Placa defensiva installed",     3,  8.0f },
+        { "+20 Range",       "Amplificador of range",       4, 20.0f },
+        { "+50 HP Maximum",     "Blindagem pesada installed",    0, 50.0f },
+        { "+18 Damage",          "Protocolo of attack avancado",  1, 18.0f },
+        { "+25 Speed",    "Motores of combat ativados",   2, 25.0f },
+        { "+12% Armor",     "Blindagem ceramica implantada", 3, 12.0f },
+        { "+35 Range",       "Mira laser estendida",          4, 35.0f },
+        { "+20 HP + 8 Damage",   "Upgrade hibrido of combat",   0, 20.0f },
     };
     const int poolSize = 11;
     int picked[3] = {-1,-1,-1};
@@ -331,19 +331,19 @@ void Game::applyEvolutionPath(int pathIdx) {
     switch (pathIdx) {
         case 0:
             player.attackDamage *= 1.30f;
-            showStoryBanner("CYBORG SOLDIER","Implantes de combate ativados. +30% Dano.",4.0f);
-            triggerPlayerSpeech("Implantes instalados. Dano aumentado.",4.0f);
+            showStoryBanner("CYBORG SOLDIER","Implantes of combat ativados. +30% Damage.",4.0f);
+            triggerPlayerSpeech("Implantes instalados. Damage aumentado.",4.0f);
             break;
         case 1:
             player.speed *= 1.40f;
-            showStoryBanner("HACKER FANTASMA","Protocolos de infiltracao ativados. +40% Velocidade.",4.0f);
-            triggerPlayerSpeech("Modo fantasma ativado. Sou mais rapido.",4.0f);
+            showStoryBanner("HACKER GHOST","Protocolos of infiltracao ativados. +40% Speed.",4.0f);
+            triggerPlayerSpeech("Modo ghost enabled. Sou more fast.",4.0f);
             break;
         case 2:
             player.maxHealth *= 1.50f;
             player.health = player.maxHealth;
-            showStoryBanner("EXECUTOR OMEGA","Blindagem maxima instalada. +50% HP.",4.0f);
-            triggerPlayerSpeech("Armadura omega. Sou imparavel.",4.0f);
+            showStoryBanner("EXECUTOR OMEGA","Blindagem maxima installed. +50% HP.",4.0f);
+            triggerPlayerSpeech("Armor omega. Sou imparavel.",4.0f);
             break;
     }
     particles.spawnLevelUp(player.position);
@@ -361,7 +361,7 @@ void Game::drawLevelUpScreen() const {
     float off=(1.0f-sc)*80.0f;
     Color Cg={255,210,0,255}; Color Cc={0,220,255,255};
     int ty=(int)(screenHeight/2-160+off);
-    const char* ttl=TextFormat("NIVEL %d ATINGIDO!",player.level);
+    const char* ttl=TextFormat("LESPEED %d ATINGIDO!",player.level);
     DrawText(ttl,screenWidth/2-MeasureText(ttl,36)/2,ty,36,ColorAlpha(Cg,sc));
     const char* sub="Escolha um upgrade (1 / 2 / 3):";
     DrawText(sub,screenWidth/2-MeasureText(sub,15)/2,ty+44,15,ColorAlpha(WHITE,0.7f*sc));
@@ -393,7 +393,7 @@ void Game::drawLevelUpScreen() const {
             DrawRectangle(cx,cy2,cW,4,Color{255,210,0,200});
         }
     }
-    const char* hint="Mouse ou 1/2/3 para selecionar   ENTER para confirmar";
+    const char* hint="Mouse ou 1/2/3 to select   ENTER to confirm";
     DrawText(hint,screenWidth/2-MeasureText(hint,12)/2,(int)(screenHeight/2+125+off),12,ColorAlpha(GRAY,0.7f*sc));
 }
 
@@ -401,11 +401,11 @@ void Game::drawEvolutionScreen() const {
     DrawRectangle(0,0,screenWidth,screenHeight,ColorAlpha(BLACK,0.80f));
     float sc=levelUpAnimTimer<0.3f?levelUpAnimTimer/0.3f:1.0f;
     Color Cp={180,0,255,255};
-    const char* ttl="PONTO DE EVOLUCAO";
+    const char* ttl="PONTO DE EVOLUTION";
     DrawText(ttl,screenWidth/2-MeasureText(ttl,32)/2,screenHeight/2-170,32,ColorAlpha(Cp,sc));
     struct EP { const char* name; const char* desc; Color col; } paths[3]={
-        {"SOLDADO CYBORG",   "+HP +Defesa +Armadura",   {0,200,255,255}},
-        {"HACKER FANTASMA",  "+Vel +Dano +Alcance",     {0,255,120,255}},
+        {"SOLDADO CYBORG",   "+HP +Defense +Armor",   {0,200,255,255}},
+        {"HACKER GHOST",  "+Vel +Damage +Range",     {0,255,120,255}},
         {"EXECUTOR OMEGA","MAXIMO HP",               {255,80,0,255}},
     };
     const char* keys[3]={"[A]","[S]","[D]"};
@@ -431,7 +431,7 @@ void Game::drawEvolutionScreen() const {
         DrawText(paths[i].desc,cx+10,cY+38,11,ColorAlpha(WHITE,0.75f*sc));
         DrawText(keys[i],cx+cW-28,cY+cH-20,14,ColorAlpha(bc,0.8f*sc));
     }
-    const char* hint2="A/S/D ou setas para selecionar   ENTER para confirmar";
+    const char* hint2="A/S/D ou arrows to select   ENTER to confirm";
     DrawText(hint2,screenWidth/2-MeasureText(hint2,12)/2,screenHeight/2+110,12,ColorAlpha(GRAY,0.7f*sc));
 }
 

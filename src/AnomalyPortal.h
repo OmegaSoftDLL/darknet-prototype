@@ -45,7 +45,7 @@ private:
 
 struct StormSystem {
     bool  active        = false;
-    bool  atmospheric   = false;  // rain/wind environment for dark zones (no anomaly wave)
+    bool  atmospheric   = false;  // rain/wind environment for dark zones (in the anomaly wave)
     float intensity     = 0.0f;
     float maxIntensity  = 1.0f;   // intensity ceiling (atmospheric uses less)
     float lightningTimer = 0.0f;

@@ -4,12 +4,12 @@
 #include <vector>
 #include <sstream>
 
-// Mantido para compatibilidade com Game.cpp existente
+// Mantido to compatibilidade with Game.cpp existente
 enum class NPCRole {
     Soldier, Engineer, Leader, Scientist, Merchant, WeaponDealer, ArmorSmith
 };
 
-// Novos tipos expandidos
+// Novos types expandidos
 enum class NPCType {
     Merchant,
     QuestGiver,
@@ -49,7 +49,7 @@ public:
     Vector2                  position;
     float                    radius      = 20.0f;
     std::string              name;
-    std::vector<std::string> dialogLines; // sistema legado
+    std::vector<std::string> dialogLines; // system legacy
     std::string              questId;
     NPCRole                  role        = NPCRole::Soldier;
     Color                    color       = DARKGREEN;
@@ -80,24 +80,24 @@ public:
     bool        talked_before = false;
     std::string currentMood   = "neutral";
 
-    // ── Construtor legado ─────────────────────────────────────────────────
+    // ── Construtor legacy ─────────────────────────────────────────────────
     NPC() = default;
     NPC(Vector2 pos, const std::string& n, NPCRole r,
         const std::vector<std::string>& lines,
         const std::string& qid = "");
 
-    // ── API legada ────────────────────────────────────────────────────────
+    // ── API legacy ────────────────────────────────────────────────────────
     void render() const;
     bool isPlayerNear(Vector2 playerPos) const;
     void showDialog(int line = 0) const;
 
-    // ── API nova ──────────────────────────────────────────────────────────
+    // ── API new ──────────────────────────────────────────────────────────
     void setup(NPCType t, const std::string& n, Vector2 pos);
     void update(float dt, Vector2 playerPos, bool playerInteract);
-    void renderFull() const;                        // render novo detalhado
-    // Fase do passo (0..2pi) e se esta andando. O 2D desenhava as pernas em
-    // posicao FIXA, entao o modelo 3D (que e gerado a partir do 2D) tambem
-    // ficava congelado: o NPC deslizava pelo cenario em vez de caminhar.
+    void renderFull() const;                        // render new detalhado
+    // Phase of the passo (0..2pi) and if is andando. O 2D desenhava the legs in
+    // position FIXA, entao the model 3D (that and generated the partir of the 2D) also
+    // ficava congelado: the NPC deslizava pelo scenario instead of caminhar.
     float walkPhase = 0.0f;
     bool  walking   = false;
     void drawLegsAnim(Color c, float w, float h, float yTop) const;

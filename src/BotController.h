@@ -34,7 +34,7 @@ public:
         bool    shouldUseSkill6   = false;
         int     nearestEnemyIdx   = -1;
         Vector2 nearestEnemyPos   = {0, 0};  // for skill aiming
-        bool    shouldUsePortal   = false;   // bot quer acionar o portal de fase (equivale a tecla E)
+        bool    shouldUsePortal   = false;   // bot wants acionar the portal of phase (equivale the key E)
         bool    shouldQuit        = false;
         BotState currentState     = BotState::Explore;
     };
@@ -70,42 +70,42 @@ public:
     void addLog(const std::string& msg);
     void writeReport(const std::string& path) const;
 
-    // Reset COMPLETO entre partidas (telemetria, estado, timers, rota cacheada).
-    // Preserva active/autoTest/testDuration — chamado por Game::restartRun.
+    // Reset COMPLETO between partidas (telemetria, state, timers, route cacheada).
+    // Preserva active/autoTest/testDuration — called by Game::restartRun.
     void reset();
 
-    // PORTAO DE VALIDACAO: transforma o relatorio em pass/fail. Sem isto qualquer
-    // mudanca (minha ou de outro agente) podia quebrar o jogo sem ninguem notar
-    // ate abrir e jogar. `reasons` recebe o motivo de cada reprovacao.
+    // PORTAO DE VALIDATION: transforma the report in pass/fail. Sem isto qualquer
+    // change (minha ou of other agente) podia quebrar the game without ninguem notar
+    // until open and play. `reasons` receives the motivo of cada reprovacao.
     bool passed(std::vector<std::string>* reasons = nullptr) const;
 
-    // Sensores de parede — Game preenche antes de update() a partir do tilemap.
+    // Sensores of wall — Game preenche before update() the partir of the tilemap.
     // Indices: 0=E 1=NE 2=N 3=NW 4=W 5=SW 6=S 7=SE (igual k8DirAngles)
     bool blockedDir[8] = {false,false,false,false,false,false,false,false};
 
-    // Consulta de colisao global do mapa (preenchida pelo Game a partir do tilemap).
-    // Retorna true se a posicao de mundo dada e uma parede/obstaculo.
-    // Quando definida, o bot usa pathfinding global (BFS) em vez do desvio reativo.
+    // Consulta of collision global of the map (preenchida pelo Game the partir of the tilemap).
+    // Returns true if the world position is a wall/obstacle.
+    // Quando definida, the bot usa pathfinding global (BFS) instead of the desvio reativo.
     std::function<bool(Vector2)> wallQuery;
 
-    // Centro do mapa (preenchido pelo Game) — destino de escape quando o bot fica
-    // preso numa borda/barreira do mundo aberto. {0,0} = nao definido.
+    // Center of the map (preenchido pelo Game) — destino of escape when the bot stays
+    // preso numa edge/barrier of the world open. {0,0} = not defined.
     Vector2 worldCenter = {0, 0};
-    float   worldRadius = 0.0f;   // raio jogavel da fase (0 = desconhecido)
+    float   worldRadius = 0.0f;   // radius playable of the phase (0 = desconhecido)
 
-    // Zona segura (refugio) — preenchida pelo Game. Inimigos so spawnam FORA
-    // dela, entao o bot precisa sair dai para encontrar combate (0 = desconhecida).
+    // Zone segura (refuge) — preenchida pelo Game. Enemies only spawnam FORA
+    // dela, entao the bot precisa leave dai to find combat (0 = desconhecida).
     Vector2 safeZoneCenter = {0, 0};
     float   safeZoneRadius = 0.0f;
 
-    // Portal de FASE do mundo aberto — preenchido pelo Game a cada frame
-    // (owPortalPos/owPortalOpen). Sem isto o bot nao sabia para onde ir quando o
-    // portal abria: recebia so tilemap.portals (sistema antigo, vazio no OW).
+    // Open-world PHASE portal — filled by Game every frame
+    // (owPortalPos/owPortalOpen). Sem isto the bot not sabia to where go when the
+    // portal abria: recebia only tilemap.portals (system old, empty in the OW).
     Vector2 owPortalPos  = {0, 0};
     bool    owPortalOpen = false;
-    // Celula alcancavel mais LONGE do bot na ultima BFS. E o unico destino que
-    // se pode prometer que produz deslocamento quando ele esta encurralado.
-    // janela de medicao do 'preso' (ver updateStuckTracking)
+    // Celula alcancavel more LONGE of the bot in the last BFS. E the only destino that
+    // if can prometer that produz deslocamento when ele is encurralado.
+    // window of medicao of the 'preso' (see updateStuckTracking)
     float   stuckAccum  = 0.0f;
     float   stuckSample = 0.0f;
     bool    stuckCounted = false;
@@ -116,7 +116,7 @@ public:
     int   frameCount        = 0;
     int   meleeHits         = 0;
     int   skillsFired       = 0;
-    int   itemsCollected    = 0;   // itens realmente coletados (incrementado pelo Game)
+    int   itemsCollected    = 0;   // items really collected (incrementado pelo Game)
     int   itemsChased       = 0;   // items moved toward
     int   killCount         = 0;
     int   damageEvents      = 0;
@@ -136,7 +136,7 @@ public:
     int   longStuckEvents   = 0;    // times stuck for > 10s (bug report)
     std::vector<std::string> issueLog;
 
-    // Picos de contagem de entidades (diagnostico de FPS) — preenchidos pelo Game.
+    // Picos of contagem of entidades (diagnostic of FPS) — preenchidos pelo Game.
     int   peakEnemies     = 0;
     int   peakItems       = 0;
     int   peakOrbs        = 0;
@@ -144,17 +144,17 @@ public:
     int   peakEnemyProj   = 0;
     int   peakParticles   = 0;
     int   peakUnits       = 0;
-    int   fpsLowEnemies   = 0;   // contagens no instante do FPS mais baixo
+    int   fpsLowEnemies   = 0;   // contagens in the instante of the FPS more down
     int   fpsLowProj      = 0;
     int   fpsLowParticles = 0;
     float fpsLowValue     = 9999.0f;
-    float peakUpdateMs    = 0.0f; // pior tempo de update()
-    float peakRenderMs    = 0.0f; // pior tempo de render()
-    // Janela de quarentena do FPS: apos um frame de CARGA (dt > 0,25s — worldgen
-    // de partida/fase), o GetFPS() do raylib fica envenenado por ~0,5s (media
-    // movel de 30 amostras) e reporta FPS ~6 com o jogo rodando a 60. Durante a
-    // quarentena as amostras de FPS sao ignoradas: o "FPS minimo" mede GAMEPLAY,
-    // nao tela de loading.
+    float peakUpdateMs    = 0.0f; // pior time of update()
+    float peakRenderMs    = 0.0f; // pior time of render()
+    // Window of quarantine of the FPS: apos um frame of CARGA (dt > 0,25s — worldgen
+    // of match/phase), the GetFPS() of the raylib stays envenenado by ~0,5s (media
+    // movel of 30 amostras) and reporta FPS ~6 with the game rodando the 60. During the
+    // quarantine the amostras of FPS sao ignoradas: the "FPS minimum" mede GAMEPLAY,
+    // not screen of loading.
     float fpsQuarantine   = 0.0f;
 
 private:
@@ -181,17 +181,17 @@ private:
     float     orbitRadius   = 220.0f;
 
     // Phase advance
-    float     clearTimer    = 0.0f;    // time with no enemies + no items
+    float     clearTimer    = 0.0f;    // time with in the enemies + in the items
     bool      wasLowHP      = false;
     Vector2   fleeTarget    = {0, 0};
-    Vector2   lastAdvancePortalPos = {-99999.0f, -99999.0f}; // evita contar o mesmo portal multiplas vezes
+    Vector2   lastAdvancePortalPos = {-99999.0f, -99999.0f}; // evita contar the same portal multiplas vezes
 
     // Exploration spiral
     float     exploreTimer  = 0.0f;
     int       exploreStep   = 0;
-    float     exploreSafeZoneTimer = 0.0f; // tempo preso DENTRO da zona segura
+    float     exploreSafeZoneTimer = 0.0f; // time preso DENTRO of the zone segura
 
-    // Engage melee (~1.5s fechando distancia direto, sem recuo nem orbita)
+    // Engage melee (~1.5s fechando distance direct, without recuo nem orbita)
     float     engageTimer   = 0.0f;
 
     // Area tracking
@@ -207,12 +207,12 @@ private:
     int       lastZoneCheck    = 0;
     float     stagnationTimer  = 0.0f;
 
-    // ── Pathfinding global (BFS na grade de tiles) ────────────────────────────
-    std::vector<Vector2> cachedPath;                 // waypoints em coordenadas de mundo
-    float                repathTimer    = 0.0f;      // recalcula quando <= 0
+    // ── Pathfinding global (BFS in the grade of tiles) ────────────────────────────
+    std::vector<Vector2> cachedPath;                 // waypoints in coordenadas of world
+    float                repathTimer    = 0.0f;      // recalcula when <= 0
     Vector2              lastPathTarget = {-9999, -9999};
 
-    // Escape de bordas/bolsoes do mapa
+    // Escape of bordas/bolsoes of the map
     float                escapeTimer    = 0.0f;
     Vector2              escapeTarget   = {0, 0};
 

@@ -5,11 +5,11 @@
 
 struct SceneryObject {
     Vector2   position;
-    int       type;     // 0=house 1=barn 2=deadtree 3=gravestone 4=fence 5=streetlight 6=car 7=building 8=silo 9=arch 10=statue 11=grama 12=pedras
+    int       type;     // 0=house 1=barn 2=deadtree 3=gravestone 4=fence 5=streetlight 6=car 7=building 8=silo 9=arch 10=statue 11=grass 12=pedras
     float     rotation;
     float     scale;
     Color     tint;
-    long long chunk = -1;  // -1 = cenário fixo da região; >=0 = chunk procedural infinito
+    long long chunk = -1;  // -1 = scenario fixed of the region; >=0 = chunk procedural infinito
 };
 
 struct DarkWorld {
@@ -21,7 +21,7 @@ struct DarkWorld {
     Color                   skyBottom   = {20, 18, 28, 255};
     std::vector<SceneryObject> scenery;
 
-    // Generate scenery for a zone using a seed
+    // Generate scenery for the zone using the seed
     void generate(int zoneId, unsigned int seed);
 
     // Draw sky, moon, stars

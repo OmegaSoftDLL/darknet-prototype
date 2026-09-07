@@ -3,19 +3,19 @@
 #include "Equipment.h"
 
 enum class QuestType {
-    Kill,       // matar N inimigos
-    KillBoss,   // matar o boss
-    Collect,    // coletar N itens
-    CollectRare,// coletar N itens raros ou superiores
-    ClosePortal,// fechar N portais de anomalia
-    Zone        // chegar a uma zona especifica
+    Kill,       // kill N enemies
+    KillBoss,   // kill the boss
+    Collect,    // collect N items
+    CollectRare,// collect N items raros ou superiores
+    ClosePortal,// close N portals of anomaly
+    Zone        // chegar the uma zone especifica
 };
 
 struct Quest {
     std::string id;
     std::string title;
     std::string description;
-    std::string npcOwner;  // nome do NPC que da a quest
+    std::string npcOwner;  // nome of the NPC that of the the quest
     QuestType   type       = QuestType::Kill;
     int         target     = 5;
     int         current    = 0;

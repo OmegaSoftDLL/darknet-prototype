@@ -6,15 +6,15 @@
 
 static Achievement makeAch(const char* id, const char* title, const char* desc,
                             const char* icon, int req, int xp, int credits) {
-    Achievement a;
-    a.id          = id;
-    a.title       = title;
-    a.description = desc;
-    a.icon        = icon;
-    a.requirement = req;
-    a.rewardXP    = xp;
-    a.rewardCredits = credits;
-    return a;
+    Achievement the;
+    the.id          = id;
+    the.title       = title;
+    the.description = desc;
+    the.icon        = icon;
+    the.requirement = req;
+    the.rewardXP    = xp;
+    the.rewardCredits = credits;
+    return the;
 }
 
 void AchievementSystem::init() {
@@ -50,13 +50,13 @@ void AchievementSystem::init() {
     achievements.push_back(makeAch("portal_50",  "Rift Exterminator",   "Close 50 portals",        "[P]",  50,    4000, 2000));
 
     // Item rarity
-    achievements.push_back(makeAch("item_rare",    "Good Taste",        "Find a Rare item",        "[I]",  1,     300,  150));
+    achievements.push_back(makeAch("item_rare",    "Good Taste",        "Find the Rare item",        "[I]",  1,     300,  150));
     achievements.push_back(makeAch("item_epic",    "Collector",         "Find an Epic item",       "[I]",  1,     600,  300));
-    achievements.push_back(makeAch("item_legend",  "Truly Lucky",       "Find a Legendary item",   "[I]",  1,     2000, 1000));
+    achievements.push_back(makeAch("item_legend",  "Truly Lucky",       "Find the Legendary item",   "[I]",  1,     2000, 1000));
     achievements.push_back(makeAch("item_omega",   "OMEGA COLLECTED",   "Find an OMEGA item",      "[I]",  1,     5000, 2500));
 
     // Zone exploration
-    achievements.push_back(makeAch("zone_dark",    "Darkness Explorer", "Enter a dark zone",       "[Z]",  1,     400,  200));
+    achievements.push_back(makeAch("zone_dark",    "Darkness Explorer", "Enter the dark zone",       "[Z]",  1,     400,  200));
     achievements.push_back(makeAch("zone_all",     "World Mapper",      "Visit 5 distinct zones",  "[Z]", 5,     1000, 500));
     achievements.push_back(makeAch("zone_inferno", "Inferno Survivor",  "Survive the Inferno Zone","[Z]",1,600,300));
 
@@ -70,7 +70,7 @@ void AchievementSystem::init() {
     achievements.push_back(makeAch("credits_10000", "Tycoon",           "Earn 10000 credits",      "[C]",  10000, 1000, 500));
 
     // Deaths
-    achievements.push_back(makeAch("no_death",    "Untouchable",        "Complete a session without dying","[S]",0,1000,500));
+    achievements.push_back(makeAch("no_death",    "Untouchable",        "Complete the session without dying","[S]",0,1000,500));
 
     // Kill streak
     achievements.push_back(makeAch("streak_10",   "On Fire",            "Kill streak of 10",       "[K]",  10,    300,  150));
@@ -78,30 +78,30 @@ void AchievementSystem::init() {
 }
 
 Achievement* AchievementSystem::findById(const std::string& id) {
-    for (auto& a : achievements) if (a.id == id) return &a;
+    for (auto& the : achievements) if (the.id == id) return &the;
     return nullptr;
 }
 
 void AchievementSystem::unlock(const std::string& id) {
-    Achievement* a = findById(id);
-    if (!a || a->unlocked) return;
-    a->unlocked     = true;
-    a->displayTimer = 4.0f;
-    popupText  = std::string("[ACHIEVEMENT] ") + a->icon + " " + a->title;
+    Achievement* the = findById(id);
+    if (!the || the->unlocked) return;
+    the->unlocked     = true;
+    the->displayTimer = 4.0f;
+    popupText  = std::string("[ACHIEVEMENT] ") + the->icon + " " + the->title;
     popupTimer = 4.0f;
     popupColor = {255, 200, 0, 255};
     if (playerPtr) {
-        playerPtr->xp       += a->rewardXP;
-        playerPtr->credits  += a->rewardCredits;
+        playerPtr->xp       += the->rewardXP;
+        playerPtr->credits  += the->rewardCredits;
     }
     if (audioPtr) audioPtr->playAchievement();
 }
 
 void AchievementSystem::checkProgress(const std::string& id, int value) {
-    Achievement* a = findById(id);
-    if (!a || a->unlocked) return;
-    a->progress = value;
-    if (a->progress >= a->requirement) unlock(id);
+    Achievement* the = findById(id);
+    if (!the || the->unlocked) return;
+    the->progress = value;
+    if (the->progress >= the->requirement) unlock(id);
 }
 
 void AchievementSystem::update(float dt) {
@@ -202,8 +202,8 @@ void AchievementSystem::onCreditsEarned(int total) {
 
 void AchievementSystem::onDeathCount(int deaths) {
     if (deaths == 0) {
-        Achievement* a = findById("no_death");
-        if (a && !a->unlocked) unlock("no_death");
+        Achievement* the = findById("no_death");
+        if (the && !the->unlocked) unlock("no_death");
     }
 }
 

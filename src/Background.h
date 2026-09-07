@@ -4,7 +4,7 @@
 #include <cmath>
 #include "Zone.h"
 
-// Objeto de cenario pre-gerado (carros, escombros, postes, fogueiras)
+// Objeto of scenario pre-generated (cars, debris, postes, fogueiras)
 struct EnvObject {
     enum class Type { Car, Rubble, Lamppost, FirePit, Crate, Terminal };
     Type    type;
@@ -44,10 +44,10 @@ public:
     void generate(ZoneID zone, int mapW, int mapH, int tileSize);
     void update(float dt);
 
-    // Desenha o ceu (antes do BeginMode2D) — agora inclui parallax stars
+    // Draws the sky (before the BeginMode2D) — now inclui parallax stars
     void drawSky(int screenW, int screenH, ZoneID zone) const;
 
-    // Desenha silhueta de predio ao fundo
+    // Draws silhueta of building to the fundo
     void drawSkyline(Vector2 camTarget, int screenW, int screenH, ZoneID zone) const;
 
     // Parallax stars (screen-space, call after drawSky)
@@ -56,10 +56,10 @@ public:
     // Data stream / Matrix rain (screen-space, for tech zones)
     void drawDataStream(int screenW, int screenH, ZoneID zone) const;
 
-    // Desenha objetos de cenario (dentro do BeginMode2D)
+    // Draws objetos of scenario (inside the BeginMode2D)
     void drawEnvObjects() const;
 
-    // Particulas de cinza
+    // Particles of gray
     void drawAsh() const;
 
 private:

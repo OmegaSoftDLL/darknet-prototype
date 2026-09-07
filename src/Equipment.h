@@ -15,9 +15,9 @@ struct Equipment {
 
     int upgradeLevel = 0;  // 0-3, each level +30% stats
 
-    // ID estavel (save/load) — NUNCA muda; name pode ser renomeado. Fica no FIM
-    // da struct com default vazio: itens craftados (agregados sem id) continuam
-    // compilando e sao salvos pelo nome, como antes.
+    // ID stable (save/load) — NUNCA muda; name can be renomeado. Stays in the FIM
+    // of the struct with default empty: items craftados (agregados without id) continuam
+    // compilando and sao salvos pelo nome, as before.
     std::string id;
 
     bool  isEmpty()            const { return slot == EquipSlot::None; }
@@ -33,30 +33,30 @@ struct Equipment {
 
 namespace EDB {
     // ── Armas (Tier 1) ────────────────────────────────────────────────────────
-    inline Equipment pistolaPlas()    { return {"Pistola Plasma",     "Dano +15, Alc +20",   EquipSlot::Weapon,  15,  20,  {0,200,255,255},   1, 0, "pistola_plasma"}; }
-    inline Equipment submetMilitar()  { return {"Submetralhadora Mil","Dano +22, Alc +10",   EquipSlot::Weapon,  22,  10,  {180,200,120,255},  1, 0, "submet_militar"}; }
+    inline Equipment pistolaPlas()    { return {"Pistola Plasma",     "Damage +15, Rng +20",   EquipSlot::Weapon,  15,  20,  {0,200,255,255},   1, 0, "pistola_plasma"}; }
+    inline Equipment submetMilitar()  { return {"Submetralhadora Mil","Damage +22, Rng +10",   EquipSlot::Weapon,  22,  10,  {180,200,120,255},  1, 0, "submet_militar"}; }
     // ── Armas (Tier 2) ────────────────────────────────────────────────────────
-    inline Equipment rifleEnergia()   { return {"Rifle de Energia",   "Dano +35, Alc +40",   EquipSlot::Weapon,  35,  40,  {0,255,150,255},    2, 0, "rifle_energia"}; }
-    inline Equipment shotgunPlasma()  { return {"Shotgun Plasma",     "Dano +55, Alc -10",   EquipSlot::Weapon,  55, -10,  {255,150,0,255},    2, 0, "shotgun_plasma"}; }
-    inline Equipment espadaEnergia()  { return {"Espada de Energia",  "Dano +50, Alc +25",   EquipSlot::Weapon,  50,  25,  {255,50,200,255},   2, 0, "espada_energia"}; }
+    inline Equipment rifleEnergia()   { return {"Rifle of Energia",   "Damage +35, Rng +40",   EquipSlot::Weapon,  35,  40,  {0,255,150,255},    2, 0, "rifle_energia"}; }
+    inline Equipment shotgunPlasma()  { return {"Shotgun Plasma",     "Damage +55, Rng -10",   EquipSlot::Weapon,  55, -10,  {255,150,0,255},    2, 0, "shotgun_plasma"}; }
+    inline Equipment espadaEnergia()  { return {"Espada of Energia",  "Damage +50, Rng +25",   EquipSlot::Weapon,  50,  25,  {255,50,200,255},   2, 0, "espada_energia"}; }
     // ── Armas (Tier 3) ────────────────────────────────────────────────────────
-    inline Equipment canhaoEMP()      { return {"Canhao EMP",         "Dano +70, Alc +60",   EquipSlot::Weapon,  70,  60,  {255,200,0,255},    3, 0, "canhao_emp"}; }
-    inline Equipment railgunSkynet()  { return {"Railgun Skynet",     "Dano +100, Alc +80",  EquipSlot::Weapon, 100,  80,  {200,0,255,255},    3, 0, "railgun_skynet"}; }
-    inline Equipment canhaoAnti()     { return {"Canhao Anti-Maquina","Dano +130, Alc +55",  EquipSlot::Weapon, 130,  55,  {255,80,0,255},     3, 0, "canhao_antimaquina"}; }
+    inline Equipment canhaoEMP()      { return {"Canhao EMP",         "Damage +70, Rng +60",   EquipSlot::Weapon,  70,  60,  {255,200,0,255},    3, 0, "canhao_emp"}; }
+    inline Equipment railgunSkynet()  { return {"Railgun Skynet",     "Damage +100, Rng +80",  EquipSlot::Weapon, 100,  80,  {200,0,255,255},    3, 0, "railgun_skynet"}; }
+    inline Equipment canhaoAnti()     { return {"Canhao Anti-Maquina","Damage +130, Rng +55",  EquipSlot::Weapon, 130,  55,  {255,80,0,255},     3, 0, "canhao_antimaquina"}; }
 
     // ── Armaduras ─────────────────────────────────────────────────────────────
     inline Equipment coleteMilitar()  { return {"Colete Militar",     "+50 HP, Def 5%",      EquipSlot::Armor,   50,  5,   {120,120,120,255},  1, 0, "colete_militar"}; }
-    inline Equipment armaduraAvan()   { return {"Armadura Avancada",  "+120 HP, Def 15%",    EquipSlot::Armor,  120,  15,  {100,150,220,255},  2, 0, "armadura_avancada"}; }
+    inline Equipment armaduraAvan()   { return {"Armor Avancada",  "+120 HP, Def 15%",    EquipSlot::Armor,  120,  15,  {100,150,220,255},  2, 0, "armadura_avancada"}; }
     inline Equipment exoesqueleto()   { return {"Exoesqueleto Titan", "+250 HP, Def 30%",    EquipSlot::Armor,  250,  30,  {200,200,255,255},  3, 0, "exoesqueleto_titan"}; }
-    inline Equipment nanoMalha()      { return {"Nano Malha T-1000",  "+180 HP, Def 25%",    EquipSlot::Armor,  180,  25,  {0,220,200,255},    3, 0, "nano_malha"}; }
+    inline Equipment nanoMalha()      { return {"Nano Mesh T-1000",  "+180 HP, Def 25%",    EquipSlot::Armor,  180,  25,  {0,220,200,255},    3, 0, "nano_malha"}; }
 
     // ── Implants ──────────────────────────────────────────────────────────────
-    inline Equipment chipVel()        { return {"Chip de Velocidade", "Vel +60",             EquipSlot::Implant, 60,  0,   {255,100,255,255},  1, 0, "chip_velocidade"}; }
+    inline Equipment chipVel()        { return {"Chip of Speed", "Vel +60",             EquipSlot::Implant, 60,  0,   {255,100,255,255},  1, 0, "chip_velocidade"}; }
     inline Equipment neuralLink()     { return {"Neural Link",        "Vel +40, XP x1.5",    EquipSlot::Implant, 40,  1.5f,{150,255,200,255},  2, 0, "neural_link"}; }
     inline Equipment quantumCore()    { return {"Quantum Core",       "Vel +80, XP x2.0",    EquipSlot::Implant, 80,  2.0f,{255,255,100,255},  3, 0, "quantum_core"}; }
     inline Equipment adrenChip()      { return {"Adrenal Override",   "Vel +100, XP x1.8",   EquipSlot::Implant,100,  1.8f,{255,50,100,255},   3, 0, "adrenal_override"}; }
 
-    // Resolve pelo ID estavel (save/load). Retorna Equipment vazio se desconhecido.
+    // Resolve pelo ID stable (save/load). Returns Equipment empty if desconhecido.
     inline Equipment byId(const std::string& id) {
         static const Equipment all[] = {
             pistolaPlas(), submetMilitar(), rifleEnergia(), shotgunPlasma(),
@@ -64,12 +64,12 @@ namespace EDB {
             coleteMilitar(), armaduraAvan(), exoesqueleto(), nanoMalha(),
             chipVel(), neuralLink(), quantumCore(), adrenChip()
         };
-        for (const auto& e : all) if (e.id == id) return e;
+        for (const auto& and : all) if (and.id == id) return and;
         return {};
     }
 
-    // Sorteio por TIER — usado pela recompensa de fim de fase. Mantido aqui pra
-    // ficar junto do catalogo: quem adicionar item novo ve este sorteio na hora.
+    // Sorteio by TIER — usado pela reward of end of phase. Mantido here to
+    // stay junto of the catalog: quem add item new ve this sorteio in the hour.
     inline Equipment randomForTier(int tier) {
         if (tier < 1) tier = 1;
         if (tier > 3) tier = 3;

@@ -34,14 +34,14 @@ struct LevelUpChoice {
     float       bonusAmount;
 };
 
-// Classes jogaveis — cada uma tem aparencia, formato de corpo e stats proprios.
+// Classes jogaveis — cada uma has aparencia, formato of body and stats own.
 enum class CharacterClass {
-    Soldado = 0,   // homem soldado — equilibrado, armadura, rifle
-    Guerreira,     // mulher guerreira — rapida, agil, pistolas duplas
-    Robo,          // robo de combate — muito HP/defesa, lento, pesado
-    Mago,          // mago — pouca vida, MUITO dano de habilidade, cajado, tunica
-    Bruxa,         // bruxa — equilibrada, chapeu, magia, varinha
-    HomemFera,     // homem-fera — alto dano corpo a corpo, garras, pelos, rapido
+    Soldado = 0,   // homem soldier — equilibrado, armor, rifle
+    Guerreira,     // mulher guerreira — fast, agil, pistolas duplas
+    Robo,          // robo of combat — very HP/defense, slow, heavy
+    Mago,          // mage — little health, MUITO damage of skill, staff, tunica
+    Bruxa,         // bruxa — equilibrada, chapeu, magic, varinha
+    HomemFera,     // homem-fera — high damage body the body, garras, pelos, fast
     COUNT
 };
 
@@ -51,11 +51,11 @@ public:
     Vector2 velocity     = {0, 0};
     float   speed        = 250.0f;
 
-    // Corrida e pulo (publicos — Game controla)
-    float jumpZ      = 0.0f;   // altura atual do pulo (z)
-    float jumpVel    = 0.0f;   // velocidade vertical do pulo
+    // Corrida and pulo (publicos — Game controla)
+    float jumpZ      = 0.0f;   // height current of the pulo (z)
+    float jumpVel    = 0.0f;   // speed vertical of the pulo
     bool  isJumping  = false;
-    bool  sprinting  = false;  // Game seta quando segura correr
+    bool  sprinting  = false;  // Game seta when segura correr
     void  startJump() { if (!isJumping) { isJumping = true; jumpVel = 360.0f; } }
 
     float   health       = 100.0f;
@@ -78,44 +78,44 @@ public:
     Equipment equippedArmor;
     Equipment equippedImplant;
 
-    // Mochila de equipamentos guardados (gear nao equipado) — estilo Diablo:
-    // o jogador escolhe o que equipar de uma lista em vez de descartar o antigo.
+    // Equipment backpack guardados (gear not equipado) — estilo Diablo:
+    // the player escolhe the that equipar of uma list instead of descartar the old.
     std::vector<Equipment> equipBag;
     int  selectedBagEquip = 0;
-    void equipFromBag(int idx);   // troca o item da bolsa pelo equipado do slot
+    void equipFromBag(int idx);   // troca the item of the bolsa pelo equipado of the slot
 
-    // Assinatura da APARENCIA (arma/armadura/implante/tinta). O modelo 3D e gerado
-    // a partir do sprite 2D e fica CACHEADO: sem incluir isto na chave do cache, o
-    // personagem continuava com o visual antigo depois de trocar de equipamento.
+    // Assinatura of the APARENCIA (weapon/armor/implant/tinta). O model 3D and generated
+    // the partir of the sprite 2D and stays CACHEADO: without incluir isto in the chave of the cache, the
+    // character continuava with the visual old after swap of equipment.
     int visualSignature() const;
 
-    // ── Cosméticos (atualizados pelo Game: loja comum + skins premium de Gems) ──
-    bool  hasCosmeticTint = false;          // tinta comprada com creditos
+    // ── Cosmeticos (atualizados pelo Game: shop common + premium skins of Gems) ──
+    bool  hasCosmeticTint = false;          // tinta comprada with credits
     Color cosmeticTint    = {255,255,255,255};
-    bool  skinNeon        = false;          // skin_neon  (brilho neon aditivo)
-    bool  skinDragon      = false;          // skin_dragon (tonalidade quente + brasas)
-    bool  petDrone        = false;          // pet_drone  (drone flutuante ao lado)
+    bool  skinNeon        = false;          // skin_neon  (glow neon aditivo)
+    bool  skinDragon      = false;          // skin_dragon (tonalidade hot + brasas)
+    bool  petDrone        = false;          // pet_drone  (drone float to the lado)
 
-    // ── Poder de cura (estilo Diablo 3: pocao com cooldown + regen buff) ───────
-    float healCooldown = 0.0f;   // tempo restante ate poder usar de novo
-    float regenTimer   = 0.0f;   // duracao do buff de regeneracao ativo
-    void  usePotion();           // cura instantanea + ativa regeneracao (tecla Q)
+    // ── Power of healing (estilo Diablo 3: potion with cooldown + regen buff) ───────
+    float healCooldown = 0.0f;   // time restante until power usar of new
+    float regenTimer   = 0.0f;   // duration of the buff of regeneracao active
+    void  usePotion();           // healing instantanea + ativa regeneracao (key Q)
     bool  potionReady() const { return healCooldown <= 0.0f; }
 
     // Buff timers
     float overloadTimer = 0.0f;
     float shieldTimer   = 0.0f;
-    bool  inSafeRefuge  = false;   // setado pelo Game: invulnerável dentro da zona segura
-    bool  reviveReady   = true;    // Protocolo Imortal (perk) — 1 uso por 60s
+    bool  inSafeRefuge  = false;   // setado pelo Game: invulneravel inside the zone segura
+    bool  reviveReady   = true;    // Protocolo Imortal (perk) — 1 uso by 60s
     float reviveTimer   = 0.0f;
 
     bool isOverloaded() const { return overloadTimer > 0.0f; }
     bool isShielded()   const { return shieldTimer   > 0.0f; }
 
-    // ── Sistema de classes de personagem ─────────────────────────────────────
+    // ── Sistema of classes of character ─────────────────────────────────────
     CharacterClass charClass = CharacterClass::Soldado;
-    float          skillPower = 1.0f;   // multiplicador de dano de habilidade da classe
-    // Paleta visual da classe (definida em applyClass, usada no render)
+    float          skillPower = 1.0f;   // multiplicador of damage of skill of the class
+    // Paleta visual of the class (definida in applyClass, usada in the render)
     Color classPrimary   = {35, 55, 120, 255};
     Color classSecondary = {55, 90, 180, 255};
     Color classAccent    = {0, 210, 255, 255};
@@ -123,9 +123,9 @@ public:
     Color classTrim      = {160, 170, 185, 255};
 
     void applyClass(CharacterClass c);                      // aplica stats/cores base
-    static const char* className(CharacterClass c);        // nome p/ a tela de selecao
-    static const char* classDescription(CharacterClass c); // descricao curta
-    static const char* classFantasy(CharacterClass c);     // 1 frase de "sabor"
+    static const char* className(CharacterClass c);        // nome p/ the screen of selecao
+    static const char* classDescription(CharacterClass c); // descricao short
+    static const char* classFantasy(CharacterClass c);     // 1 frase of "sabor"
 
     // Evolution system
     EvolutionPath evolutionPath  = EvolutionPath::None;
@@ -134,21 +134,21 @@ public:
 
     float walkAnimTimer = 0.0f;
     bool  isMoving      = false;
-    bool  moveRequested = false;  // input recebido neste frame (game feel)
+    bool  moveRequested = false;  // input received neste frame (game feel)
     int   facing        = 1;
-    bool  leveledUp     = false;   // SO efeito visual (fica true por levelUpTimer)
+    bool  leveledUp     = false;   // SO effect visual (stays true by levelUpTimer)
     float levelUpTimer  = 0.0f;
-    // Niveis ganhos que o Game ainda nao contabilizou. Contador (nao flag): o
-    // Game drena 1x por frame. Antes o Game usava `leveledUp` como gatilho de
-    // borda — mas ela fica true por 2.5s, entao cada orbe de XP colhido nessa
-    // janela dava um level-up/evolucao DE GRACA. E subir 2 niveis de uma vez
-    // (addXP grande) so dava 1 ponto.
+    // Niveis ganhos that the Game still not contabilizou. Contador (not flag): the
+    // Game drena 1x by frame. Antes the Game usava `leveledUp` as gatilho of
+    // edge — mas ela stays true by 2.5s, entao cada orb of XP colhido nessa
+    // window dava um level-up/evolution DE GRACA. E go up 2 levels of uma vez
+    // (addXP big) only dava 1 point.
     int   unclaimedLevels = 0;
     std::string lastPassive;
 
-    // ── Hack Tree (skill tree de perks) ──
-    int      skillPoints = 0;   // 1 por level-up; gasta na arvore (tecla X)
-    uint32_t perkMask    = 0;   // bits dos perks comprados (SkillTree::bit)
+    // ── Hack Tree (skill tree of perks) ──
+    int      skillPoints = 0;   // 1 by level-up; gasta in the tree (key X)
+    uint32_t perkMask    = 0;   // bits of the perks comprados (SkillTree::bit)
 
     // Player speech / dialogue
     PlayerSpeech speech;
@@ -172,9 +172,9 @@ public:
     void  addItem(const Item& item);
     void  useSkill(int index, Vector2 target);
     void  drawInventory() const;
-    void  absorbBossEssence(int kind);   // buff PERMANENTE de boss (mexe no stat BASE)
+    void  absorbBossEssence(int kind);   // buff PERMANENTE of boss (mexe in the stat BASE)
 
-    // ── Save/Load de progresso (classe + stats BASE — efetivos sao recalculados) ──
+    // ── Save/Load of progress (class + stats BASE — efetivos sao recalculados) ──
     CharacterClass getCharClass() const { return charClass; }
     float getBaseMaxHealth()    const { return baseMaxHealth; }
     float getBaseAttackDamage() const { return baseAttackDamage; }
@@ -188,19 +188,19 @@ public:
         applyEquipmentStats();
     }
     void  handleInventoryInput();
-    // Mouse no inventário (vmouse já virtualizado p/ 1280x720). Retorna true se
-    // o clique foi no botão FECHAR (Game deve então fechar o inventário).
+    // Mouse in the inventory (vmouse already virtualizado p/ 1280x720). Returns true if
+    // the click went in the button FECHAR (Game must entao close the inventory).
     bool  handleInventoryMouse(Vector2 vmouse, bool leftClick, bool rightClick);
     bool  tryUpgradeEquip(int slot);
     void  heal(float amount);
-    void  addXP(int amount);   // acumula em unclaimedLevels
+    void  addXP(int amount);   // acumula in unclaimedLevels
     void  takeDamage(float amount);
     void  increaseBaseMaxHP(float amount);
     void  increaseBaseAttackDamage(float amount);
     void  increaseBaseSpeed(float amount);
     void  increaseBaseAttackRange(float amount);
     void  increaseBaseDefense(float amount);
-    void  refreshSkillVectors();   // recalcula dano/alcance/cooldown das skills (idempotente)
+    void  refreshSkillVectors();   // recalcula damage/range/cooldown of the skills (idempotent)
     void  equipItem(const Equipment& equip);
     void  drawEquipment() const;
     float getEffectiveDamage() const;
@@ -217,15 +217,15 @@ private:
     float baseMaxHealth    = 100.0f;
     float baseAttackDamage = 25.0f;
     float baseAttackRange  = 90.0f;
-    float baseDefense      = 8.0f;   // defesa base da classe (armadura soma por cima)
+    float baseDefense      = 8.0f;   // defense base of the class (armor soma by up)
 
-    std::vector<float> baseSkillDamage;  // dano base das skills (p/ aplicar skillPower idempotente)
-    std::vector<float> baseSkillRange;    // alcance base das skills (perks recomputam dos originais)
-    std::vector<float> baseSkillCool;     // cooldown base das skills (idem)
-    float cdEvoMult = 1.0f;               // reducoes de cooldown por evolucao (lv 10/25/40/60)
+    std::vector<float> baseSkillDamage;  // damage base of the skills (p/ aplicar skillPower idempotent)
+    std::vector<float> baseSkillRange;    // range base of the skills (perks recomputam of the originais)
+    std::vector<float> baseSkillCool;     // cooldown base of the skills (idem)
+    float cdEvoMult = 1.0f;               // reducoes of cooldown by evolution (lv 10/25/40/60)
 
-    // Render de corpo por classe (formatos distintos)
-    Color accentNow() const;  // accent considerando overload/escudo
+    // Render of body by class (formatos distintos)
+    Color accentNow() const;  // accent considerando overload/shield
     void  renderSoldado  (float px, float py, float f, float legL, float legR) const;
     void  renderGuerreira(float px, float py, float f, float legL, float legR) const;
     void  renderRobo     (float px, float py, float f, float legL, float legR) const;

@@ -7,13 +7,13 @@
 struct ShopItem {
     std::string   name;
     std::string   description;
-    int           price;        // creditos
+    int           price;        // credits
     bool          isEquipment;
-    Equipment     equip;        // se isEquipment
-    Item          item;         // se !isEquipment
+    Equipment     equip;        // if isEquipment
+    Item          item;         // if !isEquipment
     Color         color;
-    bool          isCosmetic   = false;  // sem efeito mecanico
-    Color         cosmeticColor = WHITE; // nova cor do personagem
+    bool          isCosmetic   = false;  // without effect mechanical
+    Color         cosmeticColor = WHITE; // new color of the character
 };
 
 struct ShopSystem {
@@ -22,27 +22,27 @@ struct ShopSystem {
     int           selected   = 0;
     std::vector<ShopItem> items;
 
-    // Feedback de compra
+    // Feedback of purchase
     float         buyMsgTimer = 0.0f;
     std::string   buyMsg;
 
-    // Cor cosmetica aplicada ao player (0 = nenhuma)
+    // Color cosmetica aplicada to the player (0 = nenhuma)
     bool          hasCosmeticColor = false;
     Color         playerColor      = WHITE;
 
-    // Mouse (coords ja virtualizadas pelo Game). Usado para hover/botoes no render.
+    // Mouse (coords already virtualizadas pelo Game). Usado to hover/botoes in the render.
     Vector2 mousePos    = {-1, -1};
     double  lastClickT  = -1.0;
     int     lastClickIdx = -1;
 
     void buildShop(int npcIdx, const std::string& npcName);
     void render(int playerCredits, int screenW, int screenH) const;
-    // Retorna true se comprou algo. gotEquip indica tipo de retorno.
+    // Returns true if comprou algo. gotEquip indica type of return.
     bool tryBuy(int& playerCredits, Equipment& outEquip, Item& outItem,
                 bool& gotEquip, bool& gotCosmetic, Color& cosmeticOut);
     void handleInput();   // UP/DOWN navigation
-    // Mouse-aware: hover seleciona; duplo-clique no item OU botao COMPRAR compra;
-    // botao FECHAR fecha (outClosed=true). Mesmos out-params do tryBuy.
+    // Mouse-aware: hover seleciona; double-click in the item OU button BUY purchase;
+    // button FECHAR closes (outClosed=true). Same out-params of the tryBuy.
     bool handleMouse(Vector2 vmouse, bool clicked, int screenW, int screenH,
                      int& playerCredits, Equipment& outEquip, Item& outItem,
                      bool& gotEquip, bool& gotCosmetic, Color& cosmeticOut, bool& outClosed);

@@ -1,5 +1,5 @@
-// NetClient — cliente WebSocket (RFC 6455) sobre Winsock, com thread de fundo.
-// winsock2/ws2tcpip ANTES de qualquer windows.h.
+// NetClient — client WebSocket (RFC 6455) about Winsock, with thread of fundo.
+// winsock2/ws2tcpip ANTES of qualquer windows.h.
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include "NetClient.h"
@@ -10,20 +10,20 @@
 #include <cmath>
 #include <chrono>
 #include <random>
-#include <nlohmann/json.hpp>   // vendored em third_party/nlohmann/json.hpp
+#include <nlohmann/json.hpp>   // vendored in third_party/nlohmann/json.hpp
 
 #pragma comment(lib, "ws2_32.lib")
 
-// ── Parâmetros ───────────────────────────────────────────────────────────────
-static const float PEER_TIMEOUT = 5.0f;   // expira peer sem updates há >5s
+// ── Parameters ───────────────────────────────────────────────────────────────
+static const float PEER_TIMEOUT = 5.0f;   // expira peer without updates ha >5s
 static const float SEND_PERIOD  = 0.1f;   // 10x/s
 
-// ── Helpers de leitura JSON (nlohmann/json) ──────────────────────────────────
-// Mesmos defaults do parser manual anterior: chave ausente (ou com tipo
-// inesperado) retorna false e NAO altera `out` — quem chama inicializa com
-// 0 / "" antes, como antes. As mensagens do servidor sao objetos planos
-// (JSON.stringify), entao ler so as chaves de topo e equivalente a busca
-// por substring que o parser manual fazia.
+// ── Helpers of reading JSON (nlohmann/json) ──────────────────────────────────
+// Same defaults of the parser manual previous: chave ausente (ou with type
+// inesperado) returns false and NOT altera `out` — quem calls inicializa with
+// 0 / "" before, as before. As mensagens of the server sao objetos planos
+// (JSON.stringify), entao read only the chaves of topo and equivalente the busca
+// by substring that the parser manual fazia.
 static bool jsonNumber(const nlohmann::json& j, const char* key, double& out) {
     auto it = j.find(key);
     if (it == j.end() || !it->is_number()) return false;
@@ -38,7 +38,7 @@ static bool jsonString(const nlohmann::json& j, const char* key, std::string& ou
     return true;
 }
 
-// ── Base64 (para Sec-WebSocket-Key) ──────────────────────────────────────────
+// ── Base64 (to Sec-WebSocket-Key) ──────────────────────────────────────────
 static std::string base64(const unsigned char* data, int len) {
     static const char* tbl = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     std::string out;
@@ -55,7 +55,7 @@ static std::string base64(const unsigned char* data, int len) {
     return out;
 }
 
-// ── SHA1 (RFC 3174) — usado para validar Sec-WebSocket-Accept ────────────────
+// ── SHA1 (RFC 3174) — usado to validate Sec-WebSocket-Accept ────────────────
 static void sha1(const unsigned char* msg, size_t len, unsigned char digest[20]) {
     uint32_t h0 = 0x67452301, h1 = 0xEFCDAB89, h2 = 0x98BADCFE, h3 = 0x10325476, h4 = 0xC3D2E1F0;
     size_t total = ((len + 9 + 63) / 64) * 64;
@@ -76,17 +76,17 @@ static void sha1(const unsigned char* msg, size_t len, unsigned char digest[20])
             uint32_t x = w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16];
             w[i] = (x << 1) | (x >> 31);
         }
-        uint32_t a = h0, b = h1, c = h2, d = h3, e = h4;
+        uint32_t the = h0, b = h1, c = h2, d = h3, and = h4;
         for (int i = 0; i < 80; ++i) {
             uint32_t f, k;
             if (i < 20) { f = (b & c) | (~b & d); k = 0x5A827999; }
             else if (i < 40) { f = b ^ c ^ d; k = 0x6ED9EBA1; }
             else if (i < 60) { f = (b & c) | (b & d) | (c & d); k = 0x8F1BBCDC; }
             else { f = b ^ c ^ d; k = 0xCA62C1D6; }
-            uint32_t t = ((a << 5) | (a >> 27)) + f + e + k + w[i];
-            e = d; d = c; c = (b << 30) | (b >> 2); b = a; a = t;
+            uint32_t t = ((the << 5) | (the >> 27)) + f + and + k + w[i];
+            and = d; d = c; c = (b << 30) | (b >> 2); b = the; the = t;
         }
-        h0 += a; h1 += b; h2 += c; h3 += d; h4 += e;
+        h0 += the; h1 += b; h2 += c; h3 += d; h4 += and;
     }
     auto put = [&](int idx, uint32_t v) {
         digest[idx] = (unsigned char)(v >> 24);
@@ -97,10 +97,10 @@ static void sha1(const unsigned char* msg, size_t len, unsigned char digest[20])
     put(0, h0); put(4, h1); put(8, h2); put(12, h3); put(16, h4);
 }
 
-// GUID fixo do RFC 6455 para Sec-WebSocket-Accept.
+// GUID fixed of the RFC 6455 to Sec-WebSocket-Accept.
 static const char WS_GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-// Extrai um header da resposta HTTP (case-insensitive, sem espaços extras).
+// Extrai um header of the resposta HTTP (case-insensitive, without espacos extras).
 static std::string getHeader(const std::string& resp, const char* name) {
     std::string needle = "\r\n";
     needle += name;
@@ -114,7 +114,7 @@ static std::string getHeader(const std::string& resp, const char* name) {
     return resp.substr(pos, end - pos);
 }
 
-// Gerador aleatório seguro para máscaras WebSocket e Sec-WebSocket-Key.
+// Gerador random safe to mascaras WebSocket and Sec-WebSocket-Key.
 static std::mt19937& wsRng() {
     static std::mt19937 rng(std::random_device{}());
     return rng;
@@ -123,7 +123,7 @@ static unsigned char randomByte() {
     return static_cast<unsigned char>(std::uniform_int_distribution<int>(0, 255)(wsRng()));
 }
 
-// ── Envia todos os bytes (lida com sends parciais) ───────────────────────────
+// ── Sends all the bytes (read with sends parciais) ───────────────────────────
 static bool sendAll(SOCKET s, const char* data, int len) {
     int sent = 0;
     while (sent < len) {
@@ -137,7 +137,7 @@ static bool sendAll(SOCKET s, const char* data, int len) {
     return true;
 }
 
-// ── Monta e envia um frame de TEXTO mascarado (cliente -> servidor) ───────────
+// ── Monta and sends um frame of TEXT mascarado (client -> server) ───────────
 static bool wsSendText(SOCKET s, const std::string& payload) {
     std::string frame;
     frame.push_back((char)0x81); // FIN + opcode text
@@ -161,7 +161,7 @@ static bool wsSendText(SOCKET s, const std::string& payload) {
     return sendAll(s, frame.data(), (int)frame.size());
 }
 
-// ── Envia um frame de controle (pong/close), mascarado e sem payload ─────────
+// ── Sends um frame of controle (pong/close), mascarado and without payload ─────────
 static bool wsSendControl(SOCKET s, unsigned char opcode, const std::string& payload) {
     std::string frame;
     frame.push_back((char)(0x80 | opcode));
@@ -177,7 +177,7 @@ static bool wsSendControl(SOCKET s, unsigned char opcode, const std::string& pay
 
 NetClient::~NetClient() { shutdown(); }
 
-// ─── API pública ─────────────────────────────────────────────────────────────
+// ─── API publica ─────────────────────────────────────────────────────────────
 
 bool NetClient::init(const char* myName, uint32_t myId, const char* wsUrl, const char* authToken) {
     myId_ = myId;
@@ -185,11 +185,11 @@ bool NetClient::init(const char* myName, uint32_t myId, const char* wsUrl, const
     if (myName) std::strncpy(myName_, myName, sizeof(myName_) - 1);
     if (authToken) token_ = authToken;
 
-    // Parse simples de ws://host:port/path
+    // Parse simple of ws://host:port/path
     if (wsUrl && *wsUrl) {
         std::string u = wsUrl;
-        // wss:// (TLS em WebSocket) não é suportado aqui: o NetClient é Winsock
-        // puro sem TLS. Se a URL pedir wss, recusa o init sem abrir thread.
+        // wss:// (TLS in WebSocket) not is suportado here: the NetClient is Winsock
+        // puro without TLS. If the URL pedir wss, recusa the init without open thread.
         if (u.rfind("wss://", 0) == 0) {
             enabled = false;
             return false;
@@ -227,20 +227,20 @@ void NetClient::shutdown() {
 
 void NetClient::sendState(float x, float y, int charClass, int facing, bool moving) {
     if (!enabled) return;
-    // throttle real: usa relógio para não depender do dt do raylib
+    // throttle real: usa relogio to not depender of the dt of the raylib
     auto now = std::chrono::steady_clock::now();
     float elapsed = std::chrono::duration<float>(now - lastSend_).count();
     if (elapsed < SEND_PERIOD) return;
     lastSend_ = now;
 
-    // anim_state compacto: "i"=idle, "wl"=andando p/ esquerda, "wr"=p/ direita
-    const char* a = moving ? (facing < 0 ? "wl" : "wr") : "i";
+    // anim_state compacto: "i"=idle, "wl"=andando p/ left, "wr"=p/ right
+    const char* the = moving ? (facing < 0 ? "wl" : "wr") : "i";
     nlohmann::json j = {
         {"t", "state"},
         {"id", myId_},
         {"x", std::round(x * 10.0f) / 10.0f},
         {"y", std::round(y * 10.0f) / 10.0f},
-        {"a", a},
+        {"the", the},
         {"c", charClass},
         {"n", myName_}
     };
@@ -253,7 +253,7 @@ void NetClient::joinParty(const std::string& room) {
     if (room.empty()) return;
     std::lock_guard<std::mutex> lk(mtx_);
     room_ = room;
-    peersShared_.clear();          // limpa peers da sala anterior
+    peersShared_.clear();          // limpa peers of the room previous
     outQueue_.push_back(nlohmann::json{{"t", "join"}, {"room", room}}.dump());
 }
 
@@ -298,24 +298,24 @@ std::vector<uint32_t> NetClient::drainEnemyDeaths() {
 
 void NetClient::poll(float dt) {
     std::lock_guard<std::mutex> lk(mtx_);
-    // envelhece e expira peers
+    // envelhece and expira peers
     for (auto& p : peersShared_) p.lastSeen += dt;
     for (size_t i = 0; i < peersShared_.size();) {
         if (peersShared_[i].lastSeen > PEER_TIMEOUT)
             peersShared_.erase(peersShared_.begin() + i);
         else ++i;
     }
-    snapshot_ = peersShared_; // publica copia para a main thread
+    snapshot_ = peersShared_; // publica copia for the main thread
 }
 
-// ─── Thread de rede ──────────────────────────────────────────────────────────
+// ─── Thread of network ──────────────────────────────────────────────────────────
 
 void NetClient::netThreadMain() {
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) { connected_ = false; return; }
 
     while (running_) {
-        // ── Resolve + conecta TCP ─────────────────────────────────────────────
+        // ── Resolve + connects TCP ─────────────────────────────────────────────
         char portStr[16]; std::snprintf(portStr, sizeof(portStr), "%d", port_);
         addrinfo hints{}; hints.ai_family = AF_INET; hints.ai_socktype = SOCK_STREAM;
         addrinfo* res = nullptr;
@@ -334,11 +334,11 @@ void NetClient::netThreadMain() {
         unsigned char keyBytes[16];
         for (int i = 0; i < 16; ++i) keyBytes[i] = randomByte();
         std::string key = base64(keyBytes, 16);
-        // JWT no header Authorization: o servidor valida no UPGRADE e recusa
-        // com 401 (sem token valido o socket nem abre). Nunca no corpo JSON.
+        // JWT in the header Authorization: the server valid in the UPGRADE and recusa
+        // with 401 (without token valid the socket nem opens). Nunca in the body JSON.
         std::string authHeader;
         if (!token_.empty()) authHeader = "Authorization: Bearer " + token_ + "\r\n";
-        // Buffer dinamico: cabeçalho fixo ~170 bytes + strings variaveis.
+        // Buffer dynamic: cabecalho fixed ~170 bytes + strings variaveis.
         int baseSize = 256 + (int)path_.size() + (int)host_.size() + (int)authHeader.size() + (int)key.size();
         std::vector<char> req(baseSize);
         int reqLen = std::snprintf(req.data(), req.size(),
@@ -353,7 +353,7 @@ void NetClient::netThreadMain() {
         if (reqLen <= 0 || reqLen >= (int)req.size()) { closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue; }
         if (!sendAll(s, req.data(), reqLen)) { closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue; }
 
-        // lê resposta até \r\n\r\n
+        // reads resposta until \r\n\r\n
         std::string resp;
         bool ok = false;
         {
@@ -369,7 +369,7 @@ void NetClient::netThreadMain() {
             closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue;
         }
 
-        // Validar Sec-WebSocket-Accept conforme RFC 6455
+        // Validate Sec-WebSocket-Accept conforme RFC 6455
         {
             std::string accept = getHeader(resp, "Sec-WebSocket-Accept");
             std::string concat = key + WS_GUID;
@@ -383,13 +383,13 @@ void NetClient::netThreadMain() {
 
         // ── Conectado ─────────────────────────────────────────────────────────
         connected_ = true;
-        // socket com timeout de recv curto p/ não bloquear o loop
+        // socket with timeout of recv short p/ not bloquear the loop
         DWORD rcvTo = 50; setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&rcvTo, sizeof(rcvTo));
         { std::string r; { std::lock_guard<std::mutex> lk(mtx_); r = room_; }
           wsSendText(s, nlohmann::json{{"t", "join"}, {"room", r}}.dump()); }
 
         std::string rx;
-        // se sobrou corpo após o cabeçalho do handshake, processa
+        // if sobrou body after the cabecalho of the handshake, processes
         size_t hdrEnd = resp.find("\r\n\r\n");
         if (hdrEnd != std::string::npos && hdrEnd + 4 < resp.size())
             rx.append(resp.substr(hdrEnd + 4));
@@ -398,7 +398,7 @@ void NetClient::netThreadMain() {
         bool alive = true;
 
         while (running_ && alive) {
-            // 1) envia mensagens enfileiradas
+            // 1) sends mensagens enfileiradas
             {
                 std::deque<std::string> out;
                 { std::lock_guard<std::mutex> lk(mtx_); out.swap(outQueue_); }
@@ -406,28 +406,28 @@ void NetClient::netThreadMain() {
             }
             if (!alive) break;
 
-            // 2) ping periódico
+            // 2) ping periodico
             auto now = std::chrono::steady_clock::now();
             if (std::chrono::duration<float>(now - lastPing).count() > 15.0f) {
                 lastPing = now;
                 if (!wsSendControl(s, 0x9, "")) { alive = false; break; }
             }
 
-            // 3) recebe e processa frames
+            // 3) receives and processes frames
             char tmp[2048];
             int n = recv(s, tmp, sizeof(tmp), 0);
             if (n == 0) { alive = false; break; }
             if (n == SOCKET_ERROR) {
-                int e = WSAGetLastError();
-                if (e == WSAETIMEDOUT || e == WSAEWOULDBLOCK) { continue; }
+                int and = WSAGetLastError();
+                if (and == WSAETIMEDOUT || and == WSAEWOULDBLOCK) { continue; }
                 alive = false; break;
             }
             rx.append(tmp, n);
-            // Proteção contra peer malicioso/servidor com falha.
+            // Protecao contra peer malicioso/server with failure.
             static constexpr size_t MAX_RX = 8 * 1024 * 1024;
             if (rx.size() > MAX_RX) { alive = false; break; }
 
-            // parser de frames
+            // parser of frames
             for (;;) {
                 if (rx.size() < 2) break;
                 unsigned char b0 = (unsigned char)rx[0];
@@ -452,7 +452,7 @@ void NetClient::netThreadMain() {
                     for (int i = 0; i < 4; ++i) mk[i] = (unsigned char)rx[pos + i];
                     pos += 4;
                 }
-                // Proteção contra overflow aritmético: len é uint64_t, pos é size_t.
+                // Protecao contra overflow aritmetico: len is uint64_t, pos is size_t.
                 if (len > rx.size() - pos) break; // frame incompleto ou len malicioso
 
                 std::string payload = rx.substr(pos, (size_t)len);
@@ -464,18 +464,18 @@ void NetClient::netThreadMain() {
                 if (opcode == 0x8) { alive = false; break; }          // close
                 else if (opcode == 0x9) { wsSendControl(s, 0xA, payload); } // ping -> pong
                 else if (opcode == 0xA) { /* pong */ }
-                else if (opcode == 0x1 || opcode == 0x0) {            // texto
-                    // Parse tolerante a falhas: payload invalido e ignorado,
-                    // como o parser manual (que simplesmente nao achava "t").
+                else if (opcode == 0x1 || opcode == 0x0) {            // text
+                    // Parse tolerante the failures: payload invalid and ignorado,
+                    // as the parser manual (that simplesmente not achava "t").
                     nlohmann::json j = nlohmann::json::parse(payload, nullptr, false);
                     if (!j.is_discarded() && j.is_object()) {
-                    std::string a; double idd = 0, xd = 0, yd = 0, cd = 0;
+                    std::string the; double idd = 0, xd = 0, yd = 0, cd = 0;
                     std::string tt; jsonString(j, "t", tt);
                     if (tt == "peer" && jsonNumber(j, "id", idd)) {
                         jsonNumber(j, "x", xd);
                         jsonNumber(j, "y", yd);
                         jsonNumber(j, "c", cd);
-                        jsonString(j, "a", a);
+                        jsonString(j, "the", the);
                         std::string nm; jsonString(j, "n", nm);
                         uint32_t pid = (uint32_t)idd;
                         if (pid != myId_) {
@@ -485,8 +485,8 @@ void NetClient::netThreadMain() {
                             if (!peer) { peersShared_.push_back(NetPeer{}); peer = &peersShared_.back(); peer->id = pid; }
                             peer->x = (float)xd; peer->y = (float)yd;
                             peer->charClass = (int)cd;
-                            peer->moving = (a != "i" && !a.empty());
-                            peer->facing = (a == "wl") ? -1 : 1;
+                            peer->moving = (the != "i" && !the.empty());
+                            peer->facing = (the == "wl") ? -1 : 1;
                             std::strncpy(peer->name, nm.c_str(), sizeof(peer->name) - 1);
                             peer->name[sizeof(peer->name) - 1] = 0;
                             peer->lastSeen = 0.0f;

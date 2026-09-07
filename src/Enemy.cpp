@@ -190,7 +190,7 @@ void Enemy::setupByType() {
             shootSpeed = 300.0f; projectileColor = {255, 240, 200, 200};
             attackRate = 99.0f;
             break;
-        // ── Facção Meca-Orgânica ───────────────────────────────────────────────
+        // ── Faction Meca-Organica ───────────────────────────────────────────────
         case EnemyType::CorrupterDrone:
             speed = 140.0f; health = maxHealth = 55.0f;
             damage = 0.0f; radius = 14.0f; xpReward = 28;
@@ -222,7 +222,7 @@ void Enemy::setupByType() {
             damage = 8.0f; radius = 12.0f; xpReward = 35;
             bodyColor = {100, 255, 200, 255}; attackRate = 1.0f;
             break;
-        // ── Facção das Trevas ──────────────────────────────────────────────────
+        // ── Faction of the Trevas ──────────────────────────────────────────────────
         case EnemyType::LichKnight:
             speed = 70.0f; health = maxHealth = 180.0f;
             damage = 0.0f; radius = 20.0f; xpReward = 110;
@@ -252,7 +252,7 @@ void Enemy::setupByType() {
             shootRate = 1.8f; shootDamage = 28.0f; shootRange = 400.0f;
             shootSpeed = 360.0f; projectileColor = {200, 240, 255, 255};
             break;
-        // ── Facção Infernal ────────────────────────────────────────────────────
+        // ── Faction Infernal ────────────────────────────────────────────────────
         case EnemyType::MoltenGolem:
             speed = 45.0f; health = maxHealth = 350.0f;
             damage = 28.0f; radius = 30.0f; xpReward = 140;
@@ -347,14 +347,14 @@ void Enemy::setupByType() {
             shootSpeed = 420.0f; projectileColor = {0, 100, 255, 255};
             break;
     }
-    // Ritmo de caminhada normalizado — inimigos andavam rapido demais em relacao
-    // ao jogador (que tambem foi desacelerado). Mantem a proporcao entre tipos.
+    // Ritmo of caminhada normalizado — enemies andavam fast demais in relacao
+    // to the player (that also went desacelerado). Mantem the proporcao between types.
     speed *= 0.72f;
 }
 
 int Enemy::combatRole() const {
     switch (type) {
-        // 1 = atirador kiter (mantém distância e atira)
+        // 1 = shooter kiter (mantem distance and atira)
         case EnemyType::CorrupterDrone:
         case EnemyType::SiegeCrawler:
         case EnemyType::AcidSpitter:
@@ -364,14 +364,14 @@ int Enemy::combatRole() const {
         case EnemyType::GhostSniper:
         case EnemyType::ChaosSpawn:
             return 1;
-        // 2 = flanqueador rápido (aproxima em ângulo, zig-zag)
+        // 2 = flanqueador fast (aproxima in angle, zig-zag)
         case EnemyType::ReaperMech:
         case EnemyType::CrimsonBat:
         case EnemyType::DemonHunter:
         case EnemyType::AbyssalEel:
         case EnemyType::DarkMatter:
             return 2;
-        // 3 = brutamonte com investida (charge/lunge)
+        // 3 = brutamonte with investida (charge/lunge)
         case EnemyType::VoidColossus:
         case EnemyType::MoltenGolem:
         case EnemyType::IronGuard:
@@ -381,34 +381,34 @@ int Enemy::combatRole() const {
         case EnemyType::VoidStalker:
         case EnemyType::NeuralParasite:
             return 3;
-        // 4 = boss de facção (aproxima + barragem com fases)
+        // 4 = boss of faction (aproxima + barragem with phases)
         case EnemyType::FrostWyrm:
         case EnemyType::InfernoHerald:
         case EnemyType::VolcanicTitan:
         case EnemyType::Leviathan:
             return 4;
         default:
-            return 0; // perseguidor melee genérico (Scout, Tank, etc.)
+            return 0; // perseguidor melee generico (Scout, Tank, etc.)
     }
 }
 
-// ── Sistema épico de bosses: 3 fases + padrões de ataque telegrafados ──────────
+// ── Sistema epic of bosses: 3 phases + padroes of attack telegrafados ──────────
 void Enemy::checkBossPhases() {
     int tgt = (health < maxHealth * 0.33f) ? 3 :
               (health < maxHealth * 0.66f) ? 2 : 1;
     if (tgt > bossPhase) {
         bossPhase       = tgt;
-        phaseFlash      = 1.0f;          // flash dramático
+        phaseFlash      = 1.0f;          // flash dramatico
         bossInvuln      = true;
-        bossInvulnTimer = 0.8f;          // breve invulnerabilidade na virada
+        bossInvulnTimer = 0.8f;          // breve invulnerabilidade in the virada
         evolveFlash     = 0.8f;
-        // Escalada de poder por fase
+        // Escalada of power by phase
         speed       *= 1.16f;
         damage      *= 1.22f;
         shootDamage *= 1.18f;
         shootRate    = std::max(0.25f, shootRate * 0.72f);
-        bossAtkTimer = 0.6f;             // parte pro ataque logo após a virada
-        // recuo/empurrão visual já tratado pelo flash; mantém genericPhase2 sync
+        bossAtkTimer = 0.6f;             // parte to the attack soon after the virada
+        // recuo/empurrao visual already tratado pelo flash; mantem genericPhase2 sync
         if (bossPhase >= 2) genericPhase2 = true;
     }
 }
@@ -419,7 +419,7 @@ void Enemy::updateBossPatterns(float dt, Vector2 norm) {
 
     float baseAngle = std::atan2(norm.y, norm.x);
 
-    // Executando um padrão (sequência de tiros)?
+    // Executing um padrao (sequencia of shots)?
     if (burstShots > 0) {
         burstTimer -= dt;
         if (burstTimer <= 0.0f) {
@@ -429,21 +429,21 @@ void Enemy::updateBossPatterns(float dt, Vector2 norm) {
             burstAngle    += burstStep;
             burstShots--;
             if (burstShots == 0) {
-                bossPattern = 0; // Volta para cooldown
+                bossPattern = 0; // Returns to cooldown
             }
         }
-        return; // ocupado disparando o padrão
+        return; // ocupado disparando the padrao
     }
 
-    // Durante a invulnerabilidade de virada de fase, não ataca (drama)
+    // During the invulnerabilidade of virada of phase, not ataca (drama)
     if (bossInvuln) return;
 
     bossAtkTimer -= dt;
-    // Telegrafa nos últimos 0.5s antes do grande ataque (pisca/recolhe)
+    // Telegrafa in the ultimos 0.5s before the big attack (pisca/recolhe)
     if (bossAtkTimer <= 0.5f && bossAtkTimer > 0.0f) {
         telegraphTimer = telegraphMax;
         if (bossPattern == 0) {
-            // Seleciona o padrão que vai usar logo no início do telegraph
+            // Seleciona the padrao that goes usar soon in the start of the telegraph
             int phase = bossPhase;
             int maxPat = (phase >= 3) ? 4 : (phase == 2) ? 3 : 2;
             bossPattern = GetRandomValue(1, maxPat);
@@ -451,35 +451,35 @@ void Enemy::updateBossPatterns(float dt, Vector2 norm) {
     }
     if (bossAtkTimer > 0.0f) return;
 
-    // Se chegou aqui (bossAtkTimer <= 0.0f) e bossPattern ainda é 0 (cooldown acabou sem passar por telegraph), seleciona
+    // Se chegou here (bossAtkTimer <= 0.0f) and bossPattern still is 0 (cooldown acabou without pass by telegraph), seleciona
     if (bossPattern == 0) {
         int phase = bossPhase;
         int maxPat = (phase >= 3) ? 4 : (phase == 2) ? 3 : 2;
         bossPattern = GetRandomValue(1, maxPat);
     }
 
-    // Inicializa os parâmetros de disparos para o padrão selecionado
+    // Inicializa the parameters of shots for the padrao selected
     int phase = bossPhase;
     int n; float spread;
     switch (bossPattern) {
-        case 1: // LEQUE à frente
+        case 1: // LEQUE to the front
             n = 5 + phase * 2; spread = 0.85f;
             burstAngle = baseAngle - spread * 0.5f;
             burstStep  = spread / (float)(n - 1);
             burstShots = n; burstGap = 0.045f;
             break;
-        case 2: // VARREDURA giratória
+        case 2: // VARREDURA giratoria
             n = 9 + phase * 3;
             burstAngle = baseAngle - 0.8f;
             burstStep  = 1.6f / (float)n;
             burstShots = n; burstGap = 0.05f;
             break;
-        case 3: // METRALHAR reto rápido
+        case 3: // METRALHAR reto fast
             n = 6 + phase * 3;
             burstAngle = baseAngle; burstStep = 0.0f;
             burstShots = n; burstGap = 0.06f;
             break;
-        default: // ANEL 360° (fases altas)
+        default: // ANEL 360° (phases altas)
             n = 14 + phase * 4;
             burstAngle = 0.0f; burstStep = 6.2831853f / (float)n;
             burstShots = n; burstGap = 0.03f;
@@ -491,28 +491,28 @@ void Enemy::updateBossPatterns(float dt, Vector2 norm) {
 void Enemy::renderBossAura() const {
     if (!isBoss()) return;
     float t = walkAnimTimer;
-    // Aura pulsante por fase
+    // Aura pulsante by phase
     Color aur = (bossPhase >= 3) ? Color{255,40,40,255}
               : (bossPhase == 2) ? Color{255,140,0,255}
                                  : Color{180,60,255,255};
     float pr = radius * (1.7f + 0.18f * std::sin(t * 3.0f));
     DrawCircleLines((int)position.x, (int)position.y, pr, ColorAlpha(aur, 0.30f));
     DrawCircleLines((int)position.x, (int)position.y, pr * 0.82f, ColorAlpha(aur, 0.18f));
-    // Flash branco na virada de fase
+    // Flash white in the virada of phase
     if (phaseFlash > 0.0f)
         DrawCircleV(position, radius * 2.2f, ColorAlpha(WHITE, phaseFlash * 0.35f));
-    // Marcadores de fase (coroa de pips acima)
+    // Marcadores of phase (coroa of pips above)
     for (int i = 0; i < bossPhase; ++i) {
         float fx = position.x - (bossPhase - 1) * 5.0f + i * 10.0f;
         DrawCircleV({fx, position.y - radius - 16.0f}, 3.5f, aur);
     }
-    // Partículas de carregamento durante o telegraph (anéis convergindo)
+    // Particles of loading during the telegraph (aneis convergindo)
     if (telegraphTimer > 0.0f) {
         float k = 1.0f - telegraphTimer / telegraphMax;
         for (int i = 0; i < 6; ++i) {
-            float a = t * 4.0f + i * 1.047f;
+            float the = t * 4.0f + i * 1.047f;
             float rr = radius * (2.2f - k * 1.4f);
-            DrawCircleV({position.x + std::cos(a) * rr, position.y + std::sin(a) * rr},
+            DrawCircleV({position.x + std::cos(the) * rr, position.y + std::sin(the) * rr},
                         2.5f, ColorAlpha(Color{255,230,120,255}, 0.8f));
         }
     }
@@ -528,11 +528,11 @@ void Enemy::update(float dt, Vector2 target) {
     if (regenRate > 0.0f) {
         health = std::min(maxHealth, health + regenRate * dt);
     }
-    if (shieldMax > 0.0f && shieldHp < shieldMax)   // escudo Shielded recarrega devagar
+    if (shieldMax > 0.0f && shieldHp < shieldMax)   // shield Shielded recarrega devagar
         shieldHp = std::min(shieldMax, shieldHp + shieldMax * 0.10f * dt);
     if (isElite) elitePulse += dt * 4.0f;
 
-    // ── Auto-evolução por tempo de vida ──────────────────────────────────────
+    // ── Auto-evolution by time of health ──────────────────────────────────────
     aliveTimer += dt;
     if (evolveFlash > 0.0f) evolveFlash -= dt;
     justEvolved = false;
@@ -639,12 +639,12 @@ void Enemy::update(float dt, Vector2 target) {
             break;
         case EnemyType::OmegaBoss: {
             walkAnimTimer += dt * 2.0f;
-            checkBossPhases();                       // 3 fases épicas
+            checkBossPhases();                       // 3 phases epicas
             Vector2 dir = {target.x-position.x, target.y-position.y};
             float dist = std::sqrt(dir.x*dir.x+dir.y*dir.y);
             Vector2 ndir = (dist > 0.001f) ? Vector2{dir.x/dist, dir.y/dist} : Vector2{1,0};
             facing = (ndir.x >= 0) ? 1 : -1;
-            // Mantém média distância (mais imponente que correr reto)
+            // Mantem media distance (more imponente that correr reto)
             if (!bossInvuln && burstShots == 0) {
                 float ideal = shootRange * 0.65f;
                 if (dist > ideal * 1.1f) { position.x += ndir.x*speed*dt; position.y += ndir.y*speed*dt; }
@@ -656,7 +656,7 @@ void Enemy::update(float dt, Vector2 target) {
         default: {
             int role = combatRole();
 
-            // ── Bosses: sistema épico de 3 fases (Boss + bosses de facção) ───
+            // ── Bosses: system epic of 3 phases (Boss + bosses of faction) ───
             bool bossLike = (type == EnemyType::Boss) || (role == 4);
             if (bossLike) checkBossPhases();
 
@@ -668,7 +668,7 @@ void Enemy::update(float dt, Vector2 target) {
             if (norm.x > 0.1f) facing = 1;
             if (norm.x < -0.1f) facing = -1;
 
-            // ── Patrulha (Scout/Tank longe e não alertados) ──────────────────
+            // ── Patrulha (Scout/Tank far and not alertados) ──────────────────
             if ((type == EnemyType::Scout || type == EnemyType::Tank)
                 && !alerted && len > 280.0f) {
                 if (!patrolInit) { patrolInit = true; patrolTarget = position; patrolTimer = 0.0f; }
@@ -691,18 +691,18 @@ void Enemy::update(float dt, Vector2 target) {
 
             bool isRanged = (type == EnemyType::Shooter || attackRate >= 90.0f);
 
-            // ── Movimento por papel de combate ───────────────────────────────
+            // ── Movement by papel of combat ───────────────────────────────
             if (role == 1 || (isRanged && role == 0 && type != EnemyType::Boss)) {
-                // ATIRADOR KITER — mantém banda de distância e faz strafe
+                // ATIRADOR KITER — mantem banda of distance and does strafe
                 float ideal = shootRange * 0.72f;
-                if (len < ideal * 0.75f) {            // perto demais → recua
+                if (len < ideal * 0.75f) {            // near demais → retreats
                     position.x -= norm.x * speed * 1.15f * dt;
                     position.y -= norm.y * speed * 1.15f * dt;
                     facing = (norm.x > 0.0f) ? -1 : 1;
-                } else if (len > ideal * 1.15f) {     // longe demais → aproxima
+                } else if (len > ideal * 1.15f) {     // far demais → aproxima
                     position.x += norm.x * speed * dt;
                     position.y += norm.y * speed * dt;
-                } else {                              // na banda → strafe
+                } else {                              // in the banda → strafe
                     strafeTimer -= dt;
                     if (strafeTimer <= 0.0f) {
                         strafeDir   = (GetRandomValue(0,1)==0) ? 1.0f : -1.0f;
@@ -714,11 +714,11 @@ void Enemy::update(float dt, Vector2 target) {
                 walkAnimTimer += dt * 9.0f;
             }
             else if (role == 2) {
-                // FLANQUEADOR RÁPIDO — aproxima em ângulo (zig-zag), não reto
+                // FLANQUEADOR RAPIDO — aproxima in angle (zig-zag), not reto
                 if (!flankInit) { flankInit = true; flankSign = (GetRandomValue(0,1)?1.0f:-1.0f); }
                 strafeTimer -= dt;
                 if (strafeTimer <= 0.0f) { flankSign = -flankSign; strafeTimer = (float)GetRandomValue(50,140)/100.0f; }
-                float angBlend = (len > 90.0f) ? 0.55f : 0.0f; // só flanqueia de longe
+                float angBlend = (len > 90.0f) ? 0.55f : 0.0f; // only flanqueia of far
                 Vector2 mv = { norm.x + perp.x * flankSign * angBlend,
                                norm.y + perp.y * flankSign * angBlend };
                 float ml = std::sqrt(mv.x*mv.x + mv.y*mv.y);
@@ -730,19 +730,19 @@ void Enemy::update(float dt, Vector2 target) {
                 walkAnimTimer += dt * 14.0f;
             }
             else if (role == 3) {
-                // BRUTAMONTE — aproxima e dá investidas (lunge) com telegraph
+                // BRUTAMONTE — aproxima and of the investidas (lunge) with telegraph
                 if (lungeCooldown <= 0.0f && lungeTimer <= 0.0f && len > 120.0f && len < 360.0f) {
-                    telegraphTimer = 0.4f;   // aviso visual
-                    lungeTimer     = 0.72f;  // janela total (0.4 windup + ~0.32 dash)
+                    telegraphTimer = 0.4f;   // warning visual
+                    lungeTimer     = 0.72f;  // window total (0.4 windup + ~0.32 dash)
                     lungeCooldown  = 4.0f;
                 }
                 if (lungeTimer > 0.0f) {
                     if (telegraphTimer > 0.0f) {
-                        // recua levemente preparando a investida (tensão)
+                        // retreats levemente preparando the investida (tensao)
                         position.x -= norm.x * speed * 0.25f * dt;
                         position.y -= norm.y * speed * 0.25f * dt;
                     } else {
-                        // DASH rápido na direção do player
+                        // DASH fast in the direction of the player
                         position.x += norm.x * speed * 3.0f * dt;
                         position.y += norm.y * speed * 3.0f * dt;
                     }
@@ -753,17 +753,17 @@ void Enemy::update(float dt, Vector2 target) {
                 walkAnimTimer += dt * 11.0f;
             }
             else if (role == 4) {
-                // BOSS DE FACÇÃO — mantém média distância e bombardeia
+                // BOSS DE FACCAO — mantem media distance and bombardeia
                 float ideal = shootRange * 0.6f;
                 if (len > ideal * 1.1f) {
                     position.x += norm.x * speed * dt;
                     position.y += norm.y * speed * dt;
                 } else if (len < ideal * 0.6f) {
-                    // estritamente recua um pouco p/ reposicionar
+                    // estritamente retreats um little p/ reposicionar
                     position.x -= norm.x * speed * 0.5f * dt;
                     position.y -= norm.y * speed * 0.5f * dt;
                 } else {
-                    // strafe lento e ameaçador
+                    // strafe slow and ameacador
                     strafeTimer -= dt;
                     if (strafeTimer <= 0.0f) { strafeDir = -strafeDir; strafeTimer = 1.6f; }
                     position.x += perp.x * speed * 0.35f * strafeDir * dt;
@@ -772,7 +772,7 @@ void Enemy::update(float dt, Vector2 target) {
                 walkAnimTimer += dt * 6.0f;
             }
             else {
-                // PERSEGUIDOR MELEE genérico (Scout/Tank/Boss melee/default)
+                // PERSEGUIDOR MELEE generico (Scout/Tank/Boss melee/default)
                 float stopDist = radius + 10.0f;
                 bool retreating = (health < maxHealth * 0.25f) && (len < 220.0f)
                                   && (type != EnemyType::Boss);
@@ -787,12 +787,12 @@ void Enemy::update(float dt, Vector2 target) {
                 walkAnimTimer += dt * 10.0f;
             }
 
-            // ── Ataque ───────────────────────────────────────────────────────
+            // ── Attack ───────────────────────────────────────────────────────
             if (bossLike) {
-                // BOSS: padrões épicos (leque/varredura/metralha/anel) por fase
+                // BOSS: padroes epicos (leque/varredura/metralha/anel) by phase
                 updateBossPatterns(dt, norm);
             } else if (isRanged) {
-                // Atirador comum com telegraph
+                // Shooter common with telegraph
                 if (len <= shootRange && shootCooldown > 0.0f && shootCooldown <= telegraphMax)
                     telegraphTimer = telegraphMax;
                 if (len <= shootRange && shootCooldown <= 0.0f) {
@@ -858,7 +858,7 @@ void Enemy::updateSniper(float dt, Vector2 target) {
         facing = (norm.x > 0.0f) ? -1 : 1;
     } else {
         walkAnimTimer = 0.0f;
-        // Slight lateral drift
+        // Slight side drift
         float drift = std::sin(walkAnimTimer * 0.5f) * 30.0f * dt;
         position.x += (-norm.y) * drift;
         position.y += ( norm.x) * drift;
@@ -938,7 +938,7 @@ void Enemy::makeElite(int mod) {
             health *= 1.8f; maxHealth = health;
             damage *= 1.4f;
             break;
-        case 3: // Shielded — energy shield that absorbs a hit fraction and recharges
+        case 3: // Shielded — energy shield that absorbs the hit fraction and recharges
             health *= 1.9f; maxHealth = health;
             damage *= 1.15f;
             shieldMax = maxHealth * 0.45f;
@@ -970,15 +970,15 @@ void Enemy::applyKnockback(Vector2 dir, float force) {
 }
 
 void Enemy::takeDamage(float amount) {
-    // Boss invulnerável durante a breve transição de fase (drama)
+    // Boss invulneravel during the breve transition of phase (drama)
     if (bossInvuln) { hitFlashTimer = 0.08f; return; }
-    // Escudo Shielded absorve 75% de cada golpe ate esvaziar; recarrega no update.
+    // Shield Shielded absorve 75% of cada golpe until esvaziar; recarrega in the update.
     if (shieldHp > 0.0f) {
         float absorbed = std::min(shieldHp, amount * 0.75f);
         shieldHp -= absorbed;
         amount   -= absorbed;
     }
-    // Armadura reduz dano plano por hit (Arpg: tiro fraco quase nao arranha).
+    // Armor reduz damage plano by hit (Arpg: shot weak almost not arranha).
     if (armor > 0.0f)
         amount -= std::min(armor, amount);
     health -= amount;
@@ -1079,7 +1079,7 @@ void Enemy::renderAlienBoss() const {
     Color purpleGlow = {200,0,255,255};
     Color boneWhite  = {200,210,180,255};
 
-    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // shadow 2D outside the voxelizacao (viraria pedestal sob the feet)
         DrawEllipse((int)px, (int)(py + radius * 0.75f), radius * 1.3f, radius * 0.36f, ColorAlpha(BLACK,0.45f));
 
     if (bossPhase == 2) {
@@ -1087,7 +1087,7 @@ void Enemy::renderAlienBoss() const {
         DrawCircleV(position, radius + 55.0f, ColorAlpha(purpleGlow, 0.06f + rage*0.06f));
         DrawCircleV(position, radius + 35.0f, ColorAlpha(acidGreen,  0.10f + rage*0.08f));
         DrawCircleLines((int)px,(int)py, radius+50.0f+rage*6.0f, ColorAlpha(purpleGlow, 0.4f+rage*0.4f));
-        const char* p2tag = "!FASE 2!";
+        const char* p2tag = "!PHASE 2!";
         int p2w = MeasureText(p2tag,11);
         DrawText(p2tag,(int)(px-p2w/2),(int)(py-radius-55),11, ColorAlpha(purpleGlow,0.7f+rage*0.3f));
     } else {
@@ -1290,7 +1290,7 @@ void Enemy::updateUndeadEnforcer(float dt, Vector2 target) {
     if (dist > 0.001f) { dir.x /= dist; dir.y /= dist; }
     facing = (dir.x >= 0) ? 1 : -1;
 
-    // Rush straight at player like a Scout
+    // Rush straight at player like the Scout
     if (dist > radius + 8.0f) {
         position.x += dir.x * speed * dt;
         position.y += dir.y * speed * dt;

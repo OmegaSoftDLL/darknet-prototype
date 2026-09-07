@@ -34,10 +34,10 @@ void BotController::addLog(const std::string& msg) {
     if ((int)log.size() > 20) log.erase(log.begin());
 }
 
-// Reset COMPLETO entre partidas: telemetria, maquina de estados, timers, rota
-// cacheada e sensores. Preserva active/autoTest/testDuration para o autotest
-// continuar rodando na nova partida. (toggle() so fazia um reset parcial, e os
-// timers/contadores antigos vazavam de uma partida para a outra.)
+// Reset COMPLETO between partidas: telemetria, maquina of estados, timers, route
+// cacheada and sensores. Preserva active/autoTest/testDuration for the autotest
+// continue rodando in the new match. (toggle() only fazia um reset partial, and the
+// timers/contadores antigos vazavam of uma match for the other.)
 void BotController::reset() {
     bool  keepActive   = active;
     bool  keepAutoTest = autoTest;
@@ -61,36 +61,36 @@ int BotController::countEnemiesInRadius(const std::vector<Vector2>& positions,
 // Strategy:
 //   - Track distance to current goal each frame.
 //   - If the player hasn't moved > 3px in the last frame, increment stuckTimer.
-//   - At 2s stuck: pick a new escape direction from the 8-direction table, cycling
-//     through them so we try all compass headings before repeating.
+//   - At 2s stuck: pick the new escape direction from the 8-direction table, cycling
+//     through them only we try all compass headings before repeating.
 //   - Track longStuckTimer separately for bug reporting (> 10s).
-//   - When not stuck, decay the angle offset back toward 0 so we return to the
+//   - When not stuck, decay the angle offset back toward 0 only we return to the
 //     correct heading once clear of the obstacle.
 //
-// Diferenca angular normalizada para [-PI, PI]
-static float angleDiff(float a, float b) {
-    float d = a - b;
+// Diferenca angular normalizada to [-PI, PI]
+static float angleDiff(float the, float b) {
+    float d = the - b;
     while (d >  (float)M_PI) d -= 2.0f * (float)M_PI;
     while (d < -(float)M_PI) d += 2.0f * (float)M_PI;
     return d;
 }
 
-// Rastreio de "preso" — usado tanto pelo pathfinding global quanto pelo desvio
-// reativo de fallback, e alimenta a telemetria de stuck events do relatorio.
+// Rastreio of "preso" — usado both pelo pathfinding global the pelo desvio
+// reativo of fallback, and alimenta the telemetria of stuck events of the report.
 void BotController::updateStuckTracking(Vector2 currentPos, float dt) {
-    // BUG QUE ISTO CORRIGE: a versao anterior comparava o deslocamento de UM
-    // FRAME com 3 px. A 60 fps e velocidade 155 u/s o personagem anda 2,58 px por
-    // frame — ou seja, andando normalmente ele era classificado como PRESO o
-    // tempo todo. O bot vivia em "escape", nunca engajava (0 abates) e o
-    // relatorio acusava travamento sem haver travamento nenhum.
-    // Agora a medida e por JANELA DE TEMPO: distancia acumulada em 0,5 s.
+    // BUG QUE ISTO CORRIGE: the versao previous comparava the deslocamento of UM
+    // FRAME with 3 px. A 60 fps and speed 155 u/s the character anda 2,58 px by
+    // frame — i.and., andando normally ele era classificado as STUCK the
+    // time all. O bot vivia in "escape", never engajava (0 kills) and the
+    // report acusava travamento without haver travamento none.
+    // Agora the medida and by WINDOW DE TEMPO: distance accumulated over 0.5 s.
     stuckAccum += Vector2Distance(currentPos, lastPos);
     lastPos     = currentPos;
     stuckSample += dt;
     if (stuckSample < 0.5f) return;
 
-    // 0,5 s de caminhada normal percorre ~75 px; 15 px e chao de sobra para
-    // distinguir "empurrando parede" de "andando devagar".
+    // 0,5 s of caminhada normal percorre ~75 px; 15 px and floor of sobra to
+    // distinguir "empurrando wall" of "andando devagar".
     bool blockedNow = (stuckAccum < 15.0f);
     stuckAccum  = 0.0f;
     stuckSample = 0.0f;
@@ -110,22 +110,22 @@ void BotController::updateStuckTracking(Vector2 currentPos, float dt) {
     if (longStuckTimer >= 10.0f) {
         longStuckTimer = 0.0f;
         longStuckEvents++;
-        issueLog.push_back(TextFormat("PRESO por >10s em (%.0f,%.0f) — possivel bug de pathfinding",
+        issueLog.push_back(TextFormat("STUCK for >10s at (%.0f,%.0f) — possible pathfinding bug",
                                       currentPos.x, currentPos.y));
-        addLog("ALERTA: preso >10s — reportado");
+        addLog("ALERT: stuck >10s — reported");
     }
 }
 
-// ─── Pathfinding global (BFS na grade de tiles transitaveis) ─────────────────
+// ─── Pathfinding global (BFS in the grade of tiles transitaveis) ─────────────────
 //
-// Substitui o desvio reativo de sensores locais (que oscilava em cantos concavos)
-// por uma busca em largura completa numa janela de tiles ao redor do bot. A BFS
-// explora toda a regiao acessivel e gera uma rota de waypoints ate o alvo. Se o
-// alvo for inalcancavel, a rota vai ate a celula acessivel mais proxima do alvo —
-// o que permite contornar bolsoes em "U" recuando de verdade pela saida real.
+// Substitui the desvio reativo of sensores locais (that oscilava in cantos concavos)
+// by uma busca in width completa numa window of tiles around of the bot. A BFS
+// explora all the region acessivel and generates uma route of waypoints until the alvo. If the
+// alvo for inalcancavel, the route goes until the celula acessivel more next of the alvo —
+// the that permite contornar bolsoes in "U" retreatsndo of verdade pela output real.
 Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
     const float TS = 64.0f;   // tileSize (Tilemap::tileSize)
-    const int   R  = 34;      // raio da janela de busca em tiles (~2176px)
+    const int   R  = 34;      // radius of the window of busca in tiles (~2176px)
     const int   W  = 2 * R + 1;
 
     bool need = cachedPath.empty()
@@ -139,13 +139,13 @@ Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
 
         int pgx = (int)(from.x / TS), pgy = (int)(from.y / TS);
         int tgx = (int)(to.x   / TS), tgy = (int)(to.y   / TS);
-        int ox  = pgx - R, oy = pgy - R;             // tile de mundo na celula (0,0)
+        int ox  = pgx - R, oy = pgy - R;             // tile of world in the celula (0,0)
 
-        // alvo clampeado para dentro da janela
+        // alvo clampeado to inside the window
         tgx = std::max(ox, std::min(ox + W - 1, tgx));
         tgy = std::max(oy, std::min(oy + W - 1, tgy));
 
-        // grade de transitabilidade (centro de cada tile)
+        // grade of transitabilidade (center of cada tile)
         std::vector<char> walk(W * W);
         for (int gy = 0; gy < W; ++gy)
             for (int gx = 0; gx < W; ++gx) {
@@ -156,16 +156,16 @@ Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
 
         int startI = (pgy - oy) * W + (pgx - ox);
         int goalI  = (tgy - oy) * W + (tgx - ox);
-        walk[startI] = 1;   // garante que a celula do bot e transitavel
+        walk[startI] = 1;   // ensures that the celula of the bot and transitavel
 
-        std::vector<int> parent(W * W, -2);          // -2 = nao visitado
+        std::vector<int> parent(W * W, -2);          // -2 = not visitado
         std::queue<int>  q;
         q.push(startI);
         parent[startI] = -1;
 
         int   bestI = startI;
         float bestD = std::hypot((float)(tgx - pgx), (float)(tgy - pgy));
-        int   farI  = startI;      // celula alcancavel mais LONGE do bot
+        int   farI  = startI;      // celula alcancavel more LONGE of the bot
         float farD  = 0.0f;
 
         static const int dxs[8] = { 1,-1, 0, 0, 1, 1,-1,-1 };
@@ -186,7 +186,7 @@ Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
                 int ni = ny * W + nx;
                 if (parent[ni] != -2) continue;
                 if (!walk[ni]) continue;
-                if (k >= 4) {  // diagonal: impede cortar quina entre duas paredes
+                if (k >= 4) {  // diagonal: impede cortar quina between duas walls
                     if (!walk[cgy * W + nx] || !walk[ny * W + cgx]) continue;
                 }
                 parent[ni] = cur;
@@ -194,22 +194,22 @@ Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
             }
         }
 
-        // destino de emergencia: o ponto acessivel mais distante que a BFS achou
+        // destino of emergencia: the point acessivel more distante that the BFS found
         hasFarReach = (farD > 4.0f);
         farthestReachable = { (ox + farI % W) * TS + TS * 0.5f,
                               (oy + farI / W) * TS + TS * 0.5f };
 
-        // reconstroi a partir da celula acessivel mais proxima do alvo
+        // reconstroi the partir of the celula acessivel more next of the alvo
         std::vector<Vector2> rev;
         for (int node = bestI; node != -1; node = parent[node]) {
             int gx = node % W, gy = node / W;
             rev.push_back({ (ox + gx) * TS + TS * 0.5f, (oy + gy) * TS + TS * 0.5f });
         }
         for (int i = (int)rev.size() - 1; i >= 0; --i) cachedPath.push_back(rev[i]);
-        if (!cachedPath.empty()) cachedPath.erase(cachedPath.begin()); // descarta o tile atual
+        if (!cachedPath.empty()) cachedPath.erase(cachedPath.begin()); // descarta the tile current
     }
 
-    // consome waypoints ja alcancados
+    // consome waypoints already alcancados
     while (!cachedPath.empty() && Vector2Distance(from, cachedPath.front()) < 36.0f)
         cachedPath.erase(cachedPath.begin());
 
@@ -221,23 +221,23 @@ Vector2 BotController::computePathDir(Vector2 from, Vector2 to) {
 }
 
 Vector2 BotController::computeAntiWall(Vector2 desired, Vector2 currentPos, float dt) {
-    // ── Rastreio de "preso" (para relatorio e para escapar de bolsoes) ────────
+    // ── Rastreio of "preso" (to report and to escapar of bolsoes) ────────
     updateStuckTracking(currentPos, dt);
 
     Vector2 dn          = safeNormalize(desired);
     float   desiredAng  = std::atan2(dn.y, dn.x);
 
-    // Quantas direcoes estao livres?
+    // Quantas directions are livres?
     int openCount = 0;
     for (int d = 0; d < 8; d++) if (!blockedDir[d]) openCount++;
 
-    // Cercado por todos os lados — empurra na direcao desejada (ultimo recurso)
+    // Cercado by all the lados — empurra in the direction desejada (last resource)
     if (openCount == 0) return dn;
 
-    // Se a direcao desejada esta essencialmente livre e nao estamos presos,
-    // segue reto para o alvo (sem zigue-zague desnecessario).
+    // If the direction desejada is essencialmente livre and not estamos presos,
+    // segue reto for the alvo (without zigue-zague unnecessary).
     {
-        // checa o setor de 8-dir mais alinhado ao desejo
+        // checks the setor of 8-dir more alinhado to the desejo
         int   nearestIdx = 0; float nearestDelta = 1e9f;
         for (int d = 0; d < 8; d++) {
             float delta = std::fabs(angleDiff(k8DirAngles[d], desiredAng));
@@ -248,16 +248,16 @@ Vector2 BotController::computeAntiWall(Vector2 desired, Vector2 currentPos, floa
         }
     }
 
-    // Caso contrario: escolhe a direcao ABERTA mais proxima do alvo.
-    // Se estamos presos ha um tempo, gira a preferencia para sair de bolsoes
-    // concavos (cantos) em vez de insistir na mesma direcao.
+    // Caso contrario: escolhe the direction ABERTA more next of the alvo.
+    // Se estamos presos ha um time, gira the preferencia to leave of bolsoes
+    // concavos (cantos) instead of insistir in the same direction.
     float stuckBias = 0.0f;
     if (stuckTimer > 0.5f) {
-        // (a contagem de stuckEvents mora em updateStuckTracking — aqui era
-        // codigo morto que nunca incrementava)
-        // gira a preferencia ~90 graus conforme o tempo preso aumenta
+        // (the contagem of stuckEvents mora in updateStuckTracking — here era
+        // codigo dead that never incrementava)
+        // gira the preferencia ~90 graus conforme the time preso aumenta
         stuckBias = (stuckEscapeDir > 0 ? 1.0f : -1.0f) * (float)(M_PI * 0.5);
-        // alterna o lado de fuga a cada ~1.5s preso
+        // alterna the lado of fuga the cada ~1.5s preso
         if (stuckTimer > 1.5f) { stuckEscapeDir = -stuckEscapeDir; stuckTimer = 0.6f; }
     }
     float targetAng = desiredAng + stuckBias;
@@ -270,8 +270,8 @@ Vector2 BotController::computeAntiWall(Vector2 desired, Vector2 currentPos, floa
     }
     if (bestDir < 0) return dn;
 
-    float a = k8DirAngles[bestDir];
-    return {std::cos(a), std::sin(a)};
+    float the = k8DirAngles[bestDir];
+    return {std::cos(the), std::sin(the)};
 }
 
 // ─── Report ──────────────────────────────────────────────────────────────────
@@ -280,17 +280,17 @@ bool BotController::passed(std::vector<std::string>* reasons) const {
     auto fail = [&](const std::string& why) { if (reasons) reasons->push_back(why); };
     bool ok = true;
     float avg = (fpsSamples > 0) ? (fpsAccum / fpsSamples) : 0.0f;
-    // Limiares deliberadamente FROUXOS: o portao pega quebra grave (crash,
-    // travamento, jogo que nao roda), nao briga por 2 fps.
-    if (avg < 45.0f)            { ok = false; fail(TextFormat("FPS medio %.0f < 45", avg)); }
-    if (longStuckEvents > 0)    { ok = false; fail(TextFormat("%d travamento(s) > 10s", longStuckEvents)); }
-    if (deathCount > 3)         { ok = false; fail(TextFormat("%d mortes seguidas", deathCount)); }
-    if (killCount == 0)         { ok = false; fail("nenhum inimigo abatido (combate quebrado?)"); }
-    if (totalDistance < 500.0f) { ok = false; fail("bot praticamente nao andou (movimento travado?)"); }
-    // Blinda a conquista do ciclo (avanco de fase pelo portal) contra regressao
-    // silenciosa: run longo sem NENHUMA zona avancada = mecanica central quebrada.
+    // Limiares deliberadamente FROUXOS: the portao gets quebra grave (crash,
+    // travamento, game that not roda), not briga by 2 fps.
+    if (avg < 45.0f)            { ok = false; fail(TextFormat("Average FPS %.0f < 45", avg)); }
+    if (longStuckEvents > 0)    { ok = false; fail(TextFormat("%d stuck event(s) > 10s", longStuckEvents)); }
+    if (deathCount > 3)         { ok = false; fail(TextFormat("%d deaths in the row", deathCount)); }
+    if (killCount == 0)         { ok = false; fail("none enemy defeated (combat quebrado?)"); }
+    if (totalDistance < 500.0f) { ok = false; fail("bot praticamente not andou (movement travado?)"); }
+    // Blinda the achievement of the ciclo (avanco of phase pelo portal) contra regressao
+    // silenciosa: run longo without NENHUMA zone avancada = mecanica central quebrada.
     if (testDuration >= 180.0f && zonesVisited == 0)
-        { ok = false; fail("nenhuma zona avancada em run >= 180s (portal/fase regrediu?)"); }
+        { ok = false; fail("nenhuma zone avancada in run >= 180s (portal/phase regrediu?)"); }
     return ok;
 }
 
@@ -301,112 +301,112 @@ void BotController::writeReport(const std::string& path) const {
     float avgFPS = (fpsSamples > 0) ? (fpsAccum / fpsSamples) : 0.0f;
 
     f << "========================================================\n";
-    f << "  DARKNET BOT - RELATORIO DE SESSAO\n";
+    f << "  DARKNET BOT - SESSION REPORT\n";
     f << "========================================================\n\n";
 
-    f << "[DESEMPENHO TECNICO]\n";
-    f << "  FPS medio   : " << (int)avgFPS << "\n";
-    f << "  FPS minimo  : " << (int)minFPS << "\n";
-    f << "  FPS maximo  : " << (int)maxFPS << "\n";
+    f << "[TECHNICAL PERFORMANCE]\n";
+    f << "  Average FPS : " << (int)avgFPS << "\n";
+    f << "  Minimum FPS  : " << (int)minFPS << "\n";
+    f << "  Maximum FPS  : " << (int)maxFPS << "\n";
     if (minFPS < 40.0f)
-        f << "  PROBLEMA: FPS caiu abaixo de 40 - otimizacao necessaria\n";
+        f << "  PROBLEM: FPS fell below 40 - optimization needed\n";
 
-    f << "\n[COMBATE]\n";
-    f << "  Inimigos abatidos : " << killCount << "\n";
-    f << "  Ataques melee     : " << meleeHits << "\n";
-    f << "  Skills disparadas : " << skillsFired << "\n";
+    f << "\n[COMBAT]\n";
+    f << "  Enemies killed : " << killCount << "\n";
+    f << "  Melee attacks   : " << meleeHits << "\n";
+    f << "  Skills fired    : " << skillsFired << "\n";
     f << "    Skill 1 (Laser)    : " << skillUsageCounts[0] << "x\n";
     f << "    Skill 2 (EMP)      : " << skillUsageCounts[1] << "x\n";
-    f << "    Skill 3 (Granada)  : " << skillUsageCounts[2] << "x\n";
-    f << "    Skill 4 (Sobrecarga): " << skillUsageCounts[3] << "x\n";
-    f << "    Skill 5 (Barreira) : " << skillUsageCounts[4] << "x\n";
-    f << "    Skill 6 (Rajada)   : " << skillUsageCounts[5] << "x\n";
+    f << "    Skill 3 (Grenade)  : " << skillUsageCounts[2] << "x\n";
+    f << "    Skill 4 (Overload): " << skillUsageCounts[3] << "x\n";
+    f << "    Skill 5 (Barrier) : " << skillUsageCounts[4] << "x\n";
+    f << "    Skill 6 (Burst)   : " << skillUsageCounts[5] << "x\n";
     if (killCount == 0)
-        f << "  PROBLEMA: Nenhum inimigo morto - combate nao funciona\n";
+        f << "  PROBLEM: No enemies killed - combat is not working\n";
     if (meleeHits == 0)
-        f << "  PROBLEMA: Melee nao acionou - bug no sistema de ataque\n";
+        f << "  PROBLEM: Melee did not trigger - attack system bug\n";
 
-    f << "\n[COLETA DE ITENS]\n";
-    f << "  Itens perseguidos : " << itemsChased << "\n";
-    f << "  Itens coletados   : " << itemsCollected << "\n";
+    f << "\n[ITEM COLLECTION]\n";
+    f << "  Items chased   : " << itemsChased << "\n";
+    f << "  Items collected: " << itemsCollected << "\n";
     if (itemsChased > 0 && itemsCollected == 0)
-        f << "  PROBLEMA: Bot perseguiu itens mas nao coletou nenhum (tecla E?)\n";
+        f << "  PROBLEM: Bot chased items but collected none (key E?)\n";
 
-    f << "\n[EXPLORACAO E PROGRESSO]\n";
-    f << "  Areas exploradas  : " << areasExplored << "/4 quadrantes\n";
-    f << "  Zonas avancadas   : " << zonesVisited << "\n";
-    f << "  Distancia total   : " << (int)totalDistance << " px\n";
+    f << "\n[EXPLORATION AND PROGRESS]\n";
+    f << "  Areas explored  : " << areasExplored << "/4 quadrants\n";
+    f << "  Advanced zones  : " << zonesVisited << "\n";
+    f << "  Total distance  : " << (int)totalDistance << " px\n";
     if (areasExplored < 2)
-        f << "  PROBLEMA: Jogador preso num canto - mapa tem areas bloqueadas?\n";
+        f << "  PROBLEM: Player stuck in the corner - map has blocked areas?\n";
     if (zonesVisited == 0 && testTimer > 60.0f)
-        f << "  PROBLEMA: Bot nao avancou de zona em 60s\n";
+        f << "  PROBLEM: Bot did not advance zones in 60s\n";
 
-    f << "\n[SOBREVIVENCIA]\n";
-    f << "  Mortes            : " << deathCount << "\n";
-    f << "  HP mais baixo     : " << (int)lowestHP << "\n";
-    f << "  Vezes em perigo   : " << dangersZones << " (HP < 25%)\n";
-    f << "  Dano total tomado : " << (int)totalDmgTaken << "\n";
-    f << "  Eventos de dano   : " << damageEvents << "\n";
+    f << "\n[SURVIVAL]\n";
+    f << "  Deaths            : " << deathCount << "\n";
+    f << "  Lowest HP         : " << (int)lowestHP << "\n";
+    f << "  Danger moments    : " << dangersZones << " (HP < 25%)\n";
+    f << "  Total damage taken: " << (int)totalDmgTaken << "\n";
+    f << "  Damage events     : " << damageEvents << "\n";
     if (deathCount > 3)
-        f << "  PROBLEMA: Muitas mortes - dificuldade muito alta ou HP muito baixo\n";
+        f << "  PROBLEM: Many deaths - difficulty too high or HP too low\n";
     if (dangersZones > 5)
-        f << "  SUGESTAO: Adicionar mais cura / kits no mapa\n";
+        f << "  SUGGESTION: Add more healing / kits to the map\n";
 
     f << "\n[PATHFINDING / STUCK]\n";
-    f << "  Eventos de bloqueio (>2s): " << stuckEvents << "\n";
-    f << "  Bloqueios criticos (>10s): " << longStuckEvents << "\n";
+    f << "  Stuck events (>2s)   : " << stuckEvents << "\n";
+    f << "  Critical stuck (>10s): " << longStuckEvents << "\n";
     if (longStuckEvents > 0)
-        f << "  BUG: Bot ficou preso por mais de 10s em " << longStuckEvents
-          << " ocasiao(oes) - revisar colisao/mapa\n";
+        f << "  BUG: Bot stayed stuck for more than 10s in " << longStuckEvents
+          << " occurrence(s) - review collision/map\n";
 
-    f << "\n[DIAGNOSTICO DE ENTIDADES (picos)]\n";
-    f << "  Inimigos (pico)        : " << peakEnemies << "\n";
-    f << "  Projeteis player (pico): " << peakProjectiles << "\n";
-    f << "  Projeteis inimigo(pico): " << peakEnemyProj << "\n";
-    f << "  Itens no chao (pico)   : " << peakItems << "\n";
-    f << "  XP orbs (pico)         : " << peakOrbs << "\n";
-    f << "  Unidades aliadas (pico): " << peakUnits << "\n";
-    f << "  No FPS mais baixo (" << (int)fpsLowValue << "): inimigos=" << fpsLowEnemies
-      << " projeteis=" << fpsLowProj << "\n";
-    f << "  Pior tempo update()    : " << peakUpdateMs << " ms\n";
-    f << "  Pior tempo render()    : " << peakRenderMs << " ms\n";
+    f << "\n[ENTITY DIAGNOSTIC (peaks)]\n";
+    f << "  Enemies (peak)            : " << peakEnemies << "\n";
+    f << "  Player projectiles (peak) : " << peakProjectiles << "\n";
+    f << "  Enemy projectiles (peak)  : " << peakEnemyProj << "\n";
+    f << "  Items on floor (peak)     : " << peakItems << "\n";
+    f << "  XP orbs (peak)            : " << peakOrbs << "\n";
+    f << "  Allied units (peak)       : " << peakUnits << "\n";
+    f << "  At lowest FPS (" << (int)fpsLowValue << "): enemies=" << fpsLowEnemies
+      << " projectiles=" << fpsLowProj << "\n";
+    f << "  Worst update() time       : " << peakUpdateMs << " ms\n";
+    f << "  Worst render() time       : " << peakRenderMs << " ms\n";
 
-    f << "\n[PROBLEMAS DETECTADOS]\n";
+    f << "\n[DETECTED PROBLEMS]\n";
     if (issueLog.empty()) {
-        f << "  Nenhum problema critico detectado\n";
+        f << "  No critical problem detected\n";
     } else {
         for (const auto& issue : issueLog)
             f << "  - " << issue << "\n";
     }
 
-    f << "\n[LOG DE ATIVIDADE (ultimas acoes)]\n";
+    f << "\n[ACTIVITY LOG (latest actions)]\n";
     for (const auto& entry : log)
         f << "  " << entry << "\n";
 
-    f << "\n[PRIORIDADES DE MELHORIA SUGERIDAS]\n";
+    f << "\n[SUGGESTED IMPROVEMENT PRIORITIES]\n";
     int pri = 1;
     if (minFPS < 40.0f)
-        f << "  " << pri++ << ". Otimizar rendering - FPS baixo detectado\n";
+        f << "  " << pri++ << ". Optimize rendering - low FPS detected\n";
     if (killCount < 5)
-        f << "  " << pri++ << ". Corrigir sistema de combate - poucos kills\n";
+        f << "  " << pri++ << ". Fix combat system - few kills\n";
     if (deathCount > 3)
-        f << "  " << pri++ << ". Balancear dificuldade - muitas mortes\n";
+        f << "  " << pri++ << ". Balance difficulty - many deaths\n";
     if (dangersZones > 5)
-        f << "  " << pri++ << ". Adicionar mais HealthPacks no mapa\n";
+        f << "  " << pri++ << ". Add more HealthPacks to the map\n";
     if (areasExplored < 2)
-        f << "  " << pri++ << ". Corrigir geracao de mapa - areas inacessiveis\n";
+        f << "  " << pri++ << ". Fix map generation - inaccessible areas\n";
     if (itemsChased > 0 && itemsCollected == 0)
-        f << "  " << pri++ << ". Verificar tecla de coleta de item (E)\n";
+        f << "  " << pri++ << ". Check item pickup key (E)\n";
     if (itemsCollected < 3)
-        f << "  " << pri++ << ". Verificar spawn de itens - poucos itens encontrados\n";
+        f << "  " << pri++ << ". Check item spawn - few items found\n";
     if (skillsFired < 5)
-        f << "  " << pri++ << ". Checar skills - cooldowns muito longos?\n";
+        f << "  " << pri++ << ". Check skills - cooldowns too long?\n";
     if (longStuckEvents > 0)
-        f << "  " << pri++ << ". Investigar pathfinding - bot ficou preso >10s\n";
+        f << "  " << pri++ << ". Investigate pathfinding - bot stayed stuck >10s\n";
 
     f << "\n========================================================\n";
-    f << "  Duracao da sessao: " << (int)testTimer << "s\n";
-    f << "  Frames processados: " << frameCount << "\n";
+    f << "  Session duration: " << (int)testTimer << "s\n";
+    f << "  Frames processed: " << frameCount << "\n";
     f << "========================================================\n";
     f.close();
 }
@@ -444,17 +444,17 @@ BotController::BotDecision BotController::update(
         testTimer += dt;
         if (testTimer >= testDuration) {
             dec.shouldQuit = true;
-            addLog(TextFormat("TESTE CONCLUIDO (%.0fs)", testTimer));
+            addLog(TextFormat("TEST COMPLETED (%.0fs)", testTimer));
             writeReport("bot_report.txt");
             return dec;
         }
     }
 
     // ── FPS tracking ──────────────────────────────────────────────────────────
-    // Um frame de CARGA (worldgen de partida/fase, dt > 0,25s) envenena a media
-    // movel do GetFPS() por ~0,5s: o relatorio acusava "FPS minimo 6" com o jogo
-    // a 60 — era o frame de loading entrando na janela. Quarentena de 1s apos
-    // qualquer frame desses; so se mede FPS de gameplay.
+    // Um frame of CARGA (worldgen of match/phase, dt > 0,25s) envenena the media
+    // movel of the GetFPS() by ~0,5s: the report acusava "FPS minimum 6" with the game
+    // the 60 — era the frame of loading entering in the window. Quarantine of 1s apos
+    // qualquer frame desses; only if mede FPS of gameplay.
     if (dt > 0.25f) fpsQuarantine = 1.0f;
     else if (fpsQuarantine > 0.0f) fpsQuarantine -= dt;
     if (currentFPS > 0.0f && fpsQuarantine <= 0.0f) {
@@ -462,7 +462,7 @@ BotController::BotDecision BotController::update(
         if (currentFPS < minFPS) minFPS = currentFPS;
         if (currentFPS > maxFPS) maxFPS = currentFPS;
         if (currentFPS < 30.0f && logicTimer <= 0.0f)
-            issueLog.push_back(TextFormat("FPS critico: %.0f", currentFPS));
+            issueLog.push_back(TextFormat("FPS critical: %.0f", currentFPS));
     }
 
     // ── HP tracking ───────────────────────────────────────────────────────────
@@ -472,8 +472,8 @@ BotController::BotDecision BotController::update(
         if (hpPct < 0.25f && !wasLowHP) {
             wasLowHP = true;
             dangersZones++;
-            addLog(TextFormat("PERIGO! HP=%.0f/%.0f", playerHP, playerMaxHP));
-            issueLog.push_back(TextFormat("HP critico em %.0f%%", hpPct * 100));
+            addLog(TextFormat("DANGER! HP=%.0f/%.0f", playerHP, playerMaxHP));
+            issueLog.push_back(TextFormat("HP critical at %.0f%%", hpPct * 100));
         }
         if (hpPct > 0.4f) wasLowHP = false;
 
@@ -481,31 +481,31 @@ BotController::BotDecision BotController::update(
         if (playerHP <= 0.0f && !wasDeadLastFrame) {
             deathCount++;
             wasDeadLastFrame = true;
-            issueLog.push_back(TextFormat("MORTE #%d em %.0fs pos=(%.0f,%.0f)",
+            issueLog.push_back(TextFormat("DEATH #%d at %.0fs pos=(%.0f,%.0f)",
                                           deathCount, testTimer, playerPos.x, playerPos.y));
-            addLog(TextFormat("[MORTE #%d] em %.0fs", deathCount, testTimer));
+            addLog(TextFormat("[DEATH #%d] at %.0fs", deathCount, testTimer));
         } else if (playerHP > 10.0f && wasDeadLastFrame) {
             wasDeadLastFrame = false;
             if (autoTest) {
                 // Respawn — reset state machine to continue test
                 botState   = BotState::Explore;
                 stuckTimer = 0.0f;
-                addLog("Respawn detectado — bot retomando");
+                addLog("Respawn detected — bot resuming");
             }
         }
-        // Return neutral while dead so bot doesn't move into walls
+        // Return neutral while dead only bot doesn't move into walls
         if (playerHP <= 0.0f && autoTest) return dec;
     }
 
-    // ── Stagnation detection (no kills + no zone advance for 2 min) ──────────
+    // ── Stagnation detection (in the kills + in the zone advance for 2 min) ──────────
     stagnationTimer += dt;
     if (stagnationTimer >= 120.0f) {
         stagnationTimer = 0.0f;
         if (killCount == lastKillCheck && zonesVisited == lastZoneCheck) {
             issueLog.push_back(TextFormat(
-                "AVISO: Sem progresso em 2min (kills=%d zonas=%d pos=%.0f,%.0f)",
+                "WARNING: No progress in 2min (kills=%d zones=%d pos=%.0f,%.0f)",
                 killCount, zonesVisited, playerPos.x, playerPos.y));
-            addLog("AVISO: sem progresso em 2min");
+            addLog("WARNING: in the progress in 2min");
             // Force exploration state to break stagnation
             botState     = BotState::Explore;
             exploreStep  = (exploreStep + 1) % 8;
@@ -524,9 +524,9 @@ BotController::BotDecision BotController::update(
     quadrantTimer += dt;
     if (quadrantTimer > 3.0f) {
         quadrantTimer = 0.0f;
-        // Quadrante RELATIVO ao centro do mundo. O limiar fixo de 1280 vinha de um
-        // mapa de 2560; com a fase centrada em 4096 o bot ficava eternamente no
-        // mesmo quadrante e o relatorio acusava "preso num canto" sem estar.
+        // Quadrante RELATIVO to the center of the world. O threshold fixed of 1280 vinha of um
+        // map of 2560; with the phase centrada in 4096 the bot ficava eternamente in the
+        // same quadrante and the report acusava "preso num canto" without estar.
         float ccx = (worldCenter.x != 0.0f) ? worldCenter.x : 1280.0f;
         float ccy = (worldCenter.y != 0.0f) ? worldCenter.y : 1280.0f;
         int qx = (playerPos.x > ccx) ? 1 : 0;
@@ -541,7 +541,7 @@ BotController::BotDecision BotController::update(
     // ── Periodic log ─────────────────────────────────────────────────────────
     if (reportTimer <= 0.0f) {
         reportTimer = 15.0f;
-        addLog(TextFormat("t=%.0fs kills=%d hp=%.0f lvl=%d $%d itens=%d zonas=%d",
+        addLog(TextFormat("t=%.0fs kills=%d hp=%.0f lvl=%d $%d items=%d zones=%d",
                testTimer, killCount, playerHP, playerLevel, playerCredits,
                itemsCollected, zonesVisited));
     }
@@ -597,9 +597,9 @@ BotController::BotDecision BotController::update(
     if (hpPct < 0.25f && hasEnemy) {
         newState = BotState::FleeFromDanger;
     }
-    // Priority 2 (mundo aberto): portal de FASE aberto — avancar de mundo so
-    // perde para a fuga de morte iminente. Inimigos continuam spawnando, entao
-    // esperar "zona limpa" (clearTimer) significava NUNCA ir ao portal.
+    // Priority 2 (world open): portal of PHASE open — advance of world only
+    // perde for the fuga of death iminente. Enemies continuam spawnando, entao
+    // esperar "zone limpa" (clearTimer) significava NUNCA go to the portal.
     else if (owPortalOpen) {
         newState = BotState::AdvancePhase;
     }
@@ -615,7 +615,7 @@ BotController::BotDecision BotController::update(
     else if (openAnomalyPortals > 0) {
         newState = BotState::ClosePortal;
     }
-    // Priority 6: Advance phase after zone clear (5s with no enemies/items)
+    // Priority 6: Advance phase after zone clear (5s with in the enemies/items)
     else if (clearTimer > 5.0f && hasPortal) {
         newState = BotState::AdvancePhase;
     }
@@ -626,10 +626,10 @@ BotController::BotDecision BotController::update(
 
     if (newState != botState) {
         botState = newState;
-        // itemsChased conta TRANSICOES para coleta, nao frames (antes inflava
-        // a taxa de "perseguidos" e escondia a falha real de coleta).
+        // itemsChased account TRANSICOES to coleta, not frames (before inflava
+        // the taxa of "perseguidos" and escondia the failure real of coleta).
         if (botState == BotState::CollectItem) itemsChased++;
-        const char* labels[] = {"FUGINDO","COLETANDO","ATACANDO","FECHA PORTAL","AVANCANDO FASE","EXPLORANDO"};
+        const char* labels[] = {"FLEEING","COLLECTING","ATTACKING","CLOSING PORTAL","ADVANCING PHASE","EXPLORING"};
         addLog(TextFormat(">> %s", labels[(int)botState]));
         lastLoggedMode = (int)botState;
     }
@@ -651,14 +651,14 @@ BotController::BotDecision BotController::update(
         botTarget = {playerPos.x + fleeDir.x * 400.0f,
                      playerPos.y + fleeDir.y * 400.0f};
 
-        // Barreira (skill 5): use when HP < 25% — primary defensive skill
-        // (contagem de disparo fica no Game, apos a confirmacao isReady())
+        // Barrier (skill 5): use when HP < 25% — primary defensive skill
+        // (contagem of shot stays in the Game, after the confirmacao isReady())
         if (skillsReady[4] && skillTimer <= 0.0f) {
             dec.shouldUseSkill5 = true;
             skillTimer = 0.5f;
-            addLog("Barreira ativada (HP critico)");
+            addLog("Barrier activated (HP critical)");
         }
-        // Sobrecarga (skill 4): use when HP < 50% to gain speed/power
+        // Overload (skill 4): use when HP < 50% to gain speed/power
         if (skillsReady[3] && hpPct < 0.50f && skillTimer <= 0.0f) {
             dec.shouldUseSkill4 = true;
             skillTimer = 0.5f;
@@ -668,10 +668,10 @@ BotController::BotDecision BotController::update(
 
     // ── Collect item ─────────────────────────────────────────────────────────
     case BotState::CollectItem: {
-        // A coleta real e AUTOMATICA no Game (raio ~player.radius+52, com
-        // magnetismo a 230px) — o contador itemsCollected e incrementado la,
-        // quando o item sai do vetor. Contar aqui por proximidade (<20px)
-        // nunca disparava: o item sumia antes.
+        // A coleta real and AUTOMATICA in the Game (radius ~player.radius+52, with
+        // magnetismo the 230px) — the contador itemsCollected and incrementado la,
+        // when the item leaves of the vector. Contar here by proximidade (<20px)
+        // never disparava: the item sumia before.
         botTarget = itemPositions[nearestItemIdx];
         break;
     }
@@ -688,17 +688,17 @@ BotController::BotDecision BotController::update(
                 meleeHits++;
             }
             botTarget  = ePos;
-            engageTimer = 0.0f;   // conectou — encerra o engage
+            engageTimer = 0.0f;   // connected — encerra the engage
         } else if (nearestEnemyDist < 150.0f || engageTimer > 0.0f) {
-            // ENGAGE (~1.5s): fecha distancia DIRETO no inimigo, sem recuo nem
-            // orbita. Antes o bot RECUAVA 200px quando dist<150 e orbitava a
-            // 220px no resto — com o melee a 90px de alcance, a distancia nunca
-            // fechava ("Ataques melee: 0" no relatorio).
+            // ENGAGE (~1.5s): closes distance DIRETO in the enemy, without recuo nem
+            // orbita. Antes the bot RECUAVA 200px when dist<150 and orbitava the
+            // 220px in the resto — with the melee the 90px of range, the distance never
+            // fechava ("Ataques melee: 0" in the report).
             if (engageTimer <= 0.0f) engageTimer = 1.5f;
             botTarget = ePos;
         } else {
-            // Orbita COLADA (~80px) para o alcance do melee fechar — a orbita a
-            // 220px mantinha o bot longe demais para atacar.
+            // Orbita COLADA (~80px) for the range of the melee close — the orbita the
+            // 220px mantinha the bot far demais to attack.
             botTarget = {
                 ePos.x + std::cos(orbitAngle) * 80.0f,
                 ePos.y + std::sin(orbitAngle) * 80.0f
@@ -706,44 +706,44 @@ BotController::BotDecision BotController::update(
         }
 
         // ── Strategic skill usage ─────────────────────────────────────────────
-        // (contagem skillsFired/skillUsageCounts fica no Game, apos isReady())
+        // (contagem skillsFired/skillUsageCounts stays in the Game, apos isReady())
         if (skillTimer <= 0.0f) {
             // Skill 2 (EMP): use when >=2 enemies within 250px
             if (skillsReady[1] && countEnemiesInRadius(enemyPositions, playerPos, 250.0f) >= 2) {
                 dec.shouldUseSkill2 = true;
                 skillTimer = 0.5f;
-                addLog(TextFormat("EMP disparado (%d inimigos em 250px)",
+                addLog(TextFormat("EMP fired (%d enemies within 250px)",
                                   countEnemiesInRadius(enemyPositions, playerPos, 250.0f)));
             }
-            // Skill 3 (Granada): use when >=2 enemies within 200px
+            // Skill 3 (Grenade): use when >=2 enemies within 200px
             else if (skillsReady[2] && countEnemiesInRadius(enemyPositions, playerPos, 200.0f) >= 2) {
                 dec.shouldUseSkill3 = true;
                 skillTimer = 0.5f;
-                addLog("Granada lancada (cluster de inimigos)");
+                addLog("Grenade thrown (enemy cluster)");
             }
-            // Skill 6 (Rajada): use when enemy within 100px
+            // Skill 6 (Burst): use when enemy within 100px
             else if (skillsReady[5] && nearestEnemyDist < 100.0f) {
                 dec.shouldUseSkill6 = true;
                 skillTimer = 0.5f;
             }
-            // Skill 1 (Laser): single enemy in range as fallback
+            // Skill 1 (Laser): single enemy in range the fallback
             else if (skillsReady[0] && nearestEnemyDist < 500.0f) {
                 dec.shouldUseSkill1 = true;
                 skillTimer = 0.5f;
             }
         }
 
-        // Skill 4 (Sobrecarga): use when HP < 50% (damage boost + survivability)
+        // Skill 4 (Overload): use when HP < 50% (damage boost + survivability)
         if (skillsReady[3] && hpPct < 0.50f) {
             dec.shouldUseSkill4 = true;
-            addLog("Sobrecarga ativada (HP<50%)");
+            addLog("Overload activated (HP<50%)");
         }
 
-        // Skill 5 (Barreira): use when HP < 25% even during combat
+        // Skill 5 (Barrier): use when HP < 25% even during combat
         if (skillsReady[4] && hpPct < 0.25f && skillTimer <= 0.0f) {
             dec.shouldUseSkill5 = true;
             skillTimer = 0.5f;
-            addLog("Barreira ativada (HP<25% em combate)");
+            addLog("Barrier activated (HP<25% in combat)");
         }
 
         break;
@@ -766,31 +766,31 @@ BotController::BotDecision BotController::update(
 
     // ── Advance to next zone ─────────────────────────────────────────────────
     case BotState::AdvancePhase: {
-        // Mundo aberto: o alvo e o portal de FASE (owPortalPos). Os portais de
-        // zona do tilemap sao o sistema antigo — vazio no mundo aberto. A menos
-        // de 100u o bot pede o avanco: o Game trata shouldUsePortal como tecla E.
+        // Open world: the target is the PHASE portal (owPortalPos). The portals of
+        // zone of the tilemap sao the system old — empty in the world open. A less
+        // of 100u the bot pede the avanco: the Game trata shouldUsePortal as key E.
         if (owPortalOpen) {
             botTarget = owPortalPos;
             float owDist = Vector2Distance(playerPos, owPortalPos);
             if (owDist < 100.0f) dec.shouldUsePortal = true;
             if (logicTimer <= 0.0f) {
-                addLog(TextFormat("Indo ao portal de fase dist=%.0f", owDist));
+                addLog(TextFormat("Going to phase portal dist=%.0f", owDist));
                 logicTimer = 3.0f;
             }
             break;
         }
         botTarget  = nearestPortalPos;
-        clearTimer = 0.0f; // reset so we don't loop
+        clearTimer = 0.0f; // reset only we don't loop
 
-        // Track when we actually reach the portal (uma vez por posicao de portal)
+        // Track when we actually reach the portal (uma vez by position of portal)
         if (nearestPortalDist < 40.0f && Vector2Distance(nearestPortalPos, lastAdvancePortalPos) > 80.0f) {
             zonesVisited++;
             lastAdvancePortalPos = nearestPortalPos;
-            addLog(TextFormat("ZONA AVANCADA! Total=%d", zonesVisited));
+            addLog(TextFormat("ZONE ADVANCED! Total=%d", zonesVisited));
         }
 
         if (logicTimer <= 0.0f) {
-            addLog(TextFormat("Indo para portal dist=%.0f", nearestPortalDist));
+            addLog(TextFormat("Going to portal dist=%.0f", nearestPortalDist));
             logicTimer = 3.0f;
         }
         break;
@@ -800,10 +800,10 @@ BotController::BotDecision BotController::update(
     case BotState::Explore: {
         exploreTimer += dt;
 
-        // ZONA SEGURA: inimigos so spawnam FORA dela (Game empurra qualquer um
-        // para fora do raio). O passeio aleatorio centrado no player mantinha o
-        // bot eternamente no refugio — 0 inimigos vistos, 0 abates. Se ficar
-        // >3s dentro da zona, o proximo alvo e FORCADO para fora dela.
+        // SAFE ZONE: enemies only spawn OUTSIDE it (Game pushes any
+        // to outside the radius). O passeio random centrado in the player mantinha the
+        // bot eternamente in the refuge — 0 enemies vistos, 0 kills. Se stay
+        // >3s inside the zone, the next alvo and FORCADO to outside dela.
         bool insideSafe = false;
         if (safeZoneRadius > 0.0f) {
             insideSafe = Vector2Distance(playerPos, safeZoneCenter) < safeZoneRadius;
@@ -815,29 +815,29 @@ BotController::BotDecision BotController::update(
             exploreTimer = 0.0f;
 
             if (exploreSafeZoneTimer > 3.0f && safeZoneRadius > 0.0f) {
-                // Fora da zona segura: angulo aleatorio, raio alem do refugio,
-                // medido a partir do CENTRO da zona (nao do player).
+                // Outside the zone segura: angle random, radius alem of the refuge,
+                // medido the partir of the CENTRO of the zone (not of the player).
                 exploreSafeZoneTimer = 0.0f;
-                float a = (float)GetRandomValue(0, 359) * DEG2RAD;
+                float the = (float)GetRandomValue(0, 359) * DEG2RAD;
                 float r = safeZoneRadius + 300.0f + (float)GetRandomValue(0, 900);
-                botTarget = { safeZoneCenter.x + std::cos(a) * r,
-                              safeZoneCenter.y + std::sin(a) * r };
-                addLog("Saindo da zona segura para cacar");
+                botTarget = { safeZoneCenter.x + std::cos(the) * r,
+                              safeZoneCenter.y + std::sin(the) * r };
+                addLog("Leaving safe zone to hunt");
             } else {
                 float angle  = exploreStep * 0.7f;
-                // Raio ate 1800: com 900 o bot nunca saia da ZONA SEGURA (raio 1050),
-                // onde inimigo e empurrado pra fora. Resultado: 0 tiros, 0 abates - o
-                // portao de validacao pegou isso como "combate quebrado".
+                // Radius up to 1800: with 900 the bot would never leave the SAFE ZONE (radius 1050),
+                // where enemy and empurrado to outside. Result: 0 shots, 0 kills - the
+                // portao of validation got isso as "combat quebrado".
                 float radius = 300.0f + exploreStep * 90.0f;
                 if (radius > 1800.0f) { radius = 300.0f; exploreStep = 0; }
-                auto pick = [&](float a) {
-                    return Vector2{ playerPos.x + std::cos(a) * radius,
-                                    playerPos.y + std::sin(a) * radius };
+                auto pick = [&](float the) {
+                    return Vector2{ playerPos.x + std::cos(the) * radius,
+                                    playerPos.y + std::sin(the) * radius };
                 };
                 botTarget = pick(angle);
-                // Alvo dentro de parede/barreira = anda ate encostar e trava. Gira o
-                // angulo procurando um ponto livre (puxar pro centro so prendia o bot
-                // em volta do refugio).
+                // Alvo inside of wall/barrier = anda until encostar and trava. Gira the
+                // angle procurando um point livre (puxar to the center only prendia the bot
+                // in returns of the refuge).
                 for (int tryI = 1; tryI < 8 && wallQuery && wallQuery(botTarget); ++tryI)
                     botTarget = pick(angle + tryI * 0.785f);
                 exploreStep++;
@@ -852,30 +852,30 @@ BotController::BotDecision BotController::update(
     }
     } // end switch
 
-    // ── Escape de bordas/barreiras do mundo aberto ────────────────────────────
-    // Se o alvo de exploracao cai dentro de uma barreira solida (ex.: borda do
-    // mapa), o BFS leva ate a beirada e o bot encosta sem progredir. Quando o
-    // stuck se prolonga, ruma temporariamente para o centro do mapa — direcao
-    // garantidamente transitavel — para sair do bolsao.
+    // ── Escape of bordas/barreiras of the world open ────────────────────────────
+    // If the alvo of exploracao falls inside of uma barrier solida (ex.: edge of the
+    // map), the BFS leva until the beirada and the bot encosta without progredir. When the
+    // stuck if prolonga, ruma temporariamente for the center of the map — direction
+    // garantidamente transitavel — to leave of the bolsao.
     if (wallQuery) updateStuckTracking(playerPos, dt);
     escapeTimer -= dt;
     if (stuckTimer > 2.0f && escapeTimer <= 0.0f) {
-        // O escape TEM que produzir viagem. Mandar para "o centro" era um laco
-        // infinito depois que o centro virou o proprio refugio onde o bot estava:
-        // ele chegava, parava, era considerado preso de novo e reescapava - 0
-        // abates em 100s com 30 inimigos vivos na tela.
-        // Agora: um ponto a meia distancia da borda da fase, num rumo LIVRE e
-        // longe de onde ele ja esta.
+        // O escape TEM that produzir viagem. Send to "the center" era um laco
+        // infinito after that the center virou the own refuge where the bot was:
+        // ele chegava, parava, era considered preso of new and reescapava - 0
+        // kills in 100s with 30 enemies vivos in the screen.
+        // Agora: um point the meia distance of the edge of the phase, num rumo LIVRE and
+        // far of where ele already is.
         Vector2 c   = (worldCenter.x != 0.0f || worldCenter.y != 0.0f) ? worldCenter : playerPos;
         float   ring = (worldRadius > 400.0f) ? worldRadius * 0.60f : 1400.0f;
-        // Sem inimigos ha muito tempo = o bot precisa de COMBATE. Nesse caso o
-        // escape NAO pode puxar de volta para o refugio: inimigos so existem
-        // fora da zona segura, entao candidatos dentro dela sao rejeitados.
+        // Sem enemies ha very time = the bot precisa of COMBAT. Nesse if the
+        // escape NOT can puxar of returns for the refuge: enemies only existem
+        // outside the zone segura, entao candidatos inside dela sao rejeitados.
         bool needCombat = enemyPositions.empty();
         Vector2 best = playerPos; float bestD = -1.0f;
         for (int i = 0; i < 8; ++i) {
-            float a = (float)i * 0.785f + (float)GetRandomValue(0, 62) * 0.01f;
-            Vector2 cand = { c.x + std::cos(a) * ring, c.y + std::sin(a) * ring };
+            float the = (float)i * 0.785f + (float)GetRandomValue(0, 62) * 0.01f;
+            Vector2 cand = { c.x + std::cos(the) * ring, c.y + std::sin(the) * ring };
             if (wallQuery && wallQuery(cand)) continue;
             if (needCombat && safeZoneRadius > 0.0f &&
                 Vector2Distance(cand, safeZoneCenter) < safeZoneRadius + 150.0f) continue;
@@ -883,27 +883,27 @@ BotController::BotDecision BotController::update(
             float d  = dx*dx + dy*dy;
             if (d > bestD) { bestD = d; best = cand; }
         }
-        // Encurralado de verdade (>4s): o ponto sorteado pode ser inalcancavel e o
-        // escape vira outro laco. A celula que a BFS alcancou e uma promessa.
+        // Encurralado of verdade (>4s): the point sorteado can be inalcancavel and the
+        // escape vira other laco. A celula that the BFS alcancou and uma promessa.
         if (stuckTimer > 4.0f && hasFarReach &&
             Vector2Distance(farthestReachable, playerPos) > 120.0f) {
             best = farthestReachable;
-            addLog("Escape -> celula alcancavel mais distante (BFS)");
+            addLog("Escape -> farthest reachable cell (BFS)");
         }
         escapeTarget = best;
         escapeTimer  = 5.0f;
-        cachedPath.clear();   // recalcula rota imediatamente para o escape
+        cachedPath.clear();   // recalcula route imediatamente for the escape
         addLog(TextFormat("Escape -> (%.0f,%.0f)", best.x, best.y));
     }
     if (escapeTimer > 0.0f) botTarget = escapeTarget;
 
-    // ── Movimento: pathfinding global (BFS) com fallback de desvio reativo ─────
+    // ── Movement: pathfinding global (BFS) with fallback of desvio reativo ─────
     Vector2 dir;
     if (wallQuery) {
-        // Rota global na grade de tiles — escapa de cantos concavos de verdade.
+        // Route global in the grade of tiles — escapa of cantos concavos of verdade.
         dir = computePathDir(playerPos, botTarget);
     } else {
-        // Sem consulta de mapa: mantem o desvio reativo de 8 direcoes (legado).
+        // Sem consulta of map: mantem the desvio reativo of 8 directions (legacy).
         Vector2 rawDir = {botTarget.x - playerPos.x, botTarget.y - playerPos.y};
         dir = computeAntiWall(rawDir, playerPos, dt);
     }

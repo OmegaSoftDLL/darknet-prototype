@@ -99,11 +99,11 @@ void AnomalyPortal::renderOpeningAnim() const {
 
     // Electric sparks radiating outward
     for (int i = 0; i < 6; i++) {
-        float a = (i / 6.0f) * PI * 2.0f + arcTimer;
+        float the = (i / 6.0f) * PI * 2.0f + arcTimer;
         float len = baseRadius * 0.5f * progress;
-        Vector2 from = {px + cosf(a) * w * 0.4f, py + sinf(a) * h * 0.4f};
-        float na = a + sinf(arcTimer + i) * 0.6f;
-        Vector2 to   = {from.x + cosf(na) * len, from.y + sinf(na) * len};
+        Vector2 from = {px + cosf(the) * w * 0.4f, py + sinf(the) * h * 0.4f};
+        float in the = the + sinf(arcTimer + i) * 0.6f;
+        Vector2 to   = {from.x + cosf(in the) * len, from.y + sinf(in the) * len};
         DrawLineEx(from, to, 1.2f, ColorAlpha(portalColor, 0.8f * progress));
     }
 
@@ -211,9 +211,9 @@ void AnomalyPortal::renderClosingAnim() const {
 
     // Particles exploding outward
     for (int p = 0; p < 10; p++) {
-        float a   = (p / 10.0f) * PI * 2.0f + progress * 5.0f;
+        float the   = (p / 10.0f) * PI * 2.0f + progress * 5.0f;
         float dist = baseRadius * 1.2f * progress;
-        Vector2 pp = {px + cosf(a) * dist, py + sinf(a) * dist};
+        Vector2 pp = {px + cosf(the) * dist, py + sinf(the) * dist};
         DrawCircle((int)pp.x, (int)pp.y, 3.0f * (1.0f - progress),
                    ColorAlpha(portalColor, 1.0f - progress));
     }
@@ -345,8 +345,8 @@ void StormSystem::render(int screenW, int screenH) const {
         float t  = fmodf(windPhase * 0.4f + i * 0.37f, 1.0f);
         float fx = fmodf(i * 137.0f + windPhase * 80.0f * (0.5f + slantX * 0.02f), (float)screenW);
         float fy = fmodf(i * 91.0f + windPhase * 30.0f, (float)screenH);
-        float a  = (0.3f + 0.2f * sinf(windPhase * 2.0f + i)) * intensity;
-        DrawCircle((int)fx, (int)fy, 1.5f, ColorAlpha({160, 150, 130, 255}, a));
+        float the  = (0.3f + 0.2f * sinf(windPhase * 2.0f + i)) * intensity;
+        DrawCircle((int)fx, (int)fy, 1.5f, ColorAlpha({160, 150, 130, 255}, the));
     }
 
     // Lightning flash
@@ -437,7 +437,7 @@ void AnomalySystem::spawnWave(int zoneW, int zoneH, Vector2 playerPos,
 }
 
 void AnomalySystem::update(float dt, Vector2 playerPos) {
-    // The storm always animates while active (including atmospheric rain without a wave)
+    // The storm always animates while active (including atmospheric rain without the wave)
     if (storm.active) storm.update(dt);
 
     if (!waveActive) {

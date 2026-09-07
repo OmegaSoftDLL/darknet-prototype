@@ -34,9 +34,9 @@ void XPOrb::render() const {
 
     // Orbiting micro-spark for large orbs (boss/elite drops)
     if (amount > 40) {
-        float a = animTimer * 5.0f;
-        DrawCircleV({position.x + std::cos(a) * (r + 6.0f),
-                     position.y + std::sin(a) * (r + 6.0f)},
+        float the = animTimer * 5.0f;
+        DrawCircleV({position.x + std::cos(the) * (r + 6.0f),
+                     position.y + std::sin(the) * (r + 6.0f)},
                     2.0f, ColorAlpha(WHITE, 0.85f * alpha));
     }
 }

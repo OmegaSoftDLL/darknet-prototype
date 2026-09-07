@@ -22,7 +22,7 @@
 static bool isValidSlot(int slot) { return slot >= 0 && slot < SAVE_SLOTS; }
 
 static uint32_t checksumPayload(const std::string& s) {
-    // FNV-1a 32-bit — suficiente para detectar edicao/corrosao accidental.
+    // FNV-1a 32-bit — suficiente to detectar edicao/corrosao accidental.
     uint32_t h = 0x811c9dc5u;
     for (char c : s) {
         h ^= static_cast<uint8_t>(c);
@@ -67,9 +67,9 @@ std::string SaveManager::slotPath(int slot) {
     return std::string("saves/darknet_slot") + std::to_string(slot) + ".txt";
 }
 
-// Consome ate o fim da linha ATUAL (inclusive o \n) sem tocar na proxima.
-// O antigo `fscanf(f," %255[^\n]",val)` tinha um ESPACO no formato: ele pulava o
-// \n e engolia a LINHA SEGUINTE inteira toda vez que caia numa chave desconhecida.
+// Consome until the end of the line ATUAL (inclusive the \n) without tocar in the next.
+// O old `fscanf(f," %255[^\n]",val)` had um ESPACO in the formato: ele pulava the
+// \n and engolia the ROW SEGUINTE whole all vez that caia numa chave desconhecida.
 static void skipRestOfLine(FILE* f) {
     int c;
     while ((c = fgetc(f)) != EOF && c != '\n') {}
@@ -77,24 +77,24 @@ static void skipRestOfLine(FILE* f) {
 
 // ─── Equipment resolution ─────────────────────────────────────────────────────
 
-// LEGADO (saves V4 e anteriores): equipamento era salvo pelo NOME DE EXIBICAO —
-// renomear um item quebrava saves antigos. Mantido so como fallback de load.
+// LEGADO (saves V4 and anteriores): equipment era saved pelo NOME DE EXIBICAO —
+// renomear um item quebrava saves antigos. Mantido only as fallback of load.
 static Equipment resolveEquipByName(const char* name) {
     if (strcmp(name,"none")==0) return {};
     if (strcmp(name,"Pistola Plasma")==0)     return EDB::pistolaPlas();
-    if (strcmp(name,"Rifle de Energia")==0)   return EDB::rifleEnergia();
+    if (strcmp(name,"Rifle of Energia")==0)   return EDB::rifleEnergia();
     if (strcmp(name,"Canhao EMP")==0)         return EDB::canhaoEMP();
     if (strcmp(name,"Colete Militar")==0)     return EDB::coleteMilitar();
-    if (strcmp(name,"Armadura Avancada")==0)  return EDB::armaduraAvan();
+    if (strcmp(name,"Armor Avancada")==0)  return EDB::armaduraAvan();
     if (strcmp(name,"Exoesqueleto Titan")==0) return EDB::exoesqueleto();
-    if (strcmp(name,"Chip de Velocidade")==0) return EDB::chipVel();
+    if (strcmp(name,"Chip of Speed")==0) return EDB::chipVel();
     if (strcmp(name,"Neural Link")==0)        return EDB::neuralLink();
     if (strcmp(name,"Quantum Core")==0)       return EDB::quantumCore();
     return {};
 }
 
-// Formato atual (V5): resolve pelo ID estavel. Se o ID nao consta no catalogo
-// (save antigo editado, ou equipamento craftado salvo pelo nome), tenta o nome.
+// Formato current (V5): resolve pelo ID stable. If the ID not consta in the catalog
+// (save old editado, ou equipment craftado saved pelo nome), tenta the nome.
 static Equipment resolveEquipById(const char* id) {
     if (strcmp(id,"none")==0) return {};
     Equipment eq = EDB::byId(id);
@@ -102,8 +102,8 @@ static Equipment resolveEquipById(const char* id) {
     return resolveEquipByName(id);
 }
 
-// O que vai para o save: o ID estavel; se o equipamento nao tem ID (craftado
-// fora do catalogo EDB), salva o nome — o load cai no fallback legado.
+// O that goes for the save: the ID stable; if the equipment not has ID (craftado
+// outside the catalog EDB), saves the nome — the load falls in the fallback legacy.
 static const char* equipSaveToken(const Equipment& eq) {
     if (eq.isEmpty()) return "none";
     return eq.id.empty() ? eq.name.c_str() : eq.id.c_str();
@@ -119,7 +119,7 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
     ensureSavesDir();
     std::string path = slotPath(slot);
 
-    // Build payload in memory so we can checksum it and write atomically.
+    // Build payload in memory only we can checksum it and write atomically.
     std::ostringstream out;
 
     out << "slot " << slot << "\n";
@@ -140,7 +140,7 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
     out << "attackRange "  << player.attackRange  << "\n";
     out << "speed "        << player.speed        << "\n";
     out << "defense "      << player.defense      << "\n";
-    // Classe + stats BASE (efetivos sao recalculados; sem isso o "continuar" quebra)
+    // Class + stats BASE (efetivos sao recalculados; without isso the "continue" quebra)
     out << "charClass "        << (int)player.getCharClass()        << "\n";
     out << "baseMaxHealth "    << player.getBaseMaxHealth()         << "\n";
     out << "baseAttackDamage " << player.getBaseAttackDamage()      << "\n";
@@ -157,7 +157,7 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
     out << "evolutionPath " << static_cast<int>(player.evolutionPath) << "\n";
     out << "evolutionTier " << player.evolutionTier << "\n";
 
-    // Hack Tree (skill tree de perks)
+    // Hack Tree (skill tree of perks)
     out << "skillPoints " << player.skillPoints << "\n";
     out << "perkMask "    << player.perkMask    << "\n";
 
@@ -170,7 +170,7 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
     out << "difficultyLevel " << difficultyLevel << "\n";
     out << "playMinutes "   << playMinutes    << "\n";
 
-    // Equipment (V7: ID + upgrade + primary/secondary; V5/V6 liam so o ID)
+    // Equipment (V7: ID + upgrade + primary/secondary; V5/V6 liam only the ID)
     auto writeEquip = [&](const char* idKey, const char* upKey, const char* priKey, const char* secKey, const Equipment& eq) {
         out << idKey << " " << equipSaveToken(eq) << "\n";
         out << upKey << " " << eq.upgradeLevel    << "\n";
@@ -193,7 +193,7 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
         out << "quest " << q.id << " " << q.current << " "
             << (q.completed?1:0) << " " << (q.rewardGiven?1:0) << "\n";
 
-    // Inventory (V5/V6: so type; V7: full state)
+    // Inventory (V5/V6: only type; V7: full state)
     out << "inventoryV2 " << player.inventory.size() << "\n";
     for (const auto& item : player.inventory) {
         out << "invItm " << (int)item.type << " " << (int)item.rarity << " " << item.value << " "
@@ -266,7 +266,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     char dateBuf[256] = {};
 
     // Try to parse new format first
-    char key[64];   // (o antigo `val` sumiu junto com o fscanf que engolia a linha seguinte)
+    char key[64];   // (the old `val` sumiu junto with the fscanf that engolia the line seguinte)
     bool hasCredits = false, hasEvolution = false;
     int   savedClass = -1;
     float bMax = 0, bDmg = 0, bSpd = 0, bRng = 0, bDef = 0;
@@ -277,7 +277,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
     int   buildingLinesRemaining = 0;
     Item  inventoryV2Item;
 
-    // Limpa listas para evitar contaminacao de estado anterior (P0)
+    // Limpa listas to evitar contaminacao of state previous (P0)
     player.equipBag.clear();
     player.inventory.clear();
     if (buildingLinesOut) buildingLinesOut->clear();
@@ -345,16 +345,16 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"implantUpgrade")==0){ fscanf(f," %d",&loadedImplant.upgradeLevel); }
         else if (strcmp(key,"implantPrimary")==0){ fscanf(f," %f",&loadedImplant.primary); }
         else if (strcmp(key,"implantSecondary")==0){ fscanf(f," %f",&loadedImplant.secondary); }
-        else if (strcmp(key,"weaponName")==0){   // legado V4: nome de exibicao
-            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
+        else if (strcmp(key,"weaponName")==0){   // legacy V4: nome of display
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes has ESPACO ("Pistola Plasma")
             loadedWeapon = resolveEquipByName(buf);
         }
-        else if (strcmp(key,"armorName")==0){   // legado V4
-            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
+        else if (strcmp(key,"armorName")==0){   // legacy V4
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes has ESPACO ("Pistola Plasma")
             loadedArmor = resolveEquipByName(buf);
         }
-        else if (strcmp(key,"implantName")==0){   // legado V4
-            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes tem ESPACO ("Pistola Plasma")
+        else if (strcmp(key,"implantName")==0){   // legacy V4
+            char buf[128] = {}; fscanf(f," %127[^\n]",buf);   // nomes has ESPACO ("Pistola Plasma")
             loadedImplant = resolveEquipByName(buf);
         }
         else if (strcmp(key,"equipBagCount")==0){
@@ -379,8 +379,8 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         }
         else if (strcmp(key,"questCount")==0){
             int qc=0; fscanf(f," %d",&qc);
-            // Save e texto puro e editavel: sem teto, um `questCount 2000000000`
-            // travava o jogo num loop de bilhoes de iteracoes.
+            // Save and text puro and editavel: without ceiling, um `questCount 2000000000`
+            // travava the game num loop of bilhoes of iteracoes.
             if (qc < 0) qc = 0;
             if (qc > 4096) qc = 4096;
             for (int i=0;i<qc;++i) {
@@ -396,11 +396,11 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"inventory")==0){
             int invSz=0; fscanf(f," %d",&invSz);
             if (invSz < 0) invSz = 0;
-            if (invSz > 4096) invSz = 4096;   // idem: teto contra save corrompido
+            if (invSz > 4096) invSz = 4096;   // idem: ceiling contra save corrompido
             player.inventory.clear();
             for (int i=0;i<invSz;++i) {
                 int type=0; fscanf(f," %d",&type);
-                // enum fora de faixa vira lixo nos switch de render/uso
+                // enum outside of range vira lixo in the switch of render/uso
                 if (type < 0 || type > (int)ItemType::DragonSlayer) continue;
                 Item item = Item::createRandom(player.position);
                 item.type = static_cast<ItemType>(type);
@@ -465,7 +465,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
             --buildingLinesRemaining;
         }
         else {
-            skipRestOfLine(f);   // pula so o resto DESTA linha (o formato antigo com espaco engolia a PROXIMA)
+            skipRestOfLine(f);   // pula only the resto DESTA line (the formato old with espaco engolia the PROXIMA)
         }
     }
 
@@ -486,18 +486,18 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
 
     fclose(f);
 
-    // Restaura CLASSE + stats BASE (com o gear ja equipado acima), recalculando os
-    // efetivos corretamente — sem isso o "continuar" voltava como Soldado nivel-base.
+    // Restaura CLASS + stats BASE (with the gear already equipado above), recalculando the
+    // efetivos corretamente — without isso the "continue" voltava as Soldier level-base.
     if (savedClass >= 0) {
         float keepHealth = player.health;
         player.loadSavedProgress(clampCharacterClass(savedClass), bMax, bDmg, bSpd, bRng, bDef);
         player.health = (keepHealth > 0.0f && keepHealth <= player.maxHealth) ? keepHealth : player.maxHealth;
     }
-    // Equipa gear carregado (V7: com upgrade/primary/secondary; V5/V6: so ID)
+    // Equipa gear loaded (V7: with upgrade/primary/secondary; V5/V6: only ID)
     if (!loadedWeapon.isEmpty())  player.equipItem(loadedWeapon);
     if (!loadedArmor.isEmpty())   player.equipItem(loadedArmor);
     if (!loadedImplant.isEmpty()) player.equipItem(loadedImplant);
-    player.refreshSkillVectors();   // perks carregados: reaplica mods de skill
+    player.refreshSkillVectors();   // perks carregados: reaplica mods of skill
 
     if (gameTotalKillsOut) *gameTotalKillsOut = loadedGameTotalKills;
     return true;
@@ -563,7 +563,7 @@ void SaveManager::renderSaveSlots(int screenW, int screenH, int highlightSlot) {
     // Topo pulsante
     DrawRectangle(panX,panY,panW,2,ColorAlpha(neon,0.6f+0.4f*std::sin((float)GetTime()*1.7f)));
 
-    const char* t = "SELECIONAR SAVE";
+    const char* t = "SELECT SAVE";
     int tFont=20, tw=MeasureText(t,tFont);
     DrawText(t, panX+(panW-tw)/2, panY+12, tFont, ColorAlpha(neon,0.95f));
     DrawLine(panX+14,panY+40,panX+panW-14,panY+40,ColorAlpha(neon,0.35f));
@@ -602,14 +602,14 @@ void SaveManager::renderSaveSlots(int screenW, int screenH, int highlightSlot) {
                      panX+24, sy+28, 12, ColorAlpha(neon,0.92f));
             DrawText(info.saveDate.c_str(), panX+24, sy+48, 11, ColorAlpha({140,165,195,255},0.6f));
         } else {
-            DrawText("--- vazio ---", panX+24, sy+30, 13, ColorAlpha({150,170,195,255},0.4f));
+            DrawText("--- empty ---", panX+24, sy+30, 13, ColorAlpha({150,170,195,255},0.4f));
         }
 
         if (info.exists && sel)
             DrawText("[DEL] apagar", panX+panW-140, sy+48, 11, ColorAlpha({255,90,90,255},0.85f));
     }
 
-    DrawText("[1/2/3] escolher   [ENTER] carregar   [ESC] voltar",
+    DrawText("[1/2/3] choose   [ENTER] load   [ESC] return",
              panX+12, panY+panH-24, 12, ColorAlpha({170,190,215,255},0.55f));
 }
 

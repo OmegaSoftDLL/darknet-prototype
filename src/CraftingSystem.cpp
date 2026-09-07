@@ -34,78 +34,78 @@ void CraftingSystem::buildRecipes() {
     recipes.clear();
 
     // ── ARMAS ─────────────────────────────────────────────────────────────────
-    {   CraftingRecipe r; r.name="Faca de Combate"; r.category=CraftCategory::Weapons;
-        r.description="Lâmina de sucata. Dano +15"; r.ingredients={{ItemType::MetalScrap,3}};
-        r.resultEquip={"Faca de Combate","Dano +15",EquipSlot::Weapon,15,0,{200,200,200,255},1};
+    {   CraftingRecipe r; r.name="Faca of Combat"; r.category=CraftCategory::Weapons;
+        r.description="Lamina of scrap. Damage +15"; r.ingredients={{ItemType::MetalScrap,3}};
+        r.resultEquip={"Faca of Combat","Damage +15",EquipSlot::Weapon,15,0,{200,200,200,255},1};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Lancador Acido"; r.category=CraftCategory::Weapons;
-        r.description="Arma alien. Dano +30, Alc +20";
+    {   CraftingRecipe r; r.name="Lancador Acid"; r.category=CraftCategory::Weapons;
+        r.description="Weapon alien. Damage +30, Rng +20";
         r.ingredients={{ItemType::AlienCarapace,3},{ItemType::PlasmaCore,1}};
-        r.resultEquip={"Lancador Acido","Dano +30, Alc +20",EquipSlot::Weapon,30,20,{80,255,60,255},2};
+        r.resultEquip={"Lancador Acid","Damage +30, Rng +20",EquipSlot::Weapon,30,20,{80,255,60,255},2};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Rifle de Plasma"; r.category=CraftCategory::Weapons;
-        r.description="Alta energia. Dano +45, Alc +50";
+    {   CraftingRecipe r; r.name="Rifle of Plasma"; r.category=CraftCategory::Weapons;
+        r.description="Alta energy. Damage +45, Rng +50";
         r.ingredients={{ItemType::PlasmaCore,2},{ItemType::NanoFiber,2}};
-        r.resultEquip={"Rifle de Plasma","Dano +45, Alc +50",EquipSlot::Weapon,45,50,{0,150,255,255},3};
+        r.resultEquip={"Rifle of Plasma","Damage +45, Rng +50",EquipSlot::Weapon,45,50,{0,150,255,255},3};
         recipes.push_back(r); }
     {   CraftingRecipe r; r.name="Lamina Void"; r.category=CraftCategory::Weapons;
-        r.description="Dano +60 | Vampirismo 10%";
+        r.description="Damage +60 | Vampirismo 10%";
         r.ingredients={{ItemType::PlasmaCore,3},{ItemType::OmegaEssence,1}};
-        r.resultEquip={"Lamina Void","Dano +60",EquipSlot::Weapon,60,30,{120,0,200,255},3};
+        r.resultEquip={"Lamina Void","Damage +60",EquipSlot::Weapon,60,30,{120,0,200,255},3};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Martelo do Gelo"; r.category=CraftCategory::Weapons;
-        r.description="Dano +55 | Congela inimigos";
+    {   CraftingRecipe r; r.name="Martelo of the Ice"; r.category=CraftCategory::Weapons;
+        r.description="Damage +55 | Congela enemies";
         r.ingredients={{ItemType::MetalScrap,6},{ItemType::AlienCarapace,3}};
-        r.resultEquip={"Martelo do Gelo","Dano +55, Slow AoE",EquipSlot::Weapon,55,15,{100,200,255,255},3};
+        r.resultEquip={"Martelo of the Ice","Damage +55, Slow AoE",EquipSlot::Weapon,55,15,{100,200,255,255},3};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Foice da Alma"; r.category=CraftCategory::Weapons;
-        r.description="Dano +65 | Drena HP dos inimigos";
+    {   CraftingRecipe r; r.name="Foice of the Alma"; r.category=CraftCategory::Weapons;
+        r.description="Damage +65 | Drena HP of the enemies";
         r.ingredients={{ItemType::OmegaEssence,2},{ItemType::NanoFiber,3}};
-        r.resultEquip={"Foice da Alma","Dano +65, Drain HP",EquipSlot::Weapon,65,25,{200,50,255,255},3};
+        r.resultEquip={"Foice of the Alma","Damage +65, Drain HP",EquipSlot::Weapon,65,25,{200,50,255,255},3};
         recipes.push_back(r); }
     {   CraftingRecipe r; r.name="Canhao EMP Elite"; r.category=CraftCategory::Weapons;
-        r.description="Dano +80, Alc +70 | Paralisa mecas";
+        r.description="Damage +80, Rng +70 | Paralisa mecas";
         r.ingredients={{ItemType::PlasmaCore,4},{ItemType::MetalScrap,5}};
-        r.resultEquip={"Canhao EMP Elite","Dano +80, Alc +70",EquipSlot::Weapon,80,70,{255,200,0,255},3};
+        r.resultEquip={"Canhao EMP Elite","Damage +80, Rng +70",EquipSlot::Weapon,80,70,{255,200,0,255},3};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Lamina de Corrente"; r.category=CraftCategory::Weapons;
-        r.description="Combo 3-hit. Dano +50 por acerto";
+    {   CraftingRecipe r; r.name="Lamina of Corrente"; r.category=CraftCategory::Weapons;
+        r.description="Combo 3-hit. Damage +50 by acerto";
         r.ingredients={{ItemType::MetalScrap,4},{ItemType::NanoFiber,2}};
-        r.resultEquip={"Lamina de Corrente","Dano +50, Combo x3",EquipSlot::Weapon,50,10,{255,150,50,255},2};
+        r.resultEquip={"Lamina of Corrente","Damage +50, Combo x3",EquipSlot::Weapon,50,10,{255,150,50,255},2};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Cajado de Cristal"; r.category=CraftCategory::Weapons;
-        r.description="Dano +40, Alc +80 | Magico";
+    {   CraftingRecipe r; r.name="Staff of Crystal"; r.category=CraftCategory::Weapons;
+        r.description="Damage +40, Rng +80 | Magico";
         r.ingredients={{ItemType::AlienCarapace,4},{ItemType::PlasmaCore,2}};
-        r.resultEquip={"Cajado de Cristal","Dano +40, Alc +80",EquipSlot::Weapon,40,80,{150,255,255,255},2};
+        r.resultEquip={"Staff of Crystal","Damage +40, Rng +80",EquipSlot::Weapon,40,80,{150,255,255,255},2};
         recipes.push_back(r); }
     {   CraftingRecipe r; r.name="OMEGA-7 [LENDARIO]"; r.category=CraftCategory::Weapons; r.isLegendary=true;
-        r.description="Arma suprema. Dano +120 | Todas as classes";
+        r.description="Weapon suprema. Damage +120 | All the classes";
         r.ingredients={{ItemType::OmegaEssence,3},{ItemType::PlasmaCore,5},{ItemType::NanoFiber,5}};
-        r.resultEquip={"OMEGA-7","Dano +120, Alc +100 [LENDARIA]",EquipSlot::Weapon,120,100,{255,215,0,255},3};
+        r.resultEquip={"OMEGA-7","Damage +120, Rng +100 [LENDARIA]",EquipSlot::Weapon,120,100,{255,215,0,255},3};
         r.isLegendary=true; recipes.push_back(r); }
 
     // ── ARMADURAS ─────────────────────────────────────────────────────────────
-    {   CraftingRecipe r; r.name="Armadura Hibrida"; r.category=CraftCategory::Armor;
+    {   CraftingRecipe r; r.name="Armor Hibrida"; r.category=CraftCategory::Armor;
         r.description="+80 HP, Def +25%";
         r.ingredients={{ItemType::MetalScrap,5},{ItemType::AlienCarapace,2}};
-        r.resultEquip={"Armadura Hibrida","+80 HP, Def 25%",EquipSlot::Armor,80,25,{60,180,100,255},2};
+        r.resultEquip={"Armor Hibrida","+80 HP, Def 25%",EquipSlot::Armor,80,25,{60,180,100,255},2};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Nano-Armadura"; r.category=CraftCategory::Armor;
+    {   CraftingRecipe r; r.name="Nano-Armor"; r.category=CraftCategory::Armor;
         r.description="+120 HP, Def +40%, regeneracao";
         r.ingredients={{ItemType::NanoFiber,4}};
-        r.resultEquip={"Nano-Armadura","+120 HP, Def 40%, Regen",EquipSlot::Armor,120,40,{0,220,200,255},3};
+        r.resultEquip={"Nano-Armor","+120 HP, Def 40%, Regen",EquipSlot::Armor,120,40,{0,220,200,255},3};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Traje de Cristal"; r.category=CraftCategory::Armor;
+    {   CraftingRecipe r; r.name="Traje of Crystal"; r.category=CraftCategory::Armor;
         r.description="+150 HP, Def +30% | Reflete 10%";
         r.ingredients={{ItemType::AlienCarapace,3},{ItemType::PlasmaCore,2}};
-        r.resultEquip={"Traje de Cristal","+150 HP, Def 30%",EquipSlot::Armor,150,30,{150,200,255,255},3};
+        r.resultEquip={"Traje of Crystal","+150 HP, Def 30%",EquipSlot::Armor,150,30,{150,200,255,255},3};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Exo-Suit de Combate"; r.category=CraftCategory::Armor;
+    {   CraftingRecipe r; r.name="Exo-Suit of Combat"; r.category=CraftCategory::Armor;
         r.description="+200 HP, Def +50% | Exoesqueleto";
         r.ingredients={{ItemType::MetalScrap,6},{ItemType::NanoFiber,4},{ItemType::PlasmaCore,2}};
         r.resultEquip={"Exo-Suit","+ 200 HP, Def 50%",EquipSlot::Armor,200,50,{180,180,255,255},3};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Armadura Bio-Regen"; r.category=CraftCategory::Armor;
+    {   CraftingRecipe r; r.name="Armor Bio-Regen"; r.category=CraftCategory::Armor;
         r.description="+100 HP, regeneracao 3 HP/s";
         r.ingredients={{ItemType::NanoFiber,3},{ItemType::AlienCarapace,2}};
         r.resultEquip={"Bio-Regen Suit","+100 HP, +3 regen/s",EquipSlot::Armor,100,20,{0,255,150,255},2};
@@ -117,7 +117,7 @@ void CraftingSystem::buildRecipes() {
         r.isLegendary=true; recipes.push_back(r); }
 
     // ── ACESSORIOS ────────────────────────────────────────────────────────────
-    {   CraftingRecipe r; r.name="Chip de Velocidade+"; r.category=CraftCategory::Accessories;
+    {   CraftingRecipe r; r.name="Chip of Speed+"; r.category=CraftCategory::Accessories;
         r.description="Vel +80, reflexos aumentados";
         r.ingredients={{ItemType::NanoFiber,2},{ItemType::MetalScrap,2}};
         r.resultEquip={"Chip Vel+","Vel +80",EquipSlot::Implant,80,0,{255,100,200,255},2};
@@ -132,10 +132,10 @@ void CraftingSystem::buildRecipes() {
         r.ingredients={{ItemType::PlasmaCore,3},{ItemType::NanoFiber,3}};
         r.resultEquip={"Quantum Core Elite","Vel +100, XP x2.5",EquipSlot::Implant,100,2.5f,{255,255,100,255},3};
         recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Chip de Combate"; r.category=CraftCategory::Accessories;
-        r.description="Vel +50, Dano +20%";
+    {   CraftingRecipe r; r.name="Chip of Combat"; r.category=CraftCategory::Accessories;
+        r.description="Vel +50, Damage +20%";
         r.ingredients={{ItemType::MetalScrap,3},{ItemType::AlienCarapace,1}};
-        r.resultEquip={"Chip Combate","Vel +50, Dmg+20%",EquipSlot::Implant,50,1.2f,{255,80,50,255},2};
+        r.resultEquip={"Chip Combat","Vel +50, Dmg+20%",EquipSlot::Implant,50,1.2f,{255,80,50,255},2};
         recipes.push_back(r); }
     {   CraftingRecipe r; r.name="INFINITY CORE [LENDARIO]"; r.category=CraftCategory::Accessories; r.isLegendary=true;
         r.description="Vel +120, XP x3.0 PERMANENTE";
@@ -145,36 +145,36 @@ void CraftingSystem::buildRecipes() {
 
     // ── CONSUMIVEIS ──────────────────────────────────────────────────────────
     {   CraftingRecipe r; r.name="MedKit"; r.category=CraftCategory::Consumables;
-        r.description="Cura 50 HP imediatamente"; r.makesEquipment=false;
+        r.description="Healing 50 HP imediatamente"; r.makesEquipment=false;
         r.ingredients={{ItemType::NanoFiber,1},{ItemType::MetalScrap,1}};
         r.resultItem.type=ItemType::MedKit; r.resultItem.name="MedKit";
         r.resultItem.color={0,220,100,255}; recipes.push_back(r); }
     {   CraftingRecipe r; r.name="Nano Patch"; r.category=CraftCategory::Consumables;
-        r.description="Cura 30 HP ao longo de 5s"; r.makesEquipment=false;
+        r.description="Healing 30 HP along of 5s"; r.makesEquipment=false;
         r.ingredients={{ItemType::NanoFiber,2}};
         r.resultItem.type=ItemType::NanoPatch; r.resultItem.name="Nano Patch";
         r.resultItem.color={0,180,255,255}; recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Elixir de Energia"; r.category=CraftCategory::Consumables;
-        r.description="Skills recarregam 2x mais rapido por 30s"; r.makesEquipment=false;
+    {   CraftingRecipe r; r.name="Elixir of Energia"; r.category=CraftCategory::Consumables;
+        r.description="Skills recarregam 2x more fast by 30s"; r.makesEquipment=false;
         r.ingredients={{ItemType::PlasmaCore,1},{ItemType::NanoFiber,1}};
-        r.resultItem.type=ItemType::EnergyDrink; r.resultItem.name="Elixir de Energia";
+        r.resultItem.type=ItemType::EnergyDrink; r.resultItem.name="Elixir of Energia";
         r.resultItem.color={255,200,0,255}; recipes.push_back(r); }
     {   CraftingRecipe r; r.name="Essencia Void"; r.category=CraftCategory::Consumables;
-        r.description="Invulneravel por 2s"; r.makesEquipment=false;
+        r.description="Invulneravel by 2s"; r.makesEquipment=false;
         r.ingredients={{ItemType::OmegaEssence,1}};
         r.resultItem.type=ItemType::VoidEssence2; r.resultItem.name="Essencia Void";
         r.resultItem.color={180,0,255,255}; recipes.push_back(r); }
-    {   CraftingRecipe r; r.name="Celula de Plasma (Consumivel)"; r.category=CraftCategory::Consumables;
-        r.description="Reduz cooldowns por 15s"; r.makesEquipment=false;
+    {   CraftingRecipe r; r.name="Celula of Plasma (Consumivel)"; r.category=CraftCategory::Consumables;
+        r.description="Reduz cooldowns by 15s"; r.makesEquipment=false;
         r.ingredients={{ItemType::PlasmaCore,1}};
         r.resultItem.type=ItemType::PlasmaVial; r.resultItem.name="Celula Plasma";
         r.resultItem.color={0,150,255,255}; recipes.push_back(r); }
 
     // ── ESPADA LENDARIA ───────────────────────────────────────────────────────
     {   CraftingRecipe r; r.name="ESPADA DO EXECUTOR"; r.category=CraftCategory::Weapons; r.isLegendary=true;
-        r.description="Arma lendaria. Dano +80 | +50% vs Boss";
+        r.description="Weapon lendaria. Damage +80 | +50% vs Boss";
         r.ingredients={{ItemType::OmegaEssence,1},{ItemType::MetalScrap,3},{ItemType::AlienCarapace,3}};
-        r.resultEquip={"Espada do Executor","Dano +80, +50% boss [LENDARIA]",EquipSlot::Weapon,80,35,{255,215,0,255},3};
+        r.resultEquip={"Espada of the Executor","Damage +80, +50% boss [LENDARIA]",EquipSlot::Weapon,80,35,{255,215,0,255},3};
         r.isLegendary=true; recipes.push_back(r); }
 }
 
@@ -227,7 +227,7 @@ bool CraftingSystem::handleMouse(Vector2 m, bool clicked, std::vector<Item>& bag
     int panW = 920, panH = 580;
     int panX = screenW/2 - panW/2, panY = screenH/2 - panH/2;
 
-    // Abas de categoria
+    // Abas of categoria
     int tabY = panY+38, tabX = panX+12, tabW = 120, tabH = 22;
     for (int c = 0; c < (int)CraftCategory::COUNT; ++c) {
         Rectangle r = {(float)(tabX+c*tabW),(float)tabY,(float)(tabW-4),(float)tabH};
@@ -237,7 +237,7 @@ bool CraftingSystem::handleMouse(Vector2 m, bool clicked, std::vector<Item>& bag
         }
     }
 
-    // Lista de receitas
+    // List of receitas
     auto filtered = getFilteredIndices();
     int visMax = 9, leftX = panX+12, leftW = 450, listY = panY+68+18;
     for (int vi = 0; vi < visMax; ++vi) {
@@ -248,7 +248,7 @@ bool CraftingSystem::handleMouse(Vector2 m, bool clicked, std::vector<Item>& bag
             selected = fi;  // hover seleciona
             if (clicked) {
                 double now = GetTime();
-                if (lastClickIdx == fi && now - lastClickT < 0.4)  // duplo-clique fabrica
+                if (lastClickIdx == fi && now - lastClickT < 0.4)  // double-click factory
                     return tryCraft(bag, oe, oi, ge);
                 lastClickIdx = fi; lastClickT = now;
             }
@@ -269,9 +269,9 @@ bool CraftingSystem::handleMouse(Vector2 m, bool clicked, std::vector<Item>& bag
 
 static const char* materialName(ItemType t) {
     switch (t) {
-        case ItemType::MetalScrap:    return "Sucata Metal";
+        case ItemType::MetalScrap:    return "Scrap Metal";
         case ItemType::AlienCarapace: return "Carapaca Alien";
-        case ItemType::PlasmaCore:    return "Nucleo Plasma";
+        case ItemType::PlasmaCore:    return "Core Plasma";
         case ItemType::NanoFiber:     return "Fibra Nano";
         case ItemType::OmegaEssence:  return "Essencia Omega";
         default:                      return "?";
@@ -293,9 +293,9 @@ static const char* categoryName(CraftCategory c) {
     switch(c) {
         case CraftCategory::All:         return "TODOS";
         case CraftCategory::Weapons:     return "ARMAS";
-        case CraftCategory::Armor:       return "ARMADURA";
+        case CraftCategory::Armor:       return "ARMOR";
         case CraftCategory::Accessories: return "ACESSORIO";
-        case CraftCategory::Consumables: return "CONSUMIVEL";
+        case CraftCategory::Consumables: return "CONSUMISPEED";
         default: return "?";
     }
 }
@@ -385,7 +385,7 @@ void CraftingSystem::render(const std::vector<Item>& bag, int screenW, int scree
         // Status badge
         if (avail) {
             DrawRectangle(leftX+leftW-72, rowY+5, 64, 16, ColorAlpha(Color{0,180,60,255},0.25f));
-            DrawText("POSSIVEL", leftX+leftW-70, rowY+8, 10, Color{0,220,80,255});
+            DrawText("POSSISPEED", leftX+leftW-70, rowY+8, 10, Color{0,220,80,255});
         } else {
             DrawRectangle(leftX+leftW-60, rowY+5, 52, 16, ColorAlpha(Color{180,30,30,255},0.25f));
             DrawText("FALTA", leftX+leftW-58, rowY+8, 10, Color{200,60,60,255});
@@ -435,7 +435,7 @@ void CraftingSystem::render(const std::vector<Item>& bag, int screenW, int scree
         if (selected >= 0 && selected < (int)visFiltered.size()) {
             int recIdx = visFiltered[selected];
             const auto& r = recipes[recIdx];
-            DrawText("SELECIONADO:", rightX, detY, 11, ColorAlpha(borderCol,0.65f));
+            DrawText("SELECTED:", rightX, detY, 11, ColorAlpha(borderCol,0.65f));
             Color nameC = r.isLegendary ? Color{255,215,0,255} : WHITE;
             DrawText(r.name.c_str(), rightX, detY+14, 13, nameC);
             for (int j = 0; j < (int)r.ingredients.size(); ++j) {
@@ -447,7 +447,7 @@ void CraftingSystem::render(const std::vector<Item>& bag, int screenW, int scree
             }
             // Result preview
             if (r.makesEquipment) {
-                DrawText(TextFormat("Resultado: %s", r.resultEquip.name.c_str()),
+                DrawText(TextFormat("Result: %s", r.resultEquip.name.c_str()),
                          rightX, detY+90, 11, ColorAlpha(Color{0,200,255,255},0.8f));
             }
         }
@@ -465,7 +465,7 @@ void CraftingSystem::render(const std::vector<Item>& bag, int screenW, int scree
         DrawRectangle(panX+12, botY+30, barW, 8, ColorAlpha(Color{30,30,60,255},0.8f));
         DrawRectangle(panX+12, botY+30, (int)(barW*pct), 8, ColorAlpha(Color{0,200,255,255},0.9f));
     } else {
-        DrawText("Mouse: clique nas abas e receitas  -  duplo-clique fabrica",
+        DrawText("Mouse: click in the abas and receitas  -  double-click factory",
                  panX+12, botY+10, 12, ColorAlpha(WHITE,0.5f));
         if (msgTimer > 0.f)
             DrawText(lastMsg.c_str(), panX+12, botY+28, 13,
@@ -500,7 +500,7 @@ bool CraftingSystem::tryCraft(std::vector<Item>& bag, Equipment& outEquip,
     }
     if (crafting) return false;
 
-    // A barra abaixo e CONFIRMACAO (o item ja e seu neste instante), nao progresso.
+    // A barra below and CONFIRMACAO (the item already and your neste instante), not progress.
     crafting = true; craftTimer = 1.5f;
 
     const auto& r = recipes[recIdx];

@@ -5,9 +5,9 @@
 
 namespace SpriteExtrude {
 
-// Gera um Model 3D VOXEL a partir de uma Image RGBA: cada pixel opaco vira um
-// pequeno cubo extrudado em profundidade, com a COR exata do pixel. Resultado:
-// o desenho 2D do jogo, agora sólido em 3D real (pés em Y=0, centrado em X/Z).
+// Generates um Model 3D VOXEL from uma Image RGBA: cada pixel opaque vira um
+// small cube extrudado in profundidade, with the COR exata of the pixel. Result:
+// the draw 2D of the game, now solido in 3D real (feet in Y=0, centrado in X/Z).
 Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     Image img = ImageCopy(src);
     const int MAX = 34;                   // limita voxels (36 verts/voxel < 65535 idx)
@@ -25,11 +25,11 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
         auto ch = [&](unsigned char v){ float r = v * k; return (unsigned char)(r > 255.0f ? 255.0f : r); };
         return Color{ ch(c.r), ch(c.g), ch(c.b), 255 };
     };
-    // Cubo com 6 faces SEPARADAS (verts duplicados) e SOMBREAMENTO POR FACE — dá
-    // volume/relevo low-poly mesmo sem luz dinâmica (topo claro, base/laterais escuras).
-    // `faces` e um bitmask: 1=tras 2=frente 4=esq 8=dir 16=topo 32=base.
-    // Face colada num voxel vizinho opaco NUNCA e vista — emiti-la so gastava
-    // triangulo. Num sprite cheio isso corta ~60% da malha.
+    // Cube with 6 faces SEPARADAS (verts duplicados) and SOMBREAMENTO POR FACE — of the
+    // volume/relevo low-poly same without light dinamica (topo clear, base/laterais escuras).
+    // `faces` and um bitmask: 1=back 2=front 4=esq 8=dir 16=topo 32=base.
+    // Face colada num voxel vizinho opaque NUNCA and vista — emiti-la only gastava
+    // triangle. Num sprite full isso corta ~60% of the mesh.
     auto addCube = [&](float cx, float cy, float cz,
                        float sx, float sy, float sz, Color c, unsigned faces) {
         float hx = sx * 0.5f, hy = sy * 0.5f, hz = sz * 0.5f;
@@ -51,31 +51,31 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
                 idx.push_back((unsigned short)(b + j));
             }
         };
-        if (faces & 1)  face(0,1,2, 0,2,3, 0.58f,  0,0,-1);   // trás  (-Z)
-        if (faces & 2)  face(4,6,5, 4,7,6, 0.95f,  0,0, 1);   // frente(+Z, encara a câmera) — mais clara
-        if (faces & 4)  face(0,3,7, 0,7,4, 0.70f, -1,0, 0);   // esquerda (-X)
-        if (faces & 8)  face(1,5,6, 1,6,2, 0.80f,  1,0, 0);   // direita  (+X)
-        if (faces & 16) face(3,2,6, 3,6,7, 1.00f,  0,1, 0);   // topo (+Y) — mais claro
-        if (faces & 32) face(0,4,5, 0,5,1, 0.48f,  0,-1,0);   // base (-Y) — mais escuro
+        if (faces & 1)  face(0,1,2, 0,2,3, 0.58f,  0,0,-1);   // back  (-Z)
+        if (faces & 2)  face(4,6,5, 4,7,6, 0.95f,  0,0, 1);   // front(+Z, encara the camera) — more clear
+        if (faces & 4)  face(0,3,7, 0,7,4, 0.70f, -1,0, 0);   // left (-X)
+        if (faces & 8)  face(1,5,6, 1,6,2, 0.80f,  1,0, 0);   // right  (+X)
+        if (faces & 16) face(3,2,6, 3,6,7, 1.00f,  0,1, 0);   // topo (+Y) — more clear
+        if (faces & 32) face(0,4,5, 0,5,1, 0.48f,  0,-1,0);   // base (-Y) — more dark
     };
 
-    // Vizinho opaco = face escondida. Fora da imagem conta como vazio (a silhueta
-    // externa continua fechada). Frente/trás sempre entram: a profundidade e unica.
+    // Vizinho opaque = face escondida. Outside the image account as empty (the silhueta
+    // externa continuous closed). Front/back always entram: the profundidade and only.
     auto opaque = [&](int x, int y) {
         if (x < 0 || y < 0 || x >= W || y >= H) return false;
-        return px[y * W + x].a >= 40;
+        return px[y * W + x].the >= 40;
     };
     for (int y = 0; y < H; ++y)
         for (int x = 0; x < W; ++x) {
             Color c = px[y * W + x];
-            if (c.a < 40) continue;                 // inclui semi-transparentes (fantasmas não somem)
-            unsigned faces = 1 | 2;                                  // trás + frente
-            if (!opaque(x - 1, y)) faces |= 4;                       // esquerda
-            if (!opaque(x + 1, y)) faces |= 8;                       // direita
-            if (!opaque(x, y - 1)) faces |= 16;                      // topo (y-1 = acima)
+            if (c.the < 40) continue;                 // inclui semi-transparentes (fantasmas not somem)
+            unsigned faces = 1 | 2;                                  // back + front
+            if (!opaque(x - 1, y)) faces |= 4;                       // left
+            if (!opaque(x + 1, y)) faces |= 8;                       // right
+            if (!opaque(x, y - 1)) faces |= 16;                      // topo (y-1 = above)
             if (!opaque(x, y + 1)) faces |= 32;                      // base
-            float wx = (x - W * 0.5f) * voxelSize;   // centrado em X
-            float wy = (H - 1 - y)   * voxelSize;    // topo da imagem = alto; pés em Y=0
+            float wx = (x - W * 0.5f) * voxelSize;   // centrado in X
+            float wy = (H - 1 - y)   * voxelSize;    // topo of the image = high; feet in Y=0
             addCube(wx, wy, 0.0f, voxelSize, voxelSize, depth, c, faces);
         }
     UnloadImageColors(px);
@@ -84,7 +84,7 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     Mesh mesh = { 0 };
     mesh.vertexCount   = (int)(verts.size() / 3);
     mesh.triangleCount = (int)(idx.size() / 3);
-    if (mesh.vertexCount == 0) { Model m = { 0 }; return m; }  // sprite vazio
+    if (mesh.vertexCount == 0) { Model m = { 0 }; return m; }  // sprite empty
     mesh.vertices = (float*)RL_MALLOC(verts.size() * sizeof(float));
     memcpy(mesh.vertices, verts.data(), verts.size() * sizeof(float));
     mesh.normals  = (float*)RL_MALLOC(norms.size() * sizeof(float));
@@ -95,14 +95,14 @@ Model BuildVoxelModel(Image src, float voxelSize, float depth) {
     memcpy(mesh.colors, cols.data(), cols.size());
     mesh.indices  = (unsigned short*)RL_MALLOC(idx.size() * sizeof(unsigned short));
     memcpy(mesh.indices, idx.data(), idx.size() * sizeof(unsigned short));
-    // LoadModelFromMesh já faz UploadMesh internamente; chamar UploadMesh antes
-    // gerava o warning "VAO: Trying to re-load an already loaded mesh".
+    // LoadModelFromMesh already does UploadMesh internamente; call UploadMesh before
+    // gerava the warning "VAO: Trying to re-load an already loaded mesh".
     Model model = LoadModelFromMesh(mesh);
 
-    // Garante uma textura difusa VALIDA no material. Em alguns drivers/GPU a malha
-    // sem textura (ou com a textura default compartilhada) aparece branca ou
-    // invisivel; uma textura 1x1 branca propria forca o shader a multiplicar
-    // corretamente pelas cores por vertice.
+    // Ensures uma texture difusa VALIDA in the material. Em some drivers/GPU the mesh
+    // without texture (ou with the texture default compartilhada) aparece branca ou
+    // invisible; uma texture 1x1 branca own strength the shader the multiply
+    // corretamente pelas cores by vertex.
     static Texture2D whiteTex = [](){
         Image img = GenImageColor(1, 1, WHITE);
         Texture2D t = LoadTextureFromImage(img);

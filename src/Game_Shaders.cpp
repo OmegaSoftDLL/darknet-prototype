@@ -1,5 +1,5 @@
-// Game_Shaders.cpp — shader de mundo (luz/fog), pos-processamento (bloom/tonemap),
-// apresentacao do frame e virtualizacao do mouse. Extraido de Game.cpp. Mesma classe Game.
+// Game_Shaders.cpp — shader of world (light/fog), pos-processamento (bloom/tonemap),
+// apresentacao of the frame and virtualizacao of the mouse. Extraido of Game.cpp. Same class Game.
 #include "Game.h"
 #include <raylib.h>
 #include <raymath.h>
@@ -11,16 +11,16 @@
 // ── RenderTexture helpers ─────────────────────────────────────────────────────
 
 // --- Pos-processamento ------------------------------------------------------
-// Sem shader o jogo era 100% funcao fixa: cada pixel saia exatamente com a cor
-// desenhada, sem faixa dinamica. Dai a sensacao de "chapado e escuro" - luz forte
-// nao estourava e sombra nao tinha pe. Este passe da halo nas fontes de luz
-// (bloom) e curva filmica na imagem inteira (tonemap).
+// Sem shader the game era 100% function fixa: cada pixel saia exatamente with the color
+// drawn, without range dinamica. Dai the sensation of "chapado and dark" - light strong
+// not estourava and shadow not had foot. Este passe of the halo in the fontes of light
+// (bloom) and curva filmica in the image whole (tonemap).
 void Game::initWorldShader() {
     m_worldLit = false;
     if (!FileExists("resources/shaders/world.fs")) return;
     m_shWorld = GfxShader(LoadShader("resources/shaders/world.vs", "resources/shaders/world.fs"));
     if (!m_shWorld.valid()) {
-        TraceLog(LOG_WARNING, "WORLDLIT: shader nao compilou - 3D segue sem luz");
+        TraceLog(LOG_WARNING, "WORLDLIT: shader not compilou - 3D segue without light");
         return;
     }
     m_locLightDir  = GetShaderLocation(m_shWorld.get(), "lightDir");
@@ -49,33 +49,33 @@ void Game::applyWorldShader(GfxModel& m) const {
 
 void Game::updateWorldShaderUniforms() {
     if (!m_worldLit) return;
-    // O sol gira com o ciclo do dia: sombra e luz mudam de lado ao longo da partida.
+    // O sol gira with the ciclo of the day: shadow and light mudam of lado along of the match.
     float ang = worldClock * 6.2831853f;
     Vector3 ld = { -0.42f * cosf(ang) - 0.30f, -1.0f, -0.30f * sinf(ang) - 0.22f };
     float lm = sqrtf(ld.x*ld.x + ld.y*ld.y + ld.z*ld.z);
     ld = { ld.x/lm, ld.y/lm, ld.z/lm };
 
-    Color a = lightSystem.ambientColor;
+    Color the = lightSystem.ambientColor;
     float amb = 0.34f + (1.0f - lightSystem.ambientDark) * 0.30f;
-    Vector3 ambV = { a.r/255.0f*amb, a.g/255.0f*amb, a.b/255.0f*amb };
-    // luz direta puxa o matiz do ambiente, mas mais quente e mais forte de dia
+    Vector3 ambV = { the.r/255.0f*amb, the.g/255.0f*amb, the.b/255.0f*amb };
+    // light direta puxa the matiz of the environment, mas more hot and more strong of day
     float sunK = 0.42f + worldSun * 0.40f;
-    Vector3 lcV = { (a.r/255.0f*0.55f + 0.45f) * sunK,
-                    (a.g/255.0f*0.62f + 0.38f) * sunK,
-                    (a.b/255.0f*0.70f + 0.30f) * sunK };
+    Vector3 lcV = { (the.r/255.0f*0.55f + 0.45f) * sunK,
+                    (the.g/255.0f*0.62f + 0.38f) * sunK,
+                    (the.b/255.0f*0.70f + 0.30f) * sunK };
     Vector3 cam = camera3D.position;
-    // Fog morre na cor do CEU da fase (skyColorFor, mesma conta do ClearBackground):
-    // geometria distante some exatamente no horizonte — e cada fase ganha um
-    // horizonte com matiz proprio (vermelho no inferno, azul-noite na fantasma).
+    // Fog morre in the color of the CEU of the phase (skyColorFor, same account of the ClearBackground):
+    // geometria distante some exatamente in the horizonte — and cada phase ganha um
+    // horizonte with matiz own (red in the inferno, blue-night in the ghost).
     Color skc = skyColorFor(currentZone);
     float sdk = 0.30f + (1.0f - lightSystem.ambientDark) * 0.50f;
     Vector3 fog = { skc.r/255.0f * sdk, skc.g/255.0f * sdk, skc.b/255.0f * sdk };
     float fs = 900.0f, fe = 2600.0f, rim = 0.30f;
-    // especular sutil: so o suficiente para metal/lataria nunca ficar emba?ado
+    // especular sutil: only the suficiente to metal/lataria never stay emba?ado
     float sk = 0.28f;
-    // period = tamanho caracteristico do mundo (open-world: 950 do grid urbano;
-    // mapa fixo: os tiles nao tem grid, usa 480). A fbm gera manchas coerentes
-    // e SEM repeticao visivel a cada chunk.
+    // period = size caracteristico of the world (open-world: 950 of the grid urbano;
+    // map fixed: the tiles not has grid, usa 480). A fbm generates manchas coerentes
+    // and SEM repeticao visible the cada chunk.
     float per = openWorldMode && currentZone == ZoneID::LARuins ? 950.0f : 480.0f;
     SetShaderValue(m_shWorld.get(), m_locLightDir, &ld,   SHADER_UNIFORM_VEC3);
     SetShaderValue(m_shWorld.get(), m_locLightCol, &lcV,  SHADER_UNIFORM_VEC3);
@@ -92,14 +92,14 @@ void Game::updateWorldShaderUniforms() {
 void Game::initPostFX() {
     m_postFX = false;
     if (!FileExists("resources/shaders/grade.fs")) {
-        TraceLog(LOG_WARNING, "POSTFX: resources/shaders ausente - seguindo sem bloom");
+        TraceLog(LOG_WARNING, "POSTFX: resources/shaders ausente - seguindo without bloom");
         return;
     }
     m_shBright = GfxShader(LoadShader(0, "resources/shaders/bloom_bright.fs"));
     m_shBlur   = GfxShader(LoadShader(0, "resources/shaders/blur.fs"));
     m_shGrade  = GfxShader(LoadShader(0, "resources/shaders/grade.fs"));
     if (!m_shBright.valid() || !m_shBlur.valid() || !m_shGrade.valid()) {
-        TraceLog(LOG_WARNING, "POSTFX: shader nao compilou - seguindo sem bloom");
+        TraceLog(LOG_WARNING, "POSTFX: shader not compilou - seguindo without bloom");
         unloadPostFX();
         return;
     }
@@ -112,8 +112,8 @@ void Game::initPostFX() {
     m_locSaturation = GetShaderLocation(m_shGrade.get(),  "saturation");
     m_locContrast   = GetShaderLocation(m_shGrade.get(),  "contrast");
 
-    // 1/4 de resolucao: o borrao e largo de proposito, resolucao cheia so custaria
-    // fillrate. BILINEAR e o que faz o halo subir de escala liso, sem serrilha.
+    // 1/4 of resolution: the borrao and wide of purpose, resolution cheia only custaria
+    // fillrate. BILINEAR and the that does the halo go up of scale smooth, without serrilha.
     m_bloomA = GfxRenderTexture(LoadRenderTexture(screenWidth / 4, screenHeight / 4));
     m_bloomB = GfxRenderTexture(LoadRenderTexture(screenWidth / 4, screenHeight / 4));
     SetTextureFilter(m_bloomA.get().texture, TEXTURE_FILTER_BILINEAR);
@@ -122,9 +122,9 @@ void Game::initPostFX() {
     float thr = 0.62f, knee = 0.30f;
     SetShaderValue(m_shBright.get(), m_locThreshold, &thr,  SHADER_UNIFORM_FLOAT);
     SetShaderValue(m_shBright.get(), m_locKnee,      &knee, SHADER_UNIFORM_FLOAT);
-    // Com tonemap no fim da cadeia a cena NAO precisa mais ser desenhada clara:
-    // exposicao perto de 1.0 + contraste alto = pretos com pe e ilhas de luz
-    // (o visual do genero), em vez do cinza chapado de antes.
+    // Com tonemap in the end of the cadeia the scene NOT precisa more be drawn clear:
+    // exposure near of 1.0 + contrast high = pretos with foot and ilhas of light
+    // (the visual of the genero), instead of the gray chapado of before.
     float bs = 1.15f, ex = 1.06f, sat = 1.28f, con = 1.16f;
     SetShaderValue(m_shGrade.get(), m_locBloomStr,   &bs,  SHADER_UNIFORM_FLOAT);
     SetShaderValue(m_shGrade.get(), m_locExposure,   &ex,  SHADER_UNIFORM_FLOAT);
@@ -156,7 +156,7 @@ void Game::presentFrame() const {
     Rectangle dstFull = { drawX, drawY, drawW, drawH };
 
     if (m_postFX) {
-        // 1) BRILHO: extrai so os pixels acima do threshold, ja em 1/4 de res.
+        // 1) BRILHO: extrai only the pixels above the threshold, already in 1/4 of res.
         Rectangle bDst = { 0.f, 0.f, (float)m_bloomA.get().texture.width,
                                      (float)m_bloomA.get().texture.height };
         BeginTextureMode(m_bloomA.get());
@@ -166,7 +166,7 @@ void Game::presentFrame() const {
             EndShaderMode();
         EndTextureMode();
 
-        // 2) BORRAO em duas passadas (separavel): horizontal A->B, vertical B->A.
+        // 2) BORRAO in duas passadas (separavel): horizontal A->B, vertical B->A.
         Rectangle bSrc = { 0.f, 0.f, (float)m_bloomA.get().texture.width,
                                     -(float)m_bloomA.get().texture.height };
         Vector2 dirH = { 1.0f / (float)m_bloomA.get().texture.width, 0.0f };
@@ -186,7 +186,7 @@ void Game::presentFrame() const {
             EndShaderMode();
         EndTextureMode();
 
-        // 3) COMPOSICAO: cena + halo, tonemap filmico, contraste e saturacao.
+        // 3) COMPOSICAO: scene + halo, tonemap filmico, contrast and saturation.
         BeginDrawing();
             ClearBackground(BLACK);
             SetShaderValueTexture(m_shGrade.get(), m_locBloomTex, m_bloomA.get().texture);
@@ -200,19 +200,19 @@ void Game::presentFrame() const {
         DrawTexturePro(gameTarget.get().texture, srcFull, dstFull, {0, 0}, 0.0f, WHITE);
         EndDrawing();
     }
-    // TEMP-SHOT: no autotest, salva um frame a cada 30s p/ inspecao visual.
-    // 10 shots x 30s cobrem ~300s de run = fases 1-4 (antes 10s = so a fase 1).
-    // TEM que ser DEPOIS de EndDrawing — antes, o framebuffer ainda esta preto.
+    // TEMP-SHOT: in the autotest, saves um frame the cada 30s p/ inspecao visual.
+    // 10 shots x 30s cobrem ~300s of run = phases 1-4 (before 10s = only the phase 1).
+    // TEM that be DEPOIS of EndDrawing — before, the framebuffer still is black.
     if (botController.autoTest) {
-        // lastShot/shotN sao MEMBROS (eram static de funcao — nao resetavam
-        // entre partidas e as screenshots paravam de sair na segunda run).
+        // lastShot/shotN sao MEMBROS (eram static of function — not resetavam
+        // between partidas and the screenshots paravam of leave in the second run).
         double now = GetTime();
         if (now - lastShot > 30.0 && now > 8.0 && shotN < 10) {
             lastShot = now;
-            // TakeScreenshot SINCRONO derrubava 1 frame p/ ~6 FPS a cada 10s:
-            // o readback da tela e barato, mas o encode PNG (stb) de um frame
-            // inteiro custa 110-180ms na main thread. Agora so o readback fica
-            // aqui (contexto GL); o encode+gravacao vao pra uma thread auxiliar.
+            // TakeScreenshot SINCRONO derrubava 1 frame p/ ~6 FPS the cada 10s:
+            // the readback of the screen and barato, mas the encode PNG (stb) of um frame
+            // integer custa 110-180ms in the main thread. Agora only the readback stays
+            // here (contexto GL); the encode+gravacao vao to uma thread auxiliary.
             std::string fn = TextFormat("shot_%02d.png", shotN++);
             Image img = LoadImageFromScreen();
             std::thread([img, fn]() mutable {

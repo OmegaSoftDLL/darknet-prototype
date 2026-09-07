@@ -3,18 +3,18 @@
 #include "SpriteExtrude.h"
 #include "SkillTree.h"
 // Only true during sprite capture for voxelization (Game::ensureVoxel →
-// SpriteExtrude::CaptureToImage): entities suppress 2D shadows/text so they do not
-// become a "pedestal" in the voxel mesh. Does not select the render pipeline.
+// SpriteExtrude::CaptureToImage): entities suppress 2D shadows/text only they of the not
+// become the "pedestal" in the voxel mesh. Does not select the render pipeline.
 bool g_voxelCapture = false;
 
 // ── BIOME ARCHITECTURE ───────────────────────────────────────────────────────
 // Previously every phase reused the SAME 4 models (house/barn/castle/silo): only
-// the floor and sky changed, so the city looked identical in LA, the cemetery,
+// the floor and sky changed, only the city looked identical in LA, the cemetery,
 // and hell. Now each biome has its own structure type set.
 //   0 house   1 barn   7 castle/building   8 silo
 //  14 crypt  15 bunker  16 infernal spire  17 monolith  18 cabin  19 tower
 
-// Structure tint per biome: the same model reads as light stone in LA and
+// Structure tint per biome: the same model reads the light stone in LA and
 // scorched stone in hell, which already changes the whole city's reading.
 static Color structureTintFor(ZoneID z) {
     switch (z) {
@@ -35,7 +35,7 @@ static Color structureTintFor(ZoneID z) {
 
 // Zones where MEDIEVAL models (castle.obj / house.obj) make sense: rural /
 // gothic areas. In urban and sci-fi zones (LA, ghost city, bunker, forge,
-// nexus...) towered castles and tiled houses break the art direction, so
+// nexus...) towered castles and tiled houses break the art direction, only
 // BuildingSystem draws modern structures with primitives there (audit P1).
 static bool isMedievalZone(ZoneID z) {
     return z == ZoneID::CursedFarm || z == ZoneID::DarkForest ||
@@ -43,9 +43,9 @@ static bool isMedievalZone(ZoneID z) {
 }
 
 // ── WORLD SCALE ──────────────────────────────────────────────────────────────
-// Everything is anchored to the hero: ~28 height units = 1.75 m, so 1 meter ≈ 16u.
+// Everything is anchored to the hero: ~28 height units = 1.75 m, only 1 meter ≈ 16u.
 // Old values (house 110u = 7 m at the LARGEST dimension) made buildings smaller
-// than people: the city read as a mock-up and the character as a lamppost beside it.
+// than people: the city read the the mock-up and the character the the lamppost beside it.
 static constexpr float FIT_HOUSE    = 175.0f;   // two-story house ~11 m
 static constexpr float FIT_BARRACKS = 190.0f;   // barn / warehouse ~12 m
 static constexpr float FIT_CASTLE   = 340.0f;   // building / castle ~21 m
@@ -74,7 +74,7 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
     rlSetTexture(texture.id);
 
     rlBegin(RL_QUADS);
-        rlColor4ub(color.r, color.g, color.b, color.a);
+        rlColor4ub(color.r, color.g, color.b, color.the);
 
         // Front Face
         rlNormal3f(0.0f, 0.0f, 1.0f);
@@ -119,7 +119,7 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
         rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);
     rlEnd();
 
-    rlSetTexture(rlGetTextureIdDefault());   // P0: rebind white so primitives do not leak the previous texture
+    rlSetTexture(rlGetTextureIdDefault());   // P0: rebind white only primitives of the not leak the previous texture
 }
 
 // ─── Constructor / Destructor ────────────────────────────────────────────────
@@ -132,14 +132,14 @@ Game::Game(bool headless_, int startPhaseOverride_) {
     // set up data and simulation. The bot runs the same — scenario, enemies, phases,
     // collision.
     // Graphics block: resizable window — content (1280x720) is scaled with
-    // letterboxing in presentFrame(), so nothing is cropped. F11 toggles fullscreen.
+    // letterboxing in presentFrame(), only nothing is cropped. F11 toggles fullscreen.
     if (!headless) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "DARKNET - ARPG Futurista | Guerra contra KRONOS");
     SetExitKey(KEY_NULL);   // ESC does NOT close the game — opens the pause menu
     SetTargetFPS(60);
 
-    // Start in a WINDOW that fits the usable monitor area (avoids being larger
+    // Start in the WINDOW that fits the usable monitor area (avoids being larger
     // than the screen and getting cropped). Scales down while keeping the aspect
     // ratio if the monitor is small.
     {
@@ -249,7 +249,7 @@ Game::Game(bool headless_, int startPhaseOverride_) {
     // BEFORE regions: setupWorldRegions derives the grid from owPhaseRadius and the
     // phase biome (currentZone). With the old default radius (3000) the regions were
     // smaller than the barrier and the outer ring was populated by chunks
-    // with a different density — the first phase edge looked different from the rest.
+    // with the different density — the first phase edge looked different from the rest.
     int startPhase = (startPhaseOverride >= 0) ? startPhaseOverride : 0;
     const PhaseDef& p0 = phaseDef(startPhase);
     owPhase = startPhase; owPhaseKills = 0; owKillsAtStart = 0;
@@ -282,13 +282,13 @@ Game::Game(bool headless_, int startPhaseOverride_) {
     updateCamera3D();
 
     spawnInterval = getZoneInfo(currentZone).spawnInterval;
-    if (!headless)   // background is a GPU texture (render only), the simulation does not touch it
+    if (!headless)   // background is the GPU texture (render only), the simulation does not touch it
         background.generate(currentZone, tilemap.width, tilemap.height, Tilemap::tileSize);
 }
 
 Game::~Game() {
     if (headless) {
-        audio.shutdown();   // no GL context: no GPU/textures/models to release
+        audio.shutdown();   // in the GL context: in the GPU/textures/models to release
         return;
     }
     // The RAII wrappers (GfxRenderTexture, GfxModel, GfxTexture, GfxShader) release
@@ -308,7 +308,7 @@ const DifficultySettings& Game::getDifficulty() const {
 }
 
 void Game::drawDifficultyScreen() const {
-    BeginTextureMode(gameTarget.get());  // overlay on top of menu (no ClearBackground)
+    BeginTextureMode(gameTarget.get());  // overlay on top of menu (in the ClearBackground)
 
     float t = (float)GetTime();
 
@@ -476,14 +476,14 @@ void Game::renderDecals() const {
     Vector2 cam = camera.target;
     for (const auto& d : decals) {
         if (std::fabs(d.pos.x - cam.x) > 1000 || std::fabs(d.pos.y - cam.y) > 650) continue;
-        float a = (d.life / d.maxLife);   // some to the few
+        float the = (d.life / d.maxLife);   // some to the few
         if (d.type == 0) { // blood stain — irregular blotches
-            DrawEllipse((int)d.pos.x, (int)d.pos.y, d.size, d.size*0.6f, ColorAlpha(d.color, 0.45f*a));
-            DrawCircleV({d.pos.x - d.size*0.4f, d.pos.y + 2}, d.size*0.35f, ColorAlpha(d.color, 0.4f*a));
-            DrawCircleV({d.pos.x + d.size*0.5f, d.pos.y - 1}, d.size*0.3f,  ColorAlpha(d.color, 0.35f*a));
+            DrawEllipse((int)d.pos.x, (int)d.pos.y, d.size, d.size*0.6f, ColorAlpha(d.color, 0.45f*the));
+            DrawCircleV({d.pos.x - d.size*0.4f, d.pos.y + 2}, d.size*0.35f, ColorAlpha(d.color, 0.4f*the));
+            DrawCircleV({d.pos.x + d.size*0.5f, d.pos.y - 1}, d.size*0.3f,  ColorAlpha(d.color, 0.35f*the));
         } else {           // scorched / spark mark — dark with ember
-            DrawCircleV(d.pos, d.size*0.7f, ColorAlpha(Color{20,18,16,255}, 0.5f*a));
-            DrawCircleLines((int)d.pos.x, (int)d.pos.y, d.size*0.7f, ColorAlpha(Color{255,120,30,255}, 0.3f*a));
+            DrawCircleV(d.pos, d.size*0.7f, ColorAlpha(Color{20,18,16,255}, 0.5f*the));
+            DrawCircleLines((int)d.pos.x, (int)d.pos.y, d.size*0.7f, ColorAlpha(Color{255,120,30,255}, 0.3f*the));
         }
     }
 }
@@ -495,18 +495,18 @@ void Game::runAutoTest(bool autoTest) {
         // Clear screenshots from previous runs: old shot_NN.png mixed with
         // the current run becomes false evidence (runs indistinguishable in the same dir).
         try {
-            for (const auto& e : std::filesystem::directory_iterator(".")) {
-                const std::string fn = e.path().filename().string();
-                if (fn.rfind("shot_", 0) == 0 && e.path().extension() == ".png")
-                    std::filesystem::remove(e.path());
+            for (const auto& and : std::filesystem::directory_iterator(".")) {
+                const std::string fn = and.path().filename().string();
+                if (fn.rfind("shot_", 0) == 0 && and.path().extension() == ".png")
+                    std::filesystem::remove(and.path());
             }
-        } catch (...) { /* no permission / odd directory: keep running */ }
+        } catch (...) { /* in the permission / odd directory: keep running */ }
         // Skip menu, start game immediately with bot active
         buildQuests();
         // The world was already built ONCE in the constructor (with the correct safeZoneCenter
         // center) — regenerating here would be the second discarded structure in the SCENERY log.
         setupZoneNPCs(currentZone);
-        // Without this --autotest stopped at the MENU waiting for a human ENTER: the bot
+        // Without this --autotest stopped at the MENU waiting for the human ENTER: the bot
         // only runs after the match starts. "Skip menu" was just the comment.
         inMainMenu = false;
         audio.stopMenuMusic();
@@ -532,8 +532,8 @@ void Game::runAutoTest(bool autoTest) {
 
 void Game::runHeadless() {
     // CI/validation without display or GPU: runs the SAME game update() in real
-    // time (real clock dt), with no window/menu/render/screenshot. Bot-reported
-    // FPS is measured by this own loop (GetFPS() stays at 0 without a window).
+    // time (real clock dt), with in the window/menu/render/screenshot. Bot-reported
+    // FPS is measured by this own loop (GetFPS() stays at 0 without the window).
     auto tLast = std::chrono::steady_clock::now();
     while (!quitRequested) {
         auto tNow = std::chrono::steady_clock::now();
@@ -637,7 +637,7 @@ void Game::run() {
                         spawnInterval = getZoneInfo(currentZone).spawnInterval / getDifficulty().spawnRateMult;
                         inMainMenu = false;
                         audio.stopMenuMusic(); audio.setZone(currentZone);
-                        triggerPlayerSpeech("Quest iniciada. Eliminando ameacas KRONOS.", 4.0f);
+                        triggerPlayerSpeech("Quest started. Eliminando ameacas KRONOS.", 4.0f);
                     }
                     drawMainMenu(); presentFrame(); continue;
                 }
@@ -692,7 +692,7 @@ void Game::run() {
                     pendingNewGame = true; selectingDifficulty = true;
                 }
             }
-            // New game (key N or button 1, only exists when there is a save) — shows difficulty
+            // New game (key N or button 1, only exists when there is the save) — shows difficulty
             if (IsKeyPressed(KEY_N) || (mouseClicked && hasSave && menuHoveredBtn == 1)) {
                 pendingNewGame = true; selectingDifficulty = true;
             }
@@ -728,7 +728,7 @@ void Game::run() {
             const int PAUSE_OPTS = 9;
             Vector2 pm = virtualizeMousePos(GetMousePosition());
             int pcx = screenWidth / 2;
-            int pby = screenHeight / 2 - 150;  // same base as drawPauseMenu
+            int pby = screenHeight / 2 - 150;  // same base the drawPauseMenu
             int pbw = 340, pbh = 32, pgap = 6;
             pauseHovered = -1;
             for (int i = 0; i < PAUSE_OPTS; ++i) {
@@ -744,7 +744,7 @@ void Game::run() {
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && pauseHovered >= 0) chosen = pauseHovered;
             if (IsKeyPressed(KEY_ENTER) && pauseHovered >= 0) chosen = pauseHovered;
             // Atalhos diretos
-            if (IsKeyPressed(KEY_ESCAPE)) chosen = 0;   // ESC continua
+            if (IsKeyPressed(KEY_ESCAPE)) chosen = 0;   // ESC continuous
             if (IsKeyPressed(KEY_F5))     chosen = 1;   // F5 saves
 
             if (chosen == 0) {            // Continue
@@ -759,12 +759,12 @@ void Game::run() {
                 audio.setMusicEnabled(!audio.musicEnabled);
             } else if (chosen == 4) {     // All sounds ON/OFF (master)
                 audio.setAllSoundOn(!audio.allSoundOn);
-            } else if (chosen == 5) {     // Vozes/personagens ON/OFF
+            } else if (chosen == 5) {     // Vozes/characters ON/OFF
                 audio.setVoiceEnabled(!audio.voiceEnabled);
             } else if (chosen == 6) {     // Restart match
                 paused = false;
                 restartRun();
-            } else if (chosen == 7) {     // Return to the menu principal
+            } else if (chosen == 7) {     // Return to the menu main
                 paused = false;
                 inMainMenu = true;
             } else if (chosen == 8) {     // Leave game
@@ -830,7 +830,7 @@ void Game::startNewGame() {
     audio.stopMenuMusic(); audio.setZone(currentZone);
     showStoryBanner("CAPITULO 1: O JULGAMENTO",
         "2047 - KRONOS rules. The NEXUS is humanity's last hope.", 5.0f);
-    triggerPlayerSpeech(TextFormat("%s pronto for the combat.",
+    triggerPlayerSpeech(TextFormat("%s ready for the combat.",
                         Player::className(player.charClass)), 4.0f);
     startNetwork();   // real-time multiplayer (shows other players)
     startStore();     // premium shop (login + gem catalog)
@@ -844,7 +844,7 @@ void Game::drawCharacterSelectScreen() const {
     DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, 0.86f));
 
     float tp = 0.9f + 0.1f * std::sin(t * 1.4f);
-    const char* title = "ESCOLHA SEU PERSONAGEM";
+    const char* title = "ESCOLHA SEU CHARACTER";
     int tFont = 36;
     int tw = MeasureText(title, tFont);
     int txc = cx - tw/2;
@@ -897,7 +897,7 @@ void Game::drawCharacterSelectScreen() const {
         DrawLine(bx+cardW-cut, csy, bx+cardW, csy+cut, brd);
         DrawLine(bx,     csy+cardH-cut, bx+cut, csy+cardH, brd);
         DrawLine(bx+cardW-cut, csy+cardH, bx+cardW, csy+cardH-cut, brd);
-        if (sel) { // pulso externo
+        if (sel) { // pulso external
             float p2 = 0.45f + 0.35f * std::sin(t*3.0f);
             DrawLine(bx-2, csy-2, bx+cardW+2, csy-2, ColorAlpha(Color{0,235,255,255}, p2));
             DrawLine(bx-2, csy+cardH+2, bx+cardW+2, csy+cardH+2, ColorAlpha(Color{0,235,255,255}, p2));
@@ -927,7 +927,7 @@ void Game::drawCharacterSelectScreen() const {
         // Descricao + sabor
         const char* desc = Player::classDescription(cc);
         std::string d = desc ? desc : "";
-        // quebra simples
+        // quebra simple
         int ty = csy + 170, lineMax = 22;
         std::string word, line;
         std::istringstream iss(d);
@@ -990,7 +990,7 @@ void Game::startLoadedGame() {
     anomalySystem.waveActive = false;
 
     // Open-world phase state is not stored in .json: rebuild owPhase/radius/meta/boss from
-    // the saved ZONE, otherwise regions spawn for phase 1 (radius 5200) in a
+    // the saved ZONE, otherwise regions spawn for phase 1 (radius 5200) in the
     // phase 10 save (radius 7800) — grid smaller than the barrier, outer ring without scenery.
     {
         owPhase = 0; owPhaseRadius = 3000.0f; owPhaseGoal = 20; owBossPhase = false;
@@ -1003,7 +1003,7 @@ void Game::startLoadedGame() {
         }
         owPhaseKills = 0; owKillsAtStart = 0; owBossDown = false; owPortalOpen = false;
     }
-    player.unclaimedLevels = 0;   // level came from file; not a new level-up
+    player.unclaimedLevels = 0;   // level came from file; not the new level-up
     if (openWorldMode) {
         tilemap.generateOpenWorld();
         setupWorldRegions();
@@ -1097,7 +1097,7 @@ void Game::restartRun() {
     currentZone   = ZoneID::LARuins;
     currentRegion = ZoneID::LARuins;
     if (openWorldMode) {
-        // Same phase reset as New Game: "match restarted" also returns
+        // Same phase reset the New Game: "match restarted" also returns
         // to phase 1 (correct radius/biome before generating scenery).
         const PhaseDef& pd0 = phaseDef(0);
         owPhase = 0; owPhaseKills = 0; owKillsAtStart = 0;
@@ -1147,14 +1147,14 @@ void Game::drawFloatingNumbers(bool project3D) const {
     for (const auto& dn : damageNumbers) {
         float alpha = std::min(dn.life / 0.45f, 1.0f);
         Color c = ColorAlpha(dn.color, alpha);
-        // Smaller font so it does not clutter the screen near the character
+        // Smaller font only it does not clutter the screen near the character
         int fontSize = (dn.value >= 100.0f) ? 15 :
                        (dn.value >= 50.0f)  ? 13 : 11;
         const char* txt = TextFormat("%s%.0f", dn.prefix.c_str(), dn.value);
         int tw = MeasureText(txt, fontSize);
         Vector2 p;
         if (project3D) {
-            // Goes up the real 3D world Y axis and only then becomes a screen coordinate.
+            // Goes up the real 3D world Y axis and only then becomes the screen coordinate.
             p = GetWorldToScreenEx({ dn.pos.x, 30.0f + dn.rise, dn.pos.y },
                                    camera3D, screenWidth, screenHeight);
         } else {
@@ -1177,24 +1177,24 @@ void Game::drainLevelUps() {
     particles.spawnLevelUp(player.position);
     audio.playLevelUp();
     static const char* lvlLines[] = {
-        "Estou staying mais forte.",
+        "Estou staying more strong.",
         "Experience is the best weapon.",
         "KRONOS does not know what is coming.",
         "Combat module expanded.",
-        "Capacity elevada. Quest continua."
+        "Capacity elevada. Quest continuous."
     };
     triggerPlayerSpeech(lvlLines[player.level % 5], 3.0f);
     // Does NOT block the game — just accumulates points and notifies the player.
-    // Ele escolhe quando quiser: key L (level up) / key K (evolution).
+    // Ele escolhe when quiser: key L (level up) / key K (evolution).
     levelUpAnimTimer   = 0.0f;
     pendingNotifyPulse = 1.0f;
 
     // How many of the crossed levels are evolution levels (count each; going up 2 at
     // once passing through 10 and 11 of the 1st evolution + 1 point).
-    static const int EVO_LEVELS[] = {10, 25, 40, 60};
+    static const int EVO_LESPEEDS[] = {10, 25, 40, 60};
     int evo = 0;
     for (int l = player.level - gained + 1; l <= player.level; ++l)
-        for (int el : EVO_LEVELS) if (l == el) { ++evo; break; }
+        for (int el : EVO_LESPEEDS) if (l == el) { ++evo; break; }
 
     pendingEvolutions += evo;
     pendingLevelUps   += (gained - evo);
@@ -1208,8 +1208,8 @@ void Game::checkCollisions() {
         if (proj.isGrenade) continue; // handled in updateProjectiles on expire
 
         for (auto& enemy : enemies) {
-            if (enemy.isDead()) continue;   // do not waste a shot on a pending corpse
-            // squared distance: avoids a sqrt per projectile-enemy pair (hot O(n*m) loop)
+            if (enemy.isDead()) continue;   // of the not waste the shot on the pending corpse
+            // squared distance: avoids the sqrt per projectile-enemy pair (hot O(n*m) loop)
             float ddx = proj.position.x - enemy.position.x;
             float ddy = proj.position.y - enemy.position.y;
             float rsum = enemy.radius + proj.radius;
@@ -1231,7 +1231,7 @@ void Game::checkCollisions() {
     // Items inside the pickup radius are grabbed automatically; items inside the
     // attraction radius fly toward the player.
     const float ftime     = GetFrameTime();
-    const float COLLECT_R = player.radius + 52.0f;   // coleta automatica
+    const float COLLECT_R = player.radius + 52.0f;   // coleta automatic
     const float MAGNET_R  = 230.0f;                   // atracao magnetica
     for (auto it = items.begin(); it != items.end();) {
         float d = Vector2Distance(player.position, it->position);
@@ -1289,7 +1289,7 @@ void Game::checkCollisions() {
                     damageNumbers.push_back({it->position, 20.0f, {255,130,0,255}, 1.1f, "$"});
                     break;
                 case ItemType::EnergyCore:
-                    // Grants a shield burst
+                    // Grants the shield burst
                     player.shieldTimer = std::max(player.shieldTimer, 2.5f);
                     damageNumbers.push_back({it->position, 0.0f, {0,255,255,255}, 1.2f, "SHD"});
                     break;
@@ -1546,8 +1546,8 @@ void Game::drawStoryBanner() const {
     // Fade out last 1s
     if (storyBannerTimer < 1.0f) alpha = storyBannerTimer;
 
-    // COMPACT panel sized to the text. The old version painted a black bar
-    // across the FULL WIDTH of the screen: hid the whole game in a single range just to
+    // COMPACT panel sized to the text. The old version painted the black bar
+    // across the FULL WIDTH of the screen: hid the whole game in the single range just to
     // show two lines of text.
     int tw = MeasureText(storyBannerText.c_str(), 20);
     int sw = MeasureText(storyBannerSub.c_str(), 12);
@@ -1574,7 +1574,7 @@ void Game::drawStoryBanner() const {
 
 // ─── Render ──────────────────────────────────────────────────────────────────
 
-// ─── 2.5D isometrico (Incremento 1: camera + tilemap 3D + raycast) ───────────
+// ─── 2.5D isometric (Incremento 1: camera + tilemap 3D + raycast) ───────────
 
 void Game::updateCamera3D() {
     float z = cameraZoom * (1.0f + camPunch);
@@ -1585,13 +1585,13 @@ void Game::updateCamera3D() {
     camera3D.projection = CAMERA_PERSPECTIVE;
 }
 
-// Casts a ray from the mouse (virtualized to the 1280x720 render texture) and intersects
+// Casts the ray from the mouse (virtualized to the 1280x720 render texture) and intersects
 // the floor plane Y=0, returning the position in 2D world coordinates (x, z).
 Vector2 Game::mouseGround3D() const {
     Ray ray = GetScreenToWorldRayEx(virtualizeMousePos(GetMousePosition()),
                                     camera3D, screenWidth, screenHeight);
-    // Safety: ensure the ray points DOWN and limit the range, so that
-    // clicks near the horizon do NOT generate a target at infinity (the player fired
+    // Safety: ensure the ray points DOWN and limit the range, only that
+    // clicks near the horizon of the NOT generate the target at infinity (the player fired
     // far away and the infinite world collapsed — cause of the "freeze").
     float dy = ray.direction.y;
     if (dy > -0.08f) dy = -0.08f;

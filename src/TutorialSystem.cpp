@@ -29,61 +29,61 @@ void TutorialSystem::init() {
 
     add(TutorialStep::Welcome,
         "BEM-VINDO AO DARKNET",
-        "O KRONOS tomou o controle. Voce e a resistencia.\nSobreviva, evolua, destrua os portais.",
-        "ENTER / E para continuar",
+        "O KRONOS tomou the controle. You and the stamina.\nSobreviva, evolua, destrua the portals.",
+        "ENTER / E to continue",
         {0, 220, 255, 255}, 0.0f);
 
     add(TutorialStep::Movement,
         "MOVIMENTO",
-        "Use WASD ou as setas direcionais para se mover.\nEvite inimigos enquanto ganha XP.",
+        "Use WASD ou the arrows direcionais to if move.\nEvite enemies enquanto ganha XP.",
         "W A S D",
         {255, 220, 0, 255}, 0.0f);
 
     add(TutorialStep::Attack,
-        "ATACAR",
-        "Clique com o BOTAO ESQUERDO do mouse para atirar.\nSegure para fogo continuo.",
-        "BOTAO ESQUERDO",
+        "ATTACK",
+        "Click with the BUTTON ESQUERDO of the mouse to shoot.\nSegure to fire continuous.",
+        "BUTTON ESQUERDO",
         {255, 100, 60, 255}, 0.0f);
 
     add(TutorialStep::UseSkill,
         "HABILIDADES",
-        "Pressione 1-6 para usar habilidades especiais.\nCada habilidade tem cooldown proprio.",
+        "Pressione 1-6 to usar skills especiais.\nCada skill has cooldown own.",
         "1  2  3  4  5  6",
         {0, 200, 255, 255}, 0.0f);
 
     add(TutorialStep::PickupItem,
         "COLETAR ITENS",
-        "Inimigos dropam itens ao morrer.\nPasse por cima ou pressione E para coletar.",
-        "E  /  Passar por cima",
+        "Enemies dropam items to the die.\nPasse by up ou pressione E to collect.",
+        "E  /  Pass by up",
         {100, 255, 100, 255}, 0.0f);
 
     add(TutorialStep::TalkToNPC,
         "CONVERSAR COM NPCs",
-        "Aproxime-se de personagens com ! acima da cabeca.\nEles dao missoes, itens e lore da historia.",
-        "E  perto do NPC",
+        "Aproxime-if of characters with ! above the head.\nEles dao quests, items and lore of the story.",
+        "E  near the NPC",
         {255, 200, 0, 255}, 0.0f);
 
     add(TutorialStep::OpenShop,
-        "LOJA",
-        "Pressione TAB a qualquer momento para abrir a loja.\nGaste creditos em equipamentos melhores.",
+        "SHOP",
+        "Pressione TAB the qualquer momento to open the shop.\nGaste credits in equipamentos melhores.",
         "TAB",
         {0, 220, 180, 255}, 0.0f);
 
     add(TutorialStep::Portal,
         "PORTAIS DE ANOMALIA",
-        "Tempestades abrem portais que spawnham inimigos.\nFeche-os atacando o nucleo do portal!",
-        "Ataque o portal para fecha-lo",
+        "Tempestades abrem portals that spawnham enemies.\nFeche-the atacando the core of the portal!",
+        "Attack the portal to closes-lo",
         {180, 60, 255, 255}, 0.0f);
 
     add(TutorialStep::LevelUp,
-        "EVOLUCAO",
-        "Acumule XP eliminando inimigos e completando missoes.\nSuba de nivel para ficar mais forte.",
-        "Mata inimigos para ganhar XP",
+        "EVOLUTION",
+        "Acumule XP eliminando enemies and completando quests.\nSuba of level to stay more strong.",
+        "Mata enemies to ganhar XP",
         {255, 220, 0, 255}, 0.0f);
 
     add(TutorialStep::Completed,
         "TUTORIAL CONCLUIDO!",
-        "+500 XP   +100 CREDITOS\nBoa sorte, operativo. O KRONOS nao ira esperar.",
+        "+500 XP   +100 CREDITS\nBoa luck, operativo. O KRONOS not ira esperar.",
         "",
         {0, 255, 150, 255}, 4.0f);
 }
@@ -108,7 +108,7 @@ void TutorialSystem::completeStep(TutorialStep step) {
         fadingIn  = false;
         stepTimer = 0.0f;
 
-        // Avança para próximo passo
+        // Avanca to next passo
         int nextIdx = idx + 1;
         if (nextIdx < (int)hints.size()) {
             currentStep = hints[nextIdx].step;
@@ -148,14 +148,14 @@ void TutorialSystem::onPortalFound()    { if (currentStep == TutorialStep::Porta
 void TutorialSystem::update(float dt) {
     if (completeBadgeTimer > 0) completeBadgeTimer -= dt;
 
-    // Tela de boas vindas: E/Enter completa
+    // Screen of boas vindas: E/Enter completa
     if (active && currentStep == TutorialStep::Welcome) {
         if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
             completeStep(TutorialStep::Welcome);
         }
     }
 
-    // Auto-completar passos com displayTime (ex: Completed mostra por 4s)
+    // Auto-completar passos with displayTime (ex: Completed shows by 4s)
     if (active) {
         TutorialHint* h = getCurrentHint();
         if (h && h->displayTime > 0.0f) {
@@ -173,7 +173,7 @@ void TutorialSystem::update(float dt) {
         fadeAlpha = std::max(fadeAlpha - dt * 4.0f, 0.0f);
     }
 
-    // Skip tutorial com ESC
+    // Skip tutorial with ESC
     if (active && IsKeyPressed(KEY_F1)) {
         skipTutorial();
     }
@@ -198,7 +198,7 @@ void TutorialSystem::renderCurrentHint(int screenW, int screenH) const {
 
     float alpha = fadeAlpha;
 
-    // Painel Welcome especial: centro da tela
+    // Painel Welcome especial: center of the screen
     if (currentStep == TutorialStep::Welcome) {
         int pw = 600, ph = 220;
         int px = (screenW - pw) / 2;
@@ -213,10 +213,10 @@ void TutorialSystem::renderCurrentHint(int screenW, int screenH) const {
         int tw = MeasureText(h.title.c_str(), 24);
         DrawText(h.title.c_str(), px+(pw-tw)/2, py+20, 24, ColorAlpha(Color{0,220,255,255}, alpha));
 
-        // Linha
+        // Line
         DrawLine(px+20, py+52, px+pw-20, py+52, ColorAlpha(Color{0,180,255,100}, alpha));
 
-        // Texto
+        // Text
         DrawText(h.text.c_str(), px+30, py+62, 14, ColorAlpha(WHITE, alpha));
 
         // Logotipo DARKNET
@@ -236,7 +236,7 @@ void TutorialSystem::renderCurrentHint(int screenW, int screenH) const {
         return;
     }
 
-    // Painel normal: canto inferior esquerdo
+    // Painel normal: canto lower esquerdo
     int pw = 340, ph = 120;
     int px = 10, py = screenH - ph - 10;
 
@@ -255,7 +255,7 @@ void TutorialSystem::renderCurrentHint(int screenW, int screenH) const {
     DrawText(h.title.c_str(), px+10, py+8, 14, ColorAlpha(h.keyColor, alpha));
     DrawLine(px+8, py+26, px+pw-8, py+26, ColorAlpha(h.keyColor, alpha * 0.3f));
 
-    // Texto
+    // Text
     DrawText(h.text.c_str(), px+10, py+32, 12, ColorAlpha(WHITE, alpha * 0.9f));
 
     // Key badge
@@ -278,11 +278,11 @@ void TutorialSystem::renderCurrentHint(int screenW, int screenH) const {
 }
 
 void TutorialSystem::renderArrow(Vector2 target, int screenW, int screenH) const {
-    // Seta pulsante apontando para target (screen-space)
+    // Seta pulsante apontando to target (screen-space)
     float pulse = sinf((float)GetTime() * 4.0f) * 6.0f;
     float ax = target.x, ay = target.y - 40.0f - pulse;
 
-    // Triangulo seta
+    // Triangle seta
     Vector2 p1 = {ax,      ay};
     Vector2 p2 = {ax-12,   ay-20};
     Vector2 p3 = {ax+12,   ay-20};
@@ -308,11 +308,11 @@ void TutorialSystem::renderCompletionBadge(int screenW, int screenH) const {
     int tw = MeasureText(title, 22);
     DrawText(title, px+(pw-tw)/2, py+12, 22, ColorAlpha(Color{0,255,150,255}, alpha));
 
-    const char* reward = "+500 XP   +100 CREDITOS";
+    const char* reward = "+500 XP   +100 CREDITS";
     int rw = MeasureText(reward, 16);
     DrawText(reward, px+(pw-rw)/2, py+44, 16, ColorAlpha(Color{255,220,0,255}, alpha));
 
-    const char* sub = "Boa sorte, operativo.";
+    const char* sub = "Boa luck, operativo.";
     int sw = MeasureText(sub, 13);
     DrawText(sub, px+(pw-sw)/2, py+68, 13, ColorAlpha(WHITE, alpha * 0.7f));
 }

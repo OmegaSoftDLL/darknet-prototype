@@ -2,21 +2,21 @@
 #include <raylib.h>
 #include <cmath>
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  buildShop â€” monta catalogo de itens temÃ¡ticos por tipo de NPC
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+//  buildShop the€” monta catalog of items temA¡ticos by type of NPC
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     npcIndex = npcIdx;
     selected = 0;
     items.clear();
-    (void)npcName; // poderia filtrar por nome, mas usamos catÃ¡logo completo
+    (void)npcName; // poderia filtrar by nome, mas usamos catA¡soon complete
 
-    // â”€â”€ Armas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ Armas the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     {
         ShopItem si;
         si.name        = "Pistola Plasma";
-        si.description = "Arma leve de plasma. Dano +15, Alcance +20";
+        si.description = "Weapon light of plasma. Damage +15, Range +20";
         si.price       = 300;
         si.isEquipment = true;
         si.isCosmetic  = false;
@@ -27,7 +27,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     {
         ShopItem si;
         si.name        = "Rifle Energia";
-        si.description = "Rifle de alta precisao. Dano +35, Alcance +40";
+        si.description = "Rifle of high precisao. Damage +35, Range +40";
         si.price       = 650;
         si.isEquipment = true;
         si.isCosmetic  = false;
@@ -38,7 +38,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     {
         ShopItem si;
         si.name        = "Lancador EMP";
-        si.description = "Destroca circuitos inimigos. Dano +70, Alcance +60";
+        si.description = "Destroca circuitos enemies. Damage +70, Range +60";
         si.price       = 900;
         si.isEquipment = true;
         si.isCosmetic  = false;
@@ -49,7 +49,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     {
         ShopItem si;
         si.name        = "Espingarda Quantica";
-        si.description = "Dispersao quantica devastadora. Dano +55, Alc -10";
+        si.description = "Dispersao quantica devastadora. Damage +55, Rng -10";
         si.price       = 1200;
         si.isEquipment = true;
         si.isCosmetic  = false;
@@ -58,11 +58,11 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         items.push_back(si);
     }
 
-    // â”€â”€ Armaduras â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ Armaduras the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     {
         ShopItem si;
         si.name        = "Colete Tatico";
-        si.description = "+50 HP, Def 5%. Protecao basica de combate";
+        si.description = "+50 HP, Def 5%. Protecao basica of combat";
         si.price       = 400;
         si.isEquipment = true;
         si.isCosmetic  = false;
@@ -72,8 +72,8 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     }
     {
         ShopItem si;
-        si.name        = "Armadura IRON-VIII";
-        si.description = "+120 HP, Def 15%. Exosqueleto de combate";
+        si.name        = "Armor IRON-VIII";
+        si.description = "+120 HP, Def 15%. Exosqueleto of combat";
         si.price       = 800;
         si.isEquipment = true;
         si.isCosmetic  = false;
@@ -93,7 +93,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         items.push_back(si);
     }
 
-    // â”€â”€ Implants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ Implants the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     {
         ShopItem si;
         si.name        = "Neural Interface";
@@ -108,7 +108,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     {
         ShopItem si;
         si.name        = "Servo Boost";
-        si.description = "Vel +60. Servomotores hidraulicos de alta potencia";
+        si.description = "Vel +60. Servomotores hidraulicos of high potencia";
         si.price       = 600;
         si.isEquipment = true;
         si.isCosmetic  = false;
@@ -118,8 +118,8 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     }
     {
         ShopItem si;
-        si.name        = "Escudo Cortical";
-        si.description = "Vel +80, XP x2.0. Barreira neural de alto nivel";
+        si.name        = "Shield Cortical";
+        si.description = "Vel +80, XP x2.0. Barrier neural of high level";
         si.price       = 1100;
         si.isEquipment = true;
         si.isCosmetic  = false;
@@ -128,17 +128,17 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         items.push_back(si);
     }
 
-    // â”€â”€ Consumiveis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ Consumiveis the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     {
         ShopItem si;
-        si.name        = "Pocao de Cura";
-        si.description = "Restaura 30 HP imediatamente ao usar (tecla F)";
+        si.name        = "Potion of Healing";
+        si.description = "Restaura 30 HP imediatamente to the usar (key F)";
         si.price       = 50;
         si.isEquipment = false;
         si.isCosmetic  = false;
         Item it{};
         it.type   = ItemType::HealthPack;
-        it.name   = "Pocao de Cura";
+        it.name   = "Potion of Healing";
         it.color  = {0, 210, 80, 255};
         it.radius = 8.0f;
         si.item   = it;
@@ -148,7 +148,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     {
         ShopItem si;
         si.name        = "Energy Core";
-        si.description = "Ativa escudo protetov por 2.5s ao usar";
+        si.description = "Ativa shield protetov by 2.5s to the usar";
         si.price       = 80;
         si.isEquipment = false;
         si.isCosmetic  = false;
@@ -162,11 +162,11 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
         items.push_back(si);
     }
 
-    // â”€â”€ CosmÃ©ticos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ CosmA©ticos the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     {
         ShopItem si;
         si.name          = "Red Chrome";
-        si.description   = "Pintura cromada vermelha. Sem efeito de combate.";
+        si.description   = "Pintura chrome vermelha. Sem effect of combat.";
         si.price         = 200;
         si.isEquipment   = false;
         si.isCosmetic    = true;
@@ -177,7 +177,7 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     {
         ShopItem si;
         si.name          = "Gold Plating";
-        si.description   = "Revestimento dourado de luxo. Sem efeito de combate.";
+        si.description   = "Revestimento golden of luxo. Sem effect of combat.";
         si.price         = 500;
         si.isEquipment   = false;
         si.isCosmetic    = true;
@@ -187,17 +187,17 @@ void ShopSystem::buildShop(int npcIdx, const std::string& npcName) {
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  render â€” fullscreen cyberpunk shop
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+//  render the€” fullscreen cyberpunk shop
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
     if (!open) return;
 
-    // Overlay escuro
+    // Overlay dark
     DrawRectangle(0, 0, screenW, screenH, ColorAlpha({0, 0, 0, 255}, 0.88f));
 
-    // Borda cyberpunk
+    // Edge cyberpunk
     Color C_cyan  = {0, 210, 255, 255};
     Color C_gold  = {255, 190, 0, 255};
     Color C_dark  = {8, 10, 20, 255};
@@ -208,7 +208,7 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
     int panX = 40;
     int panY = 40;
 
-    // Painel de fundo
+    // Painel of fundo
     DrawRectangle(panX, panY, panW, panH, ColorAlpha(C_dark, 0.97f));
     DrawRectangleLinesEx({(float)panX,(float)panY,(float)panW,(float)panH}, 2, C_cyan);
 
@@ -219,19 +219,19 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
     DrawLine(panX, panY+panH-c, panX+c, panY+panH, C_cyan);
     DrawLine(panX+panW-c, panY+panH, panX+panW, panY+panH-c, C_cyan);
 
-    // TÃ­tulo
-    const char* titulo = "LOJA // RESISTENCIA";
-    int tw = MeasureText(titulo, 32);
-    DrawText(titulo, screenW/2 - tw/2, panY + 16, 32, C_cyan);
+    // TA­tulo
+    const char* title = "SHOP // RESISTANCE";
+    int tw = MeasureText(title, 32);
+    DrawText(title, screenW/2 - tw/2, panY + 16, 32, C_cyan);
 
-    // Linha separadora
+    // Line separadora
     DrawLine(panX+20, panY+58, panX+panW-20, panY+58, ColorAlpha(C_cyan, 0.4f));
 
     // Subtitulo
-    DrawText("CATALOGO DE EQUIPAMENTOS E SUPRIMENTOS", panX+24, panY+64, 12,
+    DrawText("CATALOG DE EQUIPAMENTOS E SUPRIMENTOS", panX+24, panY+64, 12,
              ColorAlpha(C_cyan, 0.5f));
 
-    // â”€â”€ Lista de itens (coluna esquerda) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ List of items (column left) the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     int listX   = panX + 20;
     int listY   = panY + 86;
     int listW   = (int)(panW * 0.55f);
@@ -239,7 +239,7 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
     int rowH    = 36;
     int maxVis  = listH / rowH;
 
-    // Scroll offset para manter selecionado visÃ­vel
+    // Scroll offset to manter selected visA­vel
     int scrollOff = 0;
     if (selected >= maxVis) scrollOff = selected - maxVis + 1;
 
@@ -254,7 +254,7 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
 
         bool isSel = (idx == selected);
 
-        // Highlight do selecionado
+        // Highlight of the selected
         if (isSel) {
             DrawRectangle(listX, ry, listW - 4, rowH - 2, ColorAlpha({0,80,60,255}, 0.5f));
             DrawRectangleLinesEx({(float)listX,(float)ry,(float)(listW-4),(float)(rowH-2)},
@@ -263,14 +263,14 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
             DrawRectangle(listX, ry, listW - 4, rowH - 2, ColorAlpha({15,20,30,255}, 0.4f));
         }
 
-        // Indicador de cor / tipo
+        // Indicador of color / type
         DrawRectangle(listX + 4, ry + 6, 6, rowH - 14, si.color);
 
-        // Nome do item
+        // Nome of the item
         Color nameCol = isSel ? C_sel : WHITE;
         DrawText(si.name.c_str(), listX + 18, ry + 6, 15, nameCol);
 
-        // Tag de tipo
+        // Tag of type
         const char* tag = si.isCosmetic ? "[COS]" :
                           si.isEquipment ?
                             (si.equip.slot == EquipSlot::Weapon  ? "[ARM]" :
@@ -281,7 +281,7 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
                        si.isEquipment ? C_cyan : C_item;
         DrawText(tag, listX + 18, ry + rowH - 18, 11, ColorAlpha(tagCol, 0.8f));
 
-        // PreÃ§o (amarelo dourado)
+        // PreA§the (yellow golden)
         const char* priceStr = TextFormat("%d cr", si.price);
         int pw = MeasureText(priceStr, 14);
         bool canAfford = (playerCredits >= si.price);
@@ -289,7 +289,7 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
         DrawText(priceStr, listX + listW - pw - 20, ry + 10, 14, priceCol);
     }
 
-    // Barra de scroll lateral (se necessÃ¡rio)
+    // Barra of scroll side (if necessA¡rio)
     if ((int)items.size() > maxVis) {
         int sbX = listX + listW - 10;
         int sbH = listH;
@@ -300,7 +300,7 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
         DrawRectangle(sbX, thumbY, 4, thumbH, ColorAlpha(C_cyan, 0.6f));
     }
 
-    // â”€â”€ Painel direito: descriÃ§Ã£o + stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ Painel direito: descriA§A£the + stats the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     int detX = panX + listW + 30;
     int detY = panY + 86;
     int detW = panW - listW - 50;
@@ -312,24 +312,24 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
     if (selected >= 0 && selected < (int)items.size()) {
         const ShopItem& sel = items[selected];
 
-        // Nome do item selecionado
+        // Nome of the item selected
         int snw = MeasureText(sel.name.c_str(), 20);
         DrawText(sel.name.c_str(), detX + detW/2 - snw/2, detY + 14, 20, sel.color);
 
-        // Linha separadora interna
+        // Line separadora interna
         DrawLine(detX+12, detY+40, detX+detW-12, detY+40, ColorAlpha(sel.color, 0.3f));
 
-        // DescriÃ§Ã£o
+        // DescriA§A£the
         DrawText(sel.description.c_str(), detX + 12, detY + 50, 13, ColorAlpha(WHITE, 0.85f));
 
-        // EstatÃ­sticas do equipamento
+        // EstatA­sticas of the equipment
         if (sel.isEquipment) {
             const Equipment& eq = sel.equip;
             int sy = detY + 80;
 
             const char* slotName =
                 eq.slot == EquipSlot::Weapon  ? "SLOT: ARMA"    :
-                eq.slot == EquipSlot::Armor   ? "SLOT: ARMADURA" : "SLOT: IMPLANT";
+                eq.slot == EquipSlot::Armor   ? "SLOT: ARMOR" : "SLOT: IMPLANT";
             DrawText(slotName, detX + 12, sy, 13, ColorAlpha(C_cyan, 0.8f));
             sy += 20;
 
@@ -344,46 +344,46 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
                 DrawText(TextFormat("HP:    +%.0f",  eq.primary),   detX+12, sy, 13, {0,255,100,255}); sy+=18;
                 DrawText(TextFormat("DEF:   +%.0f%%", eq.secondary),detX+12, sy, 13, {100,200,255,255}); sy+=18;
             } else { // Implant
-                DrawText(TextFormat("VEL:   +%.0f",  eq.primary),   detX+12, sy, 13, {255,100,255,255}); sy+=18;
+                DrawText(TextFormat("SPEED:   +%.0f",  eq.primary),   detX+12, sy, 13, {255,100,255,255}); sy+=18;
                 if (eq.secondary > 0.0f)
                     DrawText(TextFormat("XP x%.1f", eq.secondary),  detX+12, sy, 13, {255,220,80,255}); sy+=18;
             }
         } else if (sel.isCosmetic) {
             DrawText("EFEITO: COSMETICO", detX+12, detY+80, 13, C_gold);
-            DrawText("Sem bonus de combate.", detX+12, detY+100, 12, ColorAlpha(WHITE,0.6f));
-            DrawText("Muda a cor do personagem.", detX+12, detY+118, 12, ColorAlpha(WHITE,0.6f));
+            DrawText("Sem bonus of combat.", detX+12, detY+100, 12, ColorAlpha(WHITE,0.6f));
+            DrawText("Muda the color of the character.", detX+12, detY+118, 12, ColorAlpha(WHITE,0.6f));
 
-            // Preview da cor
+            // Preview of the color
             DrawRectangle(detX+12, detY+140, 40, 40, sel.cosmeticColor);
             DrawRectangleLinesEx({(float)(detX+12),(float)(detY+140), 40,40}, 1.5f, WHITE);
             DrawText("COR", detX+56, detY+154, 12, ColorAlpha(WHITE,0.7f));
         } else {
             // Consumivel
-            DrawText("TIPO: CONSUMIVEL", detX+12, detY+80, 13, {0,210,80,255});
+            DrawText("TIPO: CONSUMISPEED", detX+12, detY+80, 13, {0,210,80,255});
             if (sel.item.type == ItemType::HealthPack)
-                DrawText("Restaura 30 HP ao coletar.", detX+12, detY+100, 12, {0,255,80,255});
+                DrawText("Restaura 30 HP to the collect.", detX+12, detY+100, 12, {0,255,80,255});
             else if (sel.item.type == ItemType::EnergyCore)
-                DrawText("Ativa escudo por 2.5s ao coletar.", detX+12, detY+100, 12, {0,200,255,255});
+                DrawText("Ativa shield by 2.5s to the collect.", detX+12, detY+100, 12, {0,200,255,255});
         }
 
-        // PreÃ§o em destaque
+        // PreA§the in destaque
         DrawLine(detX+12, detY+detH-60, detX+detW-12, detY+detH-60, ColorAlpha(C_gold, 0.3f));
         bool canAfford = (playerCredits >= sel.price);
         Color pCol = canAfford ? C_gold : Color{200,50,50,255};
-        DrawText(TextFormat("PRECO: %d cr", sel.price), detX+12, detY+detH-50, 16, pCol);
+        DrawText(TextFormat("PRICE: %d cr", sel.price), detX+12, detY+detH-50, 16, pCol);
         if (!canAfford)
-            DrawText("CREDITOS INSUFICIENTES", detX+12, detY+detH-28, 12, {200,60,60,255});
+            DrawText("CREDITS INSUFICIENTES", detX+12, detY+detH-28, 12, {200,60,60,255});
     }
 
-    // â”€â”€ CrÃ©ditos do player (canto direito inferior) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ CrA©ditos of the player (canto direito lower) the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     int credW = 240;
     int credX = panX + panW - credW - 10;
     int credY = panY + panH - 48;
     DrawRectangle(credX, credY, credW, 36, ColorAlpha({0,20,10,255}, 0.85f));
     DrawRectangleLinesEx({(float)credX,(float)credY,(float)credW,36}, 1, C_gold);
-    DrawText(TextFormat("CREDITOS: %d", playerCredits), credX + 12, credY + 10, 16, C_gold);
+    DrawText(TextFormat("CREDITS: %d", playerCredits), credX + 12, credY + 10, 16, C_gold);
 
-    // â”€â”€ Botoes clicaveis: COMPRAR / FECHAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ Botoes clicaveis: BUY / FECHAR the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     Rectangle buyBtn   = {(float)(screenW/2-170),(float)(panY+panH-58),150,32};
     Rectangle closeBtn = {(float)(screenW/2+20), (float)(panY+panH-58),150,32};
     bool buyHover   = CheckCollisionPointRec(mousePos, buyBtn);
@@ -392,17 +392,17 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
     Color buyCol = canBuy ? (buyHover?Color{0,255,150,255}:Color{0,210,120,255}) : Color{90,90,90,255};
     DrawRectangleRec(buyBtn, ColorAlpha(buyCol, buyHover?0.35f:0.20f));
     DrawRectangleLinesEx(buyBtn, buyHover?2.5f:1.5f, buyCol);
-    DrawText("COMPRAR", (int)buyBtn.x+30, (int)buyBtn.y+8, 18, buyCol);
+    DrawText("BUY", (int)buyBtn.x+30, (int)buyBtn.y+8, 18, buyCol);
     DrawRectangleRec(closeBtn, ColorAlpha(closeHover?Color{255,120,120,255}:Color{200,80,80,255}, closeHover?0.3f:0.18f));
     DrawRectangleLinesEx(closeBtn, closeHover?2.5f:1.5f, Color{255,120,120,255});
     DrawText("FECHAR", (int)closeBtn.x+40, (int)closeBtn.y+8, 18, Color{255,160,160,255});
 
-    // â”€â”€ Controles (rodapÃ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const char* ctrl = "Mouse: passe o cursor e clique  -  duplo-clique no item compra  -  [TAB] fechar";
+    // the”€the”€ Controles (rodapA©) the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    const char* ctrl = "Mouse: passe the cursor and click  -  double-click in the item purchase  -  [TAB] close";
     int cw = MeasureText(ctrl, 12);
     DrawText(ctrl, screenW/2 - cw/2, panY + panH - 20, 12, ColorAlpha(C_cyan, 0.6f));
 
-    // â”€â”€ Mensagem de compra â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // the”€the”€ Message of purchase the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
     if (buyMsgTimer > 0.0f) {
         float alpha = buyMsgTimer < 0.5f ? buyMsgTimer / 0.5f : 1.0f;
         int mw = MeasureText(buyMsg.c_str(), 22);
@@ -415,9 +415,9 @@ void ShopSystem::render(int playerCredits, int screenW, int screenH) const {
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  handleInput â€” navegaÃ§Ã£o na lista
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+//  handleInput the€” navegaA§A£the in the list
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void ShopSystem::handleInput() {
     if (!open) return;
@@ -441,7 +441,7 @@ bool ShopSystem::handleMouse(Vector2 m, bool clicked, int screenW, int screenH,
     int maxVis = listH/rowH; if (maxVis < 1) maxVis = 1;
     int scrollOff = (selected >= maxVis) ? selected - maxVis + 1 : 0;
 
-    // Hover/clique nas linhas da lista
+    // Hover/click in the lines of the list
     for (int visRow = 0; visRow < maxVis; ++visRow) {
         int idx = visRow + scrollOff;
         if (idx >= (int)items.size()) break;
@@ -450,7 +450,7 @@ bool ShopSystem::handleMouse(Vector2 m, bool clicked, int screenW, int screenH,
             selected = idx;  // hover seleciona
             if (clicked) {
                 double now = GetTime();
-                if (lastClickIdx == idx && now - lastClickT < 0.4) // duplo-clique compra
+                if (lastClickIdx == idx && now - lastClickT < 0.4) // double-click purchase
                     return tryBuy(cr, oe, oi, ge, gc, co);
                 lastClickIdx = idx; lastClickT = now;
             }
@@ -466,9 +466,9 @@ bool ShopSystem::handleMouse(Vector2 m, bool clicked, int screenW, int screenH,
     return false;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  tryBuy â€” tenta comprar item selecionado
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+//  tryBuy the€” tenta buy item selected
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 bool ShopSystem::tryBuy(int& playerCredits, Equipment& outEquip, Item& outItem,
                         bool& gotEquip, bool& gotCosmetic, Color& cosmeticOut) {
@@ -500,17 +500,17 @@ bool ShopSystem::tryBuy(int& playerCredits, Equipment& outEquip, Item& outItem,
     return true;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  update â€” decrementa timer da mensagem de compra
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+//  update the€” decrementa timer of the message of purchase
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void ShopSystem::update(float dt) {
     if (buyMsgTimer > 0.0f) buyMsgTimer -= dt;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 //  close
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void ShopSystem::close() {
     open     = false;

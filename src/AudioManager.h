@@ -55,12 +55,12 @@ public:
     Sound sfxCritHit;         // critical hit crack
     Sound sfxBossPhase;       // boss phase transition
     Sound sfxPortalSuck;      // anomaly portal suction hum
-    Sound sfxDeathCry;        // grito de voz do personagem ao morrer
+    Sound sfxDeathCry;        // grito of voz of the character to the die
 
-    // ── Controles de mute (menu) ──────────────────────────────────────────────
+    // ── Controles of mute (menu) ──────────────────────────────────────────────
     bool musicEnabled = true;   // trilha sonora
-    bool allSoundOn   = true;   // todos os sons (master)
-    bool voiceEnabled = true;   // sons/vozes de personagem
+    bool allSoundOn   = true;   // all the sounds (master)
+    bool voiceEnabled = true;   // sounds/vozes of character
     void setMusicEnabled(bool b);
     void setAllSoundOn(bool b);
     void setVoiceEnabled(bool b) { voiceEnabled = b; }
@@ -175,5 +175,5 @@ private:
     Sound makeAmbientEcho();
     Sound makeAmbientCrickets();
     void  setupAmbientForZone(int zoneId);
-    // Note: thunder ambient reuses sfxThunder via playThunder(); no dedicated ambient method needed
+    // Note: thunder ambient reuses sfxThunder via playThunder(); in the dedicated ambient method needed
 };

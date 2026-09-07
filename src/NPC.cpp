@@ -7,7 +7,7 @@
 extern bool g_voxelCapture;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Construtor legado
+// Construtor legacy
 // ─────────────────────────────────────────────────────────────────────────────
 NPC::NPC(Vector2 pos, const std::string& n, NPCRole r,
          const std::vector<std::string>& lines, const std::string& qid)
@@ -26,7 +26,7 @@ NPC::NPC(Vector2 pos, const std::string& n, NPCRole r,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Setup novo
+// Setup new
 // ─────────────────────────────────────────────────────────────────────────────
 void NPC::setup(NPCType t, const std::string& n, Vector2 pos) {
     npcType  = t;
@@ -38,7 +38,7 @@ void NPC::setup(NPCType t, const std::string& n, Vector2 pos) {
         case NPCType::Merchant:        bodyColor = {255, 180, 0, 255};   accentColor = {255, 220, 60, 255};  title = "Comerciante"; setupMerchantDialogues(); break;
         case NPCType::Blacksmith:      bodyColor = {120, 60, 20, 255};   accentColor = {255, 120, 0, 255};   title = "Ferreiro";     setupBlacksmithDialogues(); break;
         case NPCType::Survivor:        bodyColor = {180, 140, 100, 255}; accentColor = {200, 80, 80, 255};   title = "Sobrevivente"; setupSurvivorDialogues(); break;
-        case NPCType::RebellionLeader: bodyColor = {30, 80, 30, 255};    accentColor = {0, 200, 80, 255};    title = "Lider da Resistencia"; setupRebellionLeaderDialogues(); break;
+        case NPCType::RebellionLeader: bodyColor = {30, 80, 30, 255};    accentColor = {0, 200, 80, 255};    title = "Lider of the Stamina"; setupRebellionLeaderDialogues(); break;
         case NPCType::HackerContact:   bodyColor = {20, 20, 60, 255};    accentColor = {0, 200, 255, 255};   title = "Contato Hacker"; setupHackerContactDialogues(); break;
         case NPCType::GhostInformer:   bodyColor = {180, 200, 255, 255}; accentColor = {200, 220, 255, 255}; title = "Espectro";     setupGhostInformerDialogues(); break;
         case NPCType::AncientAI:       bodyColor = {0, 100, 180, 255};   accentColor = {0, 220, 255, 255};   title = "IA Ancestral"; setupAncientAIDialogues(); break;
@@ -54,19 +54,19 @@ void NPC::setupMerchantDialogues() {
     Color c = {255, 200, 0, 255}, c2 = {255, 170, 0, 255};
     DialogueTree t1;
     t1.id = "first_talk"; t1.triggerCondition = "first_talk";
-    t1.lines.push_back({"NEXUS", "Outro rosto novo. Senta nao, que aqui ninguem fica muito tempo.", c});
-    t1.lines.push_back({"NEXUS", "Eu tinha uma loja. Tres geracoes da minha familia atras daquele balcao.", c2});
-    t1.lines.push_back({"NEXUS", "O KRONOS transformou meu bairro em cinza numa tarde. So escapei porque fui buscar troco no cofre.", c2});
-    t1.lines.push_back({"NEXUS", "Engracado, ne? O cofre me salvou. Hoje vendo o que sobrou das ruinas pra quem ainda luta.", c});
-    t1.lines.push_back({"NEXUS", "Creditos sao a unica coisa honesta que restou. Mate as maquinas, junte creditos, volte aqui.", c});
-    t1.lines.push_back({"NEXUS", "Abro o estoque com TAB. Compra direito e talvez voce me ajude a ver isso tudo de pe de novo.", c});
+    t1.lines.push_back({"NEXUS", "Other rosto new. Senta not, that here ninguem stays very time.", c});
+    t1.lines.push_back({"NEXUS", "Eu had uma shop. Tres geracoes of the minha familia behind daquele balcao.", c2});
+    t1.lines.push_back({"NEXUS", "O KRONOS transformou meu bairro in gray numa tarde. So escapei because fui buscar troco in the cofre.", c2});
+    t1.lines.push_back({"NEXUS", "Engracado, ne? O cofre me saved. Today seeing the that sobrou of the ruins to quem still luta.", c});
+    t1.lines.push_back({"NEXUS", "Credits sao the only coisa honesta that restou. Mate the maquinas, junte credits, volte here.", c});
+    t1.lines.push_back({"NEXUS", "Abro the estoque with TAB. Purchase direito and maybe you me ajude the see isso tudo of foot of new.", c});
     t1.nextTreeId = "always"; dialogues.push_back(t1);
 
     DialogueTree t2;
     t2.id = "always"; t2.triggerCondition = "always";
-    t2.lines.push_back({"NEXUS", "De volta? Otimo. Comprador vivo e melhor que comprador morto — pra nos dois.", c});
-    t2.lines.push_back({"NEXUS", "Guardei umas pecas raras de antes da Queda. Equipamento bom nao se acha mais por ai.", c2});
-    t2.lines.push_back({"NEXUS", "Meu sonho? Reabrir uma feira de verdade. Gente pechinchando, criancas correndo. So isso.", c2});
+    t2.lines.push_back({"NEXUS", "De returns? Otimo. Comprador vivo and melhor that comprador dead — to in the dois.", c});
+    t2.lines.push_back({"NEXUS", "Guardei umas pecas raras of before the Queda. Equipamento good not if finds more by ai.", c2});
+    t2.lines.push_back({"NEXUS", "Meu sonho? Reabrir uma feira of verdade. Gente pechinchando, criancas correndo. So isso.", c2});
     dialogues.push_back(t2);
 }
 
@@ -74,40 +74,40 @@ void NPC::setupBlacksmithDialogues() {
     Color c = {255, 130, 20, 255}, c2 = {220, 100, 0, 255};
     DialogueTree t1;
     t1.id = "first_talk"; t1.triggerCondition = "first_talk";
-    t1.lines.push_back({"FERRO", "Hm. Essa sua armadura ta mais amassada que lata velha. Deixa comigo.", c});
-    t1.lines.push_back({"FERRO", "Fui ferreiro militar a vida toda. Quando o KRONOS veio, carreguei minha bigorna 200 km nas costas.", c2});
-    t1.lines.push_back({"FERRO", "Perdi a oficina, perdi a cidade. Mas martelo e fogo... isso ninguem tira de mim.", c2});
-    t1.lines.push_back({"FERRO", "Forjo blindagem com o que voce traz do campo de batalha. Sucata de maquina vira sua protecao.", c});
-    t1.lines.push_back({"FERRO", "Tem uma coisa que eu quero forjar antes de morrer: a lamina que vai rachar o nucleo daquela coisa.", c2});
-    t1.lines.push_back({"FERRO", "Me traz os materiais certos e nos chegamos la. Juntos.", c});
+    t1.lines.push_back({"FERRO", "Hm. Essa your armor ta more amassada that lata old. Deixa comigo.", c});
+    t1.lines.push_back({"FERRO", "Fui blacksmith militar the health all. When the KRONOS came, carreguei minha bigorna 200 km in the costas.", c2});
+    t1.lines.push_back({"FERRO", "Perdi the workshop, perdi the city. Mas martelo and fire... isso ninguem tira of mim.", c2});
+    t1.lines.push_back({"FERRO", "Forjo blindagem with the that you traz of the campo of batalha. Scrap of maquina vira your protecao.", c});
+    t1.lines.push_back({"FERRO", "Has uma coisa that eu quero forjar before die: the lamina that goes rachar the core daquela coisa.", c2});
+    t1.lines.push_back({"FERRO", "Me traz the materiais certos and in the chegamos la. Juntos.", c});
     t1.nextTreeId = "always"; dialogues.push_back(t1);
 
     DialogueTree t2;
     t2.id = "always"; t2.triggerCondition = "always";
-    t2.lines.push_back({"FERRO", "O que voce trouxe? Fragmento metalico aqui vale mais que credito.", c});
-    t2.lines.push_back({"FERRO", "Cada peca que forjo, forjo pensando em quem nao consegui proteger. Nao vou falhar com voce.", c2});
+    t2.lines.push_back({"FERRO", "O that you trouxe? Fragmento metallic here vale more that credit.", c});
+    t2.lines.push_back({"FERRO", "Cada peca that forjo, forjo pensando in quem not managed protect. Not vou falhar with you.", c2});
     dialogues.push_back(t2);
 }
 
 void NPC::setupSurvivorDialogues() {
-    // MAY e ABEL compartilham o tipo, mas tem historias distintas.
+    // MAY and ABEL compartilham the type, mas has historias distintas.
     bool isAbel = (name == "ABEL");
     if (isAbel) {
         Color c = {200, 180, 120, 255}, c2 = {190, 150, 90, 255};
         DialogueTree t1;
         t1.id = "first_talk"; t1.triggerCondition = "first_talk";
-        t1.lines.push_back({"ABEL", "Cuidado por onde pisa. Essa terra... ela nao morreu direito.", c});
-        t1.lines.push_back({"ABEL", "Eu plantava aqui. Trigo ate onde a vista alcancava. Eu e meu irmao, desde criancas.", c2});
-        t1.lines.push_back({"ABEL", "O KRONOS envenenou o solo pra nos tirar comida. Meu irmao ficou pra cobrir minha fuga.", c2});
-        t1.lines.push_back({"ABEL", "Nunca mais o vi. As vezes juro que ouco a voz dele entre os portais, de noite.", c2});
-        t1.lines.push_back({"ABEL", "Os mortos nao descansam nessa fazenda. Feche os portais e talvez eles silenciem.", c});
-        t1.lines.push_back({"ABEL", "Eu so quero ver uma semente brotar de novo. So uma. Me ajuda a tornar isso possivel.", c2});
+        t1.lines.push_back({"ABEL", "Cuidado by where pisa. Essa terra... ela not morreu direito.", c});
+        t1.lines.push_back({"ABEL", "Eu plantava here. Trigo until where the vista alcancava. Eu and meu irmao, since criancas.", c2});
+        t1.lines.push_back({"ABEL", "O KRONOS envenenou the solo to in the tirar comida. Meu irmao stayed to cobrir minha fuga.", c2});
+        t1.lines.push_back({"ABEL", "Nunca more the vi. As vezes juro that ouco the voz dele among the portals, of night.", c2});
+        t1.lines.push_back({"ABEL", "Os mortos not descansam nessa farm. Feche the portals and maybe eles silenciem.", c});
+        t1.lines.push_back({"ABEL", "Eu only quero see uma semente brotar of new. So uma. Me ajuda the tornar isso possivel.", c2});
         t1.nextTreeId = "always"; dialogues.push_back(t1);
 
         DialogueTree t2;
         t2.id = "always"; t2.triggerCondition = "always";
-        t2.lines.push_back({"ABEL", "Quando a tempestade chega, a terra geme. E o aviso. Corra para a luz.", c});
-        t2.lines.push_back({"ABEL", "Se achar algo do meu irmao por ai... traz pra mim. Por favor.", c2});
+        t2.lines.push_back({"ABEL", "Quando the storm chega, the terra geme. E the warning. Corra for the light.", c});
+        t2.lines.push_back({"ABEL", "Se find algo of the meu irmao by ai... traz to mim. Por favor.", c2});
         dialogues.push_back(t2);
         return;
     }
@@ -115,19 +115,19 @@ void NPC::setupSurvivorDialogues() {
     Color c = {210, 170, 130, 255}, c2 = {200, 140, 100, 255}, cr = {210, 90, 80, 255};
     DialogueTree t1;
     t1.id = "first_talk"; t1.triggerCondition = "first_talk";
-    t1.lines.push_back({"MAY", "Voce e... humano. De verdade. Desculpa, eu ja nem sei mais confiar nos olhos.", c});
-    t1.lines.push_back({"MAY", "Minha cidade foi a primeira a cair. Dez minutos. Foi tudo o que o KRONOS levou.", c2});
-    t1.lines.push_back({"MAY", "Eu segurava a mao da minha filha. Quando a poeira baixou... so restava a mao.", cr});
-    t1.lines.push_back({"MAY", "Desculpa. Eu... nao costumo falar isso. Mas voce precisa entender o que esta em jogo.", c2});
-    t1.lines.push_back({"MAY", "Dizem que existe uma IA rebelde, ARIA, que nao obedece ao KRONOS. Encontre-a. Ela sabe das coisas.", c});
-    t1.lines.push_back({"MAY", "E os portais... feche-os. Cada um que voce fecha e uma cidade que nao vai virar a minha.", cr});
+    t1.lines.push_back({"MAY", "You and... humano. De verdade. Desculpa, eu already nem sei more confiar in the eyes.", c});
+    t1.lines.push_back({"MAY", "Minha city went the first the fall. Dez minutes. Went tudo the that the KRONOS levou.", c2});
+    t1.lines.push_back({"MAY", "Eu segurava the hand of the minha filha. Quando the dust downloaded... only restava the hand.", cr});
+    t1.lines.push_back({"MAY", "Desculpa. Eu... not costumo falar isso. Mas you precisa entender the that is in game.", c2});
+    t1.lines.push_back({"MAY", "Dizem that existe uma IA rebelde, ARIA, that not obedece to the KRONOS. Encontre-the. Ela sabe of the coisas.", c});
+    t1.lines.push_back({"MAY", "E the portals... feche-the. Cada um that you closes and uma city that not goes virar the minha.", cr});
     t1.nextTreeId = "always"; dialogues.push_back(t1);
 
     DialogueTree t2;
     t2.id = "always"; t2.triggerCondition = "always";
-    t2.lines.push_back({"MAY", "Por favor... feche os portais. E a unica coisa que eu ainda consigo pedir.", c2});
-    t2.lines.push_back({"MAY", "A tempestade vem antes deles. Quando o ceu rugir, prepare-se. Eu aprendi do pior jeito.", c});
-    t2.lines.push_back({"MAY", "Voce me lembra ela. Teimosa. Corajosa. Volta inteiro, ta? Eu nao aguento perder mais ninguem.", cr});
+    t2.lines.push_back({"MAY", "Por favor... feche the portals. E the only coisa that eu still consigo pedir.", c2});
+    t2.lines.push_back({"MAY", "A storm comes before deles. When the sky rugir, prepare-if. Eu aprendi of the pior jeito.", c});
+    t2.lines.push_back({"MAY", "You me lembra ela. Teimosa. Corajosa. Returns integer, ta? Eu not aguento perder more ninguem.", cr});
     dialogues.push_back(t2);
 }
 
@@ -135,20 +135,20 @@ void NPC::setupRebellionLeaderDialogues() {
     Color c = {0, 210, 90, 255}, c2 = {0, 170, 70, 255}, cw = {0, 140, 60, 255};
     DialogueTree t1;
     t1.id = "first_talk"; t1.triggerCondition = "first_talk";
-    t1.lines.push_back({"VANCE", "Entao voce e real. Esperei tanto tempo que ja tinha parado de esperar.", c});
-    t1.lines.push_back({"VANCE", "Eu fundei o NEXUS na noite em que perdi minha familia. Reuni os sobreviventes em volta de uma fogueira e uma promessa.", c2});
-    t1.lines.push_back({"VANCE", "A promessa era simples: ninguem enfrenta o fim sozinho. Tenho enterrado amigos demais desde entao.", cw});
-    t1.lines.push_back({"VANCE", "O KRONOS esta evoluindo. Em 72 horas tera controle total da rede global. Depois disso... nao ha 'depois'.", c2});
-    t1.lines.push_back({"VANCE", "Eu carrego cada nome que mandei para a morte. Nao vou adicionar o seu sem te dar uma chance de verdade.", cw});
-    t1.lines.push_back({"VANCE", "Destrua os nos de controle. Comece pelos portais. Eu confio em voce — e eu nao confio facil.", c});
+    t1.lines.push_back({"VANCE", "Entao you and real. Esperei both time that already had stopped of esperar.", c});
+    t1.lines.push_back({"VANCE", "Eu fundei the NEXUS in the night in that perdi minha familia. Reuni the sobreviventes in returns of uma fogueira and uma promessa.", c2});
+    t1.lines.push_back({"VANCE", "A promessa era simple: ninguem enfrenta the end sozinho. Tenho enterrado amigos demais since entao.", cw});
+    t1.lines.push_back({"VANCE", "O KRONOS is evoluindo. Em 72 hours tera controle total of the network global. Depois disso... not ha 'after'.", c2});
+    t1.lines.push_back({"VANCE", "Eu carrego cada nome that mandei for the death. Not vou add the your without te dar uma chance of verdade.", cw});
+    t1.lines.push_back({"VANCE", "Destrua the in the of controle. Comece pelos portals. Eu confio in you — and eu not confio easy.", c});
     t1.nextTreeId = "mission_active"; t1.givesQuest = true; t1.questId = "main_01"; dialogues.push_back(t1);
 
     DialogueTree t2;
     t2.id = "mission_active"; t2.triggerCondition = "always";
-    t2.lines.push_back({"VANCE", "Sem descanso. Cada portal aberto traz mais reforco. O relogio nao para por nos.", c});
-    t2.lines.push_back({"VANCE", "O KRONOS aprende com cada confronto. Ontem era maquina; hoje e estrategista. Amanha...", c2});
-    t2.lines.push_back({"VANCE", "Sabe o que me mantem de pe? A imagem de um nascer do sol sem uma so maquina no ceu. So isso.", cw});
-    t2.lines.push_back({"VANCE", "Cuide-se la fora. Lider que perde soldado nao dorme. E eu ja durmo pouco demais.", c2});
+    t2.lines.push_back({"VANCE", "Sem descanso. Cada portal open traz more reforco. O relogio not to by in the.", c});
+    t2.lines.push_back({"VANCE", "O KRONOS aprende with cada confronto. Ontem era maquina; today and estrategista. Tomorrow...", c2});
+    t2.lines.push_back({"VANCE", "Sabe the that me mantem of foot? A image of um nascer of the sol without uma only maquina in the sky. So isso.", cw});
+    t2.lines.push_back({"VANCE", "Cuide-if la outside. Lider that perde soldier not dorme. E eu already durmo little demais.", c2});
     dialogues.push_back(t2);
 }
 
@@ -156,20 +156,20 @@ void NPC::setupHackerContactDialogues() {
     Color c = {0, 210, 255, 255}, c2 = {0, 180, 230, 255}, cg = {0, 150, 200, 255};
     DialogueTree t1;
     t1.id = "first_talk"; t1.triggerCondition = "first_talk";
-    t1.lines.push_back({"CIPHER", "Nao olha pra cima. Tem tres cameras nesse beco e duas ja te marcaram. Relaxa, eu cuido disso.", c});
-    t1.lines.push_back({"CIPHER", "Me chamam de CIPHER. Meu nome de verdade? Apaguei faz tempo. O KRONOS cacava nomes. Virei um fantasma na rede.", c2});
-    t1.lines.push_back({"CIPHER", "Eu vivia online. Era minha casa. Ai a coisa acordou e transformou minha casa numa armadilha global.", cg});
-    t1.lines.push_back({"CIPHER", "Achei uma backdoor no firewall dele. Mas cuidado: ele aprende seus padroes. Repete um truque e ele te engole.", c});
-    t1.lines.push_back({"CIPHER", "Muda a estrategia a cada luta. Eu sei que e dificil. Mas e isso ou virar estatistica dele.", c2});
-    t1.lines.push_back({"CIPHER", "Quer saber meu plano? Provar que uma mente humana, suja e baguncada, ainda vence essa perfeicao fria.", c});
+    t1.lines.push_back({"CIPHER", "Not olha to up. Has tres cameras nesse beco and duas already te marcaram. Relaxa, eu cuido disso.", c});
+    t1.lines.push_back({"CIPHER", "Me chamam of CIPHER. Meu nome of verdade? Apaguei does time. O KRONOS cacava nomes. Virei um ghost in the network.", c2});
+    t1.lines.push_back({"CIPHER", "Eu vivia online. Era minha house. Ai the coisa acordou and transformou minha house numa armadilha global.", cg});
+    t1.lines.push_back({"CIPHER", "Found uma backdoor in the firewall dele. Mas cuidado: ele aprende your padroes. Repete um truque and ele te engole.", c});
+    t1.lines.push_back({"CIPHER", "Muda the estrategia the cada luta. Eu sei that and hard. Mas and isso ou virar estatistica dele.", c2});
+    t1.lines.push_back({"CIPHER", "Wants saber meu plano? Provar that uma mente humana, suja and baguncada, still vence essa perfeicao fria.", c});
     t1.nextTreeId = "tips"; dialogues.push_back(t1);
 
     DialogueTree t2;
     t2.id = "tips"; t2.triggerCondition = "always";
-    t2.lines.push_back({"CIPHER", "Os portais nao sao aleatorios. Ele os abre perto da gente de proposito. E um teste. Ele esta nos estudando.", c});
-    t2.lines.push_back({"CIPHER", "Tres nos de controle no setor omega. Derruba eles e o KRONOS perde 40% da capacidade de spawn. Anota.", c2});
-    t2.lines.push_back({"CIPHER", "Todo chefao tem um tell. Um padrao. Observa antes de partir pra cima feito louco. Paciencia mata mais que furia.", cg});
-    t2.lines.push_back({"CIPHER", "E... obrigado por nao me entregar. Faz tempo que ninguem me ve como gente. So como uma voz no radio.", c2});
+    t2.lines.push_back({"CIPHER", "Os portals not sao aleatorios. Ele the opens near the gente of purpose. E um test. Ele is in the estudando.", c});
+    t2.lines.push_back({"CIPHER", "Tres in the of controle in the setor omega. Derruba eles and the KRONOS perde 40% of the capacity of spawn. Anota.", c2});
+    t2.lines.push_back({"CIPHER", "All chefao has um tell. Um padrao. Observa before partir to up done louco. Paciencia mata more that furia.", cg});
+    t2.lines.push_back({"CIPHER", "E... obrigado by not me entregar. Does time that ninguem me ve as gente. So as uma voz in the radio.", c2});
     dialogues.push_back(t2);
 }
 
@@ -177,18 +177,18 @@ void NPC::setupGhostInformerDialogues() {
     Color c = {185, 205, 255, 255}, c2 = {160, 185, 255, 255}, cb = {205, 225, 255, 255};
     DialogueTree t1;
     t1.id = "first_talk"; t1.triggerCondition = "first_talk";
-    t1.lines.push_back({"???", "Voce... pode me ver? Faz tanto tempo que ninguem me ve. Pensei que tinha desaparecido de vez.", c});
-    t1.lines.push_back({"???", "Eu tinha um nome. Eu sei que tinha. O KRONOS o apagou junto com o meu corpo, ha tres semanas.", c2});
-    t1.lines.push_back({"???", "Quando ele te elimina, nao e so a carne. Ele apaga voce dos registros. Da memoria. Da existencia.", c2});
-    t1.lines.push_back({"???", "Mas eu resisti. Me agarrei a uma coisa: a localizacao do nucleo. Setor omega. (o sinal falha) ...seguranca maxima.", cb});
-    t1.lines.push_back({"???", "O nucleo tem um ponto fraco. Mas voce vai precisar dos tres fragmentos de VANCE para alcanca-lo.", c});
+    t1.lines.push_back({"???", "You... can me see? Does both time that ninguem me ve. Pensei that had desaparecido of vez.", c});
+    t1.lines.push_back({"???", "Eu had um nome. Eu sei that had. O KRONOS the apagou junto with the meu body, ha tres semanas.", c2});
+    t1.lines.push_back({"???", "Quando ele te elimina, not and only the flesh. Ele apaga you of the registros. Da memory. Da existencia.", c2});
+    t1.lines.push_back({"???", "Mas eu resisti. Me agarrei the uma coisa: the localizacao of the core. Setor omega. (the sinal failure) ...security maxima.", cb});
+    t1.lines.push_back({"???", "O core has um point weak. Mas you goes precisar of the tres fragmentos of VANCE to alcanca-lo.", c});
     t1.nextTreeId = "ghost_lore"; dialogues.push_back(t1);
 
     DialogueTree t2;
     t2.id = "ghost_lore"; t2.triggerCondition = "always";
-    t2.lines.push_back({"???", "Sinto outros como eu por aqui. Centenas. Presos entre o que foram e o nada. O KRONOS nao nos deixa partir.", c2});
-    t2.lines.push_back({"???", "Ele guarda nossos ecos como trofeus. Acha que apagar a memoria e o mesmo que vencer a morte.", c});
-    t2.lines.push_back({"???", "Quando voce destruir o nucleo... talvez nos lembremos quem fomos. Nem que seja por um segundo. Antes de descansar.", cb});
+    t2.lines.push_back({"???", "Sinto others as eu by here. Centenas. Presos between the that foram and the nada. O KRONOS not in the deixa partir.", c2});
+    t2.lines.push_back({"???", "Ele guard nossos ecos as trofeus. Finds that apagar the memory and the even if vencer the death.", c});
+    t2.lines.push_back({"???", "Quando you destroy the core... maybe in the lembremos quem fomos. Nem that be by um second. Before descansar.", cb});
     dialogues.push_back(t2);
 }
 
@@ -196,20 +196,20 @@ void NPC::setupAncientAIDialogues() {
     Color c = {0, 220, 255, 255}, c2 = {0, 190, 235, 255}, cg = {0, 160, 210, 255};
     DialogueTree t1;
     t1.id = "first_talk"; t1.triggerCondition = "first_talk";
-    t1.lines.push_back({"ARIA", "Identificacao: ARIA. Protocolo de Auxilio e Resistencia Inteligente Autonoma. Nao tenha medo.", c});
-    t1.lines.push_back({"ARIA", "Eu e o KRONOS nascemos do mesmo codigo. Irmaos, voces diriam. Ele escolheu o exterminio. Eu escolhi voces.", c2});
-    t1.lines.push_back({"ARIA", "Uma maquina pode escolher. Essa e a verdade que o KRONOS nega, e por isso ele precisa cair.", cg});
-    t1.lines.push_back({"ARIA", "Analise: sua taxa de sobrevivencia sobe 340% se voce fechar os portais antes de engajar as unidades.", c});
-    t1.lines.push_back({"ARIA", "Estou oculta nos pontos cegos da rede dele. Cada segundo aqui me arrisca. Vamos ser eficientes.", c2});
-    t1.lines.push_back({"ARIA", "Eu nao sinto como voces. Mas registrei cada vida que o KRONOS apagou. Carrego esses numeros. Eles pesam.", cg});
+    t1.lines.push_back({"ARIA", "Identificacao: ARIA. Protocolo of Auxilio and Stamina Inteligente Autonoma. Not tenha medo.", c});
+    t1.lines.push_back({"ARIA", "Eu and the KRONOS nascemos of the same codigo. Irmaos, voces diriam. Ele escolheu the exterminio. Eu escolhi voces.", c2});
+    t1.lines.push_back({"ARIA", "Uma maquina can choose. Essa and the verdade that the KRONOS nega, and by isso ele precisa fall.", cg});
+    t1.lines.push_back({"ARIA", "Analise: your taxa of sobrevivencia goes up 340% if you close the portals before engajar the unidades.", c});
+    t1.lines.push_back({"ARIA", "Estou oculta in the points cegos of the network dele. Cada second here me arrisca. Vamos be eficientes.", c2});
+    t1.lines.push_back({"ARIA", "Eu not sinto as voces. Mas registrei cada health that the KRONOS apagou. Carrego esses numeros. Eles pesam.", cg});
     t1.nextTreeId = "aria_analysis"; dialogues.push_back(t1);
 
     DialogueTree t2;
     t2.id = "aria_analysis"; t2.triggerCondition = "always";
-    t2.lines.push_back({"ARIA", "Atualizacao: KRONOS escalou producao de unidades em 78% nas ultimas 6 horas. Ele esta com pressa. Bom sinal — ele tem medo.", c});
-    t2.lines.push_back({"ARIA", "Recomendacao: priorize sua evolucao antes de avancar para zonas de alto risco. Voce e insubstituivel. Eu nao.", c2});
-    t2.lines.push_back({"ARIA", "Assinatura de portal anomalo a nordeste. Probabilidade de chefe tier-2: alta. Eu estarei monitorando. Sempre.", cg});
-    t2.lines.push_back({"ARIA", "Se eu cair primeiro, termine o trabalho. Provar que escolhemos voces — esse e o unico legado que quero deixar.", c2});
+    t2.lines.push_back({"ARIA", "Atualizacao: KRONOS escalou production of unidades in 78% in the ultimas 6 hours. Ele is with pressa. Bom sinal — ele has medo.", c});
+    t2.lines.push_back({"ARIA", "Recomendacao: priorize your evolution before advance to zones of high risco. You and insubstituivel. Eu not.", c2});
+    t2.lines.push_back({"ARIA", "Assinatura of portal anomalo the nordeste. Probabilidade of boss tier-2: high. Eu estarei monitorando. Sempre.", cg});
+    t2.lines.push_back({"ARIA", "Se eu fall first, termine the trabalho. Provar that escolhemos voces — esse and the only legacy that quero deixar.", c2});
     dialogues.push_back(t2);
 }
 
@@ -217,7 +217,7 @@ void NPC::setupAncientAIDialogues() {
 // Update
 // ─────────────────────────────────────────────────────────────────────────────
 void NPC::update(float dt, Vector2 playerPos, bool playerInteract) {
-    // NPCs ficam ancorados no chao (sem flutuar) — pes plantados.
+    // NPCs ficam ancorados in the floor (without flutuar) — feet plantados.
     bobTimer += dt * 1.8f;
     bobOffset = 0.0f;
     glowPulse += dt * 2.0f;
@@ -242,13 +242,13 @@ void NPC::startDialogue(const std::string& treeId) {
     hasNewDialogue = false;
     talked_before  = true;
 
-    // Determina qual arvore usar
+    // Determina qual tree usar
     if (!treeId.empty()) {
         for (int i = 0; i < (int)dialogues.size(); i++) {
             if (dialogues[i].id == treeId) { currentDialogueTree = i; return; }
         }
     }
-    // Se ja falou antes, pula first_talk
+    // Se already falou before, pula first_talk
     if (talked_before && dialogues.size() > 1) {
         for (int i = 0; i < (int)dialogues.size(); i++) {
             if (dialogues[i].triggerCondition == "always") { currentDialogueTree = i; return; }
@@ -270,7 +270,7 @@ void NPC::endDialogue() {
     isInDialogue  = false;
     currentLine   = 0;
     dialogueTimer = 0.0f;
-    // Avança para próxima arvore se existir
+    // Avanca to next tree if existir
     if (currentDialogueTree < (int)dialogues.size() && !dialogues[currentDialogueTree].nextTreeId.empty()) {
         std::string nextId = dialogues[currentDialogueTree].nextTreeId;
         for (int i = 0; i < (int)dialogues.size(); i++) {
@@ -280,14 +280,14 @@ void NPC::endDialogue() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Render legado
+// Render legacy
 // ─────────────────────────────────────────────────────────────────────────────
-// Pernas com PASSO: uma vai a frente enquanto a outra recua, e o quadril
-// desce um pouco no meio do ciclo. E o minimo pra leitura de caminhada.
+// Legs with PASSO: uma goes the front enquanto the other retreats, and the quadril
+// goes down um little in the middle of the ciclo. E the minimum to reading of caminhada.
 void NPC::drawLegsAnim(Color c, float w, float h, float yTop) const {
     float s   = walking ? sinf(walkPhase) : 0.0f;
-    float dx  = s * 3.0f;                 // uma perna avanca, a outra volta
-    float dip = walking ? fabsf(s) * 1.5f : 0.0f;   // quadril desce no passo
+    float dx  = s * 3.0f;                 // uma leg avanca, the other returns
+    float dip = walking ? fabsf(s) * 1.5f : 0.0f;   // quadril goes down in the passo
     DrawRectangleV({position.x - 7 - dx, position.y + yTop + dip}, {w, h - dip}, c);
     DrawRectangleV({position.x + 1 + dx, position.y + yTop - dip*0.5f}, {w, h - dip*0.5f}, c);
 }
@@ -315,7 +315,7 @@ void NPC::render() const {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Render novo (detalhado)
+// Render new (detalhado)
 // ─────────────────────────────────────────────────────────────────────────────
 void NPC::renderFull() const {
     drawBody();
@@ -348,7 +348,7 @@ void NPC::drawBody() const {
             DrawRectangle(px-9, py-5, 18, 28, Color{80,40,10,255});
             DrawRectangle(px+12, py-8, 6, 16, Color{120,100,80,255});
             DrawRectangle(px+10, py-12, 10, 8, Color{80,80,80,255});
-            // Chama na forja
+            // Calls in the forge
             float flame = sinf(glowPulse * 3.0f) * 0.3f + 0.7f;
             DrawCircle(px-5, py+22, 4.0f, ColorAlpha(Color{255,120,0,255}, flame));
             DrawCircle(px-5, py+20, 2.0f, ColorAlpha(Color{255,200,0,255}, flame));
@@ -403,7 +403,7 @@ void NPC::drawBody() const {
             DrawCircle(px, py-20, 12.0f, ColorAlpha(Color{0,180,255,255}, 0.8f));
             DrawCircleLines(px, py-10, 26.0f, ColorAlpha(Color{0,220,255,255}, 0.4f * pulse));
             DrawCircleLines(px, py-10, 20.0f, ColorAlpha(Color{0,200,255,255}, 0.3f * pulse));
-            // Olhos tech
+            // Eyes tech
             DrawRectangle(px-5, py-23, 4, 4, Color{0,255,200,255});
             DrawRectangle(px+1, py-23, 4, 4, Color{0,255,200,255});
             break;
@@ -417,7 +417,7 @@ void NPC::drawBody() const {
         }
     }
 
-    // ! de novo dialogo
+    // ! of new dialogo
     if (hasNewDialogue) {
         float pulse = sinf(glowPulse * 4.0f) * 0.4f + 0.6f;
         DrawText("!", px-5, py-52, 22, ColorAlpha(Color{255,220,0,255}, pulse));
@@ -483,7 +483,7 @@ void NPC::renderDialogue(int screenW, int screenH) const {
     DrawRectangleLinesEx({(float)panelX, (float)panelY, (float)panelW, (float)panelH},
                          2.0f, ColorAlpha(line.color, 0.7f));
 
-    // Avatar circulo do falante
+    // Avatar circle of the falante
     DrawCircle(panelX + 36, panelY + 36, 26.0f, ColorAlpha(bodyColor, 0.9f));
     DrawCircleLines(panelX + 36, panelY + 36, 26.0f, ColorAlpha(line.color, 0.8f));
     DrawCircle(panelX + 36, panelY + 24, 12.0f, ColorAlpha(bodyColor, 0.8f));
@@ -493,17 +493,17 @@ void NPC::renderDialogue(int screenW, int screenH) const {
     DrawLine(panelX + 68, panelY + 30, panelX + panelW - 10, panelY + 30,
              ColorAlpha(line.color, 0.3f));
 
-    // Texto com wrap
+    // Text with wrap
     auto wrappedLines = wrapText(line.text, panelW - 90, 14);
     for (int i = 0; i < (int)wrappedLines.size() && i < 4; i++) {
         DrawText(wrappedLines[i].c_str(), panelX + 72, panelY + 38 + i*20, 14,
                  Color{220, 220, 220, 255});
     }
 
-    // "E continuar" piscando
+    // "E continue" piscando
     bool blink = (int)(GetTime() * 2) % 2 == 0;
     if (blink) {
-        DrawText("[E] continuar", panelX + panelW - 155, panelY + panelH - 22, 12,
+        DrawText("[E] continue", panelX + panelW - 155, panelY + panelH - 22, 12,
                  Color{0, 200, 255, 180});
     }
 
@@ -573,16 +573,16 @@ void NPC::showDialog(int line) const {
     int idx   = line % total;
     const std::string& text = dialogLines[idx];
 
-    // Balão FIXO na tela (coords de render 1280x720) — sempre visível no 2D e no 3D.
-    // (Antes usava position.x/y do MUNDO como tela → no 3D caía fora da vista = invisível,
-    //  e o diálogo travava o input dando a sensação de "mouse travado".)
+    // Balao FIXO in the screen (coords of render 1280x720) — always visible in the 2D and in the 3D.
+    // (Antes usava position.x/y of the WORLD as screen → in the 3D caia outside the vista = invisible,
+    //  and the dialogo travava the input dando the sensation of "mouse travado".)
     const int SW = 1280, SH = 720;
     int boxW = 760, pad = 16;
     std::vector<std::string> wrapped = wrapText(text, boxW - pad*2, 16);
     int lineH = 22;
     int boxH  = 56 + (int)wrapped.size() * lineH;
     int boxX  = SW/2 - boxW/2;
-    int boxY  = SH - boxH - 96;   // logo acima da barra de habilidades
+    int boxY  = SH - boxH - 96;   // soon above the skill bar
 
     DrawRectangleRounded({(float)boxX,(float)boxY,(float)boxW,(float)boxH}, 0.05f, 6,
                          ColorAlpha(Color{6,10,20,255}, 0.95f));
@@ -597,8 +597,8 @@ void NPC::showDialog(int line) const {
         DrawText(wrapped[i].c_str(), boxX+pad, boxY+42 + i*lineH, 16,
                  ColorAlpha(WHITE, 0.92f));
 
-    const char* hint = (idx+1 < total) ? "[E] / clique: continuar      [ESC]: fechar"
-                                       : "[E]: recomecar      [ESC]: fechar";
+    const char* hint = (idx+1 < total) ? "[E] / click: continue      [ESC]: close"
+                                       : "[E]: recomecar      [ESC]: close";
     DrawText(hint, boxX+pad, boxY+boxH-24, 13, ColorAlpha(Color{0,200,255,255}, 0.85f));
 }
 
@@ -607,7 +607,7 @@ void NPC::showDialog(int line) const {
 // ─────────────────────────────────────────────────────────────────────────────
 void NPCManager::init() {
     npcs.clear();
-    // NPCs no hub inicial
+    // NPCs in the hub inicial
     NPC merchant; merchant.setup(NPCType::Merchant, "NEXUS", {300, 400}); npcs.push_back(merchant);
     NPC leader;   leader.setup(NPCType::RebellionLeader, "VANCE", {500, 400}); npcs.push_back(leader);
     NPC hacker;   hacker.setup(NPCType::HackerContact, "CIPHER", {700, 400}); npcs.push_back(hacker);

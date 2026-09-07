@@ -4,12 +4,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
-#include <nlohmann/json.hpp>   // vendored em third_party/nlohmann/json.hpp
+#include <nlohmann/json.hpp>   // vendored in third_party/nlohmann/json.hpp
 
 // ── Parsing JSON (nlohmann/json) ─────────────────────────────────────────────
-// Mesmos defaults do parser manual anterior: chave ausente ou com tipo
+// Same defaults of the parser manual previous: chave ausente ou with type
 // inesperado vira "" / 0. Respostas invalidas (parse falho) viram um json
-// "discarded" sem chaves — o efeito e o mesmo de nao achar as chaves no corpo.
+// "discarded" without chaves — the effect and the same of not find the chaves in the body.
 namespace {
 
 nlohmann::json jParse(const std::string& body) {
@@ -26,12 +26,12 @@ double jNum(const nlohmann::json& j, const char* key) {
     return (it != j.end() && it->is_number()) ? it->get<double>() : 0.0;
 }
 
-// Extrai um array de strings (ex.: "inventory") — ignora elementos nao-string.
+// Extrai um array of strings (ex.: "inventory") — ignora elementos not-string.
 std::vector<std::string> jStrArray(const nlohmann::json& j, const char* key) {
     std::vector<std::string> out;
     auto it = j.find(key);
     if (it != j.end() && it->is_array())
-        for (const auto& e : *it) if (e.is_string()) out.push_back(e.get<std::string>());
+        for (const auto& and : *it) if (and.is_string()) out.push_back(and.get<std::string>());
     return out;
 }
 
@@ -39,7 +39,7 @@ std::vector<std::string> jStrArray(const nlohmann::json& j, const char* key) {
 
 // ── RAII helpers ─────────────────────────────────────────────────────────────
 
-// Garante que busy_ volte a false mesmo se a lambda lançar exceção.
+// Ensures that busy_ volte the false same if the lambda throw exception.
 struct BusyGuard {
     std::atomic<bool>* flag;
     explicit BusyGuard(std::atomic<bool>* f) : flag(f) {}
@@ -50,13 +50,13 @@ struct BusyGuard {
 
 void StoreClient::startThread(std::thread&& t) {
     std::lock_guard<std::mutex> lk(mtx_);
-    // Tenta dar join em threads que já terminaram para não acumular handles.
+    // Tenta dar join in threads that already terminaram to not acumular handles.
     for (auto& th : threads_) {
         if (th.joinable()) {
-            // Não podemos verificar se terminou sem C++20; como as operações
-            // são curtas (timeout 5s), fazemos join não-bloqueante não é padrão.
-            // Optamos por manter join no destrutor e, aqui, apenas garantir
-            // que não re-adicionamos sem necessidade. Nenhuma ação extra.
+            // Not podemos check if ended without C++20; as the operacoes
+            // are curtas (timeout 5s), fazemos join not-bloqueante not is padrao.
+            // Optamos by manter join in the destrutor and, here, only ensure
+            // that not re-adicionamos without necessidade. Nenhuma acao extra.
         }
     }
     threads_.emplace_back(std::move(t));
@@ -91,33 +91,33 @@ std::string StoreClient::token() const {
 // ── login: POST /auth/login {email,password} -> {token,id,name} ───────────────
 void StoreClient::loginAsync(const std::string& email, const std::string& password) {
     std::string h = host; int p = port;
-    std::string em = email; std::string pw = password;
+    std::string in = email; std::string pw = password;
     bool tls = useTls; std::string pre = apiPrefix;
     activeThreads_.fetch_add(1);
-    startThread(std::thread([this, h, p, tls, pre, em, pw]() {
-        std::string body = nlohmann::json{{"email", em}, {"password", pw}}.dump();
+    startThread(std::thread([this, h, p, tls, pre, in, pw]() {
+        std::string body = nlohmann::json{{"email", in}, {"password", pw}}.dump();
         HttpResponse r = HttpClient::post(h, p, pre + "/auth/login", body, "", tls);
         if (r.status == 200) {
             nlohmann::json j = jParse(r.body);
             std::string tok = jStr(j, "token"), id = jStr(j, "id");
             { std::lock_guard<std::mutex> lk(mtx_); token_ = tok; playerId_ = id; }
             logged_ = true;
-            setMsg("Conectado a Cyber Station");
-            // Logo apos o login, busca o saldo de gems / inventario.
+            setMsg("Conectado the Cyber Station");
+            // Logo after the login, busca the saldo of gems / inventory.
             HttpResponse me = HttpClient::get(h, p, pre + "/me", tok, tls);
             if (me.status == 200) {
                 double g = jNum(jParse(me.body), "gems");
                 std::lock_guard<std::mutex> lk(mtx_); gems_ = (int)g;
             }
         } else {
-            setMsg(r.status == 0 ? "Backend offline (loja premium indisponivel)"
-                                 : "Credenciais invalidas (registre-se no servidor)");
+            setMsg(r.status == 0 ? "Backend offline (shop premium unavailable)"
+                                 : "Credenciais invalidas (registre-if in the server)");
         }
         activeThreads_.fetch_sub(1);
     }));
 }
 
-// ── catálogo: GET /store -> {gemPacks:[...], items:[...]} ─────────────────────
+// ── catalog: GET /store -> {gemPacks:[...], items:[...]} ─────────────────────
 void StoreClient::fetchStoreAsync() {
     std::string h = host; int p = port;
     bool tls = useTls; std::string pre = apiPrefix;
@@ -130,28 +130,28 @@ void StoreClient::fetchStoreAsync() {
             nlohmann::json j = jParse(r.body);
             auto itemsArr = j.find("items");
             if (itemsArr != j.end() && itemsArr->is_array()) {
-                for (const auto& o : *itemsArr) {
-                    if (!o.is_object()) continue;
+                for (const auto& the : *itemsArr) {
+                    if (!the.is_object()) continue;
                     PremiumItem it;
-                    it.id = jStr(o, "id"); it.name = jStr(o, "name");
-                    it.type = jStr(o, "type"); it.gems = (int)jNum(o, "gems");
+                    it.id = jStr(the, "id"); it.name = jStr(the, "name");
+                    it.type = jStr(the, "type"); it.gems = (int)jNum(the, "gems");
                     if (!it.id.empty()) its.push_back(it);
                 }
             }
             auto packsArr = j.find("gemPacks");
             if (packsArr != j.end() && packsArr->is_array()) {
-                for (const auto& o : *packsArr) {
-                    if (!o.is_object()) continue;
+                for (const auto& the : *packsArr) {
+                    if (!the.is_object()) continue;
                     GemPack gp;
-                    gp.id = jStr(o, "id"); gp.gems = (int)jNum(o, "gems");
-                    gp.priceBRL = jNum(o, "priceBRL");
+                    gp.id = jStr(the, "id"); gp.gems = (int)jNum(the, "gems");
+                    gp.priceBRL = jNum(the, "priceBRL");
                     if (!gp.id.empty()) pks.push_back(gp);
                 }
             }
             { std::lock_guard<std::mutex> lk(mtx_); items_ = its; packs_ = pks; }
-            setMsg("Catalogo da loja carregado");
+            setMsg("Catalogo of the shop loaded");
         } else {
-            setMsg(r.status == 0 ? "Backend offline" : "Falha ao carregar a loja");
+            setMsg(r.status == 0 ? "Backend offline" : "Failure to the load the shop");
         }
         activeThreads_.fetch_sub(1);
     }));
@@ -176,9 +176,9 @@ void StoreClient::refreshAsync() {
     }));
 }
 
-// ── compra com gems: POST /store/buy-item {itemId} (servidor valida saldo) ────
+// ── purchase with gems: POST /store/buy-item {itemId} (server valid saldo) ────
 void StoreClient::buyItemAsync(const std::string& itemId) {
-    if (!logged_.load()) { setMsg("Faca login na loja primeiro"); return; }
+    if (!logged_.load()) { setMsg("Faca login in the shop first"); return; }
     if (busy_.exchange(true)) return;
     std::string h = host; int p = port; std::string tok, id = itemId;
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
@@ -197,15 +197,15 @@ void StoreClient::buyItemAsync(const std::string& itemId) {
         } else if (r.status == 402) {
             setMsg("Gems insuficientes");
         } else {
-            setMsg(r.status == 0 ? "Backend offline" : "Falha na compra");
+            setMsg(r.status == 0 ? "Backend offline" : "Failure in the purchase");
         }
         activeThreads_.fetch_sub(1);
     }));
 }
 
-// ── comprar gems: POST /store/buy-gems {packId} -> abre Stripe Checkout ───────
+// ── buy gems: POST /store/buy-gems {packId} -> opens Stripe Checkout ───────
 void StoreClient::buyGemsAsync(const std::string& packId) {
-    if (!logged_.load()) { setMsg("Faca login na loja primeiro"); return; }
+    if (!logged_.load()) { setMsg("Faca login in the shop first"); return; }
     if (busy_.exchange(true)) return;
     std::string h = host; int p = port; std::string tok, id = packId;
     { std::lock_guard<std::mutex> lk(mtx_); tok = token_; }
@@ -219,12 +219,12 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
             std::string url = jStr(jParse(r.body), "url");
             if (!url.empty()) {
                 HttpClient::openBrowser(url);
-                setMsg("Abrindo pagamento seguro (Stripe)...");
+                setMsg("Abrindo payment safe (Stripe)...");
             } else {
-                setMsg("Configure STRIPE_SECRET_KEY no servidor p/ pagamento real");
+                setMsg("Configure STRIPE_SECRET_KEY in the server p/ payment real");
             }
         } else {
-            setMsg(r.status == 0 ? "Backend offline" : "Falha ao iniciar pagamento");
+            setMsg(r.status == 0 ? "Backend offline" : "Failure to the start payment");
         }
         activeThreads_.fetch_sub(1);
     }));
@@ -232,8 +232,8 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
 
 
 StoreClient::~StoreClient() {
-    // Aguarda o término de todas as threads de rede antes de destruir membros
-    // compartilhados (mutex/strings) — evita use-after-free no encerramento.
+    // Aguarda the termino of all the threads of network before destroy membros
+    // compartilhados (mutex/strings) — evita use-after-free in the encerramento.
     std::vector<std::thread> toJoin;
     { std::lock_guard<std::mutex> lk(mtx_); toJoin.swap(threads_); }
     for (auto& th : toJoin) if (th.joinable()) th.join();

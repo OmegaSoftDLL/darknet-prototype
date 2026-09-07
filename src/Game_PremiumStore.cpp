@@ -1,19 +1,19 @@
-// Game_PremiumStore.cpp — loja premium (gems / Stripe via backend Node).
-// Extraido de Game.cpp. Mesma classe Game.
+// Game_PremiumStore.cpp — premium shop (gems / Stripe via Node backend).
+// Extracted from Game.cpp. Same class Game.
 #include "Game.h"
 #include <raylib.h>
 #include <string>
 #include <cstdlib>
 
-// ─── Loja Premium (Gems / Stripe via backend Node) ───────────────────────────
+// ─── Shop Premium (Gems / Stripe via backend Node) ───────────────────────────
 
-// Endpoint da API REST. Default: direto no game-server local (dev, porta 9000,
-// sem TLS). Em produção aponte DARKNET_API_URL para o gateway nginx — o cliente
-// passa a usar o prefixo /api (o nginx re-mapeia /api/* -> game-server) e TLS
-// quando a URL for https://. O WebSocket usa DARKNET_WS_URL (ver Game_Network).
+// REST API endpoint. Default: directly to the local game server (dev, port 9000,
+// in the TLS). In production point DARKNET_API_URL to the nginx gateway — the client
+// will use the /api prefix (nginx re-maps /api/* -> game-server) and TLS when the
+// URL is https://. WebSocket uses DARKNET_WS_URL (see Game_Network).
 static void applyApiConfig(StoreClient& store) {
     const char* raw = getenv("DARKNET_API_URL");
-    if (!raw || !*raw) return;   // default: dev local direto
+    if (!raw || !*raw) return;   // default: dev local direct
     std::string u = raw;
     const bool tls = (u.rfind("https://", 0) == 0);
     if (!tls && u.rfind("http://", 0) != 0) return;
@@ -36,28 +36,28 @@ void Game::startStore() {
     if (storeStarted) return;
     storeStarted = true;
     applyApiConfig(store);
-    // Auth real: usa DARKNET_LOGIN_EMAIL/PASSWORD se definidas; senao, credenciais
-    // dummy. A loja premium so funciona apos registro real no servidor.
+    // Real auth: uses DARKNET_LOGIN_EMAIL/PASSWORD if set; otherwise dummy
+    // credentials. The premium shop only works after real registration on the server.
     const char* envEmail = getenv("DARKNET_LOGIN_EMAIL");
     const char* envPass  = getenv("DARKNET_LOGIN_PASSWORD");
     std::string email = envEmail ? envEmail : "player@darknet.local";
     std::string pass  = envPass  ? envPass  : "dummy123";
-    store.loginAsync(email, pass); // login -> token + saldo
-    store.fetchStoreAsync();                                // catalogo de itens/packs
+    store.loginAsync(email, pass); // login -> token + balance
+    store.fetchStoreAsync();                                // catalog of items/packs
 }
 
 void Game::updatePremiumStore(float dt) {
-    // Atualiza o saldo de gems periodicamente quando logado.
+    // Updates the gem balance periodically when logged in.
     storeRefreshT -= dt;
     if (store.loggedIn() && storeRefreshT <= 0.0f) {
         storeRefreshT = 8.0f;
         store.refreshAsync();
     }
 
-    // A aba premium só faz sentido com a loja do NPC aberta.
+    // The premium tab only makes sense while the NPC shop is open.
     if (!shopSystem.open) { premiumView = false; return; }
 
-    if (IsKeyPressed(KEY_P)) premiumView = !premiumView;   // P = alterna aba premium
+    if (IsKeyPressed(KEY_P)) premiumView = !premiumView;   // P = toggle premium tab
     if (!premiumView) return;
 
     auto items = store.items();
@@ -67,10 +67,10 @@ void Game::updatePremiumStore(float dt) {
         if (IsKeyPressed(KEY_UP))   premiumSel = (premiumSel - 1 + n) % n;
         premiumSel = (premiumSel % (n > 0 ? n : 1));
         if (IsKeyPressed(KEY_ENTER) && premiumSel < n)
-            store.buyItemAsync(items[premiumSel].id);  // servidor valida saldo
+            store.buyItemAsync(items[premiumSel].id);  // server validates balance
     }
 
-    // Comprar gems (abre Stripe Checkout no navegador). Teclas 1..4 = packs.
+    // Buy gems (opens Stripe Checkout in browser). Keys 1..4 = packs.
     auto packs = store.packs();
     for (int i = 0; i < (int)packs.size() && i < 4; ++i)
         if (IsKeyPressed(KEY_ONE + i)) store.buyGemsAsync(packs[i].id);
@@ -79,9 +79,9 @@ void Game::updatePremiumStore(float dt) {
 void Game::drawPremiumStore() const {
     if (!shopSystem.open) return;
 
-    // Dica para abrir a aba premium quando a loja comum está aberta.
+    // Hint to open the premium tab when the regular shop is open.
     if (!premiumView) {
-        const char* hint = "[P]  LOJA PREMIUM (Gems)";
+        const char* hint = "[P]  PREMIUM SHOP (Gems)";
         int w = MeasureText(hint, 16);
         DrawRectangle(screenWidth/2 - w/2 - 10, 34, w + 20, 24, ColorAlpha(BLACK, 0.7f));
         DrawText(hint, screenWidth/2 - w/2, 38, 16, Color{225,120,255,255});
@@ -95,15 +95,15 @@ void Game::drawPremiumStore() const {
     DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, 0.55f));
     DrawPanel(px, py, pw, ph, C_mag, 0.95f);
 
-    DrawText("LOJA PREMIUM", px + 18, py + 14, 24, C_mag);
+    DrawText("PREMIUM SHOP", px + 18, py + 14, 24, C_mag);
     DrawText(TextFormat("GEMS: %d", store.gems()),
              px + pw - MeasureText(TextFormat("GEMS: %d", store.gems()), 18) - 18,
              py + 18, 18, C_mag);
-    DrawText(store.loggedIn() ? "[P] voltar  [SETAS] escolher  [ENTER] comprar  [1-4] comprar gems"
-                              : "Conectando ao servidor da loja...",
+    DrawText(store.loggedIn() ? "[P] return  [ARROWS] choose  [ENTER] buy  [1-4] buy gems"
+                              : "Connecting to the shop server...",
              px + 18, py + 46, 11, ColorAlpha(WHITE, 0.6f));
 
-    // Itens premium
+    // Premium items
     auto items = store.items();
     int y = py + 78;
     for (int i = 0; i < (int)items.size(); ++i) {
@@ -112,15 +112,15 @@ void Game::drawPremiumStore() const {
         if (sel) DrawRectangle(px + 12, y - 2, pw - 24, 26, ColorAlpha(C_mag, 0.18f));
         DrawText(items[i].name.c_str(), px + 20, y, 16,
                  owned ? ColorAlpha(WHITE, 0.4f) : WHITE);
-        const char* tag = owned ? "ADQUIRIDO" : TextFormat("%d gems", items[i].gems);
+        const char* tag = owned ? "OWNED" : TextFormat("%d gems", items[i].gems);
         DrawText(tag, px + pw - MeasureText(tag, 14) - 20, y + 1, 14,
                  owned ? C_cyan : C_mag);
         y += 28;
     }
 
-    // Packs de gems
+    // Gem packs
     y += 10;
-    DrawText("COMPRAR GEMS (pagamento seguro - Stripe):", px + 18, y, 13, C_cyan);
+    DrawText("BUY GEMS (secure payment - Stripe):", px + 18, y, 13, C_cyan);
     y += 22;
     auto packs = store.packs();
     for (int i = 0; i < (int)packs.size() && i < 4; ++i) {
@@ -129,7 +129,7 @@ void Game::drawPremiumStore() const {
         y += 22;
     }
 
-    // Mensagem de feedback do backend
+    // Backend feedback message
     std::string msg = store.lastMessage();
     if (!msg.empty())
         DrawText(msg.c_str(), px + 18, py + ph - 26, 12, C_cyan);

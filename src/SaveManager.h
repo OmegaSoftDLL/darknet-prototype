@@ -7,7 +7,7 @@
 #include <string>
 
 static constexpr int SAVE_SLOTS = 3;
-static constexpr int SAVE_VERSION = 7;   // V7: metadados do Game, equipBag, upgrades/afixos
+static constexpr int SAVE_VERSION = 7;   // V7: metadados of the Game, equipBag, upgrades/afixos
 
 struct SaveSlotInfo {
     bool        exists      = false;

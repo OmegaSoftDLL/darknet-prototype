@@ -401,8 +401,8 @@ void DarkWorld::generate(int zoneId, unsigned int seed) {
 
     switch (zoneId) {
         case 4: { // Cemetery
-            name     = "Cemiterio Abandonado";
-            subtitle = "Os mortos nao descansam aqui...";
+            name     = "Cemetery Abandonado";
+            subtitle = "Os mortos not descansam here...";
             fogColor   = {180, 200, 180, 255};
             fogDensity = 0.75f;
             skyTop    = {8, 10, 12, 255};
@@ -410,36 +410,36 @@ void DarkWorld::generate(int zoneId, unsigned int seed) {
 
             int stones = pseudoRandI(s, 15, 25);
             for (int i = 0; i < stones; ++i) {
-                SceneryObject o;
-                o.type     = 3;
-                o.position = {pseudoRandF(s, -400, 400), pseudoRandF(s, -400, 400)};
-                o.rotation = pseudoRandF(s, -0.18f, 0.18f);
-                o.scale    = pseudoRandF(s, 0.8f, 1.2f);
-                o.tint     = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type     = 3;
+                the.position = {pseudoRandF(s, -400, 400), pseudoRandF(s, -400, 400)};
+                the.rotation = pseudoRandF(s, -0.18f, 0.18f);
+                the.scale    = pseudoRandF(s, 0.8f, 1.2f);
+                the.tint     = WHITE;
+                scenery.push_back(the);
             }
             int trees = pseudoRandI(s, 8, 12);
             for (int i = 0; i < trees; ++i) {
-                SceneryObject o;
-                o.type     = 2;
-                o.position = {pseudoRandF(s, -500, 500), pseudoRandF(s, -500, 500)};
-                o.rotation = 0; o.scale = pseudoRandF(s, 0.7f, 1.3f); o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type     = 2;
+                the.position = {pseudoRandF(s, -500, 500), pseudoRandF(s, -500, 500)};
+                the.rotation = 0; the.scale = pseudoRandF(s, 0.7f, 1.3f); the.tint = WHITE;
+                scenery.push_back(the);
             }
             for (int i = 0; i < 4; ++i) {
-                SceneryObject o;
-                o.type = 4; o.rotation = pseudoRandF(s, 0, 3.14f);
-                o.position = {pseudoRandF(s, -350, 350), pseudoRandF(s, -350, 350)};
-                o.scale = 1.0f; o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 4; the.rotation = pseudoRandF(s, 0, 3.14f);
+                the.position = {pseudoRandF(s, -350, 350), pseudoRandF(s, -350, 350)};
+                the.scale = 1.0f; the.tint = WHITE;
+                scenery.push_back(the);
             }
             // One house
             scenery.push_back({pseudoRandF(s, 280, 380), pseudoRandF(s, 280, 380), 0, 0, 0.9f, WHITE});
             break;
         }
         case 5: { // CursedFarm
-            name     = "Fazenda Maldita";
-            subtitle = "A terra esta podre. As colheitas, corrompidas.";
+            name     = "Farm Maldita";
+            subtitle = "A terra is podre. As colheitas, corrompidas.";
             fogColor   = {160, 150, 120, 255};
             fogDensity = 0.50f;
             skyTop    = {12, 10, 8, 255};
@@ -448,48 +448,48 @@ void DarkWorld::generate(int zoneId, unsigned int seed) {
             // 2-3 barns
             int barns = pseudoRandI(s, 2, 3);
             for (int i = 0; i < barns; ++i) {
-                SceneryObject o;
-                o.type = 1; o.position = {pseudoRandF(s, -300, 300), pseudoRandF(s, -300, 300)};
-                o.rotation = 0; o.scale = pseudoRandF(s, 0.85f, 1.1f); o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 1; the.position = {pseudoRandF(s, -300, 300), pseudoRandF(s, -300, 300)};
+                the.rotation = 0; the.scale = pseudoRandF(s, 0.85f, 1.1f); the.tint = WHITE;
+                scenery.push_back(the);
             }
             // 1 house
             scenery.push_back({{pseudoRandF(s,-100,100), pseudoRandF(s,-100,100)}, 0, 0.0f, 1.0f, WHITE});
             // 2 silos
             for (int i = 0; i < 2; ++i) {
-                SceneryObject o;
-                o.type = 8; o.position = {pseudoRandF(s,-400,400), pseudoRandF(s,-400,400)};
-                o.rotation = 0; o.scale = pseudoRandF(s, 0.9f, 1.2f); o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 8; the.position = {pseudoRandF(s,-400,400), pseudoRandF(s,-400,400)};
+                the.rotation = 0; the.scale = pseudoRandF(s, 0.9f, 1.2f); the.tint = WHITE;
+                scenery.push_back(the);
             }
             // Many fences
             int fences = pseudoRandI(s, 20, 30);
             for (int i = 0; i < fences; ++i) {
-                SceneryObject o;
-                o.type = 4; o.position = {pseudoRandF(s,-450,450), pseudoRandF(s,-450,450)};
-                o.rotation = pseudoRandF(s, 0, 3.14f);
-                o.scale = pseudoRandF(s, 0.8f, 1.2f); o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 4; the.position = {pseudoRandF(s,-450,450), pseudoRandF(s,-450,450)};
+                the.rotation = pseudoRandF(s, 0, 3.14f);
+                the.scale = pseudoRandF(s, 0.8f, 1.2f); the.tint = WHITE;
+                scenery.push_back(the);
             }
             // Dead trees on edges
             for (int i = 0; i < 8; ++i) {
-                SceneryObject o;
-                o.type = 2; o.position = {pseudoRandF(s,-500,500), pseudoRandF(s,-500,500)};
-                o.rotation = 0; o.scale = pseudoRandF(s,0.7f,1.1f); o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 2; the.position = {pseudoRandF(s,-500,500), pseudoRandF(s,-500,500)};
+                the.rotation = 0; the.scale = pseudoRandF(s,0.7f,1.1f); the.tint = WHITE;
+                scenery.push_back(the);
             }
             // Abandoned cars
             for (int i = 0; i < 4; ++i) {
-                SceneryObject o;
-                o.type = 6; o.position = {pseudoRandF(s,-380,380), pseudoRandF(s,-380,380)};
-                o.rotation = pseudoRandF(s,0,3.14f); o.scale = 1.0f; o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 6; the.position = {pseudoRandF(s,-380,380), pseudoRandF(s,-380,380)};
+                the.rotation = pseudoRandF(s,0,3.14f); the.scale = 1.0f; the.tint = WHITE;
+                scenery.push_back(the);
             }
             break;
         }
         case 6: { // GhostCity
-            name     = "Cidade Fantasma";
-            subtitle = "Ruas vazias. Mas nao desertas.";
+            name     = "City Fantasma";
+            subtitle = "Ruas vazias. Mas not desertas.";
             fogColor   = {160, 170, 190, 255};
             fogDensity = 0.60f;
             skyTop    = {5, 6, 14, 255};
@@ -498,45 +498,45 @@ void DarkWorld::generate(int zoneId, unsigned int seed) {
             // Buildings
             int bldgs = pseudoRandI(s, 8, 14);
             for (int i = 0; i < bldgs; ++i) {
-                SceneryObject o;
-                o.type = 7;
-                o.position = {pseudoRandF(s,-500,500), pseudoRandF(s,-500,500)};
-                o.rotation = pseudoRandF(s, 40, 80);  // width stored in rotation
-                o.scale    = pseudoRandF(s, 80, 200); // height stored in scale
-                o.tint     = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 7;
+                the.position = {pseudoRandF(s,-500,500), pseudoRandF(s,-500,500)};
+                the.rotation = pseudoRandF(s, 40, 80);  // width stored in rotation
+                the.scale    = pseudoRandF(s, 80, 200); // height stored in scale
+                the.tint     = WHITE;
+                scenery.push_back(the);
             }
             // Street lights
             int lights = pseudoRandI(s, 10, 20);
             for (int i = 0; i < lights; ++i) {
-                SceneryObject o;
-                o.type = 5;
-                o.position = {pseudoRandF(s,-480,480), pseudoRandF(s,-480,480)};
-                o.rotation = 0; o.scale = 1.0f;
+                SceneryObject the;
+                the.type = 5;
+                the.position = {pseudoRandF(s,-480,480), pseudoRandF(s,-480,480)};
+                the.rotation = 0; the.scale = 1.0f;
                 // tint.r encodes on/off (255=on, 0=off)
-                o.tint = (pseudoRandI(s,0,1) == 1) ? WHITE : Color{0,0,0,255};
-                scenery.push_back(o);
+                the.tint = (pseudoRandI(s,0,1) == 1) ? WHITE : Color{0,0,0,255};
+                scenery.push_back(the);
             }
             // Cars
             int cars = pseudoRandI(s, 6, 10);
             for (int i = 0; i < cars; ++i) {
-                SceneryObject o;
-                o.type = 6; o.position = {pseudoRandF(s,-460,460), pseudoRandF(s,-460,460)};
-                o.rotation = pseudoRandF(s,0,3.14f); o.scale = 1.0f; o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 6; the.position = {pseudoRandF(s,-460,460), pseudoRandF(s,-460,460)};
+                the.rotation = pseudoRandF(s,0,3.14f); the.scale = 1.0f; the.tint = WHITE;
+                scenery.push_back(the);
             }
             // Some houses
             for (int i = 0; i < 5; ++i) {
-                SceneryObject o;
-                o.type = 0; o.position = {pseudoRandF(s,-400,400), pseudoRandF(s,-400,400)};
-                o.rotation = 0; o.scale = pseudoRandF(s,0.7f,0.9f); o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 0; the.position = {pseudoRandF(s,-400,400), pseudoRandF(s,-400,400)};
+                the.rotation = 0; the.scale = pseudoRandF(s,0.7f,0.9f); the.tint = WHITE;
+                scenery.push_back(the);
             }
             break;
         }
         case 7: { // DarkForest
-            name     = "Floresta Negra";
-            subtitle = "A nevoa esconde o que mora entre as arvores.";
+            name     = "Forest Negra";
+            subtitle = "A fog esconde the that mora among the arvores.";
             fogColor   = {140, 160, 130, 255};
             fogDensity = 0.85f;
             skyTop    = {4, 7, 4, 255};
@@ -544,48 +544,48 @@ void DarkWorld::generate(int zoneId, unsigned int seed) {
 
             int trees = pseudoRandI(s, 40, 60);
             for (int i = 0; i < trees; ++i) {
-                SceneryObject o;
-                o.type = 2; o.position = {pseudoRandF(s,-550,550), pseudoRandF(s,-550,550)};
-                o.rotation = 0; o.scale = pseudoRandF(s,0.6f,1.5f); o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 2; the.position = {pseudoRandF(s,-550,550), pseudoRandF(s,-550,550)};
+                the.rotation = 0; the.scale = pseudoRandF(s,0.6f,1.5f); the.tint = WHITE;
+                scenery.push_back(the);
             }
             // Ruined walls
             for (int i = 0; i < 3; ++i) {
-                SceneryObject o;
-                o.type = 4; o.position = {pseudoRandF(s,-350,350), pseudoRandF(s,-350,350)};
-                o.rotation = pseudoRandF(s,0,3.14f); o.scale = 1.5f; o.tint = {80,75,70,255};
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 4; the.position = {pseudoRandF(s,-350,350), pseudoRandF(s,-350,350)};
+                the.rotation = pseudoRandF(s,0,3.14f); the.scale = 1.5f; the.tint = {80,75,70,255};
+                scenery.push_back(the);
             }
             break;
         }
         case 8: { // Catacombs
             name     = "Catacumbas";
-            subtitle = "Passagens de pedra. Cheiro de morte antiga.";
+            subtitle = "Passagens of stone. Cheiro of death antiga.";
             fogColor   = {120, 100, 130, 255};
             fogDensity = 0.70f;
             skyTop    = {6, 4, 8, 255};
             skyBottom = {14, 10, 18, 255};
 
-            // Arches in a grid pattern
+            // Arches in the grid pattern
             for (int i = 0; i < 12; ++i) {
-                SceneryObject o;
-                o.type = 9;
-                o.position = {pseudoRandF(s, -400, 400), pseudoRandF(s, -400, 400)};
-                o.rotation = 0; o.scale = 1.0f; o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 9;
+                the.position = {pseudoRandF(s, -400, 400), pseudoRandF(s, -400, 400)};
+                the.rotation = 0; the.scale = 1.0f; the.tint = WHITE;
+                scenery.push_back(the);
             }
-            // Gravestones as bone piles
+            // Gravestones the bone piles
             for (int i = 0; i < 20; ++i) {
-                SceneryObject o;
-                o.type = 3; o.position = {pseudoRandF(s,-450,450), pseudoRandF(s,-450,450)};
-                o.rotation = pseudoRandF(s,-0.3f,0.3f); o.scale = 0.7f; o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 3; the.position = {pseudoRandF(s,-450,450), pseudoRandF(s,-450,450)};
+                the.rotation = pseudoRandF(s,-0.3f,0.3f); the.scale = 0.7f; the.tint = WHITE;
+                scenery.push_back(the);
             }
             break;
         }
         case 9: { // AbandonedManor
-            name     = "Mansao Abandonada";
-            subtitle = "O boss aguarda nas profundezas.";
+            name     = "Manor Abandonada";
+            subtitle = "O boss aguarda in the profundezas.";
             fogColor   = {140, 110, 150, 255};
             fogDensity = 0.65f;
             skyTop    = {8, 4, 12, 255};
@@ -595,30 +595,30 @@ void DarkWorld::generate(int zoneId, unsigned int seed) {
             scenery.push_back({{0, -50}, 0, 0.0f, 2.0f, WHITE});
             // Trees around
             for (int i = 0; i < 5; ++i) {
-                SceneryObject o;
-                o.type = 2; o.position = {pseudoRandF(s,-350,350), pseudoRandF(s,-350,350)};
-                o.rotation = 0; o.scale = pseudoRandF(s, 1.0f, 1.5f); o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 2; the.position = {pseudoRandF(s,-350,350), pseudoRandF(s,-350,350)};
+                the.rotation = 0; the.scale = pseudoRandF(s, 1.0f, 1.5f); the.tint = WHITE;
+                scenery.push_back(the);
             }
             // Statues lining approach
             for (int i = 0; i < 4; ++i) {
-                SceneryObject o;
-                o.type = 10;
-                o.position = {(float)(i < 2 ? -80 : 80), (float)(-80 + (i%2)*120)};
-                o.rotation = 0; o.scale = 1.0f; o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 10;
+                the.position = {(float)(i < 2 ? -80 : 80), (float)(-80 + (i%2)*120)};
+                the.rotation = 0; the.scale = 1.0f; the.tint = WHITE;
+                scenery.push_back(the);
             }
-            // Fences forming a perimeter
+            // Fences forming the perimeter
             for (int i = 0; i < 12; ++i) {
-                SceneryObject o;
-                o.type = 4; o.position = {pseudoRandF(s,-400,400), pseudoRandF(s,-400,400)};
-                o.rotation = pseudoRandF(s, 0, 3.14f); o.scale = 1.2f; o.tint = WHITE;
-                scenery.push_back(o);
+                SceneryObject the;
+                the.type = 4; the.position = {pseudoRandF(s,-400,400), pseudoRandF(s,-400,400)};
+                the.rotation = pseudoRandF(s, 0, 3.14f); the.scale = 1.2f; the.tint = WHITE;
+                scenery.push_back(the);
             }
             break;
         }
         default:
-            name = "Zona Desconhecida";
+            name = "Zone Desconhecida";
             subtitle = "";
             break;
     }
@@ -636,7 +636,7 @@ void DarkWorld::renderSky(float ambientTime, int screenW, int screenH) const {
         c.r = (unsigned char)(skyTop.r + (skyBottom.r - skyTop.r) * t);
         c.g = (unsigned char)(skyTop.g + (skyBottom.g - skyTop.g) * t);
         c.b = (unsigned char)(skyTop.b + (skyBottom.b - skyTop.b) * t);
-        c.a = 255;
+        c.the = 255;
         DrawRectangle(0, y, screenW, 4, c);
     }
 
@@ -675,17 +675,17 @@ void DarkWorld::renderSky(float ambientTime, int screenW, int screenH) const {
 // Scenery rendering (world-space, inside camera transform)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Hash deterministico por celula (para detalhes de chao reproduziveis)
+// Hash deterministic by celula (to detalhes of floor reproduziveis)
 static inline float dwHash(int x, int y, int salt) {
     unsigned int h = (unsigned)(x * 73856093) ^ (unsigned)(y * 19349663) ^ (unsigned)(salt * 83492791);
     h = (h ^ (h >> 13)) * 1274126177u;
     return (float)((h >> 8) & 0xFFFF) / 65535.0f;
 }
 
-// Camada de VIDA AMBIENTE — decalques de chao, vegetacao balancando, vaga-lumes,
-// poças e passaros. Determinista por posicao (nao "nada" entre frames), animada por `time`.
+// Camada of HP AMBIENTE — decalques of floor, vegetacao balancando, slot-lumes,
+// pocas and passaros. Determinista by position (not "nada" between frames), animada by `time`.
 static void renderAmbientLife(Vector2 cam, float time) {
-    const float VW = 760.0f, VH = 480.0f;   // meia-area visivel
+    const float VW = 760.0f, VH = 480.0f;   // meia-area visible
     const int   cell = 88;
     int gx0 = (int)((cam.x - VW) / cell) - 1, gx1 = (int)((cam.x + VW) / cell) + 1;
     int gy0 = (int)((cam.y - VH) / cell) - 1, gy1 = (int)((cam.y + VH) / cell) + 1;
@@ -696,7 +696,7 @@ static void renderAmbientLife(Vector2 cam, float time) {
         float px = gx * cell + dwHash(gx, gy, 2) * cell;
         float py = gy * cell + dwHash(gx, gy, 3) * cell;
 
-        if (r < 0.30f) {                         // tufo de grama balancando
+        if (r < 0.30f) {                         // tufo of grass balancando
             float sway = std::sin(time * 1.6f + px * 0.05f) * 1.8f;
             int   gr = 55 + (int)(dwHash(gx,gy,4) * 40);
             Color g = { (unsigned char)(28 + gr/3), (unsigned char)gr, 28, 200 };
@@ -707,11 +707,11 @@ static void renderAmbientLife(Vector2 cam, float time) {
         } else if (r < 0.40f) {                  // pedrinhas
             DrawCircleV({px, py}, 1.6f, Color{92,90,86,180});
             DrawCircleV({px + 3, py + 1}, 1.1f, Color{70,68,64,150});
-        } else if (r < 0.47f) {                  // rachadura no chao
+        } else if (r < 0.47f) {                  // rachadura in the floor
             Color cr = {18,18,20,110};
             DrawLineEx({px, py}, {px + 7, py + 4}, 1.0f, cr);
             DrawLineEx({px + 7, py + 4}, {px + 12, py + 1}, 1.0f, cr);
-        } else if (r < 0.53f) {                  // poça refletindo o ceu
+        } else if (r < 0.53f) {                  // poca refletindo the sky
             DrawEllipse((int)px, (int)py, 8.0f, 3.2f, Color{34,46,62,110});
             float sh = 0.10f + 0.06f * std::sin(time * 1.2f + px * 0.1f);
             DrawEllipse((int)px, (int)py, 4.0f, 1.5f, ColorAlpha(Color{130,160,190,255}, sh));
@@ -721,19 +721,19 @@ static void renderAmbientLife(Vector2 cam, float time) {
             DrawCircleV({px + 4, py - 2}, 1.1f, ColorAlpha(lf, 0.7f));
         }
 
-        // Vaga-lume / partícula de poeira flutuando no ar (esparso)
+        // Vaga-lume / particle of dust flutuando in the ar (esparso)
         if (dwHash(gx, gy, 7) < 0.09f) {
             float fx = px + std::sin(time * 0.8f + gx) * 16.0f;
             float fy = py - 26 + std::cos(time * 0.7f + gy) * 12.0f;
-            float a  = 0.35f + 0.4f * std::sin(time * 3.0f + gx * 1.3f + gy);
-            if (a > 0.02f) {
-                DrawCircleV({fx, fy}, 3.0f, ColorAlpha(Color{170,235,130,255}, a * 0.22f));
-                DrawCircleV({fx, fy}, 1.5f, ColorAlpha(Color{210,255,170,255}, a));
+            float the  = 0.35f + 0.4f * std::sin(time * 3.0f + gx * 1.3f + gy);
+            if (the > 0.02f) {
+                DrawCircleV({fx, fy}, 3.0f, ColorAlpha(Color{170,235,130,255}, the * 0.22f));
+                DrawCircleV({fx, fy}, 1.5f, ColorAlpha(Color{210,255,170,255}, the));
             }
         }
     }
 
-    // Passaros cruzando lentamente o "ceu" (acima da area visivel)
+    // Passaros cruzando lentamente the "sky" (above the area visible)
     for (int b = 0; b < 3; ++b) {
         float speed = 38.0f + b * 14.0f;
         float bx = std::fmod(time * speed + b * 640.0f, 2400.0f) - 1200.0f + cam.x;
@@ -764,26 +764,26 @@ void DarkWorld::renderScenery(Vector2 cameraCenter, float time) const {
             if (variant < 0) variant += SpriteBank::SCENERY_VARIANTS;
             Texture2D tx = sb.scenery[obj.type][variant];
 
-            // Fator de mundo: deixa os sprites num tamanho legivel e usa obj.scale
+            // Fator of world: deixa the sprites num size legivel and usa obj.scale
             float K = 1.7f * (obj.scale > 0.01f ? obj.scale : 1.0f);
             float w = tx.width  * K;
             float h = tx.height * K;
 
-            // ÁRVORE (type 2): leve sway senoidal no topo (vento) — inclina o sprite
+            // TREE (type 2): light sway senoidal at the top (wind) — inclina the sprite
             float skew = 0.0f;
             if (obj.type == 2)
                 skew = std::sin(time * 1.3f + obj.position.x * 0.04f) * (w * 0.05f);
 
-            // base (pes) do objeto em obj.position; desenha para cima
+            // base (feet) of the objeto in obj.position; draws to up
             Rectangle dst = { obj.position.x - w * 0.5f + skew, obj.position.y - h, w, h };
 
-            // Sombra elíptica no chao (mais densa = mais "plantado")
+            // Shadow eliptica in the floor (more densa = more "plantado")
             DrawEllipse((int)obj.position.x, (int)obj.position.y,
                         w * 0.44f, h * 0.085f, ColorAlpha(BLACK, 0.40f));
             DrawTexturePro(tx, {0,0,(float)tx.width,(float)tx.height},
                            dst, {0,0}, 0.0f, WHITE);
 
-            // Glow quente de janelas/luz com FLICKER (casa, predio, poste)
+            // Glow hot of windows/light with FLICKER (house, building, pole)
             if (lights && (obj.type == 0 || obj.type == 7 || obj.type == 5)) {
                 float fl = std::sin(time * 7.3f + obj.position.x) * 0.5f
                          + std::sin(time * 2.1f + obj.position.y) * 0.5f;
@@ -792,13 +792,13 @@ void DarkWorld::renderScenery(Vector2 cameraCenter, float time) const {
                 Vector2 c = { obj.position.x, obj.position.y - h * 0.55f };
                 DrawCircleV(c, w * 0.34f, ColorAlpha(Color{255,200,110,255}, 0.10f * pulse));
                 DrawCircleV(c, w * 0.18f, ColorAlpha(Color{255,215,140,255}, 0.16f * pulse));
-                // Poste: cone de luz no chao
+                // Poste: cone of light in the floor
                 if (obj.type == 5)
                     DrawEllipse((int)obj.position.x, (int)obj.position.y,
                                 w * 0.5f, h * 0.10f, ColorAlpha(Color{255,210,130,255}, 0.07f * pulse));
             }
 
-            // CASA (type 0): fumaca subindo da chamine (canto superior direito)
+            // HOUSE (type 0): smoke subindo of the chamine (canto upper direito)
             if (obj.type == 0) {
                 float ox = obj.position.x + w * 0.26f;
                 float oy = obj.position.y - h * 0.92f;
@@ -806,15 +806,15 @@ void DarkWorld::renderScenery(Vector2 cameraCenter, float time) const {
                     float t2 = std::fmod(time * 0.35f + s * 0.25f + obj.position.x * 0.01f, 1.0f);
                     float sy = oy - t2 * 34.0f;
                     float sx = ox + std::sin(t2 * 6.0f + s) * 6.0f;
-                    float a  = (1.0f - t2) * 0.20f;
+                    float the  = (1.0f - t2) * 0.20f;
                     float sr = 2.5f + t2 * 5.0f;
-                    DrawCircleV({sx, sy}, sr, ColorAlpha(Color{120,120,128,255}, a));
+                    DrawCircleV({sx, sy}, sr, ColorAlpha(Color{120,120,128,255}, the));
                 }
             }
             continue;
         }
 
-        // ── Fallback geometrico (se sprites nao prontos) ──────────────────────
+        // ── Fallback geometrico (if sprites not prontos) ──────────────────────
         switch (obj.type) {
             case 0:  drawHouse(obj.position, obj.scale, lights, time);   break;
             case 1:  drawBarn(obj.position, obj.scale);                  break;
@@ -830,7 +830,7 @@ void DarkWorld::renderScenery(Vector2 cameraCenter, float time) const {
         }
     }
 
-    // ── Camada de vida ambiente (chao + ar) por cima do cenario base ──────────
+    // ── Camada of health environment (floor + ar) by up of the scenario base ──────────
     renderAmbientLife(cameraCenter, time);
 }
 
@@ -890,7 +890,7 @@ void DarkWorldSystem::renderBackground(int screenW, int screenH) const {
 
 void DarkWorldSystem::renderScenery(Vector2 cameraTarget, float zoom) const {
     if (!active) return;
-    // Pass negative camera target so renderScenery culls relative to camera center
+    // Pass negative camera target only renderScenery culls relative to camera center
     currentZone.renderScenery(cameraTarget, ambientTime);
 }
 
@@ -905,29 +905,29 @@ Em Game.h, adicione:
     #include "DarkWorld.h"
     DarkWorldSystem darkWorld;
 
-Em Game.cpp, onde muda de zona (transitionToZone):
-    // Mapeamento ZoneID -> inteiro
+Em Game.cpp, where muda of zone (transitionToZone):
+    // Mapeamento ZoneID -> integer
     if (dest == ZoneID::Cemetery)       darkWorld.load(4, GetRandomValue(1,99999));
     if (dest == ZoneID::CursedFarm)     darkWorld.load(5, GetRandomValue(1,99999));
     if (dest == ZoneID::GhostCity)      darkWorld.load(6, GetRandomValue(1,99999));
     if (dest == ZoneID::DarkForest)     darkWorld.load(7, GetRandomValue(1,99999));
     if (dest == ZoneID::Catacombs)      darkWorld.load(8, GetRandomValue(1,99999));
     if (dest == ZoneID::AbandonedManor) darkWorld.load(9, GetRandomValue(1,99999));
-    // Para zonas normais: darkWorld.active = false;
+    // Para zones normais: darkWorld.active = false;
 
 Em Game.cpp, update():
     darkWorld.update(dt);
 
-Em Game.cpp, render() ANTES de BeginMode2D:
+Em Game.cpp, render() ANTES of BeginMode2D:
     if (darkWorld.active) darkWorld.renderBackground(screenWidth, screenHeight);
 
-Em Game.cpp, render() DENTRO de BeginMode2D (antes dos inimigos):
+Em Game.cpp, render() DENTRO of BeginMode2D (before of the enemies):
     if (darkWorld.active) darkWorld.renderScenery(camera.target, camera.zoom);
 
-Em Game.cpp, render() DEPOIS de EndMode2D:
+Em Game.cpp, render() DEPOIS of EndMode2D:
     if (darkWorld.active) darkWorld.renderFog(screenWidth, screenHeight);
 
-Tabelas de spawn por zona sombria (em spawnEnemy()):
+Tabelas of spawn by zone sombria (in spawnEnemy()):
     Cemetery:      Ghost(30) GhostElite(10) Zombie(35) ZombieHorde(15) ShadowWraith(10)
     CursedFarm:    Zombie(40) ZombieRager(20) BansheeHowler(15) ZombieHorde(25)
     GhostCity:     Ghost(25) GhostElite(15) ShadowWraith(20) BansheeHowler(15) Zombie(25)
@@ -935,5 +935,5 @@ Tabelas de spawn por zona sombria (em spawnEnemy()):
     Catacombs:     Zombie(25) ZombieHorde(30) ShadowWraith(20) ZombieLord(boss) Zombie(25)
     AbandonedManor:Ghost(20) GhostElite(25) PoltergeistBoss(boss) ZombieHorde(30) ShadowWraith(25)
 
-Portais sombrios: adicionar portais com ZoneID::Cemetery etc. em setupZoneNPCs() ou buildNPCs()
+Portals sombrios: add portals with ZoneID::Cemetery etc. in setupZoneNPCs() ou buildNPCs()
 === */

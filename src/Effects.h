@@ -2,7 +2,7 @@
 #include <raylib.h>
 #include <cmath>
 
-// Desenha circulo com glow neon (fake bloom)
+// Draws circle with glow neon (fake bloom)
 inline void DrawGlowCircle(Vector2 pos, float radius, Color col, float glowScale = 3.0f) {
     DrawCircleV(pos, radius * glowScale,        ColorAlpha(col, 0.04f));
     DrawCircleV(pos, radius * glowScale * 0.7f, ColorAlpha(col, 0.08f));
@@ -11,25 +11,25 @@ inline void DrawGlowCircle(Vector2 pos, float radius, Color col, float glowScale
     DrawCircleV(pos, radius * 0.45f,            ColorAlpha(WHITE, 0.85f));
 }
 
-// Linha com glow neon
-inline void DrawGlowLine(Vector2 a, Vector2 b, float thick, Color col) {
-    DrawLineEx(a, b, thick * 5.0f, ColorAlpha(col, 0.06f));
-    DrawLineEx(a, b, thick * 3.0f, ColorAlpha(col, 0.15f));
-    DrawLineEx(a, b, thick * 1.5f, ColorAlpha(col, 0.4f));
-    DrawLineEx(a, b, thick,        col);
+// Line with glow neon
+inline void DrawGlowLine(Vector2 the, Vector2 b, float thick, Color col) {
+    DrawLineEx(the, b, thick * 5.0f, ColorAlpha(col, 0.06f));
+    DrawLineEx(the, b, thick * 3.0f, ColorAlpha(col, 0.15f));
+    DrawLineEx(the, b, thick * 1.5f, ColorAlpha(col, 0.4f));
+    DrawLineEx(the, b, thick,        col);
 }
 
-// Retangulo com borda neon
+// Rectangle with edge neon
 inline void DrawNeonRect(Rectangle rect, Color fill, Color glow, float borderThick = 2.0f) {
     DrawRectangleRec(rect, fill);
-    // Glow externo
+    // Glow external
     Rectangle outer = {rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4};
     DrawRectangleLinesEx(outer, borderThick + 2, ColorAlpha(glow, 0.15f));
     DrawRectangleLinesEx(rect, borderThick, glow);
 }
 
-// Overlay de scanlines CRT (chamar apos EndMode2D)
-// Cached 1xH texture stretched to the screen: a single draw call.
+// Overlay of scanlines CRT (call apos EndMode2D)
+// Cached 1xH texture stretched to the screen: the single draw call.
 inline void DrawScanlines(int screenW, int screenH) {
     static Texture2D scanTex = {0};
     static int cachedH = 0;
@@ -56,16 +56,16 @@ inline void DrawScanlines(int screenW, int screenH) {
                        Rectangle{0.0f, 0.0f, static_cast<float>(screenW), static_cast<float>(screenH)},
                        Vector2{0.0f, 0.0f}, 0.0f, WHITE);
     } else {
-        // Fallback caso a textura falhe.
+        // Fallback if the texture falhe.
         DrawRectangle(0, 0, screenW, screenH, ColorAlpha(BLACK, 0.06f));
     }
 }
 
-// Vignette (bordas escuras) — sutil, sem faixas grossas cobrindo a visao do jogador
+// Vignette (bordas escuras) — sutil, without faixas grossas cobrindo the visao of the player
 inline void DrawVignette(int screenW, int screenH) {
-    // Enquadra sem apagar: e o TERCEIRO multiplicador escuro sobre a cena
-    // (depois do fog do chao e da mascara de luz). Faixas mais largas e MUITO
-    // mais suaves leem como enquadramento; as antigas leem como perda de imagem.
+    // Enquadra without apagar: and the TERCEIRO multiplicador dark about the scene
+    // (after the floor fog and of the mascara of light). Faixas more largas and MUITO
+    // more suaves leem as enquadramento; the antigas leem as perda of image.
     int vTop = 96;
     int vSide = 150;
     DrawRectangleGradientV(0, 0, screenW, vTop, ColorAlpha(BLACK, 0.20f), BLANK);
@@ -74,7 +74,7 @@ inline void DrawVignette(int screenW, int screenH) {
     DrawRectangleGradientH(screenW - vSide, 0, vSide, screenH, BLANK, ColorAlpha(BLACK, 0.18f));
 }
 
-// Barra de vida estilizada
+// Barra of health estilizada
 inline void DrawHealthBar(Vector2 pos, float pct, float w, float h, Color col) {
     Rectangle bg = {pos.x - w/2, pos.y, w, h};
     Rectangle fg = {pos.x - w/2, pos.y, w * pct, h};

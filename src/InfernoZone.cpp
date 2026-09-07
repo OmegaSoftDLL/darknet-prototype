@@ -54,15 +54,15 @@ void InfernoZoneSystem::generate(int mapW, int mapH, unsigned int seed) {
 
     // Seed some initial ash particles
     for (int i = 0; i < 60; ++i) {
-        AshParticle a;
-        a.position.x = frand(rngSeed) * (float)mapW;
-        a.position.y = frand(rngSeed) * (float)mapH;
-        a.velocity.x = (frand(rngSeed) - 0.5f) * 18.0f;
-        a.velocity.y = -(4.0f + frand(rngSeed) * 14.0f);
-        a.maxLife    = 4.0f + frand(rngSeed) * 6.0f;
-        a.life       = frand(rngSeed) * a.maxLife;  // staggered start
-        a.size       = 1.5f + frand(rngSeed) * 3.0f;
-        ash.push_back(a);
+        AshParticle the;
+        the.position.x = frand(rngSeed) * (float)mapW;
+        the.position.y = frand(rngSeed) * (float)mapH;
+        the.velocity.x = (frand(rngSeed) - 0.5f) * 18.0f;
+        the.velocity.y = -(4.0f + frand(rngSeed) * 14.0f);
+        the.maxLife    = 4.0f + frand(rngSeed) * 6.0f;
+        the.life       = frand(rngSeed) * the.maxLife;  // staggered start
+        the.size       = 1.5f + frand(rngSeed) * 3.0f;
+        ash.push_back(the);
     }
 }
 
@@ -102,15 +102,15 @@ void InfernoZoneSystem::update(float dt, Vector2 playerPos,
     }
 
     // Update ash particles
-    for (auto& a : ash) {
-        a.position.x += a.velocity.x * dt;
-        a.position.y += a.velocity.y * dt;
-        a.life       -= dt;
+    for (auto& the : ash) {
+        the.position.x += the.velocity.x * dt;
+        the.position.y += the.velocity.y * dt;
+        the.life       -= dt;
     }
 
-    // Remove dead ash
+    // Removes dead ash
     ash.erase(std::remove_if(ash.begin(), ash.end(),
-        [](const AshParticle& a) { return a.life <= 0.0f; }), ash.end());
+        [](const AshParticle& the) { return the.life <= 0.0f; }), ash.end());
 
     // Spawn new ash near pools
     ashSpawnTimer += dt;
@@ -123,15 +123,15 @@ void InfernoZoneSystem::update(float dt, Vector2 playerPos,
 }
 
 void InfernoZoneSystem::spawnAsh(Vector2 near) {
-    AshParticle a;
-    a.position.x = near.x + (frand(rngSeed) * 200.0f - 100.0f);
-    a.position.y = near.y + frand(rngSeed) * 60.0f;
-    a.velocity.x = frand(rngSeed) * 30.0f - 15.0f;
-    a.velocity.y = -(5.0f + frand(rngSeed) * 20.0f);
-    a.maxLife    = 3.0f + frand(rngSeed) * 5.0f;
-    a.life       = a.maxLife;
-    a.size       = 1.5f + frand(rngSeed) * 3.0f;
-    ash.push_back(a);
+    AshParticle the;
+    the.position.x = near.x + (frand(rngSeed) * 200.0f - 100.0f);
+    the.position.y = near.y + frand(rngSeed) * 60.0f;
+    the.velocity.x = frand(rngSeed) * 30.0f - 15.0f;
+    the.velocity.y = -(5.0f + frand(rngSeed) * 20.0f);
+    the.maxLife    = 3.0f + frand(rngSeed) * 5.0f;
+    the.life       = the.maxLife;
+    the.size       = 1.5f + frand(rngSeed) * 3.0f;
+    ash.push_back(the);
 }
 
 // ─── isInLava / nearGeyser ───────────────────────────────────────────────────
@@ -191,20 +191,20 @@ void InfernoZoneSystem::renderEffects(Vector2 camTarget) {
     float t = (float)GetTime();
 
     // Ash particles in world-space
-    for (const auto& a : ash) {
-        float alpha = std::min(a.life / a.maxLife, 1.0f) * 0.65f;
+    for (const auto& the : ash) {
+        float alpha = std::min(the.life / the.maxLife, 1.0f) * 0.65f;
         Color c = ColorAlpha({180, 90, 40, 255}, alpha);
-        DrawCircleV(a.position, a.size, c);
+        DrawCircleV(the.position, the.size, c);
     }
 
     // Geysers
     for (const auto& g : geysers) {
         if (g.erupting > 0.0f) {
-            float progress = 1.0f - (g.erupting / 1.2f);  // 0->1 as eruption goes
+            float progress = 1.0f - (g.erupting / 1.2f);  // 0->1 the eruption goes
             float height   = 120.0f + 80.0f * progress;
             float spread   = 18.0f + 22.0f * progress;
 
-            // Flame column — drawn as stacked circles getting smaller
+            // Flame column — drawn the stacked circles getting smaller
             for (int layer = 0; layer < 8; ++layer) {
                 float layerPct = (float)layer / 8.0f;
                 float y        = g.position.y - layerPct * height;
@@ -254,13 +254,13 @@ void InfernoZoneSystem::renderAtmosphere(int screenW, int screenH) {
 
     // Inferno zone label
     float labelAlpha = 0.55f + 0.35f * std::sin(t * 1.2f);
-    const char* label = "[ ZONA INFERNO ]";
+    const char* label = "[ ZONE INFERNO ]";
     int lw = MeasureText(label, 14);
     DrawText(label, screenW/2 - lw/2, screenH - 36, 14,
              ColorAlpha({255, 120, 0, 255}, labelAlpha));
 
     // Lava damage warning when player is in lava (flashing red)
-    // (handled in update — just draw a red flash frame here if needed)
+    // (handled in update — just draw the red flash frame here if needed)
 }
 
 // ─── reset ───────────────────────────────────────────────────────────────────

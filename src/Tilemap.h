@@ -15,7 +15,7 @@ struct Tile {
     TileType  type = TileType::Floor;
     Rectangle rect;
     int       portalZone = -1;  // if Portal, which zone to go to
-    bool      solid = false;    // colisao de cenario (predio/casa/carro) sem mudar o visual
+    bool      solid = false;    // collision of scenario (building/house/car) without mudar the visual
 };
 
 struct ZonePortal {
@@ -30,9 +30,9 @@ public:
     // Open world grid — 3×3 blocks of 40×40 tiles each
     static constexpr int OW_COLS    = 3;
     static constexpr int OW_ROWS    = 3;
-    // 128 tiles = 8192 unidades por regiao. Com 40 (2560u) o jogador atravessava
-    // uma REGIAO INTEIRA em ~10s e o mundo trocava de tema/nome o tempo todo -
-    // parecia teleporte, nao viagem.
+    // 128 tiles = 8192 unidades by region. Com 40 (2560u) the player atravessava
+    // uma REGION INTEIRA in ~10s and the world trocava of tema/nome the time all -
+    // parecia teleporte, not viagem.
     static constexpr int OW_ZONE_W  = 128;
     static constexpr int OW_ZONE_H  = 128;
 
@@ -51,19 +51,19 @@ public:
     void   generate(ZoneID zone = ZoneID::LARuins);
     void   generateOpenWorld();
     ZoneID tileZone(int tx, int ty) const;
-    ZoneID biomeAtWorld(float wx, float wy) const;  // bioma INFINITO (módulo 3x3) na posição do mundo — bate com o chão
+    ZoneID biomeAtWorld(float wx, float wy) const;  // biome INFINITO (module 3x3) in the position of the world — bate with the floor
     void   render(Vector2 camTarget = {0,0}, float zoom = 1.0f) const; // frustum culling
-    void   render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) const;  // 2.5D: chão (batch único) + paredes (DrawCube), com frustum culling
+    void   render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) const;  // 2.5D: floor (batch single) + walls (DrawCube), with frustum culling
     bool   isWall(int x, int y) const;
     bool   isWallAtPosition(Vector2 pos) const;
     bool   isWallAtPosition(Vector2 pos, float radius) const;
     bool   isPortalAtPosition(Vector2 pos, ZoneID& outDest) const;
     Rectangle getBounds(int x, int y) const;
 
-    // Colisao de cenario: marca como solido o entorno de uma construcao/objeto.
+    // Collision of scenario: marca as solido the entorno of uma structure/objeto.
     void   markSolidAt(Vector2 worldPos, float radius);
-    void   clearSolidAt(Vector2 worldPos, float radius);  // desmarca (fallback do portal)
-    void   clearSolidFlags();   // limpa a colisao de cenario (mantem paredes)
+    void   clearSolidAt(Vector2 worldPos, float radius);  // desmarca (fallback of the portal)
+    void   clearSolidFlags();   // limpa the collision of scenario (mantem walls)
 
 private:
     void setTile(int x, int y, TileType type, int portalZone = -1);

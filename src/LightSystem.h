@@ -17,18 +17,18 @@ struct LightSource {
 
 struct LightSystem {
     std::vector<LightSource> lights;
-    GfxRenderTexture lightMask;        // mascara de luz/sombra em meia resolucao
-    GfxTexture       glowTex;          // gradiente radial pré-gerado (1 quad por luz)
-    float   glowPeak           = 1.0f; // brilho acumulado no centro do perfil antigo
+    GfxRenderTexture lightMask;        // mascara of light/shadow in meia resolution
+    GfxTexture       glowTex;          // gradiente radial pre-generated (1 quad by light)
+    float   glowPeak           = 1.0f; // glow acumulado in the center of the profile old
     bool  enabled              = false;
     float ambientDark          = 0.55f; // fraction of screen in darkness (0=bright, 1=black)
-    Color ambientColor         = {180, 190, 210, 255}; // cor da luz ambiente (varia por fase)
+    Color ambientColor         = {180, 190, 210, 255}; // color of the light environment (varia by phase)
     int   maskW                = 0;
     int   maskH                = 0;
 
     void init(int w, int h);
     void shutdown();
-    void clear();  // remove all lights
+    void clear();  // removes all lights
 
     // Convenience adders
     void addLight(Vector2 pos, float radius, float intensity, Color color, bool flicker = false);

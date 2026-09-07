@@ -165,10 +165,10 @@ void Background::update(float dt) {
         obj.animTimer += dt;
 }
 
-// â”€â”€â”€ Sky â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€ Sky the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void Background::drawSky(int screenW, int screenH, ZoneID zone) const {
-    // Default seguro (evita cores nao-inicializadas para zonas fora do switch)
+    // Default safe (evita cores not-inicializadas to zones outside the switch)
     Color topA = {6,6,12,255},  topB = {16,16,28,255};
     Color midA = {26,26,42,255}, midB = {40,40,60,255};
     switch (zone) {
@@ -223,7 +223,7 @@ void Background::drawSky(int screenW, int screenH, ZoneID zone) const {
     DrawRectangleGradientV(0, 0, screenW, h2, topA, topB);
     DrawRectangleGradientV(0, h2, screenW, screenH - h2, midA, midB);
 
-    // Aurora/brilho atmosferico nas zonas escuras (camada sutil acima do horizonte)
+    // Aurora/glow atmospheric in the zones escuras (camada sutil above the horizonte)
     bool darkZone = (zone == ZoneID::Cemetery || zone == ZoneID::GhostCity ||
                      zone == ZoneID::DarkForest || zone == ZoneID::Catacombs ||
                      zone == ZoneID::AbandonedManor);
@@ -262,7 +262,7 @@ void Background::drawSky(int screenW, int screenH, ZoneID zone) const {
     }
 }
 
-// â”€â”€â”€ Skyline silhouette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€ Skyline silhouette the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void Background::drawSkyline(Vector2 camTarget, int screenW, int screenH, ZoneID zone) const {
     // Horizon Y in screen coordinates
@@ -270,7 +270,7 @@ void Background::drawSkyline(Vector2 camTarget, int screenW, int screenH, ZoneID
     // Parallax factor (buildings scroll slower than world)
     float parallaxX = camTarget.x * 0.08f;
 
-    Color bldColor = {12, 12, 18, 255};  // default seguro
+    Color bldColor = {12, 12, 18, 255};  // default safe
     switch (zone) {
         case ZoneID::LARuins:        bldColor = {18, 10, 8,  255}; break;
         case ZoneID::Bunker:         bldColor = {10, 18, 10, 255}; break;
@@ -333,7 +333,7 @@ void Background::drawSkyline(Vector2 camTarget, int screenW, int screenH, ZoneID
     DrawRectangle(0, (int)horizonY, screenW, 3, ColorAlpha(bldColor, 0.5f));
 }
 
-// â”€â”€â”€ Environment objects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€ Environment objects the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void Background::drawEnvObjects() const {
     for (const auto& obj : envObjects) {
@@ -442,7 +442,7 @@ void Background::drawTerminal(Vector2 pos, float t) const {
     DrawCircleV({pos.x, pos.y - 17}, 20 + pulse*8, ColorAlpha({255,0,0,255}, 0.04f));
 }
 
-// â”€â”€â”€ Ash particles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// the”€the”€the”€ Ash particles the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
 
 void Background::drawAsh() const {
     for (int i = 0; i < (int)ashParticles.size(); ++i) {
@@ -490,7 +490,7 @@ void Background::drawDataStream(int /*screenW*/, int /*screenH*/, ZoneID zone) c
     int charCount = 12;
 
     for (const auto& d : dataDrops) {
-        // Draw a vertical column of characters
+        // Draw the vertical column of characters
         for (int j = 0; j < d.len; ++j) {
             float charY = d.y - j * 12.0f;
             if (charY < 0 || charY > 730.0f) continue;

@@ -98,16 +98,16 @@ void Particle::renderGlow() const {
 // ─── ParticleSystem ───────────────────────────────────────────────────────────
 
 void ParticleSystem::spawnExplosion(Vector2 pos, Color color, int count) {
-    // Flash central brilhante (o "estouro")
+    // Flash central bright (the "estouro")
     Particle flash(pos, {0,0}, WHITE, 14.0f, 0.14f, ParticleShape::Circle, true);
     flash.gravity = 0.0f; flash.drag = 1.0f; flash.scaleEnd = 0.1f;
     particles.push_back(flash);
-    // Anel de choque que EXPANDE (colapso de alpha) — agora visivel de verdade
+    // Anel of choque that EXPANDE (collapse of alpha) — now visible of verdade
     Particle ring(pos, {0,0}, color, 8.0f, 0.30f, ParticleShape::Circle, true);
     ring.gravity = 0.0f; ring.drag = 1.0f; ring.scaleEnd = 5.0f;
     particles.push_back(ring);
 
-    // Shockwave ring (particulas)
+    // Shockwave ring (particles)
     spawnShockwave(pos, color);
 
     for (int i = 0; i < count; ++i) {
@@ -132,7 +132,7 @@ void ParticleSystem::spawnExplosion(Vector2 pos, Color color, int count) {
 }
 
 void ParticleSystem::spawnHit(Vector2 pos, Color color, int count) {
-    // Flash de impacto curtissimo (nucleo brilhante) — da "soco" ao hit
+    // Flash of impacto curtissimo (core bright) — of the "soco" to the hit
     Particle flash(pos, {0,0}, WHITE, 7.0f, 0.10f, ParticleShape::Circle, true);
     flash.gravity = 0.0f; flash.drag = 1.0f; flash.scaleEnd = 0.2f;
     particles.push_back(flash);
@@ -552,8 +552,8 @@ void ParticleSystem::update(float dt) {
         if (!it->active) it = particles.erase(it);
         else ++it;
     }
-    // Teto de seguranca: nunca mais que ~1400 particulas vivas (descarta as
-    // mais antigas) — protege o FPS em explosoes/ondas grandes.
+    // Ceiling of security: never more that ~1400 particles vivas (descarta the
+    // more antigas) — protege the FPS in explosoes/ondas grandes.
     const size_t kMaxParticles = 1400;
     if (particles.size() > kMaxParticles)
         particles.erase(particles.begin(),

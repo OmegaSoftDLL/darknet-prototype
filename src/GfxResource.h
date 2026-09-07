@@ -1,10 +1,10 @@
 #pragma once
 // ─────────────────────────────────────────────────────────────────────────────
-// GfxResource — wrappers RAII para recursos gráficos da raylib.
+// GfxResource — wrappers RAII to resources graphics of the raylib.
 //
-// Evitam vazamentos quando uma exceção ocorre durante a carga ou quando um
-// objeto é destruído em caminho de erro. Cada wrapper é movable-only e libera
-// o recurso no destrutor se ainda for dono dele.
+// Evitam vazamentos when uma exception ocorre during the load ou when um
+// objeto is destruido in path of error. Cada wrapper is movable-only and libera
+// the resource in the destrutor if still for dono dele.
 // ─────────────────────────────────────────────────────────────────────────────
 #include <raylib.h>
 #include <utility>
@@ -34,7 +34,7 @@ public:
     bool valid() const { return m_.meshCount > 0; }
     explicit operator bool() const { return valid(); }
 
-    // Transfere ownership sem liberar. Zera o outro.
+    // Transfere ownership without release. Zera the other.
     Model release() {
         Model tmp = m_;
         m_ = Model{};

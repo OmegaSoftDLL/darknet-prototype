@@ -1,10 +1,10 @@
 #pragma once
 // ─────────────────────────────────────────────────────────────────────────────
-// StoreClient — fachada para a loja premium do backend Node.js.
-// Faz login (JWT), busca o catálogo (/store), saldo de gems (/me), compra de
-// itens com gems (/store/buy-item, validado no servidor) e abre o Stripe Checkout
-// para comprar gems (/store/buy-gems). Todas as chamadas de rede rodam em threads
-// de fundo; a UI lê o estado por getters protegidos por mutex.
+// StoreClient — fachada for the shop premium of the backend Node.js.
+// Does login (JWT), busca the catalog (/store), saldo of gems (/me), purchase of
+// items with gems (/store/buy-item, validated in the server) and opens the Stripe Checkout
+// to buy gems (/store/buy-gems). All the chamadas of network rodam in threads
+// of fundo; the UI reads the state by getters protegidos by mutex.
 // ─────────────────────────────────────────────────────────────────────────────
 #include <string>
 #include <vector>
@@ -19,25 +19,25 @@ class StoreClient {
 public:
     std::string host      = "127.0.0.1";
     int         port      = 9000;
-    // Prefixo de rota quando a API fica atrás do gateway nginx (/api/* -> /api).
-    // Vazio = conexão direta no game-server (dev local). Configurado pelo jogo
-    // via DARKNET_API_URL (ex.: "https://darknet.seudominio.com" -> /api + TLS).
+    // Prefixo of route when the API stays behind of the gateway nginx (/api/* -> /api).
+    // Empty = connection direta in the game-server (dev local). Configurado pelo game
+    // via DARKNET_API_URL (ex.: "https://darknet.seudominio.with" -> /api + TLS).
     std::string apiPrefix = "";
-    bool        useTls    = false;   // HTTPS (WinHTTP) na API configurada
+    bool        useTls    = false;   // HTTPS (WinHTTP) in the API configured
 
-    ~StoreClient();   // espera threads de rede em voo (evita use-after-free no shutdown)
+    ~StoreClient();   // espera threads of network in voo (evita use-after-free in the shutdown)
 
-    // Token JWT obtido no login (usado também pelo NetClient no handshake WS).
+    // Token JWT obtido in the login (usado also pelo NetClient in the handshake WS).
     std::string token() const;
 
-    // Todas assíncronas (disparam thread de fundo, retornam imediatamente).
+    // All assincronas (disparam thread of fundo, retornam imediatamente).
     void loginAsync(const std::string& email, const std::string& password); // POST /auth/login -> token+id
-    void fetchStoreAsync();                      // GET  /store      -> catálogo
-    void refreshAsync();                         // GET  /me         -> gems/inventário
-    void buyItemAsync(const std::string& itemId);// POST /store/buy-item (server valida)
-    void buyGemsAsync(const std::string& packId);// POST /store/buy-gems -> abre navegador
+    void fetchStoreAsync();                      // GET  /store      -> catalog
+    void refreshAsync();                         // GET  /me         -> gems/inventory
+    void buyItemAsync(const std::string& itemId);// POST /store/buy-item (server valid)
+    void buyGemsAsync(const std::string& packId);// POST /store/buy-gems -> opens navegador
 
-    // ── Getters de UI (thread-safe) ───────────────────────────────────────────
+    // ── Getters of UI (thread-safe) ───────────────────────────────────────────
     bool        loggedIn() const { return logged_.load(); }
     bool        busy()     const { return busy_.load(); }
     int         gems()     const;
@@ -52,8 +52,8 @@ private:
     std::string               playerId_;
     std::atomic<bool>         logged_{false};
     std::atomic<bool>         busy_{false};
-    std::atomic<int>          activeThreads_{0};   // threads de rede em voo
-    std::vector<std::thread>  threads_;            // threads ativas (join no destrutor)
+    std::atomic<int>          activeThreads_{0};   // threads of network in voo
+    std::vector<std::thread>  threads_;            // threads ativas (join in the destrutor)
     int                       gems_ = 0;
     std::vector<PremiumItem>  items_;
     std::vector<GemPack>      packs_;
@@ -61,5 +61,5 @@ private:
     std::string               msg_;
 
     void setMsg(const std::string& m);
-    void startThread(std::thread&& t);             // helper: guarda e limpa threads finalizadas
+    void startThread(std::thread&& t);             // helper: guard and limpa threads finalizadas
 };

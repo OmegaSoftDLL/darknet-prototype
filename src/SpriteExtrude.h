@@ -1,26 +1,26 @@
 #pragma once
 // ─────────────────────────────────────────────────────────────────────────────
-// SpriteExtrude — converte a arte 2D EXISTENTE (pixel-art procedural) em um MODELO
-// 3D REAL (malha voxel), 100% fiel ao desenho 2D, só que com volume/profundidade.
+// SpriteExtrude — converts the EXISTING 2D art (procedural pixel-art) into the MODEL
+// 3D REAL (mesh voxel), 100% fiel to the draw 2D, only that with volume/profundidade.
 //
-// Fluxo: renderiza o render() 2D da entidade para uma RenderTexture (fundo
-// transparente, centrado), lê os pixels e gera uma malha 3D onde cada pixel opaco
-// vira uma coluna (voxel) extrudada em profundidade, com a COR exata do pixel.
-// O resultado é o personagem do jogo, fiel, agora em 3D de verdade.
+// Fluxo: renders the render() 2D of the entidade to uma RenderTexture (fundo
+// transparent, centrado), reads the pixels and generates uma mesh 3D where cada pixel opaque
+// vira uma column (voxel) extrudada in profundidade, with the COR exata of the pixel.
+// O result is the character of the game, fiel, now in 3D of verdade.
 //
-// Os modelos são gerados UMA vez por tipo e cacheados (caro só no 1º uso).
+// Os modelos are gerados UMA vez by type and cacheados (caro only in the 1o uso).
 // ─────────────────────────────────────────────────────────────────────────────
 #include <raylib.h>
 
 namespace SpriteExtrude {
-    // Gera um Model 3D voxel a partir de uma Image RGBA (pixels opacos = sólidos).
-    // voxelSize: tamanho de cada voxel no mundo. depth: espessura (eixo Z/profund.).
-    // O modelo fica centrado em X/Z e assenta a base em Y=0.
+    // Generates um Model 3D voxel from uma Image RGBA (pixels opacos = solidos).
+    // voxelSize: size of cada voxel in the world. depth: espessura (eixo Z/profund.).
+    // O model stays centrado in X/Z and assenta the base in Y=0.
     Model BuildVoxelModel(Image img, float voxelSize, float depth);
 
-    // Captura o desenho 2D (drawFn) CENTRADO em worldTarget para uma Image RGBA
-    // cap×cap (fundo transparente). drawFn desenha em coords de mundo normais.
-    // Template: evita std::function no hot path (uma alocacao por entidade por frame).
+    // Captura the draw 2D (drawFn) CENTRADO in worldTarget to uma Image RGBA
+    // cap×cap (fundo transparent). drawFn draws in coords of world normais.
+    // Template: evita std::function in the hot path (uma alocacao by entidade by frame).
     template<typename Fn>
     Image CaptureToImage(int cap, Vector2 worldTarget, Fn&& drawFn);
 }
@@ -42,7 +42,7 @@ Image SpriteExtrude::CaptureToImage(int cap, Vector2 worldTarget, Fn&& drawFn) {
     EndMode2D();
     EndTextureMode();
     Image img = LoadImageFromTexture(rt.texture);
-    ImageFlipVertical(&img);              // RenderTexture vem de cabeça pra baixo
+    ImageFlipVertical(&img);              // RenderTexture comes of head to down
     UnloadRenderTexture(rt);
     return img;
 }

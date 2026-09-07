@@ -1,5 +1,5 @@
-// Game_Evolution.cpp — motor de evolucao: mutadores de mundo e som de morte de inimigo.
-// Extraido de Game.cpp. Mesma classe Game.
+// Game_Evolution.cpp — evolution engine: world mutators and enemy death sounds.
+// Extracted from Game.cpp. Same class Game.
 #include "Game.h"
 #include "SpriteGen.h"
 #include "SpriteExtrude.h"
@@ -16,45 +16,45 @@
 
 const char* Game::mutatorName(WorldMutator m) const {
     switch (m) {
-        case WorldMutator::SwiftEnemies:  return "FRENESI VELOZ";
-        case WorldMutator::ArmoredEnemies:return "BLINDAGEM PESADA";
-        case WorldMutator::BloodMoon:     return "LUA DE SANGUE";
-        case WorldMutator::LootRain:      return "CHUVA DE ESPOLIO";
-        case WorldMutator::Frenzy:        return "INVASAO TOTAL";
-        case WorldMutator::Berserk:       return "FUROR KRONOS";
+        case WorldMutator::SwiftEnemies:  return "SWIFT FRENZY";
+        case WorldMutator::ArmoredEnemies:return "HEAVY ARMOR";
+        case WorldMutator::BloodMoon:     return "BLOOD MOON";
+        case WorldMutator::LootRain:      return "LOOT RAIN";
+        case WorldMutator::Frenzy:        return "TOTAL INVASION";
+        case WorldMutator::Berserk:       return "KRONOS FURY";
         default:                          return "";
     }
 }
 
 const char* Game::mutatorDesc(WorldMutator m) const {
     switch (m) {
-        case WorldMutator::SwiftEnemies:  return "Inimigos +35% velocidade. Reaja rapido!";
-        case WorldMutator::ArmoredEnemies:return "Inimigos +60% vida. Traga poder de fogo.";
-        case WorldMutator::BloodMoon:     return "Inimigos se curam ao te atingir.";
-        case WorldMutator::LootRain:      return "Espolio +150%. Cace tudo agora!";
-        case WorldMutator::Frenzy:        return "Inimigos surgem em dobro.";
-        case WorldMutator::Berserk:       return "Inimigos +40% dano. Cuidado extremo.";
+        case WorldMutator::SwiftEnemies:  return "Enemies +35% speed. React fast!";
+        case WorldMutator::ArmoredEnemies:return "Enemies +60% health. Bring firepower.";
+        case WorldMutator::BloodMoon:     return "Enemies heal when they hit you.";
+        case WorldMutator::LootRain:      return "Loot +150%. Hunt everything now!";
+        case WorldMutator::Frenzy:        return "Enemies spawn in double numbers.";
+        case WorldMutator::Berserk:       return "Enemies +40% damage. Extreme caution.";
         default:                          return "";
     }
 }
 
 void Game::rollNewMutator() {
-    // Escolhe um mutador diferente do atual (variedade garantida)
-    int n = (int)WorldMutator::COUNT - 1; // exclui None
+    // Picks the mutator different from the current one (variety guaranteed)
+    int n = (int)WorldMutator::COUNT - 1; // excludes None
     WorldMutator next = activeMutator;
     for (int tries = 0; tries < 8 && next == activeMutator; ++tries)
         next = (WorldMutator)(1 + GetRandomValue(0, n - 1));
     activeMutator = next;
     mutatorTimer  = 0.0f;
-    showStoryBanner(TextFormat("MUTADOR: %s", mutatorName(activeMutator)),
+    showStoryBanner(TextFormat("MUTATOR: %s", mutatorName(activeMutator)),
                     mutatorDesc(activeMutator), 4.0f);
-    triggerPlayerSpeech("As regras mudaram. Adapte-se.", 3.0f);
+    triggerPlayerSpeech("The rules have changed. Adapt.", 3.0f);
 }
 
 void Game::updateEvolutionEngine(float dt) {
-    if (inSafeZone(player.position)) return; // a base nao escala (refugio)
+    if (inSafeZone(player.position)) return; // the base doesn't scale (refuge)
 
-    // ── Nivel de Ameaca: sobe por TEMPO ou por KILLS — o que vier primeiro ────
+    // ── Threat Level: rises by TIME or by KILLS — whichever comes first ────
     threatTimer += dt;
     bool levelByTime  = threatTimer >= 100.0f;
     bool levelByKills = (totalKills - threatKillMark) >= 40;
@@ -62,51 +62,51 @@ void Game::updateEvolutionEngine(float dt) {
         threatLevel++;
         threatTimer    = 0.0f;
         threatKillMark = totalKills;
-        // Recompensa de marco + anuncio de novidade
+        // Milestone reward + novelty announcement
         int bonus = 50 * threatLevel;
         player.credits += bonus;
         totalCreditsEarned += bonus;
         achievements.onCreditsEarned(totalCreditsEarned);
-        showStoryBanner(TextFormat("NIVEL DE AMEACA %d", threatLevel),
-            TextFormat("KRONOS escala. Inimigos +%.0f%% mais fortes. Bonus: $%d",
+        showStoryBanner(TextFormat("THREAT LESPEED %d", threatLevel),
+            TextFormat("KRONOS scales. Enemies +%.0f%% stronger. Bonus: $%d",
                        (threatStatMult()-1.0f)*100.0f, bonus), 4.0f);
-        triggerPlayerSpeech("O KRONOS esta evoluindo. Eu tambem vou.", 3.0f);
+        triggerPlayerSpeech("KRONOS is evolving. So will I.", 3.0f);
         audio.playLevelUp();
     }
 
-    // ── Mutadores rotativos: muda o "sabor" do mundo periodicamente ───────────
+    // ── Rotating mutators: changes the "flavor" of the world periodically ───────────
     mutatorTimer += dt;
     if (activeMutator == WorldMutator::None) {
-        // primeiro mutador comeca apos ~60s de jogo
+        // first mutator starts after ~60s of gameplay
         if (sessionTime > 60.0f) rollNewMutator();
     } else if (mutatorTimer >= mutatorDuration) {
         rollNewMutator();
     }
 }
 
-void Game::playEnemyDeathSound(const Enemy& e) {
-    // Som de morte por FACCAO/tipo do inimigo
+void Game::playEnemyDeathSound(const Enemy& and) {
+    // Death sound by enemy FACTION/type
     using ET = EnemyType;
-    if (e.isFinalBoss || e.type==ET::Boss || e.type==ET::AlienBoss || e.type==ET::OmegaBoss ||
-        e.type==ET::VoidColossus || e.type==ET::FrostWyrm || e.type==ET::InfernoHerald ||
-        e.type==ET::VolcanicTitan || e.type==ET::Leviathan || e.type==ET::ZombieLord ||
-        e.type==ET::PoltergeistBoss || e.type==ET::Broodmother) {
-        audio.playBossRoar();                       // chefes
-    } else if (e.type==ET::Zergling || e.type==ET::Hydra || e.type==ET::CorrupterDrone ||
-               e.type==ET::AcidSpitter || e.type==ET::NeuralParasite || e.type==ET::AbyssalEel ||
-               e.type==ET::MorphX || e.type==ET::ChaosSpawn) {
-        audio.playAlienScream();                    // aliens/orgânicos
-    } else if (e.type==ET::Ghost || e.type==ET::GhostElite || e.type==ET::ShadowWraith ||
-               e.type==ET::BansheeHowler || e.type==ET::GhostSniper || e.type==ET::VoidStalker ||
-               e.type==ET::DarkMatter || e.type==ET::SoulReaper) {
-        audio.playGhostWail();                      // fantasmas/sombras
-    } else if (e.type==ET::Zombie || e.type==ET::ZombieRager || e.type==ET::ZombieHorde ||
-               e.type==ET::UndeadEnforcer || e.type==ET::Necromancer || e.type==ET::PlagueDoctor) {
-        audio.playGhostWail();                      // mortos-vivos (gemido)
-    } else if (e.type==ET::MoltenGolem || e.type==ET::CrimsonBat || e.type==ET::LichKnight ||
-               e.type==ET::DemonHunter || e.type==ET::BloodBerserker) {
-        audio.playExplosion(false);                 // infernais/demônios
+    if (and.isFinalBoss || and.type==ET::Boss || and.type==ET::AlienBoss || and.type==ET::OmegaBoss ||
+        and.type==ET::VoidColossus || and.type==ET::FrostWyrm || and.type==ET::InfernoHerald ||
+        and.type==ET::VolcanicTitan || and.type==ET::Leviathan || and.type==ET::ZombieLord ||
+        and.type==ET::PoltergeistBoss || and.type==ET::Broodmother) {
+        audio.playBossRoar();                       // bosses
+    } else if (and.type==ET::Zergling || and.type==ET::Hydra || and.type==ET::CorrupterDrone ||
+               and.type==ET::AcidSpitter || and.type==ET::NeuralParasite || and.type==ET::AbyssalEel ||
+               and.type==ET::MorphX || and.type==ET::ChaosSpawn) {
+        audio.playAlienScream();                    // aliens/organics
+    } else if (and.type==ET::Ghost || and.type==ET::GhostElite || and.type==ET::ShadowWraith ||
+               and.type==ET::BansheeHowler || and.type==ET::GhostSniper || and.type==ET::VoidStalker ||
+               and.type==ET::DarkMatter || and.type==ET::SoulReaper) {
+        audio.playGhostWail();                      // ghosts/shadows
+    } else if (and.type==ET::Zombie || and.type==ET::ZombieRager || and.type==ET::ZombieHorde ||
+               and.type==ET::UndeadEnforcer || and.type==ET::Necromancer || and.type==ET::PlagueDoctor) {
+        audio.playGhostWail();                      // undead (wail)
+    } else if (and.type==ET::MoltenGolem || and.type==ET::CrimsonBat || and.type==ET::LichKnight ||
+               and.type==ET::DemonHunter || and.type==ET::BloodBerserker) {
+        audio.playExplosion(false);                 // infernals/demons
     } else {
-        audio.playEnemyDeath(false);                // robôs/mechs/padrão (mecânico)
+        audio.playEnemyDeath(false);                // robots/mechs/default (mechanical)
     }
 }

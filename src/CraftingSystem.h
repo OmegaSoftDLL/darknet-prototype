@@ -37,7 +37,7 @@ struct CraftingSystem {
     float craftTimer   = 0.f;
     bool  crafting     = false;
 
-    // Mouse (coords ja virtualizadas pelo Game)
+    // Mouse (coords already virtualizadas pelo Game)
     Vector2 mousePos    = {-1, -1};
     double  lastClickT  = -1.0;
     int     lastClickIdx = -1;
@@ -47,8 +47,8 @@ struct CraftingSystem {
     bool tryCraft(std::vector<Item>& bag, Equipment& outEquip, Item& outItem, bool& gotEquip);
     void update(float dt);
     void handleInput();   // UP/DOWN/LEFT/RIGHT/ENTER/ESC
-    // Mouse-aware: clique nas abas muda categoria; hover/clique seleciona receita;
-    // duplo-clique OU botao CRAFTAR fabrica; botao FECHAR fecha (outClosed=true).
+    // Mouse-aware: click in the abas muda categoria; hover/click selects recipe;
+    // double-click OU button CRAFTAR factory; button FECHAR closes (outClosed=true).
     bool handleMouse(Vector2 vmouse, bool clicked, std::vector<Item>& bag,
                      int screenW, int screenH, Equipment& outEquip, Item& outItem,
                      bool& gotEquip, bool& outClosed);

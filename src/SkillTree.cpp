@@ -11,18 +11,18 @@ static Color BRANCH_COLORS[3] = {
 };
 
 static const PerkInfo PERKS[PERK_COUNT] = {
-    {"Hud Balistico",     "Sistema de mira sobreposto: +10% de dano de arma.",        BRANCH_SIGHT,  0},
-    {"Laser Duplo",       "Feixe de corte extra: +15% de dano nas habilidades.",      BRANCH_SIGHT,  0},
-    {"Perfurador",        "Laser expandido: dispara 5 feixes ao mesmo tempo.",        BRANCH_SIGHT,  1},
-    {"Sistema Predador",  "+20% de dano total e Rajada com +4 projeteis.",            BRANCH_SIGHT,  2},
-    {"Tempo Neural",      "Sinapses aceleradas: cooldowns das skills -12%.",          BRANCH_NEURAL, 0},
-    {"Manto Fantasma",    "Armadura holografica permanente: +10 de defesa.",          BRANCH_NEURAL, 0},
-    {"Antena EMP",        "+20% de alcance em todas as skills.",                      BRANCH_NEURAL, 1},
-    {"Fantasma Digital",  "Sobrecarga +3s e 12% de chance de evasao.",                BRANCH_NEURAL, 2},
-    {"Regenerador",       "Nanobots de reparo regeneram 3 HP por segundo.",           BRANCH_VIRA,   0},
-    {"Placa Blindada",    "Revestimento de carapaca: +40 de HP maximo.",              BRANCH_VIRA,   0},
-    {"Hack de Sangue",    "+15% de roubo de vida (cura ao derrotar inimigos).",       BRANCH_VIRA,   1},
-    {"Protocolo Imortal", "1x a cada 60s, um golpe fatal e anulado.",                 BRANCH_VIRA,   2},
+    {"Hud Balistico",     "Sistema of mira sobreposto: +10% of damage of weapon.",        BRANCH_SIGHT,  0},
+    {"Laser Double",       "Feixe of corte extra: +15% of damage in the skills.",      BRANCH_SIGHT,  0},
+    {"Perfurador",        "Laser expandido: dispara 5 feixes to the same time.",        BRANCH_SIGHT,  1},
+    {"Sistema Predador",  "+20% of damage total and Burst with +4 projectiles.",            BRANCH_SIGHT,  2},
+    {"Time Neural",      "Sinapses aceleradas: cooldowns of the skills -12%.",          BRANCH_NEURAL, 0},
+    {"Manto Fantasma",    "Armor holografica permanent: +10 of defense.",          BRANCH_NEURAL, 0},
+    {"Antena EMP",        "+20% of range in all the skills.",                      BRANCH_NEURAL, 1},
+    {"Fantasma Digital",  "Overload +3s and 12% of chance of evasao.",                BRANCH_NEURAL, 2},
+    {"Regenerador",       "Nanobots of reparo regeneram 3 HP by second.",           BRANCH_VIRA,   0},
+    {"Placa Blindada",    "Revestimento of carapaca: +40 of HP maximum.",              BRANCH_VIRA,   0},
+    {"Hack of Blood",    "+15% of roubo of health (healing to the defeat enemies).",       BRANCH_VIRA,   1},
+    {"Protocolo Imortal", "1x the cada 60s, um golpe fatal and anulado.",                 BRANCH_VIRA,   2},
 };
 
 const PerkInfo& perk(int i) {

@@ -5,14 +5,14 @@
 #include <string>
 
 enum class BuildingType {
-    Ark,           // Base principal — heal player nearby, spawn point
-    House,         // Gera creditos passivamente
-    Barracks,      // Gera soldados aliados (infantry AI)
-    TankFactory,   // Produz tanques amigos que atacam inimigos
-    Turret,        // Torre automatica que atira nos inimigos
-    ResourceNode,  // Gera materiais de crafting
-    Wall,          // Barreira que bloqueia inimigos
-    MedBay,        // Cura player e companions ao redor
+    Ark,           // Base main — heal player nearby, spawn point
+    House,         // Generates credits passivamente
+    Barracks,      // Generates soldados aliados (infantry AI)
+    TankFactory,   // Produz tanques amigos that atacam enemies
+    Turret,        // Torre automatic that atira in the enemies
+    ResourceNode,  // Generates materiais of crafting
+    Wall,          // Barrier that bloqueia enemies
+    MedBay,        // Healing player and companions around
 };
 
 struct FriendlyTank {
@@ -32,7 +32,7 @@ struct FriendlyTank {
     bool    wantsToShoot = false;
     Vector2 shootDir     = {1, 0};
 
-    // RTS — selecao e ordem de mover
+    // RTS — selecao and ordem of move
     bool    selected     = false;
     bool    hasMoveOrder = false;
     Vector2 moveOrder    = {0, 0};
@@ -56,7 +56,7 @@ struct FriendlySoldier {
     bool    wantsToShoot = false;
     Vector2 shootDir     = {1, 0};
 
-    // RTS — selecao e ordem de mover
+    // RTS — selecao and ordem of move
     bool    selected     = false;
     bool    hasMoveOrder = false;
     Vector2 moveOrder    = {0, 0};
@@ -73,22 +73,22 @@ struct Building {
     float        maxHealth    = 200.f;
     bool         active       = true;
 
-    // Evolucao do predio — nivel 1..3, cada nivel melhora os stats
+    // Evolution of the building — level 1..3, cada level melhora the stats
     int          level        = 1;
-    static const int MAX_LEVEL = 3;
+    static const int MAX_LESPEED = 3;
 
     // Production timers
     float        buildTimer   = 0.f;    // construction progress 0→1
     bool         built        = false;
-    float        builtAt      = 0.f;    // GetTime() quando a construcao terminou (efeito de materializacao)
+    float        builtAt      = 0.f;    // GetTime() when the structure ended (effect of materializacao)
     float        productionTimer = 0.f;
     float        productionRate  = 15.f; // seconds per unit/credit cycle
 
-    // Fila de producao (Quartel/Fabrica) — unidades NAO nascem na hora.
-    // Cada clique/mao-de-obra enfileira; a unidade saí pronta so depois de spawnTime.
-    int          spawnQueue   = 0;    // unidades enfileiradas (inclui a atual)
-    float        spawnTimer   = 0.f;  // progresso da unidade atual (0→spawnTime)
-    float        spawnTime    = 5.f;  // segundos de producao por unidade
+    // Queue of production (Quartel/Fabrica) — unidades NOT nascem in the hour.
+    // Cada click/hand-of-obra enfileira; the unit leaves ready only after spawnTime.
+    int          spawnQueue   = 0;    // unidades enfileiradas (inclui the current)
+    float        spawnTimer   = 0.f;  // progress of the unit current (0→spawnTime)
+    float        spawnTime    = 5.f;  // seconds of production by unit
 
     // Resource generation
     float        genTimer     = 0.f;
@@ -135,44 +135,44 @@ public:
     void render(Vector2 playerPos, Vector2 mouseWorldPos) const;
     void renderBuildMenu(int screenW, int screenH) const;
 
-    // Persistência: serializa/deserializa estado em linhas de texto.
+    // Persistence: serializa/deserializa state in lines of text.
     void save(std::vector<std::string>& out) const;
     bool load(const std::vector<std::string>& in);
 
     void toggleBuildMode();
     bool tryPlace(Vector2 worldPos, int playerCredits, int playerMetal, int playerCarapace,
                   int& outCreditCost, int& outMetalCost, int& outCarapaceCost);
-    // Hit-test do menu de construcao (mouse em coords virtuais). Retorna o indice
-    // do predio sob o cursor, ou -1 se o clique NAO foi no painel do menu.
+    // Hit-test of the menu of structure (mouse in coords virtuais). Returns the indice
+    // of the building sob the cursor, ou -1 if the click NOT went in the painel of the menu.
     int  menuCellAt(Vector2 screenMouse, int screenW, int screenH) const;
 
     void healPlayerIfNear(Vector2 playerPos, float& playerHealth, float playerMaxHealth);
     int  collectCredits();       // returns credits generated this frame
     int  collectMaterials();     // returns metal scraps generated
 
-    // Clique numa fabrica/quartel para produzir uma unidade na hora (custa creditos).
-    // Retorna: 0=nao clicou em predio, 1=produziu, 2=sem creditos, 3=limite atingido.
+    // Click numa factory/barracks to produzir uma unit in the hour (custa credits).
+    // Returns: 0=not clicou in building, 1=produziu, 2=without credits, 3=limit atingido.
     int  clickProduce(Vector2 worldPos, int& playerCredits);
-    // Prompts flutuantes sobre fabricas/quarteis (chamado dentro de BeginMode2D)
+    // Prompts flutuantes about fabricas/quarteis (called inside of BeginMode2D)
     void renderUnitPrompts() const;
 
-    // ── Evolucao de predios ──────────────────────────────────────────────────
-    // Evolui o predio mais proximo do jogador (custa creditos crescentes).
-    // Retorna: 0=nenhum perto, 1=evoluiu, 2=sem creditos, 3=nivel maximo.
+    // ── Evolution of buildings ──────────────────────────────────────────────────
+    // Evolui the building more next of the player (custa credits crescentes).
+    // Returns: 0=none near, 1=evoluiu, 2=without credits, 3=level maximum.
     int  upgradeNearby(Vector2 playerPos, int& playerCredits);
-    int  upgradeCostFor(const Building& b) const;   // custo p/ proximo nivel
-    void applyLevelStats(Building& b);              // aplica stats conforme nivel
-    void renderBuildingInfo(Vector2 playerPos) const; // descricao+nivel sobre predios
+    int  upgradeCostFor(const Building& b) const;   // cost p/ next level
+    void applyLevelStats(Building& b);              // aplica stats conforme level
+    void renderBuildingInfo(Vector2 playerPos) const; // descricao+level about buildings
     void renderBuilding(const Building& b) const;
 
-    // ── Arca: respawn + aura de bonus ────────────────────────────────────────
-    bool getArkPosition(Vector2& out) const;       // true se ha uma Arca construida
-    bool isInArkAura(Vector2 pos) const;           // dentro do raio de uma Arca viva
+    // ── Arca: respawn + aura of bonus ────────────────────────────────────────
+    bool getArkPosition(Vector2& out) const;       // true if ha uma Arca built
+    bool isInArkAura(Vector2 pos) const;           // inside the radius of uma Arca viva
 
-    // ── Controle RTS (selecao por arrasto + ordem de mover) ──────────────────
-    int  selectUnitsInBox(Rectangle boxWorld);     // seleciona unidades na caixa; retorna qtd
+    // ── Controle RTS (selecao by arrasto + ordem of move) ──────────────────
+    int  selectUnitsInBox(Rectangle boxWorld);     // seleciona unidades in the caixa; returns qtd
     void clearSelection();
-    void orderMove(Vector2 dest);                  // move as unidades selecionadas
+    void orderMove(Vector2 dest);                  // move the unidades selecionadas
     int  selectedCount() const;
     void renderSelection() const;                  // aneis verdes sob unidades selecionadas
 

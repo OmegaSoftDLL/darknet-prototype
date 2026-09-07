@@ -19,31 +19,31 @@ Item Item::createRandom(Vector2 pos) {
 
     switch (item.type) {
         case ItemType::EnergyCore:
-            item.name   = "Nucleo de Energia";
+            item.name   = "Core of Energia";
             item.color  = {0, 255, 255, 255};
             item.rarity = ItemRarity::Uncommon;
             item.value  = 25;
             break;
         case ItemType::ScrapMetal:
-            item.name   = "Sucata Metalica";
+            item.name   = "Scrap Metalica";
             item.color  = {160,160,170,255};
             item.rarity = ItemRarity::Common;
             item.value  = 8;
             break;
         case ItemType::WeaponPart:
-            item.name   = "Peca de Arma";
+            item.name   = "Peca of Weapon";
             item.color  = {255,130,0,255};
             item.rarity = ItemRarity::Uncommon;
             item.value  = 20;
             break;
         case ItemType::HealthPack:
-            item.name   = "Kit de Reparo";
+            item.name   = "Kit of Reparo";
             item.color  = {0,210,80,255};
             item.rarity = ItemRarity::Common;
             item.value  = 15;
             break;
         case ItemType::PlasmaCell:
-            item.name   = "Celula de Plasma";
+            item.name   = "Celula of Plasma";
             item.color  = {180,0,255,255};
             item.rarity = ItemRarity::Uncommon;
             item.value  = 30;
@@ -57,7 +57,7 @@ Item Item::createCredits(Vector2 pos, int amount) {
     Item item;
     item.position = pos;
     item.type     = ItemType::Credits;
-    item.name     = "Creditos";
+    item.name     = "Credits";
     item.color    = {255,210,0,255};
     item.rarity   = ItemRarity::Common;
     item.value    = amount;
@@ -69,7 +69,7 @@ Item Item::createTech(Vector2 pos) {
     Item item;
     item.position = pos;
     item.type     = ItemType::TechChip;
-    item.name     = "Chip de Tecnologia";
+    item.name     = "Chip of Tecnologia";
     item.color    = {0,200,255,255};
     item.rarity   = ItemRarity::Rare;
     item.value    = 80;
@@ -92,63 +92,63 @@ Item Item::createEliteDrop(Vector2 pos) {
 static void setupItemByType(Item& item) {
     switch (item.type) {
         // ── Existing base items ──
-        case ItemType::EnergyCore:     item.name="Nucleo de Energia"; item.color={0,255,255,255}; item.value=25; break;
-        case ItemType::ScrapMetal:     item.name="Sucata Metalica"; item.color={160,160,170,255}; item.value=8; break;
-        case ItemType::MetalScrap:     item.name="Sucata de Metal"; item.color={140,140,150,255}; item.value=6; break;
-        case ItemType::WeaponPart:     item.name="Peca de Arma"; item.color={255,130,0,255}; item.value=20; break;
-        case ItemType::HealthPack:     item.name="Kit de Reparo"; item.color={0,210,80,255}; item.value=15; break;
-        case ItemType::TechChip:       item.name="Chip de Tecnologia"; item.color={0,200,255,255}; item.value=80; item.radius=9.0f; break;
+        case ItemType::EnergyCore:     item.name="Core of Energia"; item.color={0,255,255,255}; item.value=25; break;
+        case ItemType::ScrapMetal:     item.name="Scrap Metalica"; item.color={160,160,170,255}; item.value=8; break;
+        case ItemType::MetalScrap:     item.name="Scrap of Metal"; item.color={140,140,150,255}; item.value=6; break;
+        case ItemType::WeaponPart:     item.name="Peca of Weapon"; item.color={255,130,0,255}; item.value=20; break;
+        case ItemType::HealthPack:     item.name="Kit of Reparo"; item.color={0,210,80,255}; item.value=15; break;
+        case ItemType::TechChip:       item.name="Chip of Tecnologia"; item.color={0,200,255,255}; item.value=80; item.radius=9.0f; break;
         case ItemType::NanoCore:       item.name="NanoCore Quantum"; item.color={255,80,200,255}; item.value=200; item.radius=11.0f; break;
-        case ItemType::PlasmaCell:     item.name="Celula de Plasma"; item.color={180,0,255,255}; item.value=30; break;
-        case ItemType::Credits:        item.name="Creditos"; item.color={255,210,0,255}; item.value=50; item.radius=6.0f; break;
+        case ItemType::PlasmaCell:     item.name="Celula of Plasma"; item.color={180,0,255,255}; item.value=30; break;
+        case ItemType::Credits:        item.name="Credits"; item.color={255,210,0,255}; item.value=50; item.radius=6.0f; break;
         case ItemType::AlienCarapace:  item.name="Carapaca Alienigena"; item.color={50,200,50,255}; item.value=40; break;
-        case ItemType::PlasmaCore:     item.name="Nucleo de Plasma"; item.color={255,80,0,255}; item.value=60; break;
+        case ItemType::PlasmaCore:     item.name="Core of Plasma"; item.color={255,80,0,255}; item.value=60; break;
         case ItemType::NanoFiber:      item.name="Fibra Nano"; item.color={0,200,180,255}; item.value=45; break;
         case ItemType::OmegaEssence:   item.name="Essencia OMEGA"; item.color={200,0,255,255}; item.value=500; item.radius=12.0f; break;
         // ── Weapons ──
-        case ItemType::PlasmaRifle:    item.name="Rifle de Plasma"; item.color={0,180,255,255}; item.value=120; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
-        case ItemType::VoidBlade:      item.name="Lamina do Void"; item.color={80,0,180,255}; item.value=160; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
-        case ItemType::CrystalStaff:   item.name="Cajado de Cristal"; item.color={160,220,255,255}; item.value=140; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::PlasmaRifle:    item.name="Rifle of Plasma"; item.color={0,180,255,255}; item.value=120; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::VoidBlade:      item.name="Lamina of the Void"; item.color={80,0,180,255}; item.value=160; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::CrystalStaff:   item.name="Staff of Crystal"; item.color={160,220,255,255}; item.value=140; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
         case ItemType::NanoBow:        item.name="Arco Nano"; item.color={0,220,180,255}; item.value=110; item.radius=10.0f; item.rarity=ItemRarity::Uncommon; break;
-        case ItemType::FrostHammer:    item.name="Martelo de Gelo"; item.color={180,230,255,255}; item.value=180; item.radius=11.0f; item.rarity=ItemRarity::Epic; break;
-        case ItemType::AcidGun:        item.name="Pistola de Acido"; item.color={100,220,0,255}; item.value=100; item.radius=10.0f; item.rarity=ItemRarity::Uncommon; break;
-        case ItemType::SoulScythe:     item.name="Foice da Alma"; item.color={100,0,80,255}; item.value=220; item.radius=11.0f; item.rarity=ItemRarity::Epic; break;
-        case ItemType::ChainBlade:     item.name="Lamina de Corrente"; item.color={180,140,0,255}; item.value=150; item.radius=11.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::FrostHammer:    item.name="Martelo of Ice"; item.color={180,230,255,255}; item.value=180; item.radius=11.0f; item.rarity=ItemRarity::Epic; break;
+        case ItemType::AcidGun:        item.name="Pistola of Acid"; item.color={100,220,0,255}; item.value=100; item.radius=10.0f; item.rarity=ItemRarity::Uncommon; break;
+        case ItemType::SoulScythe:     item.name="Foice of the Alma"; item.color={100,0,80,255}; item.value=220; item.radius=11.0f; item.rarity=ItemRarity::Epic; break;
+        case ItemType::ChainBlade:     item.name="Lamina of Corrente"; item.color={180,140,0,255}; item.value=150; item.radius=11.0f; item.rarity=ItemRarity::Rare; break;
         // ── Armor ──
         case ItemType::NanoSuit:       item.name="Nano Suit"; item.color={0,180,220,255}; item.value=100; item.radius=11.0f; item.rarity=ItemRarity::Uncommon; break;
-        case ItemType::CrystalArmor:   item.name="Armadura de Cristal"; item.color={140,200,255,255}; item.value=160; item.radius=11.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::CrystalArmor:   item.name="Armor of Crystal"; item.color={140,200,255,255}; item.value=160; item.radius=11.0f; item.rarity=ItemRarity::Rare; break;
         case ItemType::VoidPlating:    item.name="Blindagem Void"; item.color={60,0,120,255}; item.value=140; item.radius=11.0f; item.rarity=ItemRarity::Rare; break;
-        case ItemType::DragonScale:    item.name="Escama de Dragao"; item.color={200,80,0,255}; item.value=200; item.radius=12.0f; item.rarity=ItemRarity::Epic; break;
-        case ItemType::PhaseCloak:     item.name="Manto de Fase"; item.color={120,0,200,255}; item.value=130; item.radius=11.0f; item.rarity=ItemRarity::Rare; break;
-        case ItemType::IronBastionArmor: item.name="Armadura Bastiao"; item.color={120,130,140,255}; item.value=240; item.radius=12.0f; item.rarity=ItemRarity::Epic; break;
+        case ItemType::DragonScale:    item.name="Escama of Dragao"; item.color={200,80,0,255}; item.value=200; item.radius=12.0f; item.rarity=ItemRarity::Epic; break;
+        case ItemType::PhaseCloak:     item.name="Manto of Phase"; item.color={120,0,200,255}; item.value=130; item.radius=11.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::IronBastionArmor: item.name="Armor Bastiao"; item.color={120,130,140,255}; item.value=240; item.radius=12.0f; item.rarity=ItemRarity::Epic; break;
         case ItemType::BioRegenSuit:   item.name="Traje Bio-Regen"; item.color={0,200,100,255}; item.value=170; item.radius=11.0f; item.rarity=ItemRarity::Rare; break;
         // ── Accessories ──
-        case ItemType::QuantumCore:    item.name="Nucleo Quantico"; item.color={200,150,0,255}; item.value=180; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
-        case ItemType::SoulCrystal:    item.name="Cristal da Alma"; item.color={160,0,120,255}; item.value=150; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::QuantumCore:    item.name="Core Quantico"; item.color={200,150,0,255}; item.value=180; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::SoulCrystal:    item.name="Crystal of the Alma"; item.color={160,0,120,255}; item.value=150; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
         case ItemType::VoidFragment:   item.name="Fragmento Void"; item.color={40,0,80,255}; item.value=130; item.radius=10.0f; item.rarity=ItemRarity::Uncommon; break;
         case ItemType::NanoChip:       item.name="Nano Chip"; item.color={0,200,220,255}; item.value=90; item.radius=9.0f; item.rarity=ItemRarity::Uncommon; break;
-        case ItemType::TimePiece:      item.name="Relogio do Tempo"; item.color={220,200,0,255}; item.value=220; item.radius=11.0f; item.rarity=ItemRarity::Epic; break;
-        case ItemType::FrostRune:      item.name="Runa de Gelo"; item.color={160,220,255,255}; item.value=140; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
-        case ItemType::PlasmaCell2:    item.name="Celula de Plasma+"; item.color={200,50,255,255}; item.value=160; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::TimePiece:      item.name="Relogio of the Time"; item.color={220,200,0,255}; item.value=220; item.radius=11.0f; item.rarity=ItemRarity::Epic; break;
+        case ItemType::FrostRune:      item.name="Runa of Ice"; item.color={160,220,255,255}; item.value=140; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
+        case ItemType::PlasmaCell2:    item.name="Celula of Plasma+"; item.color={200,50,255,255}; item.value=160; item.radius=10.0f; item.rarity=ItemRarity::Rare; break;
         // ── Consumables ──
         case ItemType::MedKit:         item.name="Kit Medico"; item.color={0,220,80,255}; item.value=60; break;
         case ItemType::EnergyDrink:    item.name="Bebida Energetica"; item.color={255,220,0,255}; item.value=40; break;
         case ItemType::NanoPatch:      item.name="Nano Curativo"; item.color={0,180,160,255}; item.value=50; break;
         case ItemType::VoidEssence2:   item.name="Essencia Void"; item.color={100,0,160,255}; item.value=80; break;
-        case ItemType::FrostCrystal2:  item.name="Cristal de Gelo"; item.color={180,230,255,255}; item.value=70; break;
-        case ItemType::PlasmaVial:     item.name="Vial de Plasma"; item.color={180,80,255,255}; item.value=65; break;
-        case ItemType::SoulFragment2:  item.name="Fragmento da Alma"; item.color={160,60,200,255}; item.value=100; break;
+        case ItemType::FrostCrystal2:  item.name="Crystal of Ice"; item.color={180,230,255,255}; item.value=70; break;
+        case ItemType::PlasmaVial:     item.name="Vial of Plasma"; item.color={180,80,255,255}; item.value=65; break;
+        case ItemType::SoulFragment2:  item.name="Fragmento of the Alma"; item.color={160,60,200,255}; item.value=100; break;
         // ── Legendaries ──
         case ItemType::OmegaWeapon:    item.name="OMEGA WEAPON"; item.color={255,50,0,255}; item.value=1000; item.radius=13.0f; item.rarity=ItemRarity::Omega; break;
-        case ItemType::VoidCrown:      item.name="Coroa do Void"; item.color={120,0,255,255}; item.value=800; item.radius=13.0f; item.rarity=ItemRarity::Legendary; break;
-        case ItemType::InfinityCore:   item.name="Nucleo Infinito"; item.color={255,200,0,255}; item.value=700; item.radius=12.0f; item.rarity=ItemRarity::Legendary; break;
+        case ItemType::VoidCrown:      item.name="Coroa of the Void"; item.color={120,0,255,255}; item.value=800; item.radius=13.0f; item.rarity=ItemRarity::Legendary; break;
+        case ItemType::InfinityCore:   item.name="Core Infinito"; item.color={255,200,0,255}; item.value=700; item.radius=12.0f; item.rarity=ItemRarity::Legendary; break;
         case ItemType::DragonSlayer:   item.name="Mata-Dragoes"; item.color={255,100,0,255}; item.value=900; item.radius=13.0f; item.rarity=ItemRarity::Legendary; break;
         default: item.name="Item Desconhecido"; item.color={180,180,180,255}; item.value=10; break;
     }
 }
 
 Item Item::createWeaponDrop(Vector2 pos) {
-    // Pick a random weapon/armor/accessory from extended list
+    // Pick the random weapon/armor/accessory from extended list
     static const ItemType weaponPool[] = {
         ItemType::PlasmaRifle, ItemType::VoidBlade, ItemType::CrystalStaff,
         ItemType::NanoBow, ItemType::AcidGun, ItemType::ChainBlade,
@@ -164,9 +164,9 @@ Item Item::createWeaponDrop(Vector2 pos) {
     setupItemByType(item);
     item.rarity = rollRarity(false);
     item.applyRarityBonus();
-    item.rollAffixes();            // afixos + nome composto + bônus
+    item.rollAffixes();            // afixos + nome composto + bonus
     item.isNew = true;
-    // Itens raros ostentam o feixe por mais tempo
+    // Items raros ostentam the feixe by more time
     item.dropBeamTimer = 3.5f + (int)item.rarity * 1.5f;
     return item;
 }
@@ -228,7 +228,7 @@ void Item::applyRarityBonus() {
     value = (int)(value * mult);
 }
 
-// ── Afixos estilo Diablo/PoE — nome composto + bônus numéricos por raridade ──
+// ── Afixos estilo Diablo/PoE — nome composto + bonus numericos by raridade ──
 void Item::rollAffixes() {
     baseName = name;
     int count = (int)rarity;          // Common 0 .. Omega 5
@@ -240,17 +240,17 @@ void Item::rollAffixes() {
     static const Affix kPrefix[] = {
         {"Flamejante",0,12}, {"Afiado",0,9},  {"Brutal",0,16},  {"Reforcado",3,8},
         {"Blindado",3,12},   {"Veloz",2,22},  {"Vital",1,45},   {"Preciso",4,8},
-        {"Sanguinario",5,9}, {"Furioso",0,13},{"Cromado",3,10}, {"Eletrico",4,10}
+        {"Sanguinario",5,9}, {"Furioso",0,13},{"Chrome",3,10}, {"Eletrico",4,10}
     };
     static const Affix kSuffix[] = {
-        {"do Tita",1,65},      {"da Furia",0,15},   {"do Vento",2,26},
-        {"do Guardiao",3,11},  {"da Precisao",4,11},{"do Vampiro",5,13},
-        {"da Tempestade",0,12},{"do Colosso",1,90}, {"da Sombra",2,18},
-        {"do Executor",0,18}
+        {"of the Tita",1,65},      {"of the Furia",0,15},   {"of the Wind",2,26},
+        {"of the Guardiao",3,11},  {"of the Precisao",4,11},{"of the Vampiro",5,13},
+        {"of the Storm",0,12},{"of the Colosso",1,90}, {"of the Shadow",2,18},
+        {"of the Executor",0,18}
     };
     const int NP = (int)(sizeof(kPrefix)/sizeof(kPrefix[0]));
     const int NS = (int)(sizeof(kSuffix)/sizeof(kSuffix[0]));
-    float rmult = 1.0f + count * 0.35f;   // bônus maior em raridades altas
+    float rmult = 1.0f + count * 0.35f;   // bonus maior in raridades altas
 
     auto apply = [&](int stat, float v) {
         v *= rmult;
@@ -265,20 +265,20 @@ void Item::rollAffixes() {
     };
 
     if (count >= 1) {
-        const Affix& a = kPrefix[GetRandomValue(0, NP-1)];
-        affixPrefix = a.word; apply(a.stat, a.val);
+        const Affix& the = kPrefix[GetRandomValue(0, NP-1)];
+        affixPrefix = the.word; apply(the.stat, the.val);
     }
     if (count >= 2) {
-        const Affix& a = kSuffix[GetRandomValue(0, NS-1)];
-        affixSuffix = a.word; apply(a.stat, a.val);
+        const Affix& the = kSuffix[GetRandomValue(0, NS-1)];
+        affixSuffix = the.word; apply(the.stat, the.val);
     }
-    // Afixos extras (Epic+) — bônus ocultos adicionais
+    // Afixos extras (Epic+) — bonus ocultos adicionais
     for (int i = 2; i < count; ++i) {
-        if (GetRandomValue(0,1)) { const Affix& a = kPrefix[GetRandomValue(0,NP-1)]; apply(a.stat, a.val*0.6f); }
-        else                     { const Affix& a = kSuffix[GetRandomValue(0,NS-1)]; apply(a.stat, a.val*0.6f); }
+        if (GetRandomValue(0,1)) { const Affix& the = kPrefix[GetRandomValue(0,NP-1)]; apply(the.stat, the.val*0.6f); }
+        else                     { const Affix& the = kSuffix[GetRandomValue(0,NS-1)]; apply(the.stat, the.val*0.6f); }
     }
 
-    // Compõe o nome final: "[Prefixo] Base [Sufixo]"
+    // Compoe the nome final: "[Prefixo] Base [Sufixo]"
     std::string composed = baseName;
     if (!affixPrefix.empty()) composed = affixPrefix + " " + composed;
     if (!affixSuffix.empty()) composed = composed + " " + affixSuffix;
@@ -334,10 +334,10 @@ void Item::drawDropEffect() const {
                             ColorAlpha(col, shockA));
         }
 
-        // Raios caindo do alto sobre o item (drama de lendário)
+        // Lightnings caindo of the high about the item (drama of legendary)
         for (int b = 0; b < 3; ++b) {
             float phase = std::fmod(t2 * 1.7f + b * 0.7f, 1.0f);
-            if (phase > 0.35f) continue;                 // raio "pisca"
+            if (phase > 0.35f) continue;                 // radius "pisca"
             float boltA = alpha * (1.0f - phase / 0.35f);
             float topY  = position.y - beamH;
             float bx    = position.x + std::sin(t2 * 3.0f + b) * beamW * 1.2f;
@@ -351,14 +351,14 @@ void Item::drawDropEffect() const {
             }
         }
 
-        // Omega: anel arco-íris girando (sensação de item supremo)
+        // Omega: anel arco-iris girando (sensation of item supremo)
         if (rarity == ItemRarity::Omega) {
             for (int i = 0; i < 12; ++i) {
-                float a   = t2 * 2.0f + i * (3.14159f / 6.0f);
+                float the   = t2 * 2.0f + i * (3.14159f / 6.0f);
                 float hue = std::fmod(t2 * 90.0f + i * 30.0f, 360.0f);
                 Color rc  = ColorFromHSV(hue, 0.9f, 1.0f);
                 float rr  = beamW * 1.6f;
-                DrawCircleV({position.x + std::cos(a) * rr, position.y + std::sin(a) * rr},
+                DrawCircleV({position.x + std::cos(the) * rr, position.y + std::sin(the) * rr},
                             3.0f, ColorAlpha(rc, alpha * 0.9f));
             }
         }
@@ -405,9 +405,9 @@ void Item::render() const {
             DrawCircleV(pos, glowR - 4.0f, ColorAlpha(color, 0.30f * alpha));
             DrawCircleLines(ix, iy, glowR, ColorAlpha(color, 0.60f * alpha));
             {
-                float a = pulseTimer * 3.0f;
-                DrawCircleV({pos.x + std::cos(a)*glowR*0.7f,
-                             pos.y + std::sin(a)*glowR*0.7f},
+                float the = pulseTimer * 3.0f;
+                DrawCircleV({pos.x + std::cos(the)*glowR*0.7f,
+                             pos.y + std::sin(the)*glowR*0.7f},
                             2.5f, ColorAlpha(WHITE, 0.8f * alpha));
             }
             break;
@@ -417,9 +417,9 @@ void Item::render() const {
             DrawCircleV(pos, glowR - 5.0f, ColorAlpha(color, 0.28f * alpha));
             DrawCircleLines(ix, iy, glowR, ColorAlpha(color, 0.70f * alpha));
             for (int i = 0; i < 2; ++i) {
-                float a = pulseTimer * 4.0f + i * kPI;
-                DrawCircleV({pos.x + std::cos(a)*(glowR*0.65f),
-                             pos.y + std::sin(a)*(glowR*0.65f)},
+                float the = pulseTimer * 4.0f + i * kPI;
+                DrawCircleV({pos.x + std::cos(the)*(glowR*0.65f),
+                             pos.y + std::sin(the)*(glowR*0.65f)},
                             3.0f, ColorAlpha(WHITE, 0.9f * alpha));
             }
             break;
@@ -431,9 +431,9 @@ void Item::render() const {
             DrawCircleLines(ix, iy, glowR, ColorAlpha(legCol, 0.85f * alpha));
             // 3 orbiting dots
             for (int i = 0; i < 3; ++i) {
-                float a = pulseTimer * 3.5f + i * (2.0f * kPI / 3.0f);
-                DrawCircleV({pos.x + std::cos(a)*(glowR*0.75f),
-                             pos.y + std::sin(a)*(glowR*0.75f)},
+                float the = pulseTimer * 3.5f + i * (2.0f * kPI / 3.0f);
+                DrawCircleV({pos.x + std::cos(the)*(glowR*0.75f),
+                             pos.y + std::sin(the)*(glowR*0.75f)},
                             3.5f, ColorAlpha({255,220,80,255}, 0.95f * alpha));
             }
             break;
@@ -446,9 +446,9 @@ void Item::render() const {
             DrawCircleLines(ix, iy, glowR,        ColorAlpha(omgCol, 0.90f * alpha));
             DrawCircleLines(ix, iy, glowR + 5.0f, ColorAlpha({255,80,0,255}, 0.5f * alpha));
             for (int i = 0; i < 4; ++i) {
-                float a = pulseTimer * 5.0f + i * (kPI / 2.0f);
-                DrawCircleV({pos.x + std::cos(a)*(glowR*0.8f),
-                             pos.y + std::sin(a)*(glowR*0.8f)},
+                float the = pulseTimer * 5.0f + i * (kPI / 2.0f);
+                DrawCircleV({pos.x + std::cos(the)*(glowR*0.8f),
+                             pos.y + std::sin(the)*(glowR*0.8f)},
                             4.5f, ColorAlpha({255,50,0,255}, alpha));
             }
             break;
@@ -461,20 +461,20 @@ void Item::render() const {
     switch (type) {
 
     // ------------------------------------------------------------------
-    // WeaponPart — mini-arma: cano + coronha + muzzle neon
+    // WeaponPart — mini-weapon: cano + coronha + muzzle neon
     // ------------------------------------------------------------------
     case ItemType::WeaponPart: {
         Color wCol  = {255, 130, 0, 255};
         Color muzz  = {255, 220, 80, 255};
-        // Coronha (retangulo esquerdo)
+        // Coronha (rectangle esquerdo)
         Rectangle stock = { pos.x - 10.0f, pos.y - 3.5f, 8.0f, 7.0f };
         DrawRectangleRec(stock, ColorAlpha({90,60,30,255}, alpha));
         DrawRectangleLinesEx(stock, 1.0f, ColorAlpha(wCol, 0.7f * alpha));
-        // Receiver (retangulo central)
+        // Receiver (rectangle central)
         Rectangle recv = { pos.x - 3.0f, pos.y - 3.0f, 7.0f, 6.0f };
         DrawRectangleRec(recv, ColorAlpha({60,50,50,255}, alpha));
         DrawRectangleLinesEx(recv, 1.0f, ColorAlpha(wCol, alpha));
-        // Cano (retangulo estreito direito)
+        // Cano (rectangle narrow direito)
         Rectangle barrel = { pos.x + 4.0f, pos.y - 1.5f, 8.0f, 3.0f };
         DrawRectangleRec(barrel, ColorAlpha({40,40,40,255}, alpha));
         DrawRectangleLinesEx(barrel, 1.0f, ColorAlpha(wCol, alpha));
@@ -487,21 +487,21 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // ScrapMetal — placa de armadura: retangulo + rivets + brilho metalico
+    // ScrapMetal — placa of armor: rectangle + rivets + glow metallic
     // ------------------------------------------------------------------
     case ItemType::ScrapMetal: {
         Color mCol  = {160, 160, 170, 255};
         Color shine = {220, 220, 240, 255};
         float shiftY = pulse * 0.5f;
-        // Placa principal
+        // Placa main
         Rectangle plate = { pos.x - 8.0f, pos.y - 7.0f + shiftY, 16.0f, 14.0f };
         DrawRectangleRec(plate, ColorAlpha({70,75,80,255}, alpha));
         DrawRectangleLinesEx(plate, 1.5f, ColorAlpha(mCol, alpha));
-        // Brilho diagonal (highlight)
+        // Glow diagonal (highlight)
         DrawLineEx({pos.x - 6.0f, pos.y - 5.0f + shiftY},
                    {pos.x - 2.0f, pos.y - 1.0f + shiftY},
                    2.0f, ColorAlpha(shine, 0.55f * alpha));
-        // Rivets (parafusos nos cantos)
+        // Rivets (parafusos in the cantos)
         float r2 = plate.x; float t2 = plate.y;
         float corners[4][2] = {
             {r2 + 2.5f, t2 + 2.5f}, {r2 + 13.5f, t2 + 2.5f},
@@ -513,13 +513,13 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // TechChip — chip eletrônico: quadrado + trilhas de circuito + pulsacao ciano/roxo
+    // TechChip — chip eletronico: square + trilhas of circuito + pulsacao cyan/purple
     // ------------------------------------------------------------------
     case ItemType::TechChip: {
         Color chipCol   = {0, 200, 255, 255};
         Color traceCol  = {120, 0, 255, 255};
         float chipPulse = 0.5f + 0.5f * std::sin(pulseTimer * 6.0f);
-        // Corpo do chip
+        // Body of the chip
         Rectangle chip = { pos.x - 8.0f, pos.y - 8.0f, 16.0f, 16.0f };
         DrawRectangleRec(chip, ColorAlpha({10,10,30,255}, alpha));
         DrawRectangleLinesEx(chip, 1.5f, ColorAlpha(chipCol, alpha));
@@ -535,7 +535,7 @@ void Item::render() const {
                        {pos.x + col, pos.y + 7.0f},
                        1.0f, ColorAlpha(chipCol, 0.5f * alpha));
         }
-        // Nucleo central pulsante
+        // Core central pulsante
         DrawGlowCircle(pos, 3.0f + chipPulse,
                        ColorAlpha(chipCol, alpha), 1.8f);
         // Pinos laterais (pins)
@@ -551,30 +551,30 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // Credits — moeda dourada: circulo amarelo + "$" rotacionando + brilho
+    // Credits — coin dourada: circle yellow + "$" rotacionando + glow
     // ------------------------------------------------------------------
     case ItemType::Credits: {
         Color gold   = {255, 210, 0, 255};
         Color goldDk = {180, 130, 0, 255};
-        float spin   = pulseTimer * 2.5f; // moeda "girando"
-        float scaleX = std::abs(std::cos(spin)); // efeito de rotacao 3D
+        float spin   = pulseTimer * 2.5f; // coin "girando"
+        float scaleX = std::abs(std::cos(spin)); // effect of rotacao 3D
         float coinW  = radius * scaleX;
         if (coinW < 1.0f) coinW = 1.0f;
-        // Sombra da moeda
+        // Shadow of the coin
         DrawCircleV({pos.x, pos.y + 1.5f}, radius + 1.0f, ColorAlpha(goldDk, 0.5f * alpha));
-        // Face da moeda (ellipse via DrawCircleV escalado em x)
+        // Face of the coin (ellipse via DrawCircleV escalado in x)
         DrawCircleV(pos, radius, ColorAlpha(goldDk, alpha));
-        // Face frontal (estreita quando girando)
+        // Face frontal (estreita when girando)
         Rectangle face = { pos.x - coinW, pos.y - radius,
                            coinW * 2.0f, radius * 2.0f };
         DrawEllipse(ix, iy, coinW, radius, ColorAlpha(gold, alpha));
-        // Brilho neon
+        // Glow neon
         DrawGlowCircle(pos, radius * 0.35f, ColorAlpha({255,240,120,255}, alpha), 2.0f);
         // Simbolo "$"
         if (scaleX > 0.3f) {
             DrawText("$", ix - 4, iy - 5, 10, ColorAlpha(WHITE, scaleX * alpha));
         }
-        // Valor
+        // Value
         {
             const char* vt = TextFormat("+%d", value);
             int tw = MeasureText(vt, 10);
@@ -585,13 +585,13 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // HealthPack — cruz vermelha + fundo escuro + brilho verde pulsante
+    // HealthPack — cruz vermelha + fundo dark + glow green pulsante
     // ------------------------------------------------------------------
     case ItemType::HealthPack: {
         Color red    = {220, 30, 30, 255};
         Color green  = {0, 230, 100, 255};
         float gPulse = 0.5f + 0.5f * std::sin(pulseTimer * 4.0f);
-        // Fundo quadrado escuro
+        // Fundo square dark
         Rectangle bg = { pos.x - 8.0f, pos.y - 8.0f, 16.0f, 16.0f };
         DrawRectangleRec(bg, ColorAlpha({20,20,20,255}, alpha));
         DrawRectangleLinesEx(bg, 1.0f, ColorAlpha(red, 0.7f * alpha));
@@ -600,7 +600,7 @@ void Item::render() const {
         Rectangle crossV = { pos.x - 2.5f, pos.y - 7.0f, 5.0f, 14.0f };
         DrawRectangleRec(crossH, ColorAlpha(red, alpha));
         DrawRectangleRec(crossV, ColorAlpha(red, alpha));
-        // Brillo verde pulsante
+        // Brillo green pulsante
         DrawCircleV(pos, radius * 1.5f + gPulse * 4.0f,
                     ColorAlpha(green, 0.12f * gPulse * alpha));
         DrawCircleLines(ix, iy, radius * 1.5f + gPulse * 4.0f,
@@ -609,14 +609,14 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // EnergyCore — hexagono brilhante azul/branco pulsando + raios
+    // EnergyCore — hexagon bright blue/white pulsing + raios
     // ------------------------------------------------------------------
     case ItemType::EnergyCore: {
         Color cyan  = {0, 255, 255, 255};
         Color white = {200, 240, 255, 255};
         float ePulse = 0.6f + 0.4f * std::sin(pulseTimer * 5.0f);
         float hexR   = radius * ePulse;
-        // Hexagono (6 triangulos)
+        // Hexagon (6 triangles)
         for (int i = 0; i < 6; ++i) {
             float a0 = (i)     * (kPI / 3.0f) + pulseTimer * 0.4f;
             float a1 = (i + 1) * (kPI / 3.0f) + pulseTimer * 0.4f;
@@ -629,25 +629,25 @@ void Item::render() const {
         }
         // Glow central
         DrawGlowCircle(pos, 4.0f * ePulse, ColorAlpha(white, alpha), 2.0f);
-        // Raios eletricos (4 linhas saindo do centro em angulos aleatorios fixos)
+        // Lightnings eletricos (4 lines leaving of the center in angles aleatorios fixos)
         for (int i = 0; i < 4; ++i) {
-            float a   = pulseTimer * 3.0f + i * (kPI / 2.0f);
+            float the   = pulseTimer * 3.0f + i * (kPI / 2.0f);
             float len = hexR * 0.8f + pulse2 * 2.0f;
-            Vector2 tip = { pos.x + std::cos(a) * len,
-                            pos.y + std::sin(a) * len };
+            Vector2 tip = { pos.x + std::cos(the) * len,
+                            pos.y + std::sin(the) * len };
             DrawLineEx(pos, tip, 1.0f, ColorAlpha(white, 0.6f * alpha));
         }
         break;
     }
 
     // ------------------------------------------------------------------
-    // NanoCore — nucleo raro: esfera magenta pulsante + orbita
+    // NanoCore — core rare: sphere magenta pulsante + orbita
     // ------------------------------------------------------------------
     case ItemType::NanoCore: {
         Color magenta = {255, 80, 200, 255};
         float nPulse  = 0.7f + 0.3f * std::sin(pulseTimer * 4.5f);
         DrawGlowCircle(pos, radius * nPulse, ColorAlpha(magenta, alpha), 2.5f);
-        // Anel orbitante duplo
+        // Anel orbitante double
         for (int ring = 0; ring < 2; ++ring) {
             float angle = pulseTimer * (2.0f + ring) + ring * (kPI / 2.0f);
             float rR    = radius * 1.6f;
@@ -660,24 +660,24 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // PlasmaCell — celula ciano + linhas de plasma
+    // PlasmaCell — celula cyan + lines of plasma
     // ------------------------------------------------------------------
     case ItemType::PlasmaCell: {
         Color plasma = {180, 0, 255, 255};
         Color glow2  = {100, 200, 255, 255};
         float pPulse = 0.5f + 0.5f * std::sin(pulseTimer * 6.5f);
-        // Corpo oval
+        // Body oval
         DrawEllipse(ix, iy, radius, radius * 0.75f,
                     ColorAlpha({40,0,60,255}, alpha));
         DrawEllipse(ix, iy, radius * 0.75f, radius * 0.55f,
                     ColorAlpha(plasma, 0.6f * alpha));
-        // Linhas de plasma internas
+        // Lines of plasma internas
         for (int i = 0; i < 3; ++i) {
-            float a = pulseTimer * 4.0f + i * (2.0f * kPI / 3.0f);
-            Vector2 p1 = { pos.x + std::cos(a) * radius * 0.5f,
-                           pos.y + std::sin(a) * radius * 0.35f };
-            Vector2 p2 = { pos.x - std::cos(a) * radius * 0.5f,
-                           pos.y - std::sin(a) * radius * 0.35f };
+            float the = pulseTimer * 4.0f + i * (2.0f * kPI / 3.0f);
+            Vector2 p1 = { pos.x + std::cos(the) * radius * 0.5f,
+                           pos.y + std::sin(the) * radius * 0.35f };
+            Vector2 p2 = { pos.x - std::cos(the) * radius * 0.5f,
+                           pos.y - std::sin(the) * radius * 0.35f };
             DrawLineEx(p1, p2, 1.5f, ColorAlpha(glow2, pPulse * alpha));
         }
         DrawGlowCircle(pos, 3.0f * pPulse, ColorAlpha(glow2, alpha), 1.8f);
@@ -685,7 +685,7 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // MetalScrap — fragmento metalico cinza
+    // MetalScrap — fragmento metallic gray
     // ------------------------------------------------------------------
     case ItemType::MetalScrap: {
         float r = radius * 0.9f;
@@ -704,9 +704,9 @@ void Item::render() const {
         DrawCircleV(pos, radius, ColorAlpha({20,60,20,255}, alpha));
         DrawCircleV(pos, radius * 0.75f, ColorAlpha({30,150,50,255}, alpha));
         for (int i = 0; i < 5; ++i) {
-            float a = i * (2.0f * kPI / 5.0f) + pulseTimer;
-            float ox = std::cos(a) * radius * 0.55f;
-            float oy = std::sin(a) * radius * 0.55f;
+            float the = i * (2.0f * kPI / 5.0f) + pulseTimer;
+            float ox = std::cos(the) * radius * 0.55f;
+            float oy = std::sin(the) * radius * 0.55f;
             DrawCircleV({pos.x + ox, pos.y + oy}, 2.5f,
                         ColorAlpha({80, 220, 80, 255}, pulse * alpha));
         }
@@ -715,7 +715,7 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // PlasmaCore — nucleo de plasma laranja incandescente
+    // PlasmaCore — core of plasma orange incandescente
     // ------------------------------------------------------------------
     case ItemType::PlasmaCore: {
         float pulse = 0.5f + 0.5f * std::sin(pulseTimer * 7.0f);
@@ -734,10 +734,10 @@ void Item::render() const {
         float pulse = 0.5f + 0.5f * std::sin(pulseTimer * 5.5f);
         DrawCircleV(pos, radius * 0.6f, ColorAlpha({0,50,50,255}, alpha));
         for (int i = 0; i < 4; ++i) {
-            float a = i * (kPI / 2.0f) + pulseTimer * 2.0f;
+            float the = i * (kPI / 2.0f) + pulseTimer * 2.0f;
             Vector2 p1 = {pos.x, pos.y};
-            Vector2 p2 = {pos.x + std::cos(a) * radius,
-                          pos.y + std::sin(a) * radius};
+            Vector2 p2 = {pos.x + std::cos(the) * radius,
+                          pos.y + std::sin(the) * radius};
             DrawLineEx(p1, p2, 2.0f, ColorAlpha({0,200,180,255}, pulse * alpha));
         }
         DrawCircleV(pos, 3.0f, ColorAlpha({0,255,220,255}, alpha));
@@ -746,7 +746,7 @@ void Item::render() const {
     }
 
     // ------------------------------------------------------------------
-    // OmegaEssence — essencia roxa pulsante
+    // OmegaEssence — essencia purple pulsante
     // ------------------------------------------------------------------
     case ItemType::OmegaEssence: {
         float pulse = 0.5f + 0.5f * std::sin(pulseTimer * 8.0f);
@@ -755,9 +755,9 @@ void Item::render() const {
         DrawCircleV(pos, r * 0.65f, ColorAlpha({160,0,220,255}, alpha));
         DrawCircleV(pos, r * 0.3f, ColorAlpha({255,100,255,255}, alpha));
         for (int i = 0; i < 6; ++i) {
-            float a = i * (kPI / 3.0f) + pulseTimer * 3.0f;
-            float ox = std::cos(a) * r * 0.75f;
-            float oy = std::sin(a) * r * 0.75f;
+            float the = i * (kPI / 3.0f) + pulseTimer * 3.0f;
+            float ox = std::cos(the) * r * 0.75f;
+            float oy = std::sin(the) * r * 0.75f;
             DrawCircleV({pos.x + ox, pos.y + oy}, 1.5f + pulse,
                         ColorAlpha({220,80,255,255}, pulse * alpha));
         }
@@ -767,26 +767,26 @@ void Item::render() const {
 
     } // end switch(type)
 
-    // ---- Name label (uncommon+) com cor da raridade + bônus principal -----
+    // ---- Name label (uncommon+) with color of the raridade + bonus main -----
     if (rarity >= ItemRarity::Uncommon) {
         Color labelCol = rarityToColor(rarity);
         std::string displayName = (rarity >= ItemRarity::Legendary)
             ? (std::string("[") + rarityToName(rarity) + "] " + name)
             : name;
         int tw = MeasureText(displayName.c_str(), 10);
-        // Fundo escuro para legibilidade
+        // Fundo dark to legibilidade
         DrawRectangle(ix - tw/2 - 3, iy - (int)radius - 16, tw + 6, 13,
                       ColorAlpha(BLACK, 0.55f * alpha));
         DrawText(displayName.c_str(), ix - tw/2, iy - (int)radius - 14,
                  10, ColorAlpha(labelCol, alpha));
 
-        // Linha de bônus principal (Epic+) — mostra a vantagem do afixo
+        // Line of bonus main (Epic+) — shows the vantagem of the afixo
         if (rarity >= ItemRarity::Epic) {
             std::string stat;
-            if      (bonusDamage    > 0) stat = TextFormat("+%.0f DANO", bonusDamage);
+            if      (bonusDamage    > 0) stat = TextFormat("+%.0f DAMAGE", bonusDamage);
             else if (bonusHealth    > 0) stat = TextFormat("+%.0f HP",   bonusHealth);
             else if (bonusDefense   > 0) stat = TextFormat("+%.0f DEF",  bonusDefense);
-            else if (bonusSpeed     > 0) stat = TextFormat("+%.0f VEL",  bonusSpeed);
+            else if (bonusSpeed     > 0) stat = TextFormat("+%.0f SPEED",  bonusSpeed);
             if (!stat.empty()) {
                 int sw = MeasureText(stat.c_str(), 9);
                 DrawText(stat.c_str(), ix - sw/2, iy - (int)radius - 28, 9,
@@ -799,7 +799,7 @@ void Item::render() const {
 // ============================================================================
 // render3D() — low-poly 3D model floating slightly over the ground.
 // World mapping: X3D = position.x, Z3D = position.y, Y = height.
-// ONLY rounded primitives are used (no cubes).
+// ONLY rounded primitives are used (in the cubes).
 // ============================================================================
 void Item::render3D() const {
     const float kPI = 3.14159265f;
@@ -810,14 +810,14 @@ void Item::render3D() const {
     float pulse  = 0.5f + 0.5f * std::sin(t * 4.0f);
     Vector3 base = { position.x, baseY, position.y };
 
-    // Brighten a color by a flat amount (keeps alpha).
-    auto lighten = [](Color c, int a) -> Color {
-        return { (unsigned char)std::min(255, (int)c.r + a),
-                 (unsigned char)std::min(255, (int)c.g + a),
-                 (unsigned char)std::min(255, (int)c.b + a), c.a };
+    // Brighten the color by the flat amount (keeps alpha).
+    auto lighten = [](Color c, int the) -> Color {
+        return { (unsigned char)std::min(255, (int)c.r + the),
+                 (unsigned char)std::min(255, (int)c.g + the),
+                 (unsigned char)std::min(255, (int)c.b + the), c.the };
     };
 
-    // Whether this is a high-rarity drop (Rare and above) -> translucent halo.
+    // Whether this is the high-rarity drop (Rare and above) -> translucent halo.
     bool isRare  = (rarity >= ItemRarity::Rare);
 
     // ── Per-type model selection — faithful to the 2D render() above ─────────
@@ -828,22 +828,22 @@ void Item::render3D() const {
         Color orange = {255,130,0,255};
         Color muzz   = {255,220,80,255};
         float y = base.y;
-        // Coronha (stock) — esquerda, madeira/cobre escuro
+        // Coronha (stock) — left, wood/cobre dark
         DrawCapsule({base.x-5.5f, y-0.4f, base.z}, {base.x-2.2f, y, base.z}, 1.7f, 8, 8, {90,60,30,255});
-        // Receiver — corpo central
+        // Receiver — body central
         DrawCapsule({base.x-2.5f, y, base.z}, {base.x+2.0f, y, base.z}, 1.9f, 8, 8, {70,60,60,255});
-        // Cano (barrel) — fino, direita
+        // Cano (barrel) — fino, right
         DrawCylinderEx({base.x+1.5f, y, base.z}, {base.x+6.0f, y, base.z}, 0.85f, 0.65f, 10, {45,45,45,255});
-        // Mira/trilho laranja por cima
+        // Mira/trilho orange by up
         DrawCapsule({base.x-1.2f, y+1.7f, base.z}, {base.x+1.2f, y+1.7f, base.z}, 0.45f, 6, 6, orange);
-        // Empunhadura (grip) abaixo
+        // Empunhadura (grip) below
         DrawCapsule({base.x-0.6f, y-1.4f, base.z}, {base.x+0.4f, y-3.4f, base.z}, 0.7f, 6, 6, {90,60,30,255});
         // Muzzle neon
         DrawSphere({base.x+6.3f, y, base.z}, 1.1f, muzz);
         break;
     }
 
-    // ── ScrapMetal — placa de armadura: disco achatado + rebites ────────────
+    // ── ScrapMetal — placa of armor: disco achatado + rebites ────────────
     case ItemType::ScrapMetal: {
         Color plateC = {80,85,92,255};
         Color edge   = {170,170,185,255};
@@ -852,21 +852,21 @@ void Item::render3D() const {
         Vector3 f1 = { base.x, base.y, base.z + 0.7f };
         DrawCylinderEx(f0, f1, 4.1f, 4.1f, 8, plateC);           // placa frontal
         DrawCylinderEx(f0, f1, 4.4f, 4.4f, 8, ColorAlpha(edge, 0.5f));
-        // Rebites nos cantos (frente da placa)
+        // Rebites in the cantos (front of the placa)
         for (int i=0;i<4;i++){
-            float a = kPI*0.25f + i*(kPI*0.5f);
-            DrawSphere({base.x+std::cos(a)*2.7f, base.y+std::sin(a)*2.7f, base.z+0.8f}, 0.6f, shine);
+            float the = kPI*0.25f + i*(kPI*0.5f);
+            DrawSphere({base.x+std::cos(the)*2.7f, base.y+std::sin(the)*2.7f, base.z+0.8f}, 0.6f, shine);
         }
         break;
     }
 
-    // ── TechChip — chip: corpo escuro + pinos + nucleo ciano pulsante ───────
+    // ── TechChip — chip: body dark + pinos + core cyan pulsante ───────
     case ItemType::TechChip: {
         Color body  = {15,18,40,255};
         Color cyan  = {0,200,255,255};
         Vector3 f0 = { base.x, base.y, base.z - 0.6f };
         Vector3 f1 = { base.x, base.y, base.z + 0.6f };
-        DrawCylinderEx(f0, f1, 3.9f, 3.9f, 8, body);             // corpo do chip
+        DrawCylinderEx(f0, f1, 3.9f, 3.9f, 8, body);             // body of the chip
         DrawCylinderEx(f0, f1, 4.1f, 4.1f, 8, ColorAlpha(cyan, 0.5f));
         // Pinos laterais
         for (int p=-1;p<=1;p++){
@@ -874,12 +874,12 @@ void Item::render3D() const {
             DrawCapsule({base.x-3.8f, yy, base.z}, {base.x-5.4f, yy, base.z}, 0.4f, 5, 5, cyan);
             DrawCapsule({base.x+3.8f, yy, base.z}, {base.x+5.4f, yy, base.z}, 0.4f, 5, 5, cyan);
         }
-        // Nucleo central pulsante
+        // Core central pulsante
         DrawSphere({base.x, base.y, base.z+0.8f}, 1.0f + pulse*0.6f, lighten(cyan, 40));
         break;
     }
 
-    // ── Credits — moeda dourada girando em torno do eixo vertical ───────────
+    // ── Credits — coin dourada girando in torno of the eixo vertical ───────────
     case ItemType::Credits: {
         Color gold     = {255,205,60,255};
         Color goldEdge = {200,150,20,255};
@@ -888,52 +888,52 @@ void Item::render3D() const {
         Vector3 c1 = { base.x + n.x, base.y, base.z + n.z };
         DrawCylinderEx(c0, c1, 4.1f, 4.1f, 16, gold);
         DrawCylinderEx(c0, c1, 4.3f, 4.3f, 16, ColorAlpha(goldEdge, 0.7f));
-        DrawSphere(base, 1.3f, {255,245,200,255});               // brilho central
+        DrawSphere(base, 1.3f, {255,245,200,255});               // glow central
         break;
     }
 
-    // ── HealthPack / MedKit — capsula branca com cruz vermelha ──────────────
+    // ── HealthPack / MedKit — capsula branca with cruz vermelha ──────────────
     case ItemType::HealthPack:
     case ItemType::MedKit: {
         Color shell = {230, 235, 245, 255};
         Color cross = {235, 40, 40, 255};
         DrawCapsule({base.x, base.y+3.0f, base.z}, {base.x, base.y-3.0f, base.z}, 3.4f, 10, 10, shell);
-        float zf = base.z + 2.6f;                                 // cruz na face frontal
+        float zf = base.z + 2.6f;                                 // cruz in the face frontal
         DrawCapsule({base.x-2.2f, base.y, zf}, {base.x+2.2f, base.y, zf}, 0.85f, 6, 6, cross);
         DrawCapsule({base.x, base.y-2.2f, zf}, {base.x, base.y+2.2f, zf}, 0.85f, 6, 6, cross);
         break;
     }
 
-    // ── EnergyCore — prisma hexagonal ciano + nucleo branco + raios ─────────
+    // ── EnergyCore — prisma hexagonal cyan + core white + raios ─────────
     case ItemType::EnergyCore: {
         Color cyan  = {0,255,255,255};
         Color white = {200,240,255,255};
         float hexR  = 3.1f + pulse*0.5f;
         DrawCylinderEx({base.x, base.y, base.z-0.9f}, {base.x, base.y, base.z+0.9f},
-                       hexR, hexR, 6, ColorAlpha(cyan, 0.85f));    // hexagono
-        DrawSphere(base, 1.4f + pulse*0.5f, white);               // nucleo brilhante
+                       hexR, hexR, 6, ColorAlpha(cyan, 0.85f));    // hexagon
+        DrawSphere(base, 1.4f + pulse*0.5f, white);               // core bright
         for (int i=0;i<4;i++){                                     // raios eletricos
-            float a = spin + i*(kPI*0.5f);
+            float the = spin + i*(kPI*0.5f);
             float len = hexR + 1.6f + pulse;
-            DrawCapsule(base, {base.x+std::cos(a)*len, base.y+std::sin(a)*len, base.z}, 0.3f, 5, 5, white);
+            DrawCapsule(base, {base.x+std::cos(the)*len, base.y+std::sin(the)*len, base.z}, 0.3f, 5, 5, white);
         }
         break;
     }
 
-    // ── NanoCore — esfera magenta pulsante + pontos em orbita ───────────────
+    // ── NanoCore — sphere magenta pulsante + points in orbita ───────────────
     case ItemType::NanoCore: {
         Color magenta = {255,80,200,255};
         DrawSphereEx(base, 2.8f + pulse*0.4f, 10, 10, magenta);
         DrawSphere(base, 1.4f, {255,200,240,255});
         for (int i=0;i<2;i++){
-            float a = t*(2.0f+i) + i*kPI;
+            float the = t*(2.0f+i) + i*kPI;
             float r = 4.2f;
-            DrawSphere({base.x+std::cos(a)*r, base.y+std::sin(a*1.3f)*1.4f, base.z+std::sin(a)*r}, 0.8f, WHITE);
+            DrawSphere({base.x+std::cos(the)*r, base.y+std::sin(the*1.3f)*1.4f, base.z+std::sin(the)*r}, 0.8f, WHITE);
         }
         break;
     }
 
-    // ── PlasmaCell — celula oval roxa + arcos de plasma ciano ───────────────
+    // ── PlasmaCell — celula oval purple + arcos of plasma cyan ───────────────
     case ItemType::PlasmaCell: {
         Color shell  = {60,0,90,255};
         Color plasma = {180,0,255,255};
@@ -941,35 +941,35 @@ void Item::render3D() const {
         DrawCapsule({base.x, base.y-1.6f, base.z}, {base.x, base.y+1.6f, base.z}, 2.6f, 10, 10, shell);
         DrawSphereEx(base, 2.0f, 8, 8, ColorAlpha(plasma, 0.85f));
         for (int i=0;i<3;i++){                                     // arcos internos
-            float a = t*4.0f + i*(2.0f*kPI/3.0f);
-            DrawCapsule({base.x+std::cos(a)*1.8f, base.y+std::sin(a)*1.2f, base.z+0.5f},
-                        {base.x-std::cos(a)*1.8f, base.y-std::sin(a)*1.2f, base.z-0.5f},
+            float the = t*4.0f + i*(2.0f*kPI/3.0f);
+            DrawCapsule({base.x+std::cos(the)*1.8f, base.y+std::sin(the)*1.2f, base.z+0.5f},
+                        {base.x-std::cos(the)*1.8f, base.y-std::sin(the)*1.2f, base.z-0.5f},
                         0.25f, 4, 4, glow2);
         }
         DrawSphere(base, 0.9f + pulse*0.4f, lighten(glow2, 40));
         break;
     }
 
-    // ── MetalScrap — fragmento metalico facetado cinza ──────────────────────
+    // ── MetalScrap — fragmento metallic facetado gray ──────────────────────
     case ItemType::MetalScrap: {
         DrawSphereEx(base, 3.0f, 5, 4, {120,120,135,255});        // low-poly facetado
         DrawSphereEx(base, 1.6f, 5, 4, {185,185,200,255});
         break;
     }
 
-    // ── AlienCarapace — casca organica verde + protuberancias ───────────────
+    // ── AlienCarapace — casca organica green + protuberancias ───────────────
     case ItemType::AlienCarapace: {
         DrawSphereEx(base, 3.0f, 8, 8, {20,70,25,255});
         DrawSphereEx(base, 2.2f, 8, 8, {35,160,55,255});
         for (int i=0;i<5;i++){
-            float a = i*(2.0f*kPI/5.0f) + t;
-            DrawSphere({base.x+std::cos(a)*2.6f, base.y+std::sin(a)*0.8f, base.z+std::sin(a)*2.6f},
+            float the = i*(2.0f*kPI/5.0f) + t;
+            DrawSphere({base.x+std::cos(the)*2.6f, base.y+std::sin(the)*0.8f, base.z+std::sin(the)*2.6f},
                        0.7f, {80,220,80,255});
         }
         break;
     }
 
-    // ── PlasmaCore — nucleo incandescente laranja em camadas ────────────────
+    // ── PlasmaCore — core incandescente orange in camadas ────────────────
     case ItemType::PlasmaCore: {
         DrawSphereEx(base, 3.0f, 8, 8, {90,30,0,255});
         DrawSphereEx(base, 2.1f, 8, 8, {255,80,0,255});
@@ -982,29 +982,29 @@ void Item::render3D() const {
         Color fib = {0,200,180,255};
         DrawSphere(base, 1.4f, {0,60,60,255});
         for (int i=0;i<4;i++){
-            float a = i*(kPI*0.5f) + t*2.0f;
-            DrawCapsule(base, {base.x+std::cos(a)*3.0f, base.y+std::sin(a)*1.5f, base.z+std::sin(a*1.5f)*3.0f},
+            float the = i*(kPI*0.5f) + t*2.0f;
+            DrawCapsule(base, {base.x+std::cos(the)*3.0f, base.y+std::sin(the)*1.5f, base.z+std::sin(the*1.5f)*3.0f},
                         0.35f, 5, 5, fib);
         }
         DrawSphere(base, 0.9f, {0,255,220,255});
         break;
     }
 
-    // ── OmegaEssence — essencia roxa em camadas + pontos orbitando ──────────
+    // ── OmegaEssence — essencia purple in camadas + points orbitando ──────────
     case ItemType::OmegaEssence: {
         float r = 3.0f + pulse*0.6f;
         DrawSphereEx(base, r,       8, 8, {70,0,95,255});
         DrawSphereEx(base, r*0.65f, 8, 8, {170,0,230,255});
         DrawSphere  (base, r*0.30f,       {255,120,255,255});
         for (int i=0;i<6;i++){
-            float a = i*(kPI/3.0f) + t*3.0f;
-            DrawSphere({base.x+std::cos(a)*r*0.9f, base.y+std::sin(a*0.7f)*1.2f, base.z+std::sin(a)*r*0.9f},
+            float the = i*(kPI/3.0f) + t*3.0f;
+            DrawSphere({base.x+std::cos(the)*r*0.9f, base.y+std::sin(the*0.7f)*1.2f, base.z+std::sin(the)*r*0.9f},
                        0.5f + pulse*0.4f, {220,90,255,255});
         }
         break;
     }
 
-    // ── Armas — lamina flutuante (guarda + cabo + pomo) na cor do item ──────
+    // ── Armas — lamina float (guard + cabo + pomo) in the color of the item ──────
     case ItemType::PlasmaRifle:
     case ItemType::VoidBlade:
     case ItemType::CrystalStaff:
@@ -1016,10 +1016,10 @@ void Item::render3D() const {
     case ItemType::OmegaWeapon:
     case ItemType::DragonSlayer: {
         Color metal = lighten(color, 50);
-        // Lamina afilada apontando para cima
+        // Lamina afilada apontando to up
         DrawCylinderEx({base.x-0.8f, base.y-1.4f, base.z}, {base.x+1.2f, base.y+4.6f, base.z},
                        0.9f, 0.12f, 8, color);
-        // Guarda-mao
+        // Guarda-hand
         DrawCapsule({base.x-2.0f, base.y-1.5f, base.z}, {base.x+0.4f, base.y-1.5f, base.z}, 0.5f, 6, 6, metal);
         // Cabo
         DrawCapsule({base.x-0.8f, base.y-1.5f, base.z}, {base.x-1.6f, base.y-3.5f, base.z}, 0.5f, 6, 6, {60,50,45,255});
@@ -1028,7 +1028,7 @@ void Item::render3D() const {
         break;
     }
 
-    // ── Armaduras — peitoral (torso + ombreiras + emblema) na cor do item ───
+    // ── Armaduras — peitoral (torso + ombreiras + emblema) in the color of the item ───
     case ItemType::NanoSuit:
     case ItemType::CrystalArmor:
     case ItemType::VoidPlating:
@@ -1044,7 +1044,7 @@ void Item::render3D() const {
         break;
     }
 
-    // ── Acessorios — gema/cristal (diamante facetado) na cor do item ────────
+    // ── Acessorios — gem/crystal (diamante facetado) in the color of the item ────────
     case ItemType::QuantumCore:
     case ItemType::SoulCrystal:
     case ItemType::VoidFragment:
@@ -1055,11 +1055,11 @@ void Item::render3D() const {
     case ItemType::InfinityCore: {
         DrawCylinderEx(base, {base.x, base.y+3.0f, base.z}, 2.2f, 0.0f, 6, color);            // topo
         DrawCylinderEx(base, {base.x, base.y-3.0f, base.z}, 2.2f, 0.0f, 6, lighten(color, 30)); // base
-        DrawSphere(base, 0.9f + pulse*0.4f, lighten(color, 90));   // brilho interno
+        DrawSphere(base, 0.9f + pulse*0.4f, lighten(color, 90));   // glow internal
         break;
     }
 
-    // ── Consumiveis — frasco/pocao (vidro + liquido + rolha) na cor do item ─
+    // ── Consumiveis — frasco/potion (vidro + liquido + rolha) in the color of the item ─
     case ItemType::EnergyDrink:
     case ItemType::NanoPatch:
     case ItemType::VoidEssence2:
@@ -1075,21 +1075,21 @@ void Item::render3D() const {
         break;
     }
 
-    // ── VoidCrown — coroa lendaria: aro + espigoes com gemas ────────────────
+    // ── VoidCrown — coroa lendaria: aro + espigoes with gems ────────────────
     case ItemType::VoidCrown: {
         Color spike = lighten(color, 60);
         DrawCylinderEx({base.x, base.y-1.0f, base.z}, {base.x, base.y+1.5f, base.z}, 2.6f, 2.6f, 10, color);
         for (int i=0;i<6;i++){
-            float a  = i*(kPI/3.0f);
-            float sx = base.x + std::cos(a)*2.4f;
-            float sz = base.z + std::sin(a)*2.4f;
+            float the  = i*(kPI/3.0f);
+            float sx = base.x + std::cos(the)*2.4f;
+            float sz = base.z + std::sin(the)*2.4f;
             DrawCylinderEx({sx, base.y+1.3f, sz}, {sx, base.y+3.2f, sz}, 0.6f, 0.0f, 6, spike);
             DrawSphere({sx, base.y+3.3f, sz}, 0.5f, {255,220,120,255});
         }
         break;
     }
 
-    // Default — esfera na cor do item com nucleo destacado.
+    // Default — sphere in the color of the item with core destacado.
     default: {
         DrawSphereEx(base, 3.2f, 10, 10, color);
         DrawSphereEx({ base.x, base.y + 0.8f, base.z }, 1.5f, 8, 8, ColorAlpha(lighten(color, 70), 0.85f));
@@ -1097,15 +1097,15 @@ void Item::render3D() const {
     }
     }
 
-    // ── Halo translucido + faiscas em orbita para drops raros ───────────────
+    // ── Halo translucido + faiscas in orbita to drops raros ───────────────
     if (isRare) {
         float gp = 0.5f + 0.5f * std::sin(t * 3.0f);
         DrawSphereEx(base, 5.5f + gp*1.5f, 8, 8, ColorAlpha(rarityColor, 0.12f + 0.08f*gp));
         if (rarity >= ItemRarity::Epic) {
             int n = (rarity >= ItemRarity::Legendary) ? 3 : 2;
             for (int i=0;i<n;i++){
-                float a = t*3.5f + i*(2.0f*kPI/n);
-                DrawSphere({base.x+std::cos(a)*6.0f, base.y, base.z+std::sin(a)*6.0f},
+                float the = t*3.5f + i*(2.0f*kPI/n);
+                DrawSphere({base.x+std::cos(the)*6.0f, base.y, base.z+std::sin(the)*6.0f},
                            0.6f, ColorAlpha(rarityColor, 0.9f));
             }
         }

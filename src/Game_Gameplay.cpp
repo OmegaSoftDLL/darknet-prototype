@@ -1,5 +1,5 @@
-// Game_Gameplay.cpp â€” loop de jogo e entrada (extraido de Game.cpp).
-// Mesma classe Game: Game::update (loop principal) e Game::handleInput.
+// Game_Gameplay.cpp the€” loop of game and input (extraido of Game.cpp).
+// Same class Game: Game::update (loop main) and Game::handleInput.
 #include "Game.h"
 #include "SkillTree.h"
 #include <raylib.h>
@@ -10,20 +10,20 @@
 #include <string>
 
 void Game::update(float dt) {
-    // VITORIA — congela o mundo e mostra a tela de fim de jogo
+    // VICTORY — freezes the world and shows the end-game screen
     if (gameWon) {
         victoryTimer += dt;
         particles.update(dt);
         audio.updateMusic();
         if (playerSpeechTimer > 0.0f) playerSpeechTimer -= dt;
-        // Bot: registra a vitoria UMA vez e encerra o teste
+        // Bot: registra the victory UMA vez and encerra the test
         if (botController.active && !victoryReported) {
             victoryReported = true;
-            botController.addLog("=== JOGO ZERADO! NUCLEO KRONOS DESTRUIDO ===");
-            botController.addLog(TextFormat("Nivel final %d, kills %d", player.level, totalKills));
+            botController.addLog("=== GAME ZERADO! NUCLEO KRONOS DESTRUIDO ===");
+            botController.addLog(TextFormat("Level final %d, kills %d", player.level, totalKills));
             botController.writeReport("bot_report_VITORIA.txt");
         }
-        // Apos 2s, ENTER volta ao menu principal
+        // Apos 2s, ENTER returns to the menu main
         if (victoryTimer > 2.0f && IsKeyPressed(KEY_ENTER)) {
             inMainMenu = true;
             gameWon = false;
@@ -41,22 +41,22 @@ void Game::update(float dt) {
                            player.isShielded());
     }
 
-    // Hack Tree — painel aberto pela tecla X pausa a simulacao
+    // Hack Tree — painel open pela key X pausa the simulacao
     if (showSkillTree) {
         updateSkillTreePanel();
         audio.updateMusic();
         return;
     }
 
-    // Tela de level up / evolucao — SO pausa quando o jogador escolheu abrir.
-    // Ela e aberta deliberadamente (tecla L / K) e fecha sozinha quando os
-    // pontos acabam, ou com ESC (pontos ficam guardados). O level up em si
-    // NUNCA forca essa tela — apenas acumula pontos.
+    // Level-up screen / evolution — only pauses when the player chose to open it.
+    // Ela and opened deliberadamente (key L / K) and closes sozinha when the
+    // points run out, ou with ESC (points are kept). The level-up itself
+    // NUNCA strength essa screen — only acumula points.
     if (showLevelUpScreen || showEvolutionScreen) {
         levelUpAnimTimer += dt;
         if (playerSpeechTimer > 0.0f) playerSpeechTimer -= dt;
         audio.updateMusic();
-        // ESC fecha sem gastar
+        // ESC closes without gastar
         if (IsKeyPressed(KEY_ESCAPE)) {
             showLevelUpScreen = false; showEvolutionScreen = false;
             return;
@@ -72,7 +72,7 @@ void Game::update(float dt) {
             if (chosen >= 0) {
                 applyEvolutionPath(chosen);
                 if (pendingEvolutions > 0) pendingEvolutions--;
-                // Fecha se nao houver mais pontos de evolucao
+                // Closes if there are in the more evolution points
                 if (pendingEvolutions <= 0) showEvolutionScreen = false;
             }
         } else {
@@ -86,7 +86,7 @@ void Game::update(float dt) {
             if (chosen >= 0) {
                 applyLevelUpChoice(chosen);
                 if (pendingLevelUps > 0) pendingLevelUps--;
-                // Se ainda houver pontos, gera novas opcoes e mantem a tela aberta
+                // If there are still points, generate new options and keep the screen open
                 if (pendingLevelUps > 0) {
                     levelUpChoice = 1;
                     generateLevelUpChoices();
@@ -98,10 +98,10 @@ void Game::update(float dt) {
         return;
     }
 
-    // Pulso visual do aviso de pontos disponiveis
+    // Visual pulse of the available-points warning
     if (pendingNotifyPulse > 0.0f) pendingNotifyPulse -= dt;
 
-    // Abrir a Hack Tree quando o JOGADOR quiser (tecla X)
+    // Open the Hack Tree whenever the player wants (key X)
     if (IsKeyPressed(KEY_X) && !inMainMenu && !paused &&
         !showLevelUpScreen && !showEvolutionScreen && player.health > 0.0f) {
         if (showSkillTree) { showSkillTree = false; return; }
@@ -112,7 +112,7 @@ void Game::update(float dt) {
         return;
     }
 
-    // Abrir tela de pontos quando o JOGADOR quiser (sem travar o jogo no level up)
+    // Open the points screen whenever the player wants (without blocking the game on level-up)
     if (IsKeyPressed(KEY_L) && pendingLevelUps > 0) {
         shopSystem.close(); craftingSystem.open = false;
         showInventory = false; showEquipment = false; showQuestLog = false;
@@ -131,7 +131,7 @@ void Game::update(float dt) {
         return;
     }
 
-    // Bot: gasta pontos acumulados automaticamente (escolha 1 / meio)
+    // Bot: gasta points acumulados automaticamente (escolha 1 / middle)
     if (botController.active) {
         if (pendingLevelUps > 0) {
             generateLevelUpChoices();
@@ -142,19 +142,19 @@ void Game::update(float dt) {
             applyEvolutionPath(1);
             pendingEvolutions--;
         }
-        autoSpendSkillPoints();   // Hack Tree do bot: build ofensiva em ordem fixa
+        autoSpendSkillPoints();   // Bot Hack Tree: fixed offensive build order
     }
 
-    // HIT-STOP — congela a simulacao por alguns frames no impacto (juice de combate).
-    // Particulas continuam animando para a "pancada" ficar visivel.
+    // HIT-STOP — freezes the simulation for the few frames on impact (combat juice).
+    // Particles continuam animando for the "pancada" stay visible.
     if (hitStopTimer > 0.0f) {
         hitStopTimer -= dt;
         particles.update(dt);
         return;
     }
-    // Camera kick de zoom decai com o tempo de gameplay (congela durante hitstop)
+    // Camera zoom kick decays with gameplay time (freezes during hit-stop)
     camPunch = std::max(0.0f, camPunch - dt * 5.5f);
-    // Decalques de chao (sangue/queimado) somem aos poucos
+    // Floor decals (blood/scorched) fade after the short while
     for (auto& d : decals) d.life -= dt;
     decals.erase(std::remove_if(decals.begin(), decals.end(),
         [](const GroundDecal& d){ return d.life <= 0.0f; }), decals.end());
@@ -168,16 +168,16 @@ void Game::update(float dt) {
     }
 
     // P = cycle zones (debug / test) — 11 zones total including InfernoZone
-    if (IsKeyPressed(KEY_P) && !shopSystem.open) {   // P na loja = aba premium
+    if (IsKeyPressed(KEY_P) && !shopSystem.open) {   // P in shop = premium tab
         int next = ((int)currentZone + 1) % 11;
         transitionToZone((ZoneID)next);
     }
 
     shopSystem.update(dt);
-    updatePremiumStore(dt);   // aba premium (gems/Stripe) + refresh de saldo
-    updateParty();            // grupo/aliança (party multiplayer — tecla O)
+    updatePremiumStore(dt);   // premium tab (gems/Stripe) + balance refresh
+    updateParty();            // group/alianca (party multiplayer — key O)
 
-    // Cosméticos aplicados ao modelo do player: tinta da loja comum + skins premium.
+    // Cosmetics applied to the player model: common shop tint + premium skins.
     player.hasCosmeticTint = shopSystem.hasCosmeticColor;
     player.cosmeticTint    = shopSystem.playerColor;
     player.skinNeon        = store.ownsItem("skin_neon");
@@ -206,7 +206,7 @@ void Game::update(float dt) {
 
     // Light system — dark zone detection and flicker
     {
-        bool isDark = true; // pipeline 3D: clima Diablo sempre
+        bool isDark = true; // pipeline 3D: clima Diablo always
         if (isDark != darkZoneActive) {
             darkZoneActive = isDark;
             lightSystem.setEnabled(isDark);
@@ -225,16 +225,16 @@ void Game::update(float dt) {
             }
         }
         if (darkZoneActive) {
-            // Pipeline 3D: iluminação ambiente por zona sempre ativa.
+            // Pipeline 3D: environment lighting per zone always active.
             {
                 Color tCol; float tDark;
                 switch (currentZone) {
-                    // ambientDark reduzido: a mascara e MULTIPLICATIVA e ja vinha
-                    // depois do fog do chao — os dois somados apagavam a cena.
-                    // Clima sombrio vem do MATIZ e do contraste, nao de apagar tudo.
-                    // CONTRASTE ENTRE ZONAS aumentado: matizes quase neutros faziam
-                    // toda fase ler igual. Inferno = laranja-sangue, nexus = cyan,
-                    // floresta = verde profundo, fantasma = azul frio e mais escuro.
+                    // reduced ambientDark: the mask is MULTIPLICATIVE and already came
+                    // after the floor fog — the two added together extinguished the scene.
+                    // Gloomy climate comes from HUE and contrast, not from extinguishing everything.
+                    // CONTRASTE ENTRE ZONAS aumentado: matizes almost neutros faziam
+                    // all phase read igual. Inferno = orange-blood, nexus = cyan,
+                    // forest = deep green, ghost = blue cold and more dark.
                     case ZoneID::LARuins:       tCol = {228,206,172,255}; tDark = 0.20f; break;
                     case ZoneID::Bunker:        tCol = {150,182,168,255}; tDark = 0.32f; break;
                     case ZoneID::KronosForge:   tCol = {250,150, 90,255}; tDark = 0.26f; break;
@@ -248,8 +248,8 @@ void Game::update(float dt) {
                     case ZoneID::InfernoZone:   tCol = {255,120, 60,255}; tDark = 0.25f; break;
                     default:                    tCol = {206,212,226,255}; tDark = 0.27f; break;
                 }
-                // Interpola em ~1,5s em vez de trocar de uma vez: cruzar a fronteira
-                // de bioma vira transicao de luz, nao um corte seco de "outro mundo".
+                // Interpolates over ~1.5 s instead of swapping at once: crossing the border
+                // of biome becomes the light transition, not the harsh cut to "another world".
                 {
                     float k = 1.0f - expf(-GetFrameTime() * 0.8f);
                     m_ambBaseDark += (tDark - m_ambBaseDark) * k;
@@ -260,16 +260,16 @@ void Game::update(float dt) {
                     lightSystem.ambientDark  = m_ambBaseDark;
                 }
 
-                // ── CICLO DIA/NOITE (mundo vivo): noite escura/azulada, dia claro ──
-                worldClock += GetFrameTime() / 420.0f;          // ciclo completo ~7 min
+                // ── CICLO DIA/NOITE (world vivo): night dark/azulada, day clear ──
+                worldClock += GetFrameTime() / 420.0f;          // ciclo complete ~7 min
                 if (worldClock >= 1.0f) worldClock -= 1.0f;
-                float sun = sinf(worldClock * 6.2831853f - 1.5707963f) * 0.5f + 0.5f; // 0=noite,1=meio-dia
+                float sun = sinf(worldClock * 6.2831853f - 1.5707963f) * 0.5f + 0.5f; // 0=night,1=middle-day
                 worldSun = sun;
-                lightSystem.ambientDark += (1.0f - sun) * 0.20f; // escurece à noite
-                if (lightSystem.ambientDark > 0.52f) lightSystem.ambientDark = 0.52f;  // teto: noite legivel
+                lightSystem.ambientDark += (1.0f - sun) * 0.20f; // escurece to the night
+                if (lightSystem.ambientDark > 0.52f) lightSystem.ambientDark = 0.52f;  // ceiling: night legivel
                 {
                     Color d = lightSystem.ambientColor;
-                    Color n = { 104, 132, 196, 255 };            // azul noturno (mais claro: luar, nao breu)
+                    Color n = { 104, 132, 196, 255 };            // blue nocturnal (more clear: luar, not breu)
                     lightSystem.ambientColor = {
                         (unsigned char)(n.r + (int)((d.r - n.r) * sun)),
                         (unsigned char)(n.g + (int)((d.g - n.g) * sun)),
@@ -277,8 +277,8 @@ void Game::update(float dt) {
                 }
                 lightSystem.clear();
                 lightSystem.addPlayerLight(player.position);
-                for (int i = 0; i < 5; ++i) { float a = i * 1.25664f;
-                    lightSystem.addTorchLight({ player.position.x + cosf(a)*360.0f, player.position.y + sinf(a)*360.0f }); }
+                for (int i = 0; i < 5; ++i) { float the = i * 1.25664f;
+                    lightSystem.addTorchLight({ player.position.x + cosf(the)*360.0f, player.position.y + sinf(the)*360.0f }); }
                 int lit = 0;
                 for (auto& b : buildingSystem.buildings) { if (b.active && lit < 10 && Vector2Distance(b.position, player.position) < 850.0f) { lightSystem.addBuildingLight(b.position); lit++; } }
             }
@@ -301,7 +301,7 @@ void Game::update(float dt) {
     if (storyBannerTimer  > 0.0f) storyBannerTimer  -= dt;
     if (playerSpeechTimer > 0.0f) playerSpeechTimer -= dt;
 
-    // Tick down active chats timers and remove expired ones
+    // Tick down active chats timers and removes expired ones
     for (auto it = activeChats.begin(); it != activeChats.end();) {
         it->second.timer -= dt;
         if (it->second.timer <= 0.0f) {
@@ -333,19 +333,19 @@ void Game::update(float dt) {
             if (cameraZoom > 1.50f) cameraZoom = 1.50f; }
     }
 
-    // Câmera 3D (2.5D) acompanha o jogador — sempre ativa.
+    // Camera 3D (2.5D) acompanha the player — always ativa.
     updateCamera3D();
 
-    // Mundo infinito: auto-gera/descarrega cenário em chunks ao redor do player.
+    // Infinite world: auto-generates/unloads scenery in chunks around the player.
     updateSceneryChunks(player.position);
 
-    // E.1: amortiza a geração do cenário fixo em lotes por frame.
+    // E.1: amortizes fixed scenery generation in batches per frame.
     streamSceneryBuild();
 
-    // Eventos de guerra ambiente (Ruínas de LA / Cidade Fantasma): a cada 20-30s
-    // um impacto distante cruza o céu — flash no horizonte, estrondo abafado e um
-    // micro-tremor. Só visual/audio; nao toca vida/dano, entao o autoteste segue
-    // determinista (o bot colhe/atira em coordenadas de mundo, nao do offset).
+    // Environmental war events (Ruins of LA / City Fantasma): the cada 20-30s
+    // um distant impact crosses the sky — flash on the horizon, estrondo abafado and um
+    // micro-tremor. Visual/audio only; does not touch health/damage, entao the autotest segue
+    // determinista (the bot harvests/shoots in world coordinates, not from the offset).
     if (openWorldMode &&
         (currentZone == ZoneID::LARuins || currentZone == ZoneID::GhostCity)) {
         if (owWarFlash > 0.0f) {
@@ -358,7 +358,7 @@ void Game::update(float dt) {
             }
         }
         owWarTimer -= dt;
-        if (owWarTimer <= 0.0f) {   // agenda o proximo impacto
+        if (owWarTimer <= 0.0f) {   // schedules the next impact
             auto rf = []() { return (float)GetRandomValue(0, 1000) / 1000.0f; };
             owWarTimer = 20.0f + rf() * 12.0f;
             owWarFlash = 0.9f;
@@ -369,7 +369,7 @@ void Game::update(float dt) {
         }
     }
 
-    // Open World region detection (SEM clamp de câmera — mundo é infinito)
+    // Open World region detection (without camera clamp — world is infinite)
     if (openWorldMode) {
         ZoneID newRegion = getRegionAt(player.position);
         if (newRegion != currentRegion) {
@@ -382,27 +382,27 @@ void Game::update(float dt) {
             for (auto& r : worldRegions)
                 if (r.zoneType == newRegion && !r.discovered) { r.discovered = true; break; }
 
-            // Anuncio UNICO da regiao: a barra do topo. Antes isto tambem ligava
-            // zoneNameTimer e, na PRIMEIRA visita, o mesmo nome+descricao saia duas
-            // vezes ao mesmo tempo (barra no topo + texto gigante no meio da tela).
+            // Single region announcement: the top bar. Before this also triggered
+            // zoneNameTimer and, on the FIRST visit, the same nome+descricao saia duas
+            // vezes to the same time (bar at the top + giant text in the middle of the screen).
             ZoneInfo zi = getZoneInfo(newRegion);
             showStoryBanner(zi.name.c_str(), zi.description.c_str(), 4.0f);
 
             switch (newRegion) {
                 case ZoneID::Cemetery:
-                    triggerPlayerSpeech("Lugar sombrio... almas presas aqui.", 3.0f); break;
+                    triggerPlayerSpeech("Lugar sombrio... almas presas here.", 3.0f); break;
                 case ZoneID::CursedFarm:
-                    triggerPlayerSpeech("Algo muito errado nessa fazenda...", 3.0f); break;
+                    triggerPlayerSpeech("Algo very wrong nessa farm...", 3.0f); break;
                 case ZoneID::GhostCity:
-                    triggerPlayerSpeech("Uma cidade inteira... silenciada.", 3.5f); break;
+                    triggerPlayerSpeech("Uma city whole... silenciada.", 3.5f); break;
                 case ZoneID::DarkForest:
-                    triggerPlayerSpeech("Visibilidade zero. Cuidado com a nevoa.", 3.0f); break;
+                    triggerPlayerSpeech("Visibilidade zero. Cuidado with the fog.", 3.0f); break;
                 case ZoneID::KronosForge:
-                    triggerPlayerSpeech("Forja KRONOS. Calor extremo detectado.", 3.0f); break;
+                    triggerPlayerSpeech("Forge KRONOS. Calor extremo detectado.", 3.0f); break;
                 case ZoneID::AbandonedManor:
-                    triggerPlayerSpeech("Mansao abandonada. Presencas sobrenaturais.", 3.5f); break;
+                    triggerPlayerSpeech("Manor abandonada. Presencas sobrenaturais.", 3.5f); break;
                 case ZoneID::KronosNexus:
-                    triggerPlayerSpeech("Nucleo do KRONOS. Fim da linha.", 4.0f); break;
+                    triggerPlayerSpeech("KRONOS Core. End of the line.", 4.0f); break;
                 case ZoneID::Bunker:
                     triggerPlayerSpeech("Bunker NEXUS. Area aliada.", 2.5f); break;
                 default: break;
@@ -419,10 +419,10 @@ void Game::update(float dt) {
                 lightSystem.addTorchLight({player.position.x + 180, player.position.y - 300});
                 lightSystem.addTorchLight({player.position.x - 400, player.position.y - 180});
                 lightSystem.addTorchLight({player.position.x + 120, player.position.y + 450});
-                // Chuva e vento ambiente nas zonas sombrias
+                // Rain and wind environment in the zones sombrias
                 anomalySystem.storm.startAtmospheric();
             } else if (!anomalySystem.waveActive) {
-                // Saiu da zona sombria e nao ha onda — para a chuva
+                // Left of the zone sombria and not ha onda — for the rain
                 anomalySystem.storm.stop();
             }
 
@@ -431,15 +431,15 @@ void Game::update(float dt) {
             bool hasDarkScenery = ((int)newRegion >= (int)ZoneID::Cemetery &&
                                    newRegion != ZoneID::InfernoZone);
             if (hasDarkScenery) {
-                // Seed DERIVADA da regiao + fase (deterministica): a mesma fase
-                // sempre reestrutura o mesmo cenario sombrio ao voltar.
+                // Seed DERIVADA of the region + phase (deterministica): the same phase
+                // always reestrutura the same scenario sombrio to the return.
                 unsigned int dseed = 0x343fdu * (unsigned int)((int)newRegion + 1)
                                    + (unsigned int)owPhase * 0x9e3779b9u;
                 darkWorld.load((int)newRegion, dseed);
-                // Dark scenery e gerado na origem da antiga grade 3x3 (hub em (1280,1280)).
-                // O mundo agora e CENTRADO na base: translada a decoracao para o hub
-                // (delta = safeZoneCenter - centro antigo = 0 nas fases atuais, mas
-                // explicito caso a base um dia mude de lugar).
+                // Dark scenery is generated at the origin of the old 3x3 grid (hub at (1280,1280)).
+                // The world is now CENTERED on the base: translates the decoration for the hub
+                // (delta = safeZoneCenter - center old = 0 in the phases atuais, mas
+                // explicit in case the base ever moves).
                 darkWorld.applyWorldOffset({
                     safeZoneCenter.x - (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize) / 2.0f,
                     safeZoneCenter.y - (float)(Tilemap::OW_ZONE_H * Tilemap::tileSize) / 2.0f });
@@ -449,7 +449,7 @@ void Game::update(float dt) {
 
             setupZoneNPCs(newRegion);
 
-            // BOSS FINAL — ao chegar no Nucleo KRONOS, invoca o clímax do jogo
+            // FINAL BOSS — to reach the KRONOS Core, triggers the game climax
             if (newRegion == ZoneID::KronosNexus && !finalBossSpawned && !gameWon) {
                 spawnFinalBoss();
             }
@@ -504,7 +504,7 @@ void Game::update(float dt) {
 
     // Damage numbers update
     for (auto& dn : damageNumbers) {
-        dn.rise += 38.0f * dt;   // sobe em `rise`; no 3D pos.y e o eixo NORTE do chao
+        dn.rise += 38.0f * dt;   // goes up in `rise`; in 3D pos.y is the NORTH axis of the floor
         dn.life -= dt;
     }
     damageNumbers.erase(
@@ -513,31 +513,31 @@ void Game::update(float dt) {
         damageNumbers.end());
     if (zoneNameTimer > 0.0f) zoneNameTimer -= dt;
 
-    // Aviso ao CRUZAR a fronteira da zona segura (portao da base)
+    // Warning when CROSSING the safe-zone border (base gate)
     if (openWorldMode) {
         bool nowInSafe = inSafeZone(player.position);
-        player.inSafeRefuge = nowInSafe;   // invulnerável no refúgio (ninguém te mata na cidade)
+        player.inSafeRefuge = nowInSafe;   // invulnerable in the refuge (in the one kills you in the city)
         if (wasInSafeZone && !nowInSafe) {
-            // Saindo da base para o perigo
-            showStoryBanner("!! SAINDO DA ZONA SEGURA !!",
-                            "Territorio hostil a frente. Fique alerta.", 3.0f);
-            triggerPlayerSpeech("Saindo da base. Modo de combate ativo.", 2.5f);
+            // Leaving the base for danger
+            showStoryBanner("!! SAINDO DA SAFE ZONE !!",
+                            "Hostile territory ahead. Fique alert.", 3.0f);
+            triggerPlayerSpeech("Leaving the base. Combat mode active.", 2.5f);
         } else if (!wasInSafeZone && nowInSafe) {
-            // Voltando para a base
-            showStoryBanner("ZONA SEGURA",
-                            "Voce esta protegido. Recupere-se e prepare-se.", 2.5f);
-            triggerPlayerSpeech("De volta a base. Em seguranca.", 2.0f);
+            // Returning for the base
+            showStoryBanner("SAFE ZONE",
+                            "You are protected. Recover and prepare.", 2.5f);
+            triggerPlayerSpeech("Back to base. Secure.", 2.0f);
         }
         wasInSafeZone = nowInSafe;
     }
 
-    // Motor de Evolucao Infinita — sobe ameaca e rotaciona mutadores
+    // Infinite Evolution Engine — increases threat and rotates mutators
     updateEvolutionEngine(dt);
 
-    // Coleta de recursos naturais (segurar H perto de um nó)
+    // Natural resource gathering (hold H near the node)
     updateResourceGathering(dt);
 
-    // Multiplayer LAN — envia o estado local e recebe os outros jogadores
+    // Multiplayer LAN — sends local state and receives other players
     if (netActive) {
         float vm = std::sqrt(player.velocity.x*player.velocity.x + player.velocity.y*player.velocity.y);
         net.sendState(player.position.x, player.position.y,
@@ -554,18 +554,18 @@ void Game::update(float dt) {
             // Find closest local active enemy within 80 pixels
             Enemy* closest = nullptr;
             float minDist = 80.0f;
-            for (auto& e : enemies) {
-                if (e.isDead()) continue;
-                float d = Vector2Distance(e.position, netPos);
+            for (auto& and : enemies) {
+                if (and.isDead()) continue;
+                float d = Vector2Distance(and.position, netPos);
                 if (d < minDist) {
                     minDist = d;
-                    closest = &e;
+                    closest = &and;
                 }
             }
             if (closest) {
                 closest->health = 0.0f;
-                // Marca no PRÓPRIO inimigo (flag move junto na realocação do vetor) —
-                // evita o use-after-free de guardar ponteiro em netKilledEnemies.
+                // Marks the SAME enemy (flag moves along on vector reallocation) —
+                // avoids use-after-free from storing the pointer in netKilledEnemies.
                 closest->netKilled = true;
             }
         }
@@ -579,31 +579,31 @@ void Game::update(float dt) {
         }
     }
 
-    // Animais / vida selvagem
+    // Animais / health selvagem
     updateAnimals(dt);
-    updateCityFolk(dt);   // civis perambulando pela cidade
+    updateCityFolk(dt);   // civis perambulando pela city
 
-    // Spawn enemies — COM LIMITE para nao acumular sem fim (perf + estabilidade).
-    // O cap escala um pouco com a dificuldade; bosses/minions ainda podem somar.
+    // Spawn enemies — WITH A LIMIT only it does not accumulate endlessly (perf + stability).
+    // O cap scale um little with the difficulty; bosses/minions still can somar.
     {
         const int baseCap   = 55;
         const int diffBonus  = (int)difficulty * 12;   // Historia 0 .. Apocalipse +48
-        const int enemyCap   = baseCap + diffBonus + threatLevel * 3; // mais ameaca = mais inimigos
+        const int enemyCap   = baseCap + diffBonus + threatLevel * 3; // more ameaca = more enemies
         spawnTimer += dt;
-        // Mutador "Invasao Total" acelera o spawn
-        float dayNight = 0.62f + 0.38f * worldSun;   // noite: intervalo menor = mais inimigos
+        // "Total Invasion" mutator speeds up spawn
+        float dayNight = 0.62f + 0.38f * worldSun;   // night: intervalo menor = more enemies
         float effectiveInterval = spawnInterval * mutatorSpawnMult() * dayNight;
         if (spawnTimer >= effectiveInterval) {
-            // ZONA SEGURA: nao spawna inimigos enquanto o player esta no refugio
+            // SAFE ZONE: does not spawn enemies while the player is in the refuge
             if ((int)enemies.size() < enemyCap && !inSafeZone(player.position))
                 spawnEnemy();
             spawnTimer = 0.0f;
         }
     }
 
-    // Boss tambem nao surge dentro da zona segura.
-    // Em FASE DE CHEFE o gatilho e a cota da fase: mata a cota -> o chefe aparece
-    // -> so entao o portal abre. Da comeco, meio e fim para a fase.
+    // Boss also not surge inside the zone segura.
+    // In BOSS PHASE the trigger is the phase quota: kill the quota -> the boss appears
+    // -> only then the portal opens. Gives beginning, middle and end to the phase.
     bool bossCue = openWorldMode
         ? (owBossPhase && owPhaseKills >= owPhaseGoal)
         : (enemiesKilled >= bossSpawnThreshold);
@@ -611,7 +611,7 @@ void Game::update(float dt) {
         spawnBoss();
         bossSpawned = true;
         if (openWorldMode)
-            showStoryBanner("O CHEFE APARECEU", "Derrote-o para abrir o portal.", 4.5f);
+            showStoryBanner("O BOSS APARECEU", "Defeat it to open the portal.", 4.5f);
     }
 
     // Auto-save
@@ -622,26 +622,26 @@ void Game::update(float dt) {
     int enemyIdx = 0;
     for (auto& enemy : enemies) {
         Vector2 prevPos = enemy.position;
-        // Ponto de aproximacao tatico: longe do jogador o inimigo vai pro flanco
-        // ou corta a retaguarda; colado, recebe a posicao REAL (senao a mira e o
-        // telegrafo de ataque apontariam para o lugar errado).
+        // Tactical approach point: far from the player the enemy goes to the flank
+        // ou corta the rear; up close, receives the REAL position (otherwise the mira and the
+        // telegrafo of attack apontariam for the lugar wrong).
         Vector2 aim = enemy.isBoss()
                     ? player.position
                     : director.approachPoint(enemyIdx++, enemy.position, player.position);
         enemy.update(dt, aim);
 
-        // Colisao com paredes — inimigos NAO atravessam mais paredes.
-        // Desliza ao longo da parede (separacao por eixo) em vez de parar seco.
-        // Bosses voadores/sobrenaturais ignoram (atravessam de proposito).
+        // Collision with walls — enemies in the longer pass through walls.
+        // Slides along the wall (axis separation) instead of stopping dead.
+        // Flying/supernatural bosses ignore (pass through on purpose).
         bool ghostly = (enemy.type == EnemyType::Ghost ||
                         enemy.type == EnemyType::GhostElite ||
                         enemy.type == EnemyType::ShadowWraith ||
                         enemy.type == EnemyType::BansheeHowler ||
                         enemy.type == EnemyType::PoltergeistBoss);
         auto blockedAt = [&](Vector2 p) {
-            // Parede de TILE (grid do tilemap) OU estrutura de CHUNK (círculo físico
-            // das construções geradas no infinito). Antes os inimigos só barravam
-            // na parede de tile: andavam ATRAVESSADOS dentro do prédio de chunk.
+            // Wall of TILE (grid of the tilemap) OU struct of CHUNK (circle physical
+            // of the structures geradas in the infinito). Antes the enemies only barravam
+            // on the tile wall: andavam ATRAVESSADOS inside the building of chunk.
             if (tilemap.isWallAtPosition(p)) return true;
             for (const auto& s : m_chunkSolids) {
                 float dx = p.x - s.x, dy = p.y - s.y;
@@ -657,14 +657,14 @@ void Game::update(float dt) {
             else                      enemy.position = prevPos;
         }
 
-        // ZONA SEGURA: inimigo que entra no refugio e empurrado para fora (recua).
-        // O jogador fica seguro mesmo se for perseguido ate a base.
+        // SAFE ZONE: enemy that enters the refuge is pushed outside (retreats).
+        // O player stays safe same if for chased until the base.
         if (inSafeZone(enemy.position)) {
             Vector2 away = { enemy.position.x - safeZoneCenter.x,
                              enemy.position.y - safeZoneCenter.y };
             float len = std::sqrt(away.x*away.x + away.y*away.y);
             if (len < 1.0f) { away = {1.0f, 0.0f}; len = 1.0f; }
-            // Empurra forte; se entrou MUITO fundo, joga direto pra borda (não fica perseguindo).
+            // Empurra strong; if entered MUITO fundo, plays direct to edge (not stays perseguindo).
             float push = enemy.speed * 4.0f * dt + 90.0f * dt;
             enemy.position.x += (away.x / len) * push;
             enemy.position.y += (away.y / len) * push;
@@ -679,10 +679,10 @@ void Game::update(float dt) {
             enemy.justEvolved = false;
             if (Vector2Distance(enemy.position, player.position) < 420.0f) {
                 const char* evolMsgs[] = {
-                    "Inimigo evoluiu — cuidado!",
+                    "Enemy evoluiu — cuidado!",
                     "Ameaca escalando!",
-                    "Inimigo ficou mais forte!",
-                    "Evolucao detectada — atencao!"
+                    "Enemy stayed more strong!",
+                    "Evolution detectada — atencao!"
                 };
                 triggerPlayerSpeech(evolMsgs[GetRandomValue(0, 3)], 2.0f);
                 triggerShake(3.0f, 0.18f);
@@ -696,7 +696,7 @@ void Game::update(float dt) {
                 player.takeDamage(dmg);
                 audio.playPlayerHurt();
                 noteHurtDir(enemy.position);
-                // Mutador LUA DE SANGUE: o inimigo se cura ao te atingir
+                // Mutador LUA DE BLOOD: the enemy heals when hitting you
                 if (mutatorBloodMoon())
                     enemy.health = std::min(enemy.maxHealth, enemy.health + dmg * 0.5f);
                 hitFlashTimer = 0.25f;
@@ -708,10 +708,10 @@ void Game::update(float dt) {
                 // Low HP warning speech
                 float hpPct = player.health / player.maxHealth;
                 if (hpPct < 0.20f && playerSpeechTimer <= 0.0f) {
-                    triggerPlayerSpeech("ALERTA: Integridade critica. Recuando!", 3.0f);
+                    triggerPlayerSpeech("ALERT: Integridade critica. Recuando!", 3.0f);
                 } else if (hpPct < 0.40f && playerSpeechTimer <= 0.0f
                            && GetRandomValue(0,3) == 0) {
-                    triggerPlayerSpeech("Dano severo detectado.", 2.5f);
+                    triggerPlayerSpeech("Damage severo detectado.", 2.5f);
                 }
             }
         }
@@ -754,8 +754,8 @@ void Game::update(float dt) {
         }
     }
 
-    // Separation steering com GRID ESPACIAL — evita O(N^2) em Threat alto.
-    // So compara inimigos na mesma celula e nas 8 adjacentes.
+    // Separation steering with GRID ESPACIAL — evita O(N^2) in Threat high.
+    // So compara enemies in the same celula and in the 8 adjacentes.
     {
         const float CELL = 64.0f;
         std::unordered_map<long long, std::vector<int>> grid;
@@ -775,7 +775,7 @@ void Game::update(float dt) {
                 auto it = grid.find(key(cx+ox, cy+oy));
                 if (it == grid.end()) continue;
                 for (int j : it->second) {
-                    if (j <= i) continue;   // cada par so uma vez
+                    if (j <= i) continue;   // cada par only uma vez
                     float dx = enemies[i].position.x - enemies[j].position.x;
                     float dy = enemies[i].position.y - enemies[j].position.y;
                     float minDist = enemies[i].radius + enemies[j].radius + 4.0f;
@@ -795,7 +795,7 @@ void Game::update(float dt) {
     }
 
     // Group alert: if any enemy took damage, alert nearby (not-yet-alerted) allies.
-    // Pular allies ja alertados evita trabalho O(n^2) redundante todo frame.
+    // Pular allies already alertados evita trabalho O(n^2) redundante all frame.
     for (auto& hit : enemies) {
         if (hit.hitFlashTimer > 0.05f) {
             for (auto& ally : enemies) {
@@ -811,7 +811,7 @@ void Game::update(float dt) {
     {
         std::vector<Enemy*> enemyPtrs;
         enemyPtrs.reserve(enemies.size());
-        for (auto& e : enemies) enemyPtrs.push_back(&e);
+        for (auto& and : enemies) enemyPtrs.push_back(&and);
         buildingSystem.update(dt, player.position, &enemyProjectiles, enemyPtrs);
 
         // Collect building-generated resources
@@ -847,8 +847,8 @@ void Game::update(float dt) {
             } else {
                 anomalySystem.spawnWave(mapW, mapH, player.position);
             }
-            triggerPlayerSpeech("Anomalias detectadas! Feche os portais!", 3.5f);
-            showStoryBanner("!! ANOMALIA DETECTADA !!", "Feche todos os portais para continuar");
+            triggerPlayerSpeech("Anomalias detectadas! Feche the portals!", 3.5f);
+            showStoryBanner("!! ANOMALIA DETECTADA !!", "Feche all the portals to continue");
         }
     }
     anomalySystem.update(dt, player.position);
@@ -879,9 +879,9 @@ void Game::update(float dt) {
         totalCreditsEarned += 500;
         achievements.onCreditsEarned(totalCreditsEarned);
         player.addXP(2500);
-        triggerPlayerSpeech("Todas anomalias fechadas! Zona segura.", 3.5f);
+        triggerPlayerSpeech("All anomalias fechadas! Zone segura.", 3.5f);
 
-        // Quest tracking: ClosePortal avanca ao fechar uma wave de portais.
+        // Quest tracking: ClosePortal avanca to the close uma wave of portals.
         for (auto& q : quests) {
             if (!q.completed && q.active && q.type == QuestType::ClosePortal) {
                 q.updateProgress(1);
@@ -896,13 +896,13 @@ void Game::update(float dt) {
     updateItems(dt);
     updateXPOrbs(dt);
     checkCollisions();
-    drainLevelUps();      // credita os niveis ganhos neste frame (qualquer fonte)
-    // A IA aprende com ESTE frame: distancia, movimentacao, ritmo de abate e dano
-    // sofrido alimentam o diretor, que responde no spawn e na tatica.
+    drainLevelUps();      // credita the levels ganhos neste frame (qualquer fonte)
+    // A IA aprende with ESTE frame: distance, movimentacao, ritmo of abate and damage
+    // sofrido alimentam the diretor, that responde in the spawn and in the tactic.
     director.observe(dt, player.position, player.health, player.maxHealth,
                      enemiesKilled, (int)enemies.size());
     updatePhasePortal(dt);
-    // ── LIMITE DA FASE ───────────────────────────────────────────────────────
+    // ── PHASE LIMIT ───────────────────────────────────────────────────────
     if (openWorldMode && owFadeTimer <= 0.0f) {
         Vector2 d = { player.position.x - safeZoneCenter.x, player.position.y - safeZoneCenter.y };
         float dl = sqrtf(d.x*d.x + d.y*d.y);
@@ -911,14 +911,14 @@ void Game::update(float dt) {
             player.position.y = safeZoneCenter.y + d.y / dl * owPhaseRadius;
             if (borderWarnTimer <= 0.0f) {
                 borderWarnTimer = 2.0f;
-                triggerPlayerSpeech("Barreira de KRONOS. Nao da pra ir alem daqui.", 2.5f);
+                triggerPlayerSpeech("Barrier of KRONOS. Not of the to go alem daqui.", 2.5f);
             }
         }
         if (borderWarnTimer > 0.0f) borderWarnTimer -= dt;
     }
     checkPortalTransition();
 
-    // Grito de "estou morrendo" quando a vida fica critica (antes de morrer)
+    // Grito of "estou morrendo" when the health stays critica (before die)
     {
         float hpPct = player.health / player.maxHealth;
         if (hpPct > 0.0f && hpPct < 0.18f) {
@@ -929,14 +929,14 @@ void Game::update(float dt) {
                 triggerPlayerSpeech("ESTOU MORRENDO! ME AJUDE!", 3.0f);
             }
         } else if (hpPct >= 0.30f) {
-            dyingCryCooldown = 0.0f; // recuperou — pode gritar de novo se cair
+            dyingCryCooldown = 0.0f; // recuperou — can gritar of new if fall
         }
     }
 
-    // Player death - respawn (na Arca, se houver uma construida)
+    // Player death - respawn (in the Arca, if houver uma built)
     if (player.health <= 0.0f) {
         audio.playPlayerDeath();
-        triggerPlayerSpeech("NAO... nao acabou ainda!", 3.0f);
+        triggerPlayerSpeech("NOT... not acabou still!", 3.0f);
         totalDeaths++;
         achievements.onDeathCount(totalDeaths);
         enemies.clear();
@@ -948,31 +948,31 @@ void Game::update(float dt) {
 
         Vector2 arkPos;
         if (buildingSystem.getArkPosition(arkPos)) {
-            // Renasce na Arca com mais vida (75%) — a Arca e seu ponto de retorno
+            // Renasce in the Arca with more health (75%) — the Arca and your point of return
             player.position = arkPos;
             player.health   = player.maxHealth * 0.75f;
-            triggerPlayerSpeech("Renascido na Arca. De volta a luta.", 3.0f);
+            triggerPlayerSpeech("Renascido in the Arca. De returns the luta.", 3.0f);
         } else {
-            // Sem Arca: renasce na ZONA SEGURA (refugio inicial) com 60%
+            // Without Ark: respawns in the SAFE ZONE (initial refuge) with 60%
             player.health  = player.maxHealth * 0.6f;
             player.position = safeZoneCenter;
-            triggerPlayerSpeech("De volta a base segura. Recupere-se e prepare-se.", 3.5f);
+            triggerPlayerSpeech("De returns the base segura. Recover and prepare.", 3.5f);
         }
     }
 
     // Process dead enemies
     nearNpcIndex = -1;
     std::vector<Enemy> splitSpawns;
-    bool pendingOmega = false;   // spawn do Omega adiado p/ DEPOIS do loop (push no loop invalidaria `it`)
+    bool pendingOmega = false;   // spawn of the Omega adiado p/ DEPOIS of the loop (push in the loop invalidaria `it`)
 
     for (auto it = enemies.begin(); it != enemies.end();) {
         if (it->isDead()) {
             if (it->shouldDropLoot()) {
                 it->markLootDropped();
 
-                // Morte por sync de rede (flag no inimigo) → não rebroadcastar.
+                // Death by sync of network (flag in the enemy) → not rebroadcastar.
                 if (it->netKilled) {
-                    // já tratada pela rede; nada a enviar
+                    // already tratada pela network; nada the send
                 } else {
                     if (netActive) {
                         uint32_t cx = (uint32_t)(it->position.x / 10.0f) & 0xFFFF;
@@ -982,10 +982,10 @@ void Game::update(float dt) {
                     }
                 }
 
-                playEnemyDeathSound(*it);   // som de morte por facção/tipo
+                playEnemyDeathSound(*it);   // sound of death by faction/type
 
-                // "POP" de morte (juice): burst colorido em escala; elite/boss
-                // congelam o mundo e tremem a camera — recompensa por abate.
+                // "POP" of death (juice): burst colorido in scale; elite/boss
+                // congelam the world and tremem the camera — reward by abate.
                 {
                     int burstCount = it->isBoss() ? 46 : it->isElite ? 24 : 12;
                     Color kCol = (it->isElite || it->isBoss()) ? Color{255,200,80,255} : it->bodyColor;
@@ -998,7 +998,7 @@ void Game::update(float dt) {
                         camPunch = std::max(camPunch, it->isBoss() ? 0.07f : 0.045f);
                     }
                 }
-                // Decalque no chão: sangue (orgânicos) ou queimado (máquinas)
+                // Floor decal: blood (organics) or scorched (machines)
                 {
                     using ET = EnemyType;
                     bool organic = (it->type==ET::Zergling||it->type==ET::Hydra||it->type==ET::Broodmother||
@@ -1013,7 +1013,7 @@ void Game::update(float dt) {
                 // XP orb — scales by elite/boss status, evolTier, and difficulty
                 int xpAmt = it->isElite ? it->xpReward * 2 :
                             (it->type == EnemyType::Boss) ? it->xpReward * 3 : it->xpReward;
-                float tierMult = 1.0f + it->evolTier * 0.75f; // Lendário = 3.25x
+                float tierMult = 1.0f + it->evolTier * 0.75f; // Legendary = 3.25x
                 xpAmt = (int)(xpAmt * tierMult * getDifficulty().xpMult * mutatorDropMult());
                 xpOrbs.emplace_back(it->position, xpAmt);
 
@@ -1033,7 +1033,7 @@ void Game::update(float dt) {
                 if (it->isElite) credAmt = (int)(credAmt * 2.5f);
                 credAmt = (int)(credAmt * getDifficulty().creditMult * mutatorDropMult());
                 if (credAmt > 0) {
-                    // Scatter credits in a small arc so they're visible
+                    // Scatter credits in the small arc only they're visible
                     int numCoins = std::min(credAmt / 10 + 1, 5);
                     int coinAmt  = credAmt / numCoins;
                     for (int ci = 0; ci < numCoins; ++ci) {
@@ -1047,17 +1047,17 @@ void Game::update(float dt) {
                     }
                 }
 
-                // ── ABSORÇÃO DE PODER (estilo V Rising): matar BOSS = buff PERMANENTE ──
+                // ── ABSORCAO DE POWER (estilo V Rising): kill BOSS = buff PERMANENTE ──
                 if (it->isBoss()) {
                     bossPowersAbsorbed++;
                     totalBossesKilled++;
                     achievements.onBossKilled(totalBossesKilled);
                     int kind = bossPowersAbsorbed % 4;
-                    const char* pname = (kind==0) ? "+10% Vida Maxima" : (kind==1) ? "+10% Dano"
-                                      : (kind==2) ? "+4% Defesa" : "+6% Velocidade";
-                    player.absorbBossEssence(kind);   // buff PERMANENTE (mexe no base + recalcula)
-                    showStoryBanner("PODER ABSORVIDO",
-                        TextFormat("Essencia do boss: %s   (total: %d)", pname, bossPowersAbsorbed), 3.5f);
+                    const char* pname = (kind==0) ? "+10% Health Maxima" : (kind==1) ? "+10% Damage"
+                                      : (kind==2) ? "+4% Defense" : "+6% Speed";
+                    player.absorbBossEssence(kind);   // buff PERMANENTE (mexe in the base + recalcula)
+                    showStoryBanner("POWER ABSORVIDO",
+                        TextFormat("Essencia of the boss: %s   (total: %d)", pname, bossPowersAbsorbed), 3.5f);
                     triggerShake(6.0f, 0.4f);
                 }
 
@@ -1082,7 +1082,7 @@ void Game::update(float dt) {
                     if (drop.rarity >= ItemRarity::Legendary && playerSpeechTimer <= 0.5f)
                         triggerPlayerSpeech("Item LENDARIO detectado!", 3.0f);
                     else if (drop.rarity == ItemRarity::Epic && playerSpeechTimer <= 0.5f)
-                        triggerPlayerSpeech("Item Epico encontrado!", 2.0f);
+                        triggerPlayerSpeech("Item Epico found!", 2.0f);
                     items.push_back(drop);
                 }
                 // Tech chip drop — 20% base, 60% from bosses, scaled by difficulty
@@ -1123,7 +1123,7 @@ void Game::update(float dt) {
                     case EnemyType::KronosSentry:
                         // MetalScrap — 40%
                         if (GetRandomValue(0, 99) < 40)
-                            spawnMaterial(ItemType::MetalScrap, "Sucata Metal", {180,180,180,255});
+                            spawnMaterial(ItemType::MetalScrap, "Scrap Metal", {180,180,180,255});
                         break;
                     case EnemyType::Zergling:
                     case EnemyType::Hydra:
@@ -1135,7 +1135,7 @@ void Game::update(float dt) {
                     case EnemyType::HunterDrone:
                         // PlasmaCore — 35%
                         if (GetRandomValue(0, 99) < 35)
-                            spawnMaterial(ItemType::PlasmaCore, "Nucleo Plasma", {0,180,255,255});
+                            spawnMaterial(ItemType::PlasmaCore, "Core Plasma", {0,180,255,255});
                         break;
                     case EnemyType::MorphX:
                         // NanoFiber — 45% (T-1000 analogue)
@@ -1180,48 +1180,48 @@ void Game::update(float dt) {
                 achievements.onKill(totalKills);
                 totalKillsEver++;
 
-                // VITORIA — o Nucleo KRONOS foi destruido
+                // VICTORY — the Core KRONOS went destruido
                 if (it->isFinalBoss) {
                     finalBossAlive = false;
                     gameWon        = true;
                     victoryTimer   = 0.0f;
                     triggerShake(20.0f, 1.0f);
-                    triggerPlayerSpeech("Acabou... a humanidade esta livre.", 6.0f);
+                    triggerPlayerSpeech("Acabou... the humanidade is livre.", 6.0f);
                     audio.playLevelUp();
                 }
 
-                // Omega Boss trigger every 50 kills (desativado apos a vitoria)
+                // Omega Boss trigger every 50 kills (disabled after the victory)
                 if (!gameWon && totalKills >= omegaKillThreshold) {
                     omegaKillThreshold += 50;
-                    pendingOmega = true;   // spawn DEPOIS do loop de mortes (push aqui invalidaria `it`)
+                    pendingOmega = true;   // spawn DEPOIS of the loop of deaths (push here invalidaria `it`)
                 }
 
                 // First kill speech
                 if (!firstKillTriggered && playerSpeechTimer <= 0.3f) {
                     firstKillTriggered = true;
-                    static const char* fkl[] = { "Primeiro de muitos.", "NEXUS: 1. KRONOS: 0.", "Isso e por Lyra." };
+                    static const char* fkl[] = { "Primeiro of many.", "NEXUS: 1. KRONOS: 0.", "Isso and by Lyra." };
                     triggerPlayerSpeech(fkl[GetRandomValue(0,2)], 2.5f);
                 }
                 // Player combat commentary (half-human reactions)
                 if (enemiesKilled % 5 == 0 && playerSpeechTimer <= 0.5f) {
                     static const char* killLines[] = {
                         "Unidade neutralizada.", "Target eliminado.",
-                        "Sistema de combate eficiente.", "Ameaca suprimida.",
-                        "Protocolo de neutralizacao concluido.",
-                        "Meus sensores detectam mais inimigos.", "Continuo a missao."
+                        "Sistema of combat eficiente.", "Ameaca suprimida.",
+                        "Protocolo of neutralizacao completed.",
+                        "Meus sensores detectam more enemies.", "Continuo the quest."
                     };
                     triggerPlayerSpeech(killLines[GetRandomValue(0,6)], 3.0f);
                 }
                 if (it->type == EnemyType::Boss || it->type == EnemyType::AlienBoss || it->type == EnemyType::OmegaBoss) {
-                    static const char* bossLines[] = { "CHEFE ABATIDO. Missao cumprida.", "Um a menos pra humanidade.", "Era isso? Vim preparado.", "KRONOS - seu tempo acabou." };
+                    static const char* bossLines[] = { "BOSS ABATIDO. Quest cumprida.", "Um the less to humanidade.", "Era isso? Vim prepared.", "KRONOS - your time acabou." };
                     triggerPlayerSpeech(bossLines[GetRandomValue(0,3)], 5.0f);
                 }
 
                 // Shake on kill
                 triggerShake(4.0f, 0.12f);
 
-                // Quest progress — GENERICO por tipo (qualquer kill conta nas quests
-                // de caca; boss conta nas de boss). Garante que as barras enchem.
+                // Quest progress — GENERICO by type (qualquer kill account in the quests
+                // of caca; boss account in the of boss). Ensures that the barras enchem.
                 bool isBossKill = (it->type == EnemyType::Boss ||
                                    it->type == EnemyType::AlienBoss ||
                                    it->type == EnemyType::OmegaBoss);
@@ -1269,7 +1269,7 @@ void Game::update(float dt) {
                 audio.playExplosion();
             }
 
-            // UndeadEnforcer ressurreicao — revive com 30% HP uma vez
+            // UndeadEnforcer ressurreicao — revive with 30% HP uma vez
             if (it->type == EnemyType::UndeadEnforcer && !it->hasRevived) {
                 it->hasRevived = true;
                 it->health     = it->maxHealth * 0.30f;
@@ -1287,7 +1287,7 @@ void Game::update(float dt) {
 
     for (auto& s : splitSpawns) enemies.push_back(s);
 
-    // Omega boss adiado: entrou depois do loop, sem invalidar iteradores.
+    // Omega boss adiado: entered after the loop, without invalidar iteradores.
     if (pendingOmega) spawnOmegaBoss();
 
     // Check NPC proximity
@@ -1298,11 +1298,11 @@ void Game::update(float dt) {
         }
     }
 
-    // Quest rewards + conclusao de quests de Zona (ao estar na zona alvo)
+    // Quest rewards + conclusao of quests of Zone (to the estar in the zone alvo)
     for (auto& q : quests) {
         if (!q.completed && q.active && q.type == QuestType::Zone &&
             (int)currentZone == q.target && !q.isComplete()) {
-            q.updateProgress(q.target);   // chegou na zona — completa
+            q.updateProgress(q.target);   // chegou in the zone — completa
         }
         if (q.isComplete() && !q.rewardGiven) {
             grantQuestRewards(q);
@@ -1311,7 +1311,8 @@ void Game::update(float dt) {
 }
 
 void Game::movePlayerWithSlide(Vector2 direction, float dt) {
-    float len = std::sqrt(direction.x * direction.x + direction.y * direction.y);    if (len < 0.01f) return;
+    float len = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+    if (len < 0.01f) return;
     direction.x /= len;
     direction.y /= len;
 
@@ -1397,7 +1398,7 @@ void Game::handleInput(float dt) {
         bool      crafted  = false;
         if (IsKeyPressed(KEY_ENTER) && !craftingSystem.crafting)
             crafted = craftingSystem.tryCraft(player.inventory, outEquip, outItem, gotEquip);
-        // Mouse: hover/clique nas receitas e botao CRAFTAR
+        // Mouse: hover/click in the receitas and button CRAFTAR
         {
             Vector2 vm = virtualizeMousePos(GetMousePosition());
             bool click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
@@ -1432,12 +1433,12 @@ void Game::handleInput(float dt) {
         bool      gotCosmetic = false;
         Color     cosmeticCol = WHITE;
         bool      bought      = false;
-        // Compra por TECLADO (ENTER) ...
+        // Purchase by TECLADO (ENTER) ...
         if (IsKeyPressed(KEY_ENTER)) {
             bought = shopSystem.tryBuy(player.credits, outEquip, outItem,
                                        gotEquip, gotCosmetic, cosmeticCol);
         }
-        // ... ou por MOUSE (hover/clique nos botoes)
+        // ... ou by MOUSE (hover/click in the botoes)
         {
             Vector2 vm = virtualizeMousePos(GetMousePosition());
             bool click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
@@ -1469,7 +1470,7 @@ void Game::handleInput(float dt) {
     // ── Inventory absorbs 1/2/3/U when open ──────────────────────────────────
     if (showInventory) {
         player.handleInventoryInput();
-        // Mouse: clique seleciona/equipa/usa; botão X fecha.
+        // Mouse: click selects/equipa/usa; button X closes.
         bool lc = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
         bool rc = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
         if (lc || rc) {
@@ -1480,66 +1481,66 @@ void Game::handleInput(float dt) {
         return;
     }
 
-    // Mouse no mundo: raycast no plano do chão 3D (pipeline 2.5D).
+    // Mouse in the world: raycast in the plano of the floor 3D (pipeline 2.5D).
     Vector2 mouseWorld = mouseGround3D();
 
     // ── Bot controller decisions ──────────────────────────────────────────────
     updateBotControl(dt);
-    // shouldQuit do bot (autotest) pedia return imediato do handleInput —
-    // quitRequested so e setado ali dentro, entao o early-return e equivalente.
+    // shouldQuit of the bot (autotest) pedia return immediate of the handleInput —
+    // quitRequested only and setado there inside, entao the early-return and equivalente.
     if (quitRequested) return;
 
-    // ── Clique numa fabrica/quartel = produzir unidade na hora ────────────────
+    // ── Click numa factory/barracks = produzir unit in the hour ────────────────
     bool producedThisClick = false;
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !dialogOpen &&
         !buildingSystem.buildModeActive) {
         int r = buildingSystem.clickProduce(mouseWorld, player.credits);
         if (r == 1) {
-            triggerPlayerSpeech("Unidade em producao!", 1.5f);
+            triggerPlayerSpeech("Unidade in production!", 1.5f);
             audio.playPickup();
             producedThisClick = true;
         } else if (r == 2) {
-            triggerPlayerSpeech("Creditos insuficientes.", 1.5f);
+            triggerPlayerSpeech("Credits insuficientes.", 1.5f);
             producedThisClick = true;
         } else if (r == 3) {
-            triggerPlayerSpeech("Limite de unidades atingido.", 1.5f);
+            triggerPlayerSpeech("Limit of unidades atingido.", 1.5f);
             producedThisClick = true;
         }
     }
 
-    // ── Clicar num NPC para conversar (selecao por clique) ────────────────────
+    // ── Clicar num NPC to conversar (selecao by click) ────────────────────
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !dialogOpen &&
         !buildingSystem.buildModeActive && !producedThisClick) {
-        // Testa o clique contra o NPC PROJETADO NA TELA (o modelo voxel é
-        // alto e aparece acima dos "pés"; o chão sob o cursor cai atrás do NPC).
+        // Testa the click contra the NPC PROJETADO NA SCREEN (the voxel model is
+        // high and aparece above of the "feet"; the floor sob the cursor falls behind of the NPC).
         Vector2 cs = virtualizeMousePos(GetMousePosition());
         for (int i = 0; i < (int)npcs.size(); ++i) {
             Vector2 ns = GetWorldToScreenEx({ npcs[i].position.x, 28.0f, npcs[i].position.y },
                                             camera3D, screenWidth, screenHeight);
-            bool hit = Vector2Distance(cs, ns) <= 44.0f;   // tolerância em pixels (corpo)
+            bool hit = Vector2Distance(cs, ns) <= 44.0f;   // tolerance in pixels (body)
             if (hit) {
                 if (Vector2Distance(player.position, npcs[i].position) <= 160.0f) {
                     nearNpcIndex = i;
                     dialogOpen   = true;
                     dialogLine   = 0;
-                    producedThisClick = true; // nao mover o player neste clique
+                    producedThisClick = true; // not move the player neste click
                 } else {
-                    triggerPlayerSpeech("Preciso chegar mais perto para conversar.", 2.0f);
+                    triggerPlayerSpeech("Preciso chegar more near to conversar.", 2.0f);
                 }
                 break;
             }
         }
     }
 
-    // ── Selecao RTS por arrasto do mouse esquerdo ─────────────────────────────
-    // ── Selecao RTS: SO com SHIFT segurado (esquerdo sozinho = andar) ─────────
-    // Assim segurar o esquerdo para CAMINHAR nunca desenha caixa de selecao.
+    // ── Selecao RTS by arrasto of the mouse esquerdo ─────────────────────────────
+    // ── Selecao RTS: SO with SHIFT segurado (esquerdo sozinho = andar) ─────────
+    // Assim hold the esquerdo to CAMINHAR never draws caixa of selecao.
     bool selectMod = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
     if (!buildingSystem.buildModeActive && !dialogOpen) {
         if (selectMod && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !producedThisClick) {
             rtsDragStart = mouseWorld;
             rtsDragCur   = mouseWorld;
-            rtsDragging  = true;   // entra em modo selecao imediatamente
+            rtsDragging  = true;   // enters in modo selecao imediatamente
         }
         if (rtsDragging && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             rtsDragCur = mouseWorld;
@@ -1550,29 +1551,29 @@ void Game::handleInput(float dt) {
                               rtsDragCur.y - rtsDragStart.y };
             int sel = buildingSystem.selectUnitsInBox(box);
             rtsHasUnits = (sel > 0);
-            if (sel > 0) triggerPlayerSpeech(TextFormat("%d unidade(s) selecionada(s)", sel), 1.5f);
+            if (sel > 0) triggerPlayerSpeech(TextFormat("%d unit(s) selected(s)", sel), 1.5f);
             rtsDragging = false;
         }
-        // Se soltar SHIFT no meio do arrasto, cancela a selecao (volta a andar)
+        // Se release SHIFT in the middle of the arrasto, cancela the selecao (returns the andar)
         if (rtsDragging && !selectMod) rtsDragging = false;
 
-        // Botao DIREITO = ordem de mover as unidades selecionadas
+        // Button DIREITO = ordem of move the unidades selecionadas
         if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && rtsHasUnits) {
             buildingSystem.orderMove(mouseWorld);
         }
     }
 
-    // ── Click-to-move (Diablo) — esquerdo sozinho SEMPRE anda (sem marcar) ────
+    // ── Click-to-move (Diablo) — esquerdo sozinho SEMPRE anda (without marcar) ────
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !dialogOpen && !rtsDragging) {
         moveTarget = mouseWorld;
         hasTarget  = true;
         tutorial.onPlayerMoved();
     }
 
-    // CORRER (segurar SHIFT) e PULAR (ESPAÇO) — pulo cruza obstaculos baixos
+    // CORRER (hold SHIFT) and PULAR (ESPACO) — pulo cruza obstaculos baixos
     player.sprinting = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
     if (IsKeyPressed(KEY_SPACE)) { player.startJump(); audio.playFootstep(); }
-    // Durante o pulo a colisao com parede e relaxada (passa por cima)
+    // During the pulo the collision with wall and relaxada (passes by up)
     bool airborne = player.isJumping && player.jumpZ > 8.0f;
 
     // WASD also sets move direction (alternative control)
@@ -1591,7 +1592,8 @@ void Game::handleInput(float dt) {
             }
             hasTarget = false; // WASD cancels click target
             tutorial.onPlayerMoved();
-        }    }
+        }
+    }
 
     // Move toward click target
     if (hasTarget) {
@@ -1604,7 +1606,8 @@ void Game::handleInput(float dt) {
             } else {
                 movePlayerWithSlide({toTarget.x / dist, toTarget.y / dist}, dt);
             }
-        } else {            hasTarget = false;
+        } else {
+            hasTarget = false;
         }
     }
 
@@ -1641,28 +1644,28 @@ void Game::handleInput(float dt) {
         if (hitAny) {
             triggerShake(3.5f, 0.12f);
             camPunch = std::max(camPunch, 0.045f);
-            // HIT-STOP: micro-congelamento no impacto (mais forte em combos altos)
+            // HIT-STOP: micro-congelamento in the impacto (more strong in combos altos)
             hitStopTimer = (comboCount >= 5) ? 0.09f : 0.05f;
         }
     }
 
 
-    // ── MIRA: o cursor define a direção, mas o aim assist GRUDA no inimigo
-    //    mais perto do cursor (magnetismo de tiro). A direção vira sempre
-    //    UNITÁRIA (antes escalava com a distância do mouse e o projétil corria
-    //    em velocidades diferentes conforme a distância do cursor). O alvo
-    //    travado é publicado para o retículo do HUD desenhar o lock.
+    // ── MIRA: the cursor define the direction, mas the aim assist GRUDA in the enemy
+    //    more near the cursor (magnetismo of shot). A direction vira always
+    //    UNITARIA (before escalava with the distance of the mouse and the projectile corria
+    //    in speeds different conforme the distance of the cursor). O alvo
+    //    travado is published for the reticulo of the HUD draw the lock.
     Vector2 aimDir = Vector2Subtract(mouseWorld, player.position);
     {
-        hudAimLock = { -1.0f, -1.0f };          // reset por frame: trava só com inimigo sob o cursor
-        const float M = 120.0f;                 // raio de magnetismo ao redor do cursor
+        hudAimLock = { -1.0f, -1.0f };          // reset by frame: trava only with enemy sob the cursor
+        const float M = 120.0f;                 // radius of magnetismo around of the cursor
         Vector2 best = { -1.0f, -1.0f };
         float bestD = M * M;
-        for (const auto& e : enemies) {
-            if (e.isDead()) continue;
-            float dx = e.position.x - mouseWorld.x, dy = e.position.y - mouseWorld.y;
+        for (const auto& and : enemies) {
+            if (and.isDead()) continue;
+            float dx = and.position.x - mouseWorld.x, dy = and.position.y - mouseWorld.y;
             float d = dx * dx + dy * dy;
-            if (d < bestD) { bestD = d; best = e.position; }
+            if (d < bestD) { bestD = d; best = and.position; }
         }
         if (best.x >= 0.0f) {
             aimDir = Vector2Subtract(best, player.position);
@@ -1673,7 +1676,7 @@ void Game::handleInput(float dt) {
         else           { aimDir = { 1.0f, 0.0f }; }
     }
 
-    // Skill 1 - Laser (piercing: fires 3 staggered beams; Perfurador adiciona mais)
+    // Skill 1 - Laser (piercing: fires 3 staggered beams; Perfurador adds more)
     if (IsKeyPressed(KEY_ONE) && player.skills[0].isReady()) {
         player.useSkill(0, mouseWorld);
         tutorial.onSkillUsed();
@@ -1683,17 +1686,17 @@ void Game::handleInput(float dt) {
         float baseA = std::atan2(aimDir.y, aimDir.x);
         for (int k = 1; k <= spread; ++k) {
             for (int s : {-1, 1}) {
-                float a = baseA + s * 0.12f * (float)k;
-                Vector2 d = {std::cos(a), std::sin(a)};
+                float the = baseA + s * 0.12f * (float)k;
+                Vector2 d = {std::cos(the), std::sin(the)};
                 projectiles.emplace_back(player.position, d, dmg * 0.6f, 550.0f, 560.0f,
                                          Color{0,200,255,180});
             }
         }
         particles.spawnHit(player.position, Color{0,255,255,255}, 8);
         audio.playLaser();
-        triggerShake(2.2f, 0.10f);   // camera kick no cast
+        triggerShake(2.2f, 0.10f);   // camera kick in the cast
         camPunch = std::max(camPunch, 0.05f);
-        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Laser ativo!", 1.5f);
+        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Laser active!", 1.5f);
     }
 
     // Skill 2 - EMP Area
@@ -1709,7 +1712,7 @@ void Game::handleInput(float dt) {
         }
         particles.spawnExplosion(player.position, YELLOW, 25);
         audio.playEMP();
-        triggerShake(4.0f, 0.18f);   // onda de choque no EMP
+        triggerShake(4.0f, 0.18f);   // onda of choque in the EMP
         camPunch = std::max(camPunch, 0.06f);
         if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("EMP liberado!", 1.5f);
     }
@@ -1723,31 +1726,31 @@ void Game::handleInput(float dt) {
                                  player.skills[2].range, 280.0f,
                                  Color{255,120,0,255}, true);
         audio.playLaser();
-        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Granada de plasma!", 1.5f);
+        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Grenade of plasma!", 1.5f);
         triggerShake(1.8f, 0.08f);   // arremesso sente peso
         camPunch = std::max(camPunch, 0.03f);
     }
 
-    // Skill 4 - Sobrecarga
+    // Skill 4 - Overload
     if (IsKeyPressed(KEY_FOUR) && player.skills[3].isReady()) {
         player.useSkill(3, mouseWorld);
         tutorial.onSkillUsed();
         player.overloadTimer = 8.0f + SkillTree::statsFor(player.perkMask).overloadBonus;
         particles.spawnLevelUp(player.position);
         audio.playLevelUp();
-        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Sobrecarga ativada!", 2.0f);
+        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Overload activated!", 2.0f);
     }
 
-    // Skill 5 - Barreira de Escudo
+    // Skill 5 - Barrier of Shield
     if (IsKeyPressed(KEY_FIVE) && player.skills[4].isReady()) {
         player.useSkill(4, mouseWorld);
         tutorial.onSkillUsed();
         player.shieldTimer = 3.0f;
         particles.spawnLevelUp(player.position);
-        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Barreira de escudo!", 2.0f);
+        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Barrier of shield!", 2.0f);
     }
 
-    // Skill 6 - Rajada (8 projetos em leque; Sistema Predador adiciona mais)
+    // Skill 6 - Burst (8 projetos in leque; Sistema Predador adds more)
     if (IsKeyPressed(KEY_SIX) && player.skills[5].isReady()) {
         player.useSkill(5, mouseWorld);
         tutorial.onSkillUsed();
@@ -1764,21 +1767,21 @@ void Game::handleInput(float dt) {
         }
         particles.spawnHit(player.position, Color{0,255,100,255}, 6);
         audio.playLaser();
-        triggerShake(2.5f, 0.12f);   // camera kick na rajada
+        triggerShake(2.5f, 0.12f);   // camera kick in the burst
         camPunch = std::max(camPunch, 0.06f);
-        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Rajada maxima!", 1.5f);
+        if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Burst maxima!", 1.5f);
     }
 
     // Contextual dialogue — first enemy nearby
     if (!firstCombatTriggered) {
-        for (const auto& e : enemies) {
-            if (Vector2Distance(player.position, e.position) < 400.0f) {
+        for (const auto& and : enemies) {
+            if (Vector2Distance(player.position, and.position) < 400.0f) {
                 firstCombatTriggered = true;
                 static const char* lines[] = {
-                    "Vou limpar essa zona.",
-                    "KRONOS... sempre KRONOS.",
-                    "Vem. Nao tenho o dia todo.",
-                    "NEXUS nunca desiste."
+                    "Vou clear essa zone.",
+                    "KRONOS... always KRONOS.",
+                    "Comes. Not tenho the day all.",
+                    "NEXUS never desiste."
                 };
                 triggerPlayerSpeech(lines[GetRandomValue(0, 3)], 2.5f);
                 break;
@@ -1790,16 +1793,16 @@ void Game::handleInput(float dt) {
     if (surroundedCooldown > 0.0f) surroundedCooldown -= dt;
     if (surroundedCooldown <= 0.0f) {
         int nearby = 0;
-        for (const auto& e : enemies) {
-            if (Vector2Distance(player.position, e.position) < 220.0f) nearby++;
+        for (const auto& and : enemies) {
+            if (Vector2Distance(player.position, and.position) < 220.0f) nearby++;
         }
         if (nearby >= 5) {
             surroundedCooldown = 8.0f;
             if (playerSpeechTimer <= 0.5f) {
                 static const char* slines[] = {
-                    "Cercado! Hora das skills.",
-                    "Muitos... mas nao impossivel.",
-                    "Vou derrubar todos!"
+                    "Cercado! Hour of the skills.",
+                    "Many... mas not impossivel.",
+                    "Vou derrubar all!"
                 };
                 triggerPlayerSpeech(slines[GetRandomValue(0,2)], 2.5f);
             }
@@ -1807,16 +1810,16 @@ void Game::handleInput(float dt) {
     }
 
     // NPC dialog / Shop
-    // E = conversar com o NPC proximo (TODOS contam sua historia em baloes).
-    // Vendedores tambem conversam; a loja deles abre com [TAB].
-    // [E] ou CLIQUE ESQUERDO (com diálogo aberto) avança a fala; ESC fecha.
+    // E = conversar with the NPC next (TODOS contam your story in baloes).
+    // Vendedores also conversam; the shop deles opens with [TAB].
+    // [E] ou CLICK ESQUERDO (with dialogo open) avanca the fala; ESC closes.
     bool advanceDialog = IsKeyPressed(KEY_E) || (dialogOpen && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !producedThisClick);
     if (advanceDialog) {
         if (nearNpcIndex >= 0 && nearNpcIndex < (int)npcs.size()) {
             int nLines = (int)npcs[nearNpcIndex].dialogLines.size();
             if (nLines > 0) {
-                if (!dialogOpen) { dialogOpen = true; dialogLine = 0; tutorial.onNPCTalked(); }   // inicia a historia
-                else             { dialogLine = (dialogLine + 1) % nLines; } // avanca linha
+                if (!dialogOpen) { dialogOpen = true; dialogLine = 0; tutorial.onNPCTalked(); }   // inicia the story
+                else             { dialogLine = (dialogLine + 1) % nLines; } // avanca line
             }
         }
     }
@@ -1863,28 +1866,28 @@ void Game::handleInput(float dt) {
     if (IsKeyPressed(KEY_F3)) spawnCompanion(CompanionType::Steel);
     if (IsKeyPressed(KEY_F4)) spawnCompanion(CompanionType::Rex);
 
-    // Poder de cura (estilo Diablo 3) — tecla Q: cura instantanea + regeneracao.
+    // Power of healing (estilo Diablo 3) — key Q: healing instantanea + regeneracao.
     if (IsKeyPressed(KEY_Q)) {
         if (player.potionReady()) {
             player.usePotion();
             particles.spawnLevelUp(player.position);
             audio.playLevelUp();
-            triggerPlayerSpeech("Cura ativada!", 1.5f);
+            triggerPlayerSpeech("Healing activated!", 1.5f);
         } else {
-            triggerPlayerSpeech(TextFormat("Cura recarregando (%.0fs)", player.healCooldown), 1.5f);
+            triggerPlayerSpeech(TextFormat("Healing recarregando (%.0fs)", player.healCooldown), 1.5f);
         }
     }
 
     // Building system
     if (IsKeyPressed(KEY_B)) buildingSystem.toggleBuildMode();
 
-    // Tecla U — evoluir o predio mais proximo
+    // Key U — evoluir the building more next
     if (IsKeyPressed(KEY_U) && !buildingSystem.buildModeActive) {
         int r = buildingSystem.upgradeNearby(player.position, player.credits);
-        if (r == 1)      { triggerPlayerSpeech("Estrutura evoluida!", 1.8f); audio.playLevelUp(); }
-        else if (r == 2) triggerPlayerSpeech("Creditos insuficientes para evoluir.", 2.5f);
-        else if (r == 3) triggerPlayerSpeech("Esta estrutura ja esta no nivel maximo.", 2.5f);
-        else if (r == 0) triggerPlayerSpeech("Chegue perto de uma construcao para evoluir.", 2.5f);
+        if (r == 1)      { triggerPlayerSpeech("Struct evoluida!", 1.8f); audio.playLevelUp(); }
+        else if (r == 2) triggerPlayerSpeech("Credits insuficientes to evoluir.", 2.5f);
+        else if (r == 3) triggerPlayerSpeech("Is struct already is in the level maximum.", 2.5f);
+        else if (r == 0) triggerPlayerSpeech("Chegue near of uma structure to evoluir.", 2.5f);
     }
 
     if (buildingSystem.buildModeActive) {
@@ -1898,11 +1901,11 @@ void Game::handleInput(float dt) {
             if (IsKeyPressed(KEY_ONE + k)) buildingSystem.selectedType = k;
         }
 
-        // CLIQUE no painel do menu = escolher o predio (mouse virtualizado)
+        // CLICK in the painel of the menu = choose the building (virtualized mouse)
         Vector2 vmouse = virtualizeMousePos(GetMousePosition());
         int menuCell = buildingSystem.menuCellAt(vmouse, screenWidth, screenHeight);
 
-        // Left click: se foi no menu -> seleciona; senao -> coloca no mapa
+        // Left click: if went in the menu -> seleciona; otherwise -> puts in the map
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && menuCell >= 0) {
             buildingSystem.selectedType = menuCell;
             audio.playPickup();
@@ -1917,19 +1920,19 @@ void Game::handleInput(float dt) {
                 audio.playPickup();
                 triggerPlayerSpeech("Construido!", 1.2f);
             } else {
-                // Diz EXATAMENTE o que falta para conseguir construir
+                // Says EXATAMENTE the that falta to manage construir
                 const BuildingCost& c = BuildingSystem::COSTS[buildingSystem.selectedType];
                 if (player.credits < c.credits) {
-                    triggerPlayerSpeech(TextFormat("Faltam creditos: tem $%d, precisa $%d. Mate inimigos p/ ganhar.",
+                    triggerPlayerSpeech(TextFormat("Faltam credits: has $%d, precisa $%d. Mate enemies p/ ganhar.",
                                         player.credits, c.credits), 3.5f);
                 } else if (materialMetal < c.metalScrap) {
-                    triggerPlayerSpeech(TextFormat("Falta Sucata de Metal: tem %d, precisa %d. Derrote robos/mecas.",
+                    triggerPlayerSpeech(TextFormat("Falta Scrap of Metal: has %d, precisa %d. Derrote robos/mecas.",
                                         materialMetal, c.metalScrap), 3.5f);
                 } else if (materialCarapace < c.alienCarapace) {
-                    triggerPlayerSpeech(TextFormat("Falta Carapaca Alien: tem %d, precisa %d. Derrote aliens.",
+                    triggerPlayerSpeech(TextFormat("Falta Carapaca Alien: has %d, precisa %d. Derrote aliens.",
                                         materialCarapace, c.alienCarapace), 3.5f);
                 } else {
-                    triggerPlayerSpeech("Nao da pra construir aqui (local bloqueado).", 2.5f);
+                    triggerPlayerSpeech("Not of the to construir here (local bloqueado).", 2.5f);
                 }
             }
         }

@@ -1,4 +1,4 @@
-// Enemy_Render.cpp â€” desenho dos inimigos (extraido de Enemy.cpp).
+// Enemy_Render.cpp the€” draw of the enemies (extraido of Enemy.cpp).
 // Somente metodos const/void Enemy::render* + helper local DrawRotatedRectangle.
 #include "Enemy.h"
 #include "Effects.h"
@@ -33,64 +33,64 @@ static void DrawRotatedRectangle(Vector2 center, float width, float length, floa
     }
 }
 
-// Marcador tatico por afixo de elite (leitura estilo Risk of Rain 2): o ANEL
-// diz "elite", o GLYPH e a COR dizem qual ameaca — o jogador reage sem ler texto.
-static void drawEliteAffix(const Enemy& e) {
-    const float puls = 0.5f + 0.5f * std::sin(e.elitePulse);
+// Marcador tatico by afixo of elite (reading estilo Risk of Rain 2): the ANEL
+// says "elite", the GLYPH and the COR dizem qual ameaca — the player reage without read text.
+static void drawEliteAffix(const Enemy& and) {
+    const float puls = 0.5f + 0.5f * std::sin(and.elitePulse);
     Color col; const char* tag = "ELITE";
-    switch (e.eliteMod) {
-        case 0:  col = {255,  60,   0, 255}; tag = "BERSERK";  break;  // fúria escarlate
+    switch (and.eliteMod) {
+        case 0:  col = {255,  60,   0, 255}; tag = "BERSERK";  break;  // furia escarlate
         case 1:  col = {226, 170,  84, 255}; tag = "BLINDADO"; break;  // placas cobre/platina
-        case 2:  col = {255,   0, 200, 255}; tag = "VOLATIL";  break;  // carga magenta
-        case 3:  col = { 72, 222, 255, 255}; tag = "ESCUDADO"; break;  // bolha ciano
-        default: col = { 92, 255, 148, 255}; tag = "CRONOS";   break;  // reação verde
+        case 2:  col = {255,   0, 200, 255}; tag = "VOLATIL";  break;  // load magenta
+        case 3:  col = { 72, 222, 255, 255}; tag = "ESCUDADO"; break;  // bolha cyan
+        default: col = { 92, 255, 148, 255}; tag = "CRONOS";   break;  // reacao green
     }
-    const float r = e.radius + 10.0f + puls * 4.0f;
-    const int cx = (int)e.position.x, cy = (int)e.position.y;
-    DrawCircleV(e.position, r - 2.0f, ColorAlpha(col, 0.10f));
+    const float r = and.radius + 10.0f + puls * 4.0f;
+    const int cx = (int)and.position.x, cy = (int)and.position.y;
+    DrawCircleV(and.position, r - 2.0f, ColorAlpha(col, 0.10f));
     DrawCircleLines(cx, cy, r, ColorAlpha(col, 0.55f + puls * 0.25f));
-    switch (e.eliteMod) {
-        case 0:   // Berserker: anel duplo nervoso
+    switch (and.eliteMod) {
+        case 0:   // Berserker: anel double nervoso
             DrawCircleLines(cx, cy, r * 0.84f - puls * 3.0f, ColorAlpha(col, 0.35f));
             break;
         case 1:   // Blindado: placas orbitando (blindagem extra)
             for (int i = 0; i < 4; ++i) {
-                float a = e.elitePulse * 0.7f + i * 1.5708f;
-                DrawCircle((int)(e.position.x + cosf(a) * (r + 4.0f)),
-                           (int)(e.position.y + sinf(a) * (r + 4.0f)), 3.5f, col);
+                float the = and.elitePulse * 0.7f + i * 1.5708f;
+                DrawCircle((int)(and.position.x + cosf(the) * (r + 4.0f)),
+                           (int)(and.position.y + sinf(the) * (r + 4.0f)), 3.5f, col);
             }
             break;
-        case 2: { // Volatil: pips de carga convergindo
+        case 2: { // Volatile: pips of load convergindo
             for (int i = 0; i < 4; ++i) {
-                float a = e.elitePulse * 1.2f + i * 1.5708f;
-                float fill = 0.20f + 0.80f * (cosf(e.elitePulse + 1.5708f + i) * 0.5f + 0.5f);
-                DrawCircle((int)(e.position.x + cosf(a) * (r * 0.5f + fill * r * 0.45f)),
-                           (int)(e.position.y + sinf(a) * (r * 0.5f + fill * r * 0.45f)),
+                float the = and.elitePulse * 1.2f + i * 1.5708f;
+                float fill = 0.20f + 0.80f * (cosf(and.elitePulse + 1.5708f + i) * 0.5f + 0.5f);
+                DrawCircle((int)(and.position.x + cosf(the) * (r * 0.5f + fill * r * 0.45f)),
+                           (int)(and.position.y + sinf(the) * (r * 0.5f + fill * r * 0.45f)),
                            2.5f, ColorAlpha(col, 0.45f + 0.55f * fill));
             }
         } break;
-        case 3: { // Escudado: bolha + barra de saúde do escudo acima do HP
-            DrawCircleLines(cx, cy, e.radius + 16.0f, ColorAlpha(col, 0.35f + 0.30f * puls));
-            if (e.shieldMax > 0.0f) {
-                float p = e.shieldHp / e.shieldMax;
-                int bw = 30, bx = cx - bw / 2, by = cy - (int)e.radius - 26;
+        case 3: { // Escudado: bolha + barra of saude of the shield above the HP
+            DrawCircleLines(cx, cy, and.radius + 16.0f, ColorAlpha(col, 0.35f + 0.30f * puls));
+            if (and.shieldMax > 0.0f) {
+                float p = and.shieldHp / and.shieldMax;
+                int bw = 30, bx = cx - bw / 2, by = cy - (int)and.radius - 26;
                 DrawRectangle(bx - 1, by - 1, bw + 2, 5, ColorAlpha(BLACK, 0.6f));
                 DrawRectangle(bx, by, (int)(bw * p), 3, col);
             }
         } break;
-        default:  // Cronos: riscos de velocidade orbitando
+        default:  // Cronos: riscos of speed orbitando
             for (int i = 0; i < 3; ++i) {
-                float a = e.elitePulse * 1.4f + i * 2.0944f;
-                DrawCircle((int)(e.position.x + cosf(a) * (r * 0.55f + puls * 6.0f)),
-                           (int)(e.position.y + sinf(a) * (r * 0.55f + puls * 6.0f)), 2.5f, col);
+                float the = and.elitePulse * 1.4f + i * 2.0944f;
+                DrawCircle((int)(and.position.x + cosf(the) * (r * 0.55f + puls * 6.0f)),
+                           (int)(and.position.y + sinf(the) * (r * 0.55f + puls * 6.0f)), 2.5f, col);
             }
             break;
     }
-    DrawText(tag, cx - MeasureText(tag, 10) / 2, cy - (int)e.radius - 32, 10, ColorAlpha(col, 0.9f));
+    DrawText(tag, cx - MeasureText(tag, 10) / 2, cy - (int)and.radius - 32, 10, ColorAlpha(col, 0.9f));
 }
 
 void Enemy::render() const {
-    // ── SPRITE PIXEL-ART (substitui o desenho por formas) ────────────────────
+    // ── SPRITE PIXEL-ART (substitui the draw by formas) ────────────────────
     SpriteBank& sb = SpriteBank::get();
     int et = (int)type;
     if (sb.ready && et >= 0 && et < SpriteBank::NUM_ENEMY_TYPES &&
@@ -100,8 +100,8 @@ void Enemy::render() const {
         if (frame < 0) frame = 0;
         Texture2D tx = sb.enemy[et][frame];
 
-        // Aura de tier de evolucao
-        if (evolTier > 0 && auraColor.a > 0) {
+        // Aura of tier of evolution
+        if (evolTier > 0 && auraColor.the > 0) {
             float ap = 0.85f + std::sin(aliveTimer * 3.0f) * 0.15f;
             float ar = radius * (1.4f + ap * 0.2f);
             DrawCircle((int)position.x, (int)position.y, ar, ColorAlpha(auraColor, 0.22f * ap));
@@ -109,9 +109,9 @@ void Enemy::render() const {
             if (evolTier >= 3) {
                 float orbitR = ar * 1.25f;
                 for (int i = 0; i < 4; ++i) {
-                    float a = aliveTimer * 1.5f + i * 1.5708f;
-                    DrawCircle((int)(position.x + std::cos(a)*orbitR),
-                               (int)(position.y + std::sin(a)*orbitR), 4.0f, auraColor);
+                    float the = aliveTimer * 1.5f + i * 1.5708f;
+                    DrawCircle((int)(position.x + std::cos(the)*orbitR),
+                               (int)(position.y + std::sin(the)*orbitR), 4.0f, auraColor);
                 }
             }
         }
@@ -119,7 +119,7 @@ void Enemy::render() const {
             DrawCircle((int)position.x, (int)position.y, radius*2.5f,
                        ColorAlpha(WHITE, (evolveFlash/0.8f)*0.45f));
 
-        // Boss: aura épica de fase + coroa de pips + partículas de carregamento
+        // Boss: aura epica of phase + coroa of pips + particles of loading
         if (isBoss()) renderBossAura();
 
         // ── DANGER ZONE (Hades/FFXIV style) ──────────────────────────────────
@@ -187,7 +187,7 @@ void Enemy::render() const {
             }
         }
 
-        // Sombra no chao — só fantasmas/wraiths flutuam; zumbis andam no chao
+        // Shadow in the floor — only fantasmas/wraiths flutuam; zumbis andam in the floor
         bool floaty = isFloating();
         float bobF  = floaty ? std::sin(gt * 2.0f + position.x * 0.05f) * 4.0f : 0.0f;
         if (!g_voxelCapture) {
@@ -196,13 +196,13 @@ void Enemy::render() const {
                         ColorAlpha(BLACK, floaty ? 0.25f : 0.4f));
         }
 
-        // Desenha o sprite (feet ancorados no chao do inimigo)
+        // Draws the sprite (feet ancorados in the floor of the enemy)
         float scale = (radius * 3.0f) / (float)tx.height;
         float w = tx.width * scale, h = tx.height * scale;
         float feetY = position.y + radius * 0.9f + bobF;
         Color tint = WHITE;
         if (floaty) tint = ColorAlpha(WHITE, 0.82f);
-        // brilho durante windup do telegraph (carregando ataque)
+        // glow during windup of the telegraph (loading attack)
         if (telegraphTimer > 0.0f) {
             float gw = 0.5f + 0.5f * std::sin(gt * 30.0f);
             tint = Color{255, (unsigned char)(200 + (int)(55*gw)), (unsigned char)(120*gw), 255};
@@ -212,16 +212,16 @@ void Enemy::render() const {
                        {position.x - w/2, feetY - h, w, h}, {0,0}, 0.0f, tint);
 
         if (!g_voxelCapture) {
-            // Aura/tag de elite
+            // Aura/tag of elite
             if (isElite) drawEliteAffix(*this);
 
-            // Barra de HP
+            // Barra of HP
             float barW  = isBoss() ? 70.0f : (type == EnemyType::Tank ? 48.0f : 36.0f);
             float hpPct = health / maxHealth;
             Color hpCol = hpPct > 0.5f ? Color{0,220,80,255} : hpPct > 0.25f ? YELLOW : RED;
             DrawHealthBar({position.x, position.y - radius - 16}, hpPct, barW, 5, hpCol);
 
-            // Label de tier
+            // Label of tier
             if (evolTier > 0) {
                 const char* tierLabel = evolTier == 1 ? "[VET]" : evolTier == 2 ? "[ELT]" : "[LND]";
                 Color tierCol = evolTier == 1 ? Color{0,220,100,255} :
@@ -260,7 +260,7 @@ void Enemy::render() const {
     }
 
     // ── Evolution tier aura ──────────────────────────────────────────────────
-    if (evolTier > 0 && auraColor.a > 0) {
+    if (evolTier > 0 && auraColor.the > 0) {
         float ap = 0.85f + std::sin(aliveTimer * 3.0f) * 0.15f;
         float ar = radius * (1.4f + ap * 0.2f);
         DrawCircle((int)position.x, (int)position.y, ar, ColorAlpha(auraColor, 0.22f * ap));
@@ -268,9 +268,9 @@ void Enemy::render() const {
         if (evolTier >= 3) {
             float orbitR = ar * 1.25f;
             for (int i = 0; i < 4; ++i) {
-                float a = aliveTimer * 1.5f + i * 1.5708f;
-                DrawCircle((int)(position.x + std::cos(a)*orbitR),
-                           (int)(position.y + std::sin(a)*orbitR),
+                float the = aliveTimer * 1.5f + i * 1.5708f;
+                DrawCircle((int)(position.x + std::cos(the)*orbitR),
+                           (int)(position.y + std::sin(the)*orbitR),
                            4.0f, auraColor);
             }
         }
@@ -280,8 +280,8 @@ void Enemy::render() const {
                    ColorAlpha(WHITE, (evolveFlash/0.8f)*0.45f));
 
     // Ground shadow (depth illusion for all types)
-    // NAO no passe 3D: a captura vira MALHA, entao a elipse do chao virava um
-    // disco escuro VERTICAL sob os pes - o inimigo parecia flutuar sobre ele.
+    // NOT in the passe 3D: the captura vira MALHA, entao the elipse of the floor virava um
+    // disco dark VERTICAL sob the feet - the enemy parecia flutuar about ele.
     if (!g_voxelCapture)
         DrawEllipse((int)position.x, (int)(position.y + radius * 0.75f),
                     radius * 1.1f, radius * 0.32f, ColorAlpha(BLACK, 0.35f));
@@ -314,7 +314,7 @@ void Enemy::render() const {
                            2.2f, ColorAlpha({255,150,0,255}, 0.7f + rage * 0.3f));
             }
             // Phase 2 label
-            const char* p2tag = "!FASE 2!";
+            const char* p2tag = "!PHASE 2!";
             int p2w = MeasureText(p2tag, 11);
             DrawText(p2tag, (int)(px - p2w/2), (int)(py - radius - 50), 11,
                      ColorAlpha({255,100,0,255}, 0.7f + rage * 0.3f));
@@ -529,7 +529,7 @@ void Enemy::render() const {
         DrawRectangle((int)(px-8),(int)(py-28),16,18,{50,10,65,255});
         DrawRectangle((int)(px-6),(int)(py-27),12,16,{70,15,85,255});
         DrawRectangle((int)(px-7),(int)(py-29),14,4,metalLt);
-        // Visor slit
+        // View slit
         DrawRectangle((int)(px-6),(int)(py-22),12,5,{15,0,20,255});
         DrawGlowLine({px-5,py-20},{px+5,py-20},2.5f,{200,0,255,255});
         DrawCircleV({px+f*4,py-20},2.5f,{220,100,255,255});
@@ -622,7 +622,7 @@ void Enemy::render() const {
 }
 
 void Enemy::renderMorphX() const {
-    if (!g_voxelCapture)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+    if (!g_voxelCapture)   // shadow 2D not enters in the voxelizacao (viraria pedestal)
         DrawEllipse((int)position.x, (int)(position.y + radius * 0.7f),
                     radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK, 0.32f));
     float pulse = std::sin(walkAnimTimer * 3.0f) * 2.0f;
@@ -634,14 +634,14 @@ void Enemy::renderMorphX() const {
         DrawCircleV(position, radius + pulse * 0.3f, silver);
         DrawCircleV({position.x + 3, position.y - 3}, radius * 0.5f, WHITE);
     } else {
-        // Corpo liquido deformado
+        // Body liquido deformado
         DrawEllipse((int)position.x, (int)position.y, 14.0f + pulse, 18.0f, silver);
-        // Pseudo-cabeca
+        // Pseudo-head
         DrawEllipse((int)position.x + facing*2, (int)position.y - 20, (int)10, (int)12, silverDark);
-        // Olhos brancos
+        // Eyes brancos
         DrawCircleV({position.x + facing*4, position.y - 22}, 3, WHITE);
         DrawCircleV({position.x + facing*4, position.y - 22}, 1.5f, BLACK);
-        // Bracos-lanca
+        // Arms-lanca
         DrawLineEx({position.x, position.y - 4},
                    {position.x + facing * 20, position.y - 8 + pulse}, 4, silver);
     }
@@ -656,11 +656,11 @@ void Enemy::renderHunterDrone() const {
     float hover = std::sin(walkAnimTimer) * 3.0f;
     Vector2 p = {position.x, position.y + hover};
 
-    // Corpo central
+    // Body central
     DrawCircleV(p, 16, bodyColor);
     DrawCircleV(p, 10, {0, 150, 170, 255});
 
-    // Rotores nos 4 cantos
+    // Rotores in the 4 cantos
     for (int i = 0; i < 4; ++i) {
         float angle = orbitAngle * 8.0f + i * 1.5708f;
         Vector2 rotorPos = {p.x + std::cos(angle) * 22, p.y + std::sin(angle) * 22};
@@ -668,11 +668,11 @@ void Enemy::renderHunterDrone() const {
         DrawCircleLines((int)rotorPos.x, (int)rotorPos.y, 8, ColorAlpha(SKYBLUE, 0.5f));
     }
 
-    // Canhao inferior apontando para baixo/frente
+    // Canhao lower apontando to down/front
     DrawRectangleV({p.x - 3, p.y + 14}, {6, 12}, DARKGRAY);
     DrawCircleV({p.x, p.y + 26}, 4, {0, 230, 255, 255});
 
-    // Luz de scan
+    // Light of scan
     DrawCircleV({p.x, p.y}, 4, {0, 255, 255, 255});
 
     float barW = 36.0f;
@@ -692,11 +692,11 @@ void Enemy::renderKronosSentry() const {
     DrawLineEx(position, barrelEnd, 6, bodyColor);
     DrawCircleV(barrelEnd, 5, bodyColor);
 
-    // Olho central
+    // Eye central
     DrawCircleV(position, 7, {255, 80, 0, 255});
     DrawCircleV(position, 4, RED);
 
-    // Raio de alcance (sutil)
+    // Radius of range (sutil)
     DrawCircleLines((int)position.x, (int)position.y, shootRange, ColorAlpha(RED, 0.06f));
 
     float barW = 36.0f;
@@ -737,7 +737,7 @@ void Enemy::renderKamikaze() const {
     DrawRectangle((int)(px-14),(int)(py-8),7,10,dark);
     DrawRectangle((int)(px+7),(int)(py-8),7,10,dark);
 
-    // Head — no neck, low to body
+    // Head — in the neck, low to body
     DrawRectangle((int)(px-5),(int)(py-18),10,10,dark);
     DrawRectangle((int)(px-3),(int)(py-17),6,8,{100,5,0,255});
     // Single large red sensor
@@ -810,7 +810,7 @@ void Enemy::renderSniper() const {
     DrawRectangle((int)(px-7),(int)(py-24),14,14,camo);
     DrawRectangle((int)(px-5),(int)(py-23),10,12,{45,90,45,255});
     DrawRectangle((int)(px-6),(int)(py-24),12,3,metalLt);
-    // Visor slit
+    // View slit
     DrawRectangle((int)(px-4),(int)(py-19),8,4,{10,20,10,255});
     DrawGlowLine({px-3,py-17},{px+3,py-17},2.0f,scope);
     DrawCircleV({px+f*3,py-17},2.0f,{100,255,100,255});
@@ -834,7 +834,7 @@ void Enemy::renderZergling() const {
     Color acidGreen = {50,200,0,255};
     Color darkGreen = {20,90,0,255};
 
-    if (!g_voxelCapture)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+    if (!g_voxelCapture)   // shadow 2D not enters in the voxelizacao (viraria pedestal)
         DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK,0.35f));
     DrawCircleV(position, radius + 8.0f + spd*2.0f, ColorAlpha(acidGreen, 0.15f));
 
@@ -875,7 +875,7 @@ void Enemy::renderHydra() const {
     Color darkGreen = {0,120,30,255};
     Color spitGlow  = {80,255,80,255};
 
-    if (!g_voxelCapture)   // sombra 2D nao entra na voxelizacao (viraria pedestal)
+    if (!g_voxelCapture)   // shadow 2D not enters in the voxelizacao (viraria pedestal)
         DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.0f, radius * 0.28f, ColorAlpha(BLACK,0.35f));
     DrawCircleV(position, radius + 10.0f, ColorAlpha(acidGreen, 0.12f));
 
@@ -930,7 +930,7 @@ void Enemy::renderBroodmother() const {
     Color darkGreen  = {20,70,0,255};
     Color phase2Col  = (bossPhase==2) ? Color{60,180,0,255} : bodyColor;
 
-    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // shadow 2D outside the voxelizacao (viraria pedestal sob the feet)
         DrawEllipse((int)px, (int)(py + radius * 0.7f), radius * 1.2f, radius * 0.32f, ColorAlpha(BLACK,0.4f));
     DrawCircleV(position, radius + 14.0f + pulse*4.0f, ColorAlpha(acidGreen, 0.14f));
     DrawCircleV(position, radius +  8.0f + pulse*2.0f, ColorAlpha(acidGreen, 0.20f));
@@ -1003,7 +1003,7 @@ void Enemy::renderOmegaBoss() const {
     Color boneWhite   = {210, 200, 190, 255};
 
     // Ground shadow
-    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // shadow 2D outside the voxelizacao (viraria pedestal sob the feet)
         DrawEllipse((int)px,(int)(py+radius*0.8f),radius*1.4f,radius*0.38f,ColorAlpha(BLACK,0.5f));
 
     // Outer aura rings — pulsing
@@ -1019,7 +1019,7 @@ void Enemy::renderOmegaBoss() const {
             float rr = radius + 20.0f + r*18.0f + pulse2*5.0f;
             DrawCircleLines((int)px,(int)py,rr, ColorAlpha(omegaRed,0.25f+r*0.05f));
         }
-        const char* p2 = "!! OMEGA FASE 2 !!";
+        const char* p2 = "!! OMEGA PHASE 2 !!";
         int p2w = MeasureText(p2, 12);
         DrawText(p2,(int)(px-p2w/2),(int)(py-radius-70),12,ColorAlpha(omegaRed,0.8f+std::fabs(pulse2)*0.2f));
     }
@@ -1156,7 +1156,7 @@ void Enemy::renderOrcCibernetico() const {
     // Chest KRONOS plate armor
     DrawRectangle((int)(px - 18), (int)(py - 14), 36, 24, metal);
     DrawRectangle((int)(px - 16), (int)(py - 12), 32, 20, {55, 58, 68, 255});
-    // KRONOS logo hint (concentric circles on chest)
+    // KRONOS soon hint (concentric circles on chest)
     DrawCircleLines((int)px, (int)(py - 2), 8.0f, ColorAlpha(kronosCol, 0.7f));
     DrawCircleLines((int)px, (int)(py - 2), 5.0f, ColorAlpha(kronosCol, 0.5f));
     DrawCircleV({px, py - 2.0f}, 2.5f, kronosCol);
@@ -1276,11 +1276,11 @@ void Enemy::renderPaladinCorrompido() const {
     // Crossguard
     DrawRectangle((int)(px + f * 16), (int)(py - 5), (int)(f * 14), 5, gold);
 
-    // HEAD — helmet with visor
+    // HEAD — helmet with view
     DrawRectangle((int)(px - 10), (int)(py - 38), 20, 26, goldOx);
     DrawRectangle((int)(px - 8),  (int)(py - 36), 16, 22, gold);
     DrawRectangle((int)(px - 8),  (int)(py - 38), 16, 5, goldOx);
-    // Visor slit — purple glowing eyes
+    // View slit — purple glowing eyes
     DrawRectangle((int)(px - 8),  (int)(py - 28), 16, 7, {15, 5, 20, 255});
     DrawGlowLine({px - 6, py - 25}, {px + 6, py - 25}, 2.5f, eyePurple);
     DrawGlowCircle({px - 4.0f, py - 25.0f}, 3.0f, eyePurple, 2.5f);
@@ -1367,7 +1367,7 @@ void Enemy::renderUndeadEnforcer() const {
     DrawGlowCircle({px - 11.0f, py - 8.0f}, 2.5f, purpleNecro, 2.0f);
     DrawRectangle((int)(px + 8),  (int)(py - 10), 7, 10, metal);
 
-    // LEFT ARM — missing parts, just a bone strut
+    // LEFT ARM — missing parts, just the bone strut
     DrawRectangle((int)(px - 13), (int)(py - 2), 4, 8, bone);
     DrawCircleV({px - 11.0f, py + 8.0f}, 2.5f, boneRust);
     DrawGlowCircle({px - 11.0f, py + 8.0f}, 2.0f, purpleNecro, 1.5f);
@@ -1476,7 +1476,7 @@ void Enemy::renderZombie() const {
     DrawEllipse((int)px, (int)(py + 20*sc), 14.0f*sc, 4.0f*sc, ColorAlpha(bloodRed, 0.35f));
 
     // Shadow
-    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // shadow 2D outside the voxelizacao (viraria pedestal sob the feet)
         DrawEllipse((int)px, (int)(py + 18*sc), 16.0f*sc, 4.5f*sc, ColorAlpha(BLACK, 0.30f));
 
     // Legs — uneven shamble
@@ -1532,7 +1532,7 @@ void Enemy::renderZombieRager() const {
         DrawCircleLines((int)px, (int)py, radius + 10 + pulse*4, ColorAlpha({255,50,0,255}, 0.4f + pulse*0.3f));
     }
 
-    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // shadow 2D outside the voxelizacao (viraria pedestal sob the feet)
         DrawEllipse((int)px, (int)(py + 20), 16.0f, 4.5f, ColorAlpha(BLACK, 0.32f));
 
     // Legs
@@ -1581,7 +1581,7 @@ void Enemy::renderZombieLord() const {
     DrawCircleV(position, aurR, ColorAlpha(glowG, 0.06f + pulse*0.04f));
     DrawCircleLines((int)px, (int)py, aurR - 5, ColorAlpha(glowG, 0.25f + pulse*0.15f));
 
-    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // shadow 2D outside the voxelizacao (viraria pedestal sob the feet)
         DrawEllipse((int)px, (int)(py + 40), 30.0f, 8.0f, ColorAlpha(BLACK, 0.40f));
 
     // Robe/mantle (triangle behind)
@@ -1617,7 +1617,7 @@ void Enemy::renderZombieLord() const {
 
     // Phase label
     if (bossPhase >= 2) {
-        const char* lbl = bossPhase == 3 ? "FASE 3" : "FASE 2";
+        const char* lbl = bossPhase == 3 ? "PHASE 3" : "PHASE 2";
         int lw = MeasureText(lbl, 10);
         DrawText(lbl, (int)(px - lw/2), (int)(py - radius - 50), 10,
                  ColorAlpha(eyeCol, 0.8f + pulse*0.2f));
@@ -1705,9 +1705,9 @@ void Enemy::renderShadowWraith() const {
 
     // Leaking particles (dark)
     for (int i = 0; i < 4; ++i) {
-        float a = walkAnimTimer * 2.0f + i * 1.571f;
+        float the = walkAnimTimer * 2.0f + i * 1.571f;
         float r = radius * 0.5f + pulse * 4.0f;
-        DrawCircleV({px + std::cos(a)*r, py + std::sin(a)*r*0.5f},
+        DrawCircleV({px + std::cos(the)*r, py + std::sin(the)*r*0.5f},
                     2.5f + pulse, ColorAlpha({10,0,20,255}, 0.7f));
     }
 
@@ -1740,7 +1740,7 @@ void Enemy::renderBansheeHowler() const {
         }
     }
 
-    if (!g_voxelCapture)   // sombra 2D fora da voxelizacao (viraria pedestal sob os pes)
+    if (!g_voxelCapture)   // shadow 2D outside the voxelizacao (viraria pedestal sob the feet)
         DrawEllipse((int)px, (int)(py + 20), 14.0f, 4.0f, ColorAlpha(BLACK, 0.28f));
 
     // Legs — skeletal
