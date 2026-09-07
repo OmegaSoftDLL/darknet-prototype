@@ -29,3 +29,27 @@ saves/
 # Editor
 .vs/
 *.user
+
+# Agent/IDE configuration (local-only)
+.agents/
+.claude/
+.obsidian/
+
+# Personal knowledge base / coordination notes (not for public repo)
+obsidian-vault/
+AUDITORIA_COMPLETA.md
+BACKLOG_IMPLEMENTACAO_CLAUDE.md
+CLAUDE_CODE_GUIDELINES.md
+COORDENACAO.md
+DARKNET_VICIO_E_MARKETING.md
+PARA_ANTIGRAVITY.md
+ROADMAP_EXECUTIVO_CLAUDE.md
+
+# Server runtime data
+server/game-server/saves/
+server/game-server/server.log
+server/game-server/server.log.err
+
+# Unused/orphan assets
+resources/models/bridge_diffuse.png
+resources/models/greenman_sword.glb
