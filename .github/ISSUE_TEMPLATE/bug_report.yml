@@ -1,0 +1,65 @@
+name: Bug Report
+description: Report a bug or crash in the game or tooling
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill out the sections below.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear and concise description of the bug.
+      placeholder: The game crashes when opening the inventory after leveling up.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce the issue?
+      placeholder: |
+        1. Start the game with seed 7.
+        2. Kill 5 enemies.
+        3. Press L to open the level-up screen.
+        4. Press I to open the inventory.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages or stack traces if available.
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build Configuration
+      description: Release/Debug, compiler, and commit hash if known.
+      placeholder: Release, MSVC 19.40, main@f8ccf9c
+    validations:
+      required: false
+  - type: input
+    id: seed
+    attributes:
+      label: Seed / Phase
+      description: If applicable, the seed and phase where the bug occurred.
+      placeholder: seed 7, phase Cursed Farm
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Attach relevant logs, screenshots, or GIFs.
+    validations:
+      required: false

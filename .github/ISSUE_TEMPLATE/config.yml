@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a Question
+    url: https://github.com/OmegaSoftDLL/darknet-prototype/discussions/new?category=q-a
+    about: Use Discussions for questions, ideas, and general chat.
+  - name: Show and Tell
+    url: https://github.com/OmegaSoftDLL/darknet-prototype/discussions/new?category=show-and-tell
+    about: Share screenshots, videos, forks, or mods.
