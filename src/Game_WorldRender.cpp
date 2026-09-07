@@ -2377,14 +2377,23 @@ void Game::renderWorld3D() {
 
     // (Feixes de loot agora são pilares 3D dentro do BeginMode3D — com oclusão)
 
-    // Partículas
+    // Partículas — duas passadas para evitar trocar blend mode por partícula.
     for (const auto& p : particles.particles) {
         if (!p.active) continue;
         Vector2 s = proj(p.position, 8.0f);
         Particle tempP = p;
         tempP.position = s;
-        tempP.render();
+        tempP.renderBase();
     }
+    BeginBlendMode(BLEND_ADDITIVE);
+    for (const auto& p : particles.particles) {
+        if (!p.active || !p.glow) continue;
+        Vector2 s = proj(p.position, 8.0f);
+        Particle tempP = p;
+        tempP.position = s;
+        tempP.renderGlow();
+    }
+    EndBlendMode();
 
     // (Projéteis do player e dos inimigos agora são esferas 3D dentro do BeginMode3D)
 

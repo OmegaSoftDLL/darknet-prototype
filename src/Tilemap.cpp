@@ -1536,6 +1536,26 @@ bool Tilemap::isWallAtPosition(Vector2 pos) const {
     return isWall(x, y);
 }
 
+bool Tilemap::isWallAtPosition(Vector2 pos, float radius) const {
+    if (radius <= 0.0f) return isWallAtPosition(pos);
+    int minX = (int)((pos.x - radius) / tileSize);
+    int minY = (int)((pos.y - radius) / tileSize);
+    int maxX = (int)((pos.x + radius) / tileSize);
+    int maxY = (int)((pos.y + radius) / tileSize);
+    float r2 = radius * radius;
+    for (int y = minY; y <= maxY; ++y) {
+        for (int x = minX; x <= maxX; ++x) {
+            if (!isWall(x, y)) continue;
+            float nearestX = pos.x < x * tileSize ? x * tileSize : (pos.x > (x + 1) * tileSize ? (x + 1) * tileSize : pos.x);
+            float nearestY = pos.y < y * tileSize ? y * tileSize : (pos.y > (y + 1) * tileSize ? (y + 1) * tileSize : pos.y);
+            float dx = pos.x - nearestX;
+            float dy = pos.y - nearestY;
+            if (dx * dx + dy * dy <= r2) return true;
+        }
+    }
+    return false;
+}
+
 bool Tilemap::isPortalAtPosition(Vector2 pos, ZoneID& outDest) const {
     int x = (int)(pos.x / tileSize);
     int y = (int)(pos.y / tileSize);

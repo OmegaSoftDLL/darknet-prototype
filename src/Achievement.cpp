@@ -1,5 +1,6 @@
 #include "Achievement.h"
 #include "Player.h"
+#include "AudioManager.h"
 #include <cmath>
 #include <algorithm>
 
@@ -93,6 +94,7 @@ void AchievementSystem::unlock(const std::string& id) {
         playerPtr->xp       += a->rewardXP;
         playerPtr->credits  += a->rewardCredits;
     }
+    if (audioPtr) audioPtr->playAchievement();
 }
 
 void AchievementSystem::checkProgress(const std::string& id, int value) {

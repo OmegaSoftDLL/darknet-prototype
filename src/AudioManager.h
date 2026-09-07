@@ -122,6 +122,7 @@ public:
     void playEnemyHit()           const;
     void playEnemyDeath(bool isBoss = false) const;
     void playPlayerHurt()         const;
+    void playPlayerDeath()        const;
     void playEvolve()             const;
     void playHeal()               const;
     void playItemPickup(int rarityLevel) const; // 0-5

@@ -27,7 +27,7 @@ void EnemyDirector::observe(float dt, Vector2 playerPos, float playerHP,
 
     // medias moveis: a IA muda de opiniao devagar, senao vira ioio
     prof.killSpeed   = prof.killSpeed   * 0.6f + kpm * 0.4f;
-    prof.damageTaken = prof.damageTaken * 0.0f + dpm * 1.0f;
+    prof.damageTaken = prof.damageTaken * 0.6f + dpm * 0.4f;
     prof.kiteScore   = prof.kiteScore   * 0.6f
                      + std::fmin(1.0f, moveAccum / (WINDOW * 220.0f)) * 0.4f;
 

@@ -55,6 +55,65 @@ static std::string base64(const unsigned char* data, int len) {
     return out;
 }
 
+// ── SHA1 (RFC 3174) — usado para validar Sec-WebSocket-Accept ────────────────
+static void sha1(const unsigned char* msg, size_t len, unsigned char digest[20]) {
+    uint32_t h0 = 0x67452301, h1 = 0xEFCDAB89, h2 = 0x98BADCFE, h3 = 0x10325476, h4 = 0xC3D2E1F0;
+    size_t total = ((len + 9 + 63) / 64) * 64;
+    std::vector<unsigned char> buf(total);
+    std::memcpy(buf.data(), msg, len);
+    buf[len] = 0x80;
+    uint64_t bits = (uint64_t)len * 8;
+    for (int i = 0; i < 8; ++i) buf[total - 1 - i] = (unsigned char)(bits >> (i * 8));
+    for (size_t off = 0; off < total; off += 64) {
+        uint32_t w[80];
+        for (int i = 0; i < 16; ++i) {
+            w[i] = ((uint32_t)buf[off + i * 4] << 24) |
+                   ((uint32_t)buf[off + i * 4 + 1] << 16) |
+                   ((uint32_t)buf[off + i * 4 + 2] << 8) |
+                   ((uint32_t)buf[off + i * 4 + 3]);
+        }
+        for (int i = 16; i < 80; ++i) {
+            uint32_t x = w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16];
+            w[i] = (x << 1) | (x >> 31);
+        }
+        uint32_t a = h0, b = h1, c = h2, d = h3, e = h4;
+        for (int i = 0; i < 80; ++i) {
+            uint32_t f, k;
+            if (i < 20) { f = (b & c) | (~b & d); k = 0x5A827999; }
+            else if (i < 40) { f = b ^ c ^ d; k = 0x6ED9EBA1; }
+            else if (i < 60) { f = (b & c) | (b & d) | (c & d); k = 0x8F1BBCDC; }
+            else { f = b ^ c ^ d; k = 0xCA62C1D6; }
+            uint32_t t = ((a << 5) | (a >> 27)) + f + e + k + w[i];
+            e = d; d = c; c = (b << 30) | (b >> 2); b = a; a = t;
+        }
+        h0 += a; h1 += b; h2 += c; h3 += d; h4 += e;
+    }
+    auto put = [&](int idx, uint32_t v) {
+        digest[idx] = (unsigned char)(v >> 24);
+        digest[idx + 1] = (unsigned char)(v >> 16);
+        digest[idx + 2] = (unsigned char)(v >> 8);
+        digest[idx + 3] = (unsigned char)v;
+    };
+    put(0, h0); put(4, h1); put(8, h2); put(12, h3); put(16, h4);
+}
+
+// GUID fixo do RFC 6455 para Sec-WebSocket-Accept.
+static const char WS_GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+// Extrai um header da resposta HTTP (case-insensitive, sem espaços extras).
+static std::string getHeader(const std::string& resp, const char* name) {
+    std::string needle = "\r\n";
+    needle += name;
+    needle += ":";
+    auto pos = resp.find(needle);
+    if (pos == std::string::npos) return "";
+    pos += needle.size();
+    while (pos < resp.size() && (resp[pos] == ' ' || resp[pos] == '\t')) ++pos;
+    auto end = resp.find("\r\n", pos);
+    if (end == std::string::npos) return "";
+    return resp.substr(pos, end - pos);
+}
+
 // Gerador aleatório seguro para máscaras WebSocket e Sec-WebSocket-Key.
 static std::mt19937& wsRng() {
     static std::mt19937 rng(std::random_device{}());
@@ -204,23 +263,15 @@ std::string NetClient::currentRoom() const {
 }
 
 // ── Chat ─────────────────────────────────────────────────────────────────────
-static std::string jsonEscape(const std::string& s) {
-    std::string o;
-    for (char c : s) {
-        if (c == '"' || c == '\\') { o.push_back('\\'); o.push_back(c); }
-        else if (c == '\n' || c == '\r' || c == '\t') o.push_back(' ');
-        else o.push_back(c);
-    }
-    return o;
-}
-
 void NetClient::sendChat(const std::string& text) {
     if (!enabled || text.empty()) return;
-    char buf[320];
-    std::snprintf(buf, sizeof(buf), "{\"t\":\"chat\",\"id\":%u,\"text\":\"%s\"}",
-                  myId_, jsonEscape(text).substr(0, 200).c_str());
+    nlohmann::json j = {
+        {"t", "chat"},
+        {"id", myId_},
+        {"text", text.substr(0, 200)}
+    };
     std::lock_guard<std::mutex> lk(mtx_);
-    if (outQueue_.size() < 32) outQueue_.push_back(buf);
+    if (outQueue_.size() < 32) outQueue_.push_back(j.dump());
 }
 
 std::vector<std::pair<uint32_t,std::string>> NetClient::drainChats() {
@@ -318,6 +369,18 @@ void NetClient::netThreadMain() {
             closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue;
         }
 
+        // Validar Sec-WebSocket-Accept conforme RFC 6455
+        {
+            std::string accept = getHeader(resp, "Sec-WebSocket-Accept");
+            std::string concat = key + WS_GUID;
+            unsigned char digest[20];
+            sha1((const unsigned char*)concat.data(), concat.size(), digest);
+            std::string expected = base64(digest, 20);
+            if (accept != expected) {
+                closesocket(s); std::this_thread::sleep_for(std::chrono::seconds(2)); continue;
+            }
+        }
+
         // ── Conectado ─────────────────────────────────────────────────────────
         connected_ = true;
         // socket com timeout de recv curto p/ não bloquear o loop
@@ -389,7 +452,8 @@ void NetClient::netThreadMain() {
                     for (int i = 0; i < 4; ++i) mk[i] = (unsigned char)rx[pos + i];
                     pos += 4;
                 }
-                if (rx.size() < pos + len) break; // frame incompleto
+                // Proteção contra overflow aritmético: len é uint64_t, pos é size_t.
+                if (len > rx.size() - pos) break; // frame incompleto ou len malicioso
 
                 std::string payload = rx.substr(pos, (size_t)len);
                 if (masked)

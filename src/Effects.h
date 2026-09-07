@@ -29,13 +29,35 @@ inline void DrawNeonRect(Rectangle rect, Color fill, Color glow, float borderThi
 }
 
 // Overlay de scanlines CRT (chamar apos EndMode2D)
-// Uses two wide rectangles with gradient instead of 240 individual draw calls
+// Cached 1xH texture stretched to the screen: a single draw call.
 inline void DrawScanlines(int screenW, int screenH) {
-    // Draw a single semi-transparent texture-less overlay — much cheaper
-    DrawRectangle(0, 0, screenW, screenH, ColorAlpha(BLACK, 0.06f));
-    // Sparse scanlines (every 6px instead of 3) — half the draw calls
-    for (int y = 0; y < screenH; y += 6) {
-        DrawRectangle(0, y, screenW, 1, ColorAlpha(BLACK, 0.14f));
+    static Texture2D scanTex = {0};
+    static int cachedH = 0;
+    if (scanTex.id == 0 || cachedH != screenH) {
+        if (scanTex.id != 0) UnloadTexture(scanTex);
+        Image img = GenImageColor(1, screenH, ColorAlpha(BLACK, 0.06f));
+        Color* pixels = LoadImageColors(img);
+        if (pixels) {
+            for (int y = 0; y < screenH; y += 6) {
+                pixels[y] = ColorAlpha(BLACK, 0.14f);
+            }
+            UnloadImage(img);
+            img = Image{pixels, 1, screenH, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+            scanTex = LoadTextureFromImage(img);
+            UnloadImageColors(pixels);
+        } else {
+            UnloadImage(img);
+        }
+        cachedH = screenH;
+    }
+    if (scanTex.id != 0) {
+        DrawTexturePro(scanTex,
+                       Rectangle{0.0f, 0.0f, 1.0f, static_cast<float>(screenH)},
+                       Rectangle{0.0f, 0.0f, static_cast<float>(screenW), static_cast<float>(screenH)},
+                       Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+    } else {
+        // Fallback caso a textura falhe.
+        DrawRectangle(0, 0, screenW, screenH, ColorAlpha(BLACK, 0.06f));
     }
 }
 

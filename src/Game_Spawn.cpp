@@ -56,6 +56,8 @@ void Game::spawnEnemy() {
         attempts++;
     }
 
+    clampInsideOpenWorldBounds(pos, 120.0f);
+
     pos = slideToFree(pos);
 
     ZoneInfo info = getZoneInfo(currentZone);
@@ -187,92 +189,8 @@ void Game::spawnEnemy() {
 
     Enemy& e = enemies.emplace_back(pos, type);
 
-    // Scale enemy with player level — harder as you get stronger
-    if (player.level > 1) {
-        float scale = 1.0f + (player.level - 1) * 0.12f;
-        e.health    *= scale;
-        e.maxHealth *= scale;
-        e.damage    *= (1.0f + (player.level - 1) * 0.08f);
-        e.xpReward  = (int)(e.xpReward * scale);
-    }
-
-    // Global progression scaling — gets harder as kills and wave count rise
-    {
-        float gs = Enemy::getGlobalScaling(totalKills, anomalySystem.waveNumber);
-        if (gs > 1.0f) {
-            e.health    *= gs;
-            e.maxHealth *= gs;
-            e.damage    *= gs;
-            e.speed     *= (1.0f + (gs - 1.0f) * 0.35f); // speed scales slower
-            e.xpReward  = (int)(e.xpReward * gs);
-        }
-    }
-
-    // Difficulty scaling
-    {
-        const DifficultySettings& diff = getDifficulty();
-        e.health    *= diff.enemyHPMult;
-        e.maxHealth *= diff.enemyHPMult;
-        e.damage    *= diff.enemyDmgMult;
-        e.speed     *= diff.enemySpeedMult;
-    }
-
-// Gradiente por DISTÂNCIA do REFUGIO (mundo centrado na base): cada anel
-        // de 1 zona (2560px) alem do centro endurece e recompensa mais.
-        if (openWorldMode) {
-            const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize);   // 2560
-            const Vector2 wc = safeZoneCenter;   // base/hub, coracao da fase
-            float dx = e.position.x - wc.x, dy = e.position.y - wc.y;
-            float ring = std::max(0.0f, (sqrtf(dx*dx + dy*dy) - ZONE) / ZONE);
-            if (ring > 0.0f) {
-                float hpMul = 1.0f + ring * 0.22f, dmgMul = 1.0f + ring * 0.18f;
-                e.health *= hpMul; e.maxHealth *= hpMul; e.damage *= dmgMul;
-                e.xpReward = (int)(e.xpReward * (1.0f + ring * 0.20f));
-            }
-        }
-
-    // Motor de Evolucao Infinita — Nivel de Ameaca + mutador ativo
-    {
-        float ts = threatStatMult();
-        e.health    *= ts * mutatorHPMult();
-        e.maxHealth *= ts * mutatorHPMult();
-        e.damage    *= ts * mutatorDmgMult();
-        e.speed     *= mutatorSpeedMult();
-        e.xpReward   = (int)(e.xpReward * ts);
-    }
-
-    // Curva por FASE (mundo aberto): a mare inimiga endurece a cada mundo.
-    // Fase 1 (ruinas) = normal; mundos seguintes +8% HP e +5% dano por fase.
-    if (openWorldMode && owPhase > 0) {
-        float phMul = 1.0f + owPhase * 0.08f;
-        e.health    *= phMul;
-        e.maxHealth *= phMul;
-        e.damage    *= (1.0f + owPhase * 0.05f);
-    }
-
-    // Chance de ELITE escala com a fase e o raio do refugio (estilo Risk of Rain):
-    // base 12% + 3% por fase + 5% por anel, teto 45%. Tales afixos: 0 Berserker,
-    // 1 Armored, 2 Volatile, 3 Shielded, 4 KronosRapid — resistem de jeitos
-    // diferentes, exigindo reacoes diferentes (fracos demais = "tipo um chefe".
-    // ANTES do split do Zergling: os emplace_back abaixo podem realocar o vetor
-    // e invalidar a referencia `e` (use-after-realloc).
-    if (type != EnemyType::Boss && type != EnemyType::Zergling) {
-        int pct = 12;
-        if (openWorldMode) {
-            const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize);
-            float dx = e.position.x - safeZoneCenter.x, dy = e.position.y - safeZoneCenter.y;
-            float ring = std::max(0.0f, (sqrtf(dx*dx + dy*dy) - ZONE) / ZONE);
-            pct += (int)owPhase * 3 + (int)ring * 5;
-        }
-        pct = std::min(45, pct);
-        if (GetRandomValue(0, 99) < pct)
-            e.makeElite(GetRandomValue(0, 4));
-        // Armored elite fica mais blindado conforme o mundo (8 + 4 por fase).
-        if (e.isElite && e.eliteMod == 1)
-            e.armor = 8.0f + (float)owPhase * 4.0f;
-    }
-
     // Zergling swarm — spawn 2 more in formation (StarCraft feel)
+    // Feito ANTES do scaling para que todos recebam o mesmo tratamento.
     if (type == EnemyType::Zergling) {
         for (int z = 0; z < 2; ++z) {
             float za = angle + (z == 0 ? 0.25f : -0.25f);
@@ -282,6 +200,94 @@ void Game::spawnEnemy() {
                 player.position.y + std::sin(za) * zd
             };
             enemies.emplace_back(zp, EnemyType::Zergling);
+        }
+    }
+
+    // Aplica scaling/elite a todos os Zerglings recém-criados.
+    size_t firstIdx = &e - &enemies[0];
+    size_t lastIdx = enemies.size();
+    for (size_t idx = firstIdx; idx < lastIdx; ++idx) {
+        Enemy& en = enemies[idx];
+
+        // Scale enemy with player level — harder as you get stronger
+        if (player.level > 1) {
+            float scale = 1.0f + (player.level - 1) * 0.12f;
+            en.health    *= scale;
+            en.maxHealth *= scale;
+            en.damage    *= (1.0f + (player.level - 1) * 0.08f);
+            en.xpReward  = (int)(en.xpReward * scale);
+        }
+
+        // Global progression scaling — gets harder as kills and wave count rise
+        {
+            float gs = Enemy::getGlobalScaling(totalKills, anomalySystem.waveNumber);
+            if (gs > 1.0f) {
+                en.health    *= gs;
+                en.maxHealth *= gs;
+                en.damage    *= gs;
+                en.speed     *= (1.0f + (gs - 1.0f) * 0.35f); // speed scales slower
+                en.xpReward  = (int)(en.xpReward * gs);
+            }
+        }
+
+        // Difficulty scaling
+        {
+            const DifficultySettings& diff = getDifficulty();
+            en.health    *= diff.enemyHPMult;
+            en.maxHealth *= diff.enemyHPMult;
+            en.damage    *= diff.enemyDmgMult;
+            en.speed     *= diff.enemySpeedMult;
+        }
+
+        // Gradiente por DISTÂNCIA do REFUGIO (mundo centrado na base): cada anel
+        // de 1 zona (2560px) alem do centro endurece e recompensa mais.
+        if (openWorldMode) {
+            const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize);   // 2560
+            const Vector2 wc = safeZoneCenter;   // base/hub, coracao da fase
+            float dx = en.position.x - wc.x, dy = en.position.y - wc.y;
+            float ring = std::max(0.0f, (sqrtf(dx*dx + dy*dy) - ZONE) / ZONE);
+            if (ring > 0.0f) {
+                float hpMul = 1.0f + ring * 0.22f, dmgMul = 1.0f + ring * 0.18f;
+                en.health *= hpMul; en.maxHealth *= hpMul; en.damage *= dmgMul;
+                en.xpReward = (int)(en.xpReward * (1.0f + ring * 0.20f));
+            }
+        }
+
+        // Motor de Evolucao Infinita — Nivel de Ameaca + mutador ativo
+        {
+            float ts = threatStatMult();
+            en.health    *= ts * mutatorHPMult();
+            en.maxHealth *= ts * mutatorHPMult();
+            en.damage    *= ts * mutatorDmgMult();
+            en.speed     *= mutatorSpeedMult();
+            en.xpReward   = (int)(en.xpReward * ts);
+        }
+
+        // Curva por FASE (mundo aberto): a mare inimiga endurece a cada mundo.
+        // Fase 1 (ruinas) = normal; mundos seguintes +8% HP e +5% dano por fase.
+        if (openWorldMode && owPhase > 0) {
+            float phMul = 1.0f + owPhase * 0.08f;
+            en.health    *= phMul;
+            en.maxHealth *= phMul;
+            en.damage    *= (1.0f + owPhase * 0.05f);
+        }
+
+        // Chance de ELITE escala com a fase e o raio do refugio (estilo Risk of Rain):
+        // base 12% + 3% por fase + 5% por anel, teto 45%.
+        if (type != EnemyType::Boss && type != EnemyType::Zergling) {
+            int pct = 12;
+            if (openWorldMode) {
+                const float ZONE = (float)(Tilemap::OW_ZONE_W * Tilemap::tileSize);
+                float dx = en.position.x - safeZoneCenter.x, dy = en.position.y - safeZoneCenter.y;
+                float ring = std::max(0.0f, (sqrtf(dx*dx + dy*dy) - ZONE) / ZONE);
+                pct += (int)owPhase * 3 + (int)ring * 5;
+            }
+            pct = std::min(45, pct);
+            if (GetRandomValue(0, 99) < pct)
+                en.makeElite(GetRandomValue(0, 4));
+            // Armored elite fica mais blindado conforme o mundo (8 + 4 por fase).
+            if (en.isElite && en.eliteMod == 1)
+                en.armor = 8.0f + (float)owPhase * 4.0f;
         }
     }
 }
@@ -297,6 +303,7 @@ void Game::spawnBoss() {
         pos.x = player.position.x + std::cos(angle) * 420.0f;
         pos.y = player.position.y + std::sin(angle) * 420.0f;
     }
+    clampInsideOpenWorldBounds(pos, 120.0f);
     enemies.emplace_back(pos, EnemyType::Boss);
     {
         Enemy& boss = enemies.back();
@@ -359,6 +366,7 @@ void Game::updateCompanions(float dt) {
         if (c.wantsHeal && !c.isDead() && c.healAmount > 0.0f) {
             float before = player.health;
             player.heal(c.healAmount);
+            audio.playHeal();
             companionHealAccum += player.health - before;
             if (companionHealAccum >= 5.0f) {   // 1 numero a cada ~5 HP (nao 1 por frame)
                 damageNumbers.push_back({player.position, companionHealAccum,
@@ -427,6 +435,7 @@ void Game::spawnOmegaBoss() {
         pos.x = player.position.x + std::cos(angle) * 480.0f;
         pos.y = player.position.y + std::sin(angle) * 480.0f;
     }
+    clampInsideOpenWorldBounds(pos, 120.0f);
     Enemy omega(pos, EnemyType::OmegaBoss);
     // Scale with player level
     float lvlScale = 1.0f + (player.level - 1) * 0.2f;
@@ -460,6 +469,7 @@ void Game::spawnFinalBoss() {
         pos.x = player.position.x + std::cos(angle) * 520.0f;
         pos.y = player.position.y + std::sin(angle) * 520.0f;
     }
+    clampInsideOpenWorldBounds(pos, 120.0f);
     Enemy core(pos, EnemyType::OmegaBoss);
     core.isFinalBoss = true;
     // Muito mais forte que o OmegaBoss normal — e o clímax do jogo

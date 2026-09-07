@@ -10,6 +10,7 @@ bool Game::buyPerk(int idx) {
     if (idx == SkillTree::PERK_S2_PLACA) player.increaseBaseMaxHP(40.0f);
     if (idx == SkillTree::PERK_C2_MANTO) player.increaseBaseDefense(10.0f);
     player.refreshSkillVectors();
+    audio.playSkillUnlock();
     return true;
 }
 

@@ -78,7 +78,7 @@ void Game::buildQuests() {
 
     { Quest q("q_portais",   "Fechar os Rifts",
               "Feche 3 portais de anomalia antes que mais inimigos entrem", "VANCE RIOS",
-              QuestType::Kill, 3);
+              QuestType::ClosePortal, 3);
       q.rewardXP = 800; q.rewardHP = 120.0f; quests.push_back(q); }
 
     { Quest q("q_orc",       "Orc Cibernetico",
@@ -143,7 +143,7 @@ void Game::buildQuests() {
 
     { Quest q("q_coleta_raro","Tesouros Raros",
               "Colete 5 itens Raros ou superiores", "MARCO VEIL",
-              QuestType::Collect, 5);
+              QuestType::CollectRare, 5);
       q.rewardXP = 700; q.rewardHP = 0.0f; quests.push_back(q); }
 
     { Quest q("q_nocturna",  "Missao Noturna",
