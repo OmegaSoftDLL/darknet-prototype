@@ -1,64 +1,64 @@
-# DARKNET — Cyber Station (servidor do jogo)
+# DARKNET — Cyber Station (game server)
 
-Backend do DARKNET em **containers Docker**: multiplayer em tempo real, contas, loja com
-moeda premium (gems compradas com dinheiro real), inventário e matchmaking por salas.
+DARKNET backend in **Docker containers**: real-time multiplayer, accounts, store with
+premium currency (gems purchased with real money), inventory and room matchmaking.
 
-## Subir os containers
+## Start the containers
 ```bash
 cd server
 docker compose up -d --build
 # API:  http://localhost:8080/api/healthz
 # WS :  ws://localhost:8080/ws
 ```
-Containers: **gateway** (nginx, porta pública 8080) · **game-server** (Node, porta interna 9000) · **db** (Postgres).
+Containers: **gateway** (nginx, public port 8080) · **game-server** (Node, internal port 9000) · **db** (Postgres).
 
-## Endpoints (via gateway: `http://localhost:8080/api/...`; direto no Node: `http://localhost:9000/...`)
+## Endpoints (via gateway: `http://localhost:8080/api/...`; directly on the Node: `http://localhost:9000/...`)
 
-| Método | Rota | Descrição |
+| Method | Route | Description |
 |--------|------|-----------|
-| POST | `/auth/login` | Login stub (nome) → retorna `{ token, id }` (JWT) |
-| GET | `/store` | Catálogo da loja (pacotes de gems + itens) |
-| POST | `/store/buy-gems` | Cria Stripe Checkout Session → `{ url }` (auth) |
-| POST | `/store/buy-item` | Compra item com gems, validado no servidor (auth) |
-| POST | `/store/webhook` | Webhook assinado do Stripe — ÚNICA fonte que credita gems |
-| POST | `/store/dev-grant-gems` | DEV ONLY: credita gems sem pagamento (requer `ALLOW_DEV_GRANT=1`) |
-| GET | `/me` | Perfil: gems + inventário (auth) |
-| GET/POST | `/progress` | Lê/grava progresso da conta (level, credits, save_json) (auth) |
-| GET | `/healthz` | Health check (status do Stripe e do banco) |
-| GET | `/store/success`, `/store/cancel` | Páginas de retorno do Stripe Checkout |
-| WS | `/ws` | Realtime: sincronização de jogadores, chat, salas (matchmaking em memória) |
+| POST | `/auth/login` | Login stub (name) → returns `{ token, id }` (JWT) |
+| GET | `/store` | Store catalog (gem + item packs) |
+| POST | `/store/buy-gems` | Create Stripe Checkout Session → `{ url }` (auth) |
+| POST | `/store/buy-item` | Buy item with gems, validated on the server (auth) |
+| POST | `/store/webhook` | Stripe signed webhook — the ONLY source that credits gems |
+| POST | `/store/dev-grant-gems` | DEV ONLY: credits gems without payment (requires `ALLOW_DEV_GRANT=1`) |
+| GET | `/me` | Profile: gems + inventory (auth) |
+| GET/POST | `/progress` | Read/write account progress (level, credits, save_json) (auth) |
+| GET | `/healthz` | Health check (Stripe and database status) |
+| GET | `/store/success`, `/store/cancel` | Stripe Checkout Return Pages |
+| WS | `/ws` | Realtime: player synchronization, chat, rooms (memory matchmaking) |
 
-## O que JÁ está pronto (esqueleto funcional)
-- `game-server`: REST (tabela acima) + **WebSocket** (`/ws`) com sincronização de
-  posição entre jogadores, chat e salas (matchmaking simples em memória).
-- Banco com tabelas de contas, inventário (com `qty` agregado por item), transações
-  e progresso. **DDL canônico no `game-server/src/index.js`** (`CREATE TABLE IF NOT
-  EXISTS` em todo boot); `db/init.sql` é apenas um apontador.
-- Catálogo da loja: pacotes de **gems** (R$) e itens (cosméticos/boosts) comprados com gems.
-- Modelo **free-to-play**: jogo grátis; receita por gems (cosméticos + conveniência).
+## What is ALREADY ready (functional skeleton)
+- `game-server`: REST (table above) + **WebSocket** (`/ws`) with position
+  synchronization between players, chat and rooms (simple matchmaking in memory).
+- Bank with tables of accounts, inventory (with `qty` aggregated per item), transactions
+  and progress. **Canonical DDL in `game-server/src/index.js`** (`CREATE TABLE IF NOT
+  EXISTS` on every boot); `db/init.sql` is just a pointer.
+- Store catalog: packages of **gems** (R$) and items (cosmetics/boosts) purchased with gems.
+- **free-to-play** model: free game; revenue from gems (cosmetics + convenience).
 
-## O que FALTA para virar produção (precisa de você / contas externas)
-Isto **não** dá para eu "implementar" sozinho — exige cadastros, dinheiro e questões legais:
-1. **Pagamento real**: criar conta **Stripe** (ou Mercado Pago/Google Play/Apple) e preencher
-   `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`. Gems só são creditados via **webhook
-   confirmado** server-side (nunca confiar no cliente). Sem isso, `/store/buy-gems` é stub.
-2. **Hospedagem**: subir os containers num provedor cloud (Fly.io, Railway, AWS, GCP) com
-   **TLS/HTTPS** e domínio. "Cyber Station" passa a ser esse deploy.
-3. **Contas seguras**: e-mail+senha com hash (bcrypt/argon2) ou OAuth, verificação, reset.
-4. **Anti-cheat / anti-fraude**: validação server-side de TODA ação que dá item pago,
-   rate limiting, detecção de abuso, reembolsos.
-5. **Conformidade legal**: termos de uso, privacidade (LGPD), impostos, regras das lojas
-   (Apple App Store / Google Play cobram comissão e exigem o billing delas no mobile).
-6. **Integração no cliente C++**: o jogo (raylib) precisa de um módulo de rede para falar
-   com a API/WS (login, baixar loja, sincronizar jogadores). Hoje o cliente é offline.
+## What is MISSING to become production (needs you / external accounts)
+This **isn't** something I can "implement" on my own — it requires registration, money, and legal work:
+1. **Actual payment**: create a **Stripe** account (or Mercado Pago/Google Play/Apple) and fill out
+   `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`. Gems are only credited via **webhook
+   confirmed** server-side (never trust the client). Without this, `/store/buy-gems` is stub.
+2. **Hosting**: deploy containers to a cloud provider (Fly.io, Railway, AWS, GCP) with
+   **TLS/HTTPS** and a domain. "Cyber Station" becomes this deployment.
+3. **Secure accounts**: email+hashed password (bcrypt/argon2) or OAuth, verification, reset.
+4. **Anti-cheat / anti-fraud**: server-side validation of EVERY action that results in a paid item,
+   rate limiting, abuse detection, refunds.
+5. **Legal compliance**: terms of use, privacy (LGPD), taxes, store rules
+   (Apple App Store / Google Play charge commission and require billing on mobile).
+6. **C++ client integration**: the game (raylib) needs a network module to talk
+   with API/WS (login, download store, synchronize players). Today the client is offline.
 
-## Próximos passos sugeridos (ordem)
-1. Rodar os containers local e testar `/api/healthz` + conectar 2 clientes no `/ws`.
-2. Integrar um módulo de rede simples no cliente (login + ver outros jogadores no lobby).
-3. Criar conta Stripe em modo teste e ligar `buy-gems` + webhook (ambiente sandbox).
-4. Deploy num cloud com HTTPS = "Cyber Station" no ar.
+## Suggested next steps (order)
+1. Run the local containers and test `/api/healthz` + connect 2 clients to `/ws`.
+2. Integrate a simple network module into the client (login + see other players in the lobby).
+3. Create a Stripe account in test mode and connect `buy-gems` + webhook (sandbox environment).
+4. Deploy on a cloud with HTTPS = "Cyber Station" online.
 
-> Resumo honesto: o **cliente do jogo** está avançado e jogável offline. O **backend
-> multiplayer + monetização** está com a **arquitetura e os containers prontos** aqui,
-> mas virar um jogo online com dinheiro real de verdade depende de contas de pagamento,
-> hospedagem e conformidade legal — passos que envolvem você e serviços externos.
+> Honest summary: **game client** is advanced and playable offline. The **backend
+> multiplayer + monetization** has the **architecture and containers ready** here,
+> but becoming an online game with real money depends on payment accounts,
+> hosting and legal compliance — steps that involve you and external services.

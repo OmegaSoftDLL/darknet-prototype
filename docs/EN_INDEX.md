@@ -1,21 +1,21 @@
 # English Documentation Index
 
-The main design, story, and planning documents are currently available in Portuguese. This index provides English summaries and pointers to the full documents. Translations are welcome as contributions.
+The main design, story, and planning documents are now available in English. This index provides pointers to the full documents.
 
 ## Core Documents
 
-### [`GAME_DESIGN.md`](../GAME_DESIGN.md) — Game Design Document (Portuguese)
+### [`GAME_DESIGN.md`](../GAME_DESIGN.md) — Game Design Document (English)
 
 A comprehensive design document covering:
 
 - Core loop: explore zones, fight enemies, collect loot, craft/upgrade, advance phases.
 - Classes and character progression.
 - Enemy factions, bosses, and AI behaviors.
-- Crafting, building, and economy systems.
+- Crafting, building, and economic systems.
 - World structure: open-world phases, biomes, safe zones, portals, and chunk streaming.
 - Multiplayer and monetization architecture (backend groundwork in `server/`).
 
-### [`DARKNET_STORY.md`](../DARKNET_STORY.md) — Story Bible (Portuguese)
+### [`DARKNET_STORY.md`](../DARKNET_STORY.md) — Story Bible (English)
 
 The narrative bible for the Darknet universe:
 
@@ -24,7 +24,7 @@ The narrative bible for the Darknet universe:
 - Act structure, major plot beats, and faction lore.
 - Side quests, secret endings, and New Game+ content.
 
-### [`ROADMAP.md`](../ROADMAP.md) — Development Roadmap (Portuguese)
+### [`ROADMAP.md`](../ROADMAP.md) — Development Roadmap (English)
 
 Milestone planning from prototype to release, including:
 
@@ -33,7 +33,7 @@ Milestone planning from prototype to release, including:
 - Backend, multiplayer, and store integration.
 - Polish, localization, and distribution targets.
 
-### [`DISTRIBUTION.md`](../DISTRIBUTION.md) — Distribution & Marketing Plan (Portuguese)
+### [`DISTRIBUTION.md`](../DISTRIBUTION.md) — Distribution & Marketing Plan (English)
 
 Strategic notes on:
 
@@ -47,10 +47,10 @@ Strategic notes on:
 
 A multi-domain audit covering architecture, gameplay, rendering, networking, save system, and audio. It lists P0/P1/P2/P3 issues and recommended fixes. This is the best starting point for new contributors looking for high-impact work.
 
-## Contributing Translations
+## Contributing Updates
 
-If you want to translate any of these documents to English:
+If you want to improve these documents or add new ones:
 
-1. Open an issue to claim the document.
-2. Create a PR with the translated file named `EN_<original>.md` in the `docs/` folder.
-3. Update this index to link to the new translation.
+1. Open an issue to discuss the change.
+2. Create a PR with the updated file and keep the English surface consistent.
+3. Update this index if you add or remove a core document.

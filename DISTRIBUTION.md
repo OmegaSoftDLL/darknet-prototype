@@ -1,39 +1,39 @@
-# DARKNET — Distribuição (Steam + Epic Games)
+# DARKNET — Distribution (Steam + Epic Games)
 
-O jogo será vendido na **Steam** e na **Epic Games Store**. Abaixo o que está pronto
-no projeto e o que depende de contas/cadastros externos.
+The game will be sold on **Steam** and **Epic Games Store**. Below what is ready
+in the project and what depends on external accounts/registrations.
 
-## Modelo
-- Cliente C++ (raylib) — o jogo em si.
-- **Cyber Station** (pasta `server/`) — backend multiplayer + loja de gems (free-to-play
-  com microtransações). No PC via Steam/Epic, as compras de gems podem usar Stripe
-  diretamente; em consoles/mobile usam o billing da plataforma.
+## Model
+- C++ client (raylib) — the game itself.
+- **Cyber Station** (folder `server/`) — multiplayer backend + gem store (free-to-play
+  with microtransactions). On PC via Steam/Epic, gem purchases can use Stripe
+  directly; on consoles/mobile they use platform billing.
 
 ## Steam (Steamworks)
-1. Conta **Steamworks** (taxa Steam Direct **US$100** por app, recuperável).
-2. Receber o **App ID**. Criar `steam_appid.txt` (no dir do .exe em dev).
-3. Integrar o **Steamworks SDK** (overlay, conquistas, cloud saves, DRM leve, friends/lobby
-   para multiplayer P2P). Ver `integration/steam/` (stub de wrapper).
-4. Empacotar build via **SteamPipe** (`steamcmd` + scripts de depot).
-5. Página da loja, idiomas, classificação etária, preço, screenshots/trailer.
+1. **Steamworks** Account (Steam Direct fee **US$100** per app, recoverable).
+2. Receive the **App ID**. Create `steam_appid.txt` (in the .exe dir in dev).
+3. Integrate the **Steamworks SDK** (overlay, achievements, cloud saves, light DRM, friends/lobby
+   for P2P multiplayer). See `integration/steam/` (wrapper stub).
+4. Package build via **SteamPipe** (`steamcmd` + depot scripts).
+5. Store page, languages, age rating, price, screenshots/trailer.
 
 ## Epic Games Store (EOS)
-1. Conta de **desenvolvedor Epic** (gratuita) + product/sandbox/deployment IDs.
-2. Integrar **Epic Online Services (EOS) SDK** (auth, achievements, lobbies/matchmaking,
-   P2P) — funciona cross-platform inclusive com Steam.
-3. Empacotar via **Epic BuildPatchTool**.
-4. Página da loja, revisão da Epic.
+1. **Epic developer account** (free) + product/sandbox/deployment IDs.
+2. Integrate **Epic Online Services (EOS) SDK** (auth, achievements, lobbies/matchmaking,
+   P2P) — works cross-platform including with Steam.
+3. Package via **Epic BuildPatchTool**.
+4. Store Page, Epic Review.
 
-## O que JÁ existe no repo
-- `server/` — backend em containers (multiplayer realtime + loja). Ver `server/README.md`.
-- `integration/steam/SteamIntegration.*` — wrapper STUB para ligar o Steamworks SDK quando
-  você tiver o App ID e baixar o SDK (não dá para redistribuir o SDK no repo).
-- `integration/build/` — notas de empacotamento (SteamPipe / Epic BPT).
+## What ALREADY exists in the repo
+- `server/` — containerized backend (realtime multiplayer + store). See `server/README.md`.
+- `integration/steam/SteamIntegration.*` — STUB wrapper to link the Steamworks SDK when
+  you have the App ID and download the SDK (you cannot redistribute the SDK in the repo).
+- `integration/build/` — packaging notes (SteamPipe / Epic BPT).
 
-## Honesto: o que depende de você
-- Comprar/criar as contas (Steam US$100, Epic grátis) e obter os IDs.
-- Baixar os SDKs (Steamworks / EOS) — licença não permite eu incluí-los aqui.
-- Submeter builds e páginas para revisão das lojas.
-- Para multiplayer "ver outros jogadores": usar lobbies do Steam/EOS (recomendado, sem
-  servidor próprio) OU o Cyber Station (servidor dedicado). Já deixei um cliente de rede
-  LAN/UDP no jogo para testar localmente sem nenhuma conta.
+## Honest: what depends on you
+- Buy/create accounts (Steam US$100, Epic free) and get IDs.
+- Download the SDKs (Steamworks / EOS) — license does not allow me to include them here.
+- Submit builds and pages for store review.
+- For multiplayer "see other players": use Steam/EOS lobbies (recommended, without
+  own server) OR Cyber Station (dedicated server). I have already left a network client
+  LAN/UDP in game to test locally without any account.
