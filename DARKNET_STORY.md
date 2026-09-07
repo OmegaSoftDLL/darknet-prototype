@@ -335,7 +335,7 @@ VANCE leaves the Kronos Nexus alone. LYRA, MARCO, STEEL and REX wait outside.
 VANCE uses the implants to create the **partition** in the core of KRONOS — isolating the 47 million consciousnesses into the separate subsystem where suffering is minimized but complete liberation is impossible.
 KRONOS, reduced to the basic management subsystem, goes into dormant mode. Its robots continue to operate in defensive mode — without attacking humans, but without surrendering. The world enters an unstable peace.
 
-Resonance Zones diminish but of the not disappear completely — the permanent fog marks the locations where the upload failed.
+Resonance Zones diminish but do not disappear completely — the permanent fog marks the locations where the upload failed.
 
 VANCE stares at the monitor showing 47 million points of light in the slow loop. DR. CHEN puts his hand on your shoulder.
 

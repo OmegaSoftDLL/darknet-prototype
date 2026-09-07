@@ -9,7 +9,7 @@
 | **Verdict** | **APPROVED WITH RESERVATIONS** — on 1st pass: 1×P0, 4×P1, 2×P2. **Updated by addendum (§6): P0 downgraded after verification → 0×P0, 4×P1, 5×P2.** |
 
 This report is for the programmer. Each finding includes where, evidence, repro, and the
-player effect. What was **measured** is separated from what was **deduced** — of the not
+player effect. What was **measured** is separated from what was **deduced** — do not
 mix the two when prioritizing.
 
 ---
@@ -164,7 +164,7 @@ report disappeared (0 critical).
 
 Scenery generation **does not use `--seed`**: `buildOpenWorldScenery` runs its own LCG
 with fixed constant `0x1234abcd` and zero calls to `GetRandomValue`
-(verified in source). Chunks of the not generate inside the fixed region (`ox < ORIG`).
+(verified in source). Chunks do not generate inside the fixed region (`ox < ORIG`).
 So the portal surroundings are the **deterministic fact**, not the probability —
 "seed sweep" was the wrong instrument; the right one is to reconstruct the layout.
 

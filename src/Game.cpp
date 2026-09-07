@@ -3,7 +3,7 @@
 #include "SpriteExtrude.h"
 #include "SkillTree.h"
 // Only true during sprite capture for voxelization (Game::ensureVoxel →
-// SpriteExtrude::CaptureToImage): entities suppress 2D shadows/text only they of the not
+// SpriteExtrude::CaptureToImage): entities suppress 2D shadows/text only they do not
 // become the "pedestal" in the voxel mesh. Does not select the render pipeline.
 bool g_voxelCapture = false;
 
@@ -119,7 +119,7 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
         rlTexCoord2f(0.0f, 0.0f); rlVertex3f(x - width/2, y + height/2, z - length/2);
     rlEnd();
 
-    rlSetTexture(rlGetTextureIdDefault());   // P0: rebind white only primitives of the not leak the previous texture
+    rlSetTexture(rlGetTextureIdDefault());   // P0: rebind white only primitives do not leak the previous texture
 }
 
 // ─── Constructor / Destructor ────────────────────────────────────────────────
@@ -1208,7 +1208,7 @@ void Game::checkCollisions() {
         if (proj.isGrenade) continue; // handled in updateProjectiles on expire
 
         for (auto& enemy : enemies) {
-            if (enemy.isDead()) continue;   // of the not waste the shot on the pending corpse
+            if (enemy.isDead()) continue;   // do not waste the shot on the pending corpse
             // squared distance: avoids the sqrt per projectile-enemy pair (hot O(n*m) loop)
             float ddx = proj.position.x - enemy.position.x;
             float ddy = proj.position.y - enemy.position.y;

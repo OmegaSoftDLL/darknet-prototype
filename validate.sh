@@ -16,7 +16,7 @@ CMAKE="/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/ID
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 FAIL=0
 
-for CFG in Debug Release; of the
+for CFG in Debug Release; do
   echo "== build $CFG =="
   if ! "$CMAKE" --build "$ROOT/build" --config "$CFG" 2>&1 | grep -E "error C|error LNK|darknet.vcxproj ->"; then
     echo "  (in the relevant build output)"

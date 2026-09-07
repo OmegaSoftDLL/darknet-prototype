@@ -78,7 +78,7 @@ are not.
 
 ---
 
-## 2. What does NOT need fixing (of the not waste time)
+## 2. What does NOT need fixing (do not waste time)
 
 - Portal inside building: **verified free** (120/120 variants, §6).
   Only the 3-line assert to shield the future.
@@ -96,7 +96,7 @@ are not.
 - **2D shadow ellipse** without `g_renderPass3D` guard becomes the pedestal in the voxelized mesh.
 - **Bob/animation by translation** makes the character float — use scale.
 - The campaign is **data**: `content/phases.txt` (zone | kills | boss | radius |
-  title). Phase pacing adjustments of the not require recompiling.
+  title). Phase pacing adjustments do not require recompiling.
 
 ## 4. How the next audit will evaluate your delivery
 

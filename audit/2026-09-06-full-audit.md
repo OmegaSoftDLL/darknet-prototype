@@ -29,7 +29,7 @@
 ### Main conclusions
 
 1. **Architecture is the biggest long-term risk.** `Game.h` declares ~160 members and includes 30 headers. Any change has high regression risk.
-2. **Several systems documented in the GDD of the not work.** Tutorial, achievements, tier 3 skill tree, level-up rewards, and NPC quests are broken or disconnected.
+2. **Several systems documented in the GDD do not work.** Tutorial, achievements, tier 3 skill tree, level-up rewards, and NPC quests are broken or disconnected.
 3. **Save is not reliable.** Zeroed metadata, lost equipment, residual state between matches, in the checksum/backup.
 4. **Multiplayer is not production-ready.** WebSocket without TLS, non-authoritative server, data races in client, stub authentication.
 5. **Graphics performance has clear bottlenecks.** Voxel model generation never used, thousands of state changes, insufficient culling.
@@ -63,7 +63,7 @@
 | Headless autotest | 300s, seed 7 | `VALIDATION: PASSED` |
 | Unit tests | — | 26/26 cases, 148/148 assertions |
 
-The game is stable for autonomous execution, but tests of the not cover gameplay, save, render, or netcode regressions.
+The game is stable for autonomous execution, but tests do not cover gameplay, save, render, or netcode regressions.
 
 ---
 
@@ -160,7 +160,7 @@ The game is stable for autonomous execution, but tests of the not cover gameplay
 - **Description:** House generates 10 credits/8s; with several houses and upgrades, passive income explodes. Barracks/TankFactory spawn free units beyond the paid queue.
 - **Recommendation:** Reduce passive income, make it per player, charge cost for automatic units.
 
-#### P3 — Evolution texts of the not match effects
+#### P3 — Evolution texts do not match effects
 - **File:** `src/Game_Menus.cpp:404-407` vs `src/Game_Menus.cpp:325-348`
 - **Description:** "CYBORG SOLDIER — +HP +Defense +Armor" applies only `attackDamage *= 1.30`; "GHOST HACKER — +Speed +Damage +Range" applies only `speed *= 1.40`.
 - **Recommendation:** Align texts to effects or adjust effects.
@@ -194,7 +194,7 @@ The game is stable for autonomous execution, but tests of the not cover gameplay
 - **Description:** `DrawScanlines` draws one rectangle per ~6 pixels of height (≈120 draw calls for 720p).
 - **Recommendation:** Use alpha mask texture or post-process shader.
 
-#### P1 — Entities of the not use frustum culling
+#### P1 — Entities do not use frustum culling
 - **File:** `src/Game_WorldRender.cpp:1989-2027`
 - **Description:** Only uses box test with fixed bounds. Objects behind the camera or outside the view cone are still drawn.
 - **Recommendation:** Apply `sphereInCameraFrustum` (already implemented for `owDecor`) to all entities.
@@ -371,9 +371,9 @@ The game is stable for autonomous execution, but tests of the not cover gameplay
 - **Description:** Only queries the center tile. Entities with radius > half tile cross walls.
 - **Recommendation:** Add overload `isWallAtPosition(Vector2 pos, float radius)`.
 
-#### P1 — Projectiles of the not collide with open-world boundary
+#### P1 — Projectiles do not collide with open-world boundary
 - **File:** `src/Game.cpp:1353`, `1385`
-- **Description:** `tilemap.isWallAtPosition` returns `false` outside bounds when `openWorld=true`. Grenades of the not explode at the boundary.
+- **Description:** `tilemap.isWallAtPosition` returns `false` outside bounds when `openWorld=true`. Grenades do not explode at the boundary.
 - **Recommendation:** Add explicit test against `owPhaseRadius`.
 
 #### P1 — Enemy spawn can push beyond barrier
@@ -525,7 +525,7 @@ The game is stable for autonomous execution, but tests of the not cover gameplay
 
 ## 7. Conclusion
 
-`darknet-prototype` is an impressive prototype in volume of features, but the **technical debt exceeds code maturity**. The monolithic `Game` class is the epicenter of risk: it concentrates coupling, hinders tests, and makes every new feature prone to regressions. In parallel, **entire systems documented in the GDD (tutorial, achievements, tier 3 tree, reliable save) of the not work**, and **the multiplayer architecture is not safe for production**.
+`darknet-prototype` is an impressive prototype in volume of features, but the **technical debt exceeds code maturity**. The monolithic `Game` class is the epicenter of risk: it concentrates coupling, hinders tests, and makes every new feature prone to regressions. In parallel, **entire systems documented in the GDD (tutorial, achievements, tier 3 tree, reliable save) do not work**, and **the multiplayer architecture is not safe for production**.
 
 From the stability standpoint, the game passes headless validation gates, which is positive. However, **passing autotest does not equal ready to play**: save corrupts metadata, balance can explode from accumulated scaling, and the procedural world has spawn and collision bugs.
 

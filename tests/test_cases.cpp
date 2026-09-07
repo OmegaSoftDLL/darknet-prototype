@@ -15,7 +15,7 @@
 #include <doctest/doctest.h>
 
 // Global defined in Game.cpp; Enemy.cpp references it via `extern`.
-// In tests we of the not capture voxels, only it stays false.
+// In tests we do not capture voxels, only it stays false.
 bool g_voxelCapture = false;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ TEST_CASE("CraftingSystem::canCraft - sufficient and insufficient materials") {
     appendTo(bag, ItemType::MetalScrap, 1);
     CHECK(cs.canCraft(bag, idx));                          // exact: 3
     appendTo(bag, ItemType::MetalScrap, 5);
-    CHECK(cs.canCraft(bag, idx));                          // extras of the not hurt
+    CHECK(cs.canCraft(bag, idx));                          // extras do not hurt
 }
 
 TEST_CASE("CraftingSystem::canCraft - multi-ingredient recipe and invalid index") {

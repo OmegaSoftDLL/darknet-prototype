@@ -60,7 +60,7 @@ backend Node.js (auth, premium store, realtime WS) in Docker containers.
 - **Stable IDs in SaveManager**: `resolveEquipByName` uses `strcmp` for display name —
   migrate to immutable internal IDs.
 - **Nomenclature standardization**: prefix `m_` in members, without obscure abbreviations.
-- **Visually apply purchased premium cosmetics**: skins/paints of the not render
+- **Visually apply purchased premium cosmetics**: skins/paints do not render
   in `Player.cpp` — check and link premium inventory to player render
   (includes Pet Drone spawn).
 
