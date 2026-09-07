@@ -1,4 +1,4 @@
-﻿#include "SpriteGen.h"
+#include "SpriteGen.h"
 #include <cmath>
 
 // ── PRNG deterministico (nao usa rand/Math.random) ───────────────────────────
@@ -136,7 +136,7 @@ static Texture2D makeFloorTex(int zone) {
     }
 
     // Borda sutil para leitura de grade
-    // (borda do chao removida — criava grade/seam em 3D; auditoria P4)
+    // (ground border removed — created grid/seam in 3D; audit P4)
 
     Texture2D t = LoadTextureFromImage(img);
     GenTextureMipmaps(&t);

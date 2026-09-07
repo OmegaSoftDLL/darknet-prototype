@@ -43,7 +43,7 @@ Strategic notes on:
 
 ## Engineering & Audit
 
-### [`auditoria/2026-09-06-auditoria-completa.md`](../auditoria/2026-09-06-auditoria-completa.md) — Full Technical Audit (Portuguese)
+### [`audit/2026-09-06-full-audit.md`](../audit/2026-09-06-full-audit.md) — Full Technical Audit
 
 A multi-domain audit covering architecture, gameplay, rendering, networking, save system, and audio. It lists P0/P1/P2/P3 issues and recommended fixes. This is the best starting point for new contributors looking for high-impact work.
 

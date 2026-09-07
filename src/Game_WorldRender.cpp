@@ -38,7 +38,7 @@ static Color structureTintFor(ZoneID z) {
 // Zonas onde os modelos MEDIEVAIS (castle.obj / house.obj) sao coerentes: areas
 // rurais/goticas. Nas zonas urbanas e sci-fi (LA, cidade fantasma, bunker, forja,
 // nexus...) o castelo de torres e a casa de telha quebram a direcao de arte —
-// la o BuildingSystem desenha estruturas modernas em primitivas (auditoria P1).
+// there the BuildingSystem draws modern structures with primitives (audit P1).
 static bool isMedievalZone(ZoneID z) {
     return z == ZoneID::CursedFarm || z == ZoneID::DarkForest ||
            z == ZoneID::Cemetery  || z == ZoneID::AbandonedManor;
@@ -222,8 +222,8 @@ void Game::drawGenericStructure(Vector2 pos, float sc) const {
 
 // ARCA em zona urbana/sci-fi: base de respawn como FORTIFICACAO moderna — bunker
 // de concreto com antena, holofotes e faixas de luz cyan. O castle.obj (torres
-// vermelhas medievais) no meio do asfalto era o objeto mais olhado do jogo
-// traindo a direcao de arte (auditoria P1). Mesma escala do castelo (~340u).
+// red medieval towers) in the middle of the asphalt was the most-looked-at object in the game,
+// betraying art direction (audit P1). Same castle scale (~340u).
 void Game::drawArkStructure(Vector2 pos) const {
     float x = pos.x, z = pos.y;
     const Color CONCRETE = { 104, 108, 114, 255 };
@@ -262,9 +262,9 @@ void Game::drawArkStructure(Vector2 pos) const {
     }
 }
 
-// Visuais futuristas das construcoes do jogador (sci-fi: casco gunmetal + acentos
-// emissivos), independentes do biome — substitui os modelos medievais que liam
-// como "castelinho" no meio do cenario tecnologico (auditoria do ciclo E28).
+// Futuristic visuals for player buildings (sci-fi: gunmetal shell + emissive
+// accents), independent of biome — replaces the medieval models that read
+// as "little castle" in the middle of the tech scenery (audit cycle E28).
 static void drawPlayerBuilding(const Building& b) {
     const float x   = b.position.x, z = b.position.y;
     const Vector3 v = { x, 0.0f, z };
@@ -1144,9 +1144,9 @@ void Game::renderWorld3D() {
                             // OCLUSAO: mesma regra do branch de modelos .obj, mas com a
                             // janela baseada na PEGADA REAL do predio (a fixa 620/230
                             // nao escala com W/D/Hh). Player atras da massa (entre o
-                            // predio e a camera, que olha de +Z) => predio translucido;
-                            // senao o heroi some 100% atras dele no meio do combate
-                            // (auditoria 2, P1 — oclusor dominante da fase urbana).
+                            // building and the camera, which looks from +Z) => translucent building;
+                            // otherwise the hero disappears 100% behind it in the middle of combat
+                            // (audit 2, P1 — dominant occluder of the urban phase).
                             float odxB = fabsf(x - player.position.x);
                             float odzB = zz - player.position.y;
                             bool  occludes = (odzB > -D * 0.5f &&

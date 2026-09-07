@@ -94,7 +94,7 @@ public:
     void runAutoTest(bool autoTest);
     void runHeadless();
     bool  headless = false;          // roda SEM janela/GPU (CI)
-    int   startPhaseOverride = -1;   // >=0: pula para esta fase no inicio (auditoria)
+    int   startPhaseOverride = -1;   // >=0: jump to this phase at start (audit)
     float headlessFps = 0.0f;   // FPS medido do proprio loop headless (GetFPS()=0 sem janela)
 
 private:

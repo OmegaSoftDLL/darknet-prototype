@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     printf("  --autotest        bot de teste automatico\n");
     printf("  --test-seconds=N  encerra o teste em N segundos e grava o relatorio\n");
     printf("  --seed=N          mundo REPRODUTIVEL (mesmo seed = mesmo mapa)\n");
-    printf("  --start-phase=N   inicia diretamente na fase N (0..N-1; util p/ auditoria)\n");
+    printf("  --start-phase=N   start directly at phase N (0..N-1; useful for audit)\n");
     printf("  --headless        sem janela/GPU (CI): so a simulacao do bot\n\n");
 
     bool     autoTest = false;
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
         // Sem seed fixa todo relatorio de bug virava anedota irreproduzivel.
         else if (arg.rfind("--seed=", 0) == 0)
             seed = (unsigned)strtoul(arg.substr(7).c_str(), nullptr, 10);
-        // Pular para fase avancada (auditoria das fases 5-11).
+        // Jump to advanced phase (audit of phases 5-11).
         else if (arg.rfind("--start-phase=", 0) == 0)
             startPhase = atoi(arg.substr(14).c_str());
     }

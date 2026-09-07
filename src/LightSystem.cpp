@@ -72,8 +72,8 @@ void LightSystem::addLight(Vector2 pos, float radius, float intensity, Color col
 void LightSystem::addPlayerLight(Vector2 pos) {
     // Always slot 0 — large warm bubble so the player always sees nearby
     // scenery (houses, trees, etc.) even in the darkest zones.
-    // Alcance/intensidade MINIMOS garantidos: a noite fechada nunca esconde o
-    // proprio heroi nem os inimigos em volta dele (auditoria 2, legibilidade).
+    // MINIMUM guaranteed reach/intensity: pitch-black night never hides the
+    // hero himself or enemies around him (audit 2, readability).
     LightSource l;
     l.position  = pos;
     l.radius    = 480.0f;
@@ -141,9 +141,9 @@ void LightSystem::prepareMask(Camera2D camera) {
     BeginTextureMode(lightMask.get());
     // Fill with ambient darkness
     float amb = 1.0f - ambientDark;
-    // PISO de ambiente: a mascara e MULTIPLICATIVA — abaixo de ~0.33 de
-    // luminosidade cenario e atores viram preto puro (auditoria 2). O clima
-    // sombrio fica no MATIZ (ambientColor noturno), nao em apagar a cena.
+    // AMBIENT floor: the mask is MULTIPLICATIVE — below ~0.33 luminance,
+    // scenery and actors turn pure black (audit 2). The dark mood stays in HUE
+    // (nighttime ambientColor), not in turning off the scene.
     if (amb < 0.64f) amb = 0.64f;
     ClearBackground({ (unsigned char)(amb*ambientColor.r), (unsigned char)(amb*ambientColor.g), (unsigned char)(amb*ambientColor.b), 255 });
 

@@ -324,7 +324,7 @@ app.post("/store/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
         const gems = Math.min(parseInt(meta.gems, 10) || 0, 1000000000);
         await creditGems(meta.userId, gems);
-        // Registro de transacao (auditoria de pagamento) no esquema normalizado.
+        // Transaction record (payment audit) in the normalized schema.
         if (pool) {
           try {
             await pool.query(

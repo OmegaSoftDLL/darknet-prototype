@@ -5,7 +5,7 @@
 
 A top-down action RPG prototype built in C++17 with raylib 5.5, featuring a 2.5D isometric renderer, procedural open-world zones, crafting, building, skill trees, NPCs, quests, and multiplayer groundwork.
 
-> **Note:** Some internal design documents are still being translated from Portuguese. The codebase, comments, and this README are the primary English-facing surfaces for contributors.
+> **Note:** Internal design documents are now available in English. The codebase, comments, and this README are the primary English-facing surfaces for contributors.
 
 ## Current Features
 
@@ -104,7 +104,7 @@ Contributions are welcome. The project is still a prototype with active technica
    - `./validate.sh 120 7` and `./validate.sh 120 20260821` must print `APROVADO` / `VALIDACAO: PASSOU`.
 4. **Open a pull request** against `main` with a clear description and test results.
 
-See the audit report at `auditoria/2026-09-06-auditoria-completa.md` for a detailed list of known issues and priorities (currently in Portuguese).
+See the audit report at `audit/2026-09-06-full-audit.md` for a detailed list of known issues and priorities.
 
 ## Getting the Word Out
 

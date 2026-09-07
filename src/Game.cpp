@@ -36,7 +36,7 @@ static Color structureTintFor(ZoneID z) {
 // Zonas onde os modelos MEDIEVAIS (castle.obj / house.obj) sao coerentes: areas
 // rurais/goticas. Nas zonas urbanas e sci-fi (LA, cidade fantasma, bunker, forja,
 // nexus...) o castelo de torres e a casa de telha quebram a direcao de arte —
-// la o BuildingSystem desenha estruturas modernas em primitivas (auditoria P1).
+// there the BuildingSystem draws modern structures with primitives (audit P1).
 static bool isMedievalZone(ZoneID z) {
     return z == ZoneID::CursedFarm || z == ZoneID::DarkForest ||
            z == ZoneID::Cemetery  || z == ZoneID::AbandonedManor;
