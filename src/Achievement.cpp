@@ -21,60 +21,60 @@ void AchievementSystem::init() {
     achievements.clear();
 
     // Kill milestones
-    achievements.push_back(makeAch("kill_1",     "Primeiro Sangue",     "Eliminar 1 inimigo",       "[X]",  1,     50,   20));
-    achievements.push_back(makeAch("kill_10",    "Cacador",             "Eliminar 10 inimigos",     "[X]",  10,    100,  40));
-    achievements.push_back(makeAch("kill_50",    "Combatente",          "Eliminar 50 inimigos",     "[X]",  50,    200,  80));
-    achievements.push_back(makeAch("kill_100",   "Guerreiro",           "Eliminar 100 inimigos",    "[X]",  100,   400,  150));
-    achievements.push_back(makeAch("kill_250",   "Exterminador",        "Eliminar 250 inimigos",    "[X]",  250,   800,  300));
-    achievements.push_back(makeAch("kill_500",   "Maquina de Guerra",   "Eliminar 500 inimigos",    "[X]",  500,   1500, 600));
-    achievements.push_back(makeAch("kill_1000",  "Mestre da Morte",     "Eliminar 1000 inimigos",   "[X]",  1000,  3000, 1200));
-    achievements.push_back(makeAch("kill_5000",  "Lenda Sombria",       "Eliminar 5000 inimigos",   "[X]",  5000,  10000,5000));
+    achievements.push_back(makeAch("kill_1",     "First Blood",         "Eliminate 1 enemy",       "[X]",  1,     50,   20));
+    achievements.push_back(makeAch("kill_10",    "Hunter",              "Eliminate 10 enemies",    "[X]",  10,    100,  40));
+    achievements.push_back(makeAch("kill_50",    "Fighter",             "Eliminate 50 enemies",    "[X]",  50,    200,  80));
+    achievements.push_back(makeAch("kill_100",   "Warrior",             "Eliminate 100 enemies",   "[X]",  100,   400,  150));
+    achievements.push_back(makeAch("kill_250",   "Exterminator",        "Eliminate 250 enemies",   "[X]",  250,   800,  300));
+    achievements.push_back(makeAch("kill_500",   "War Machine",         "Eliminate 500 enemies",   "[X]",  500,   1500, 600));
+    achievements.push_back(makeAch("kill_1000",  "Master of Death",     "Eliminate 1000 enemies",  "[X]",  1000,  3000, 1200));
+    achievements.push_back(makeAch("kill_5000",  "Dark Legend",         "Eliminate 5000 enemies",  "[X]",  5000,  10000,5000));
 
     // Level milestones
-    achievements.push_back(makeAch("level_5",    "Iniciado",            "Atingir Level 5",          "[L]",  5,     200,  100));
-    achievements.push_back(makeAch("level_10",   "Combatente Treinado", "Atingir Level 10",         "[L]",  10,    500,  250));
-    achievements.push_back(makeAch("level_20",   "Veterano",            "Atingir Level 20",         "[L]",  20,    1000, 500));
-    achievements.push_back(makeAch("level_30",   "Elite DARKNET",       "Atingir Level 30",         "[L]",  30,    2000, 1000));
-    achievements.push_back(makeAch("level_50",   "Executor OMEGA",      "Atingir Level 50",         "[L]",  50,    5000, 2500));
+    achievements.push_back(makeAch("level_5",    "Initiate",            "Reach Level 5",           "[L]",  5,     200,  100));
+    achievements.push_back(makeAch("level_10",   "Trained Fighter",     "Reach Level 10",          "[L]",  10,    500,  250));
+    achievements.push_back(makeAch("level_20",   "Veteran",             "Reach Level 20",          "[L]",  20,    1000, 500));
+    achievements.push_back(makeAch("level_30",   "DARKNET Elite",       "Reach Level 30",          "[L]",  30,    2000, 1000));
+    achievements.push_back(makeAch("level_50",   "OMEGA Executor",      "Reach Level 50",          "[L]",  50,    5000, 2500));
 
     // Boss kills
-    achievements.push_back(makeAch("boss_1",     "Caçador de Bosses",   "Derrotar 1 boss",          "[B]",  1,     300,  150));
-    achievements.push_back(makeAch("boss_5",     "Boss Slayer",         "Derrotar 5 bosses",        "[B]",  5,     800,  400));
-    achievements.push_back(makeAch("boss_10",    "Aniquilador",         "Derrotar 10 bosses",       "[B]",  10,    2000, 1000));
-    achievements.push_back(makeAch("boss_20",    "Caçador Lendario",    "Derrotar 20 bosses",       "[B]",  20,    5000, 2500));
+    achievements.push_back(makeAch("boss_1",     "Boss Hunter",         "Defeat 1 boss",           "[B]",  1,     300,  150));
+    achievements.push_back(makeAch("boss_5",     "Boss Slayer",         "Defeat 5 bosses",         "[B]",  5,     800,  400));
+    achievements.push_back(makeAch("boss_10",    "Annihilator",         "Defeat 10 bosses",        "[B]",  10,    2000, 1000));
+    achievements.push_back(makeAch("boss_20",    "Legendary Hunter",    "Defeat 20 bosses",        "[B]",  20,    5000, 2500));
 
     // Portal closure
-    achievements.push_back(makeAch("portal_1",   "Fechador de Portais", "Fechar 1 portal",          "[P]",  1,     200,  100));
-    achievements.push_back(makeAch("portal_5",   "Guardiao",            "Fechar 5 portais",         "[P]",  5,     500,  250));
-    achievements.push_back(makeAch("portal_20",  "Sentinela OMEGA",     "Fechar 20 portais",        "[P]",  20,    1500, 750));
-    achievements.push_back(makeAch("portal_50",  "Exterminador de Rifts","Fechar 50 portais",       "[P]",  50,    4000, 2000));
+    achievements.push_back(makeAch("portal_1",   "Portal Closer",       "Close 1 portal",          "[P]",  1,     200,  100));
+    achievements.push_back(makeAch("portal_5",   "Guardian",            "Close 5 portals",         "[P]",  5,     500,  250));
+    achievements.push_back(makeAch("portal_20",  "OMEGA Sentinel",      "Close 20 portals",        "[P]",  20,    1500, 750));
+    achievements.push_back(makeAch("portal_50",  "Rift Exterminator",   "Close 50 portals",        "[P]",  50,    4000, 2000));
 
     // Item rarity
-    achievements.push_back(makeAch("item_rare",    "Bom Gosto",         "Encontrar item Raro",      "[I]",  1,     300,  150));
-    achievements.push_back(makeAch("item_epic",    "Colecionador",      "Encontrar item Epico",     "[I]",  1,     600,  300));
-    achievements.push_back(makeAch("item_legend",  "Sortudo de Verdade","Encontrar item Lendario",  "[I]",  1,     2000, 1000));
-    achievements.push_back(makeAch("item_omega",   "OMEGA COLETADO",    "Encontrar item OMEGA",     "[I]",  1,     5000, 2500));
+    achievements.push_back(makeAch("item_rare",    "Good Taste",        "Find a Rare item",        "[I]",  1,     300,  150));
+    achievements.push_back(makeAch("item_epic",    "Collector",         "Find an Epic item",       "[I]",  1,     600,  300));
+    achievements.push_back(makeAch("item_legend",  "Truly Lucky",       "Find a Legendary item",   "[I]",  1,     2000, 1000));
+    achievements.push_back(makeAch("item_omega",   "OMEGA COLLECTED",   "Find an OMEGA item",      "[I]",  1,     5000, 2500));
 
     // Zone exploration
-    achievements.push_back(makeAch("zone_dark",    "Explorador das Trevas","Entrar em zona sombria", "[Z]",  1,     400,  200));
-    achievements.push_back(makeAch("zone_all",     "Mapeador do Mundo",  "Visitar 5 zonas distintas","[Z]", 5,     1000, 500));
-    achievements.push_back(makeAch("zone_inferno", "Sobrevivente do Inferno","Sobreviver na Zona Inferno","[Z]",1,600,300));
+    achievements.push_back(makeAch("zone_dark",    "Darkness Explorer", "Enter a dark zone",       "[Z]",  1,     400,  200));
+    achievements.push_back(makeAch("zone_all",     "World Mapper",      "Visit 5 distinct zones",  "[Z]", 5,     1000, 500));
+    achievements.push_back(makeAch("zone_inferno", "Inferno Survivor",  "Survive the Inferno Zone","[Z]",1,600,300));
 
     // Playtime
-    achievements.push_back(makeAch("time_10",    "Comprometido",        "Jogar 10 minutos",         "[T]",  10,    100,  50));
-    achievements.push_back(makeAch("time_60",    "Viciado",             "Jogar 60 minutos",         "[T]",  60,    500,  250));
-    achievements.push_back(makeAch("time_300",   "Sem Vida Social",     "Jogar 5 horas",            "[T]",  300,   2000, 1000));
+    achievements.push_back(makeAch("time_10",    "Committed",           "Play 10 minutes",         "[T]",  10,    100,  50));
+    achievements.push_back(makeAch("time_60",    "Hooked",              "Play 60 minutes",         "[T]",  60,    500,  250));
+    achievements.push_back(makeAch("time_300",   "No Social Life",      "Play 5 hours",            "[T]",  300,   2000, 1000));
 
     // Credits
-    achievements.push_back(makeAch("credits_1000",  "Milionario?",      "Acumular 1000 creditos",   "[C]",  1000,  200,  100));
-    achievements.push_back(makeAch("credits_10000", "Tycoon",           "Acumular 10000 creditos",  "[C]",  10000, 1000, 500));
+    achievements.push_back(makeAch("credits_1000",  "Millionaire?",     "Earn 1000 credits",       "[C]",  1000,  200,  100));
+    achievements.push_back(makeAch("credits_10000", "Tycoon",           "Earn 10000 credits",      "[C]",  10000, 1000, 500));
 
     // Deaths
-    achievements.push_back(makeAch("no_death",    "Intocavel",          "Completar uma sessão sem morrer","[S]",0,1000,500));
+    achievements.push_back(makeAch("no_death",    "Untouchable",        "Complete a session without dying","[S]",0,1000,500));
 
     // Kill streak
-    achievements.push_back(makeAch("streak_10",   "Em Chamas",          "Kill streak de 10",        "[K]",  10,    300,  150));
-    achievements.push_back(makeAch("streak_20",   "Imparavel!",         "Kill streak de 20",        "[K]",  20,    800,  400));
+    achievements.push_back(makeAch("streak_10",   "On Fire",            "Kill streak of 10",       "[K]",  10,    300,  150));
+    achievements.push_back(makeAch("streak_20",   "Unstoppable!",       "Kill streak of 20",       "[K]",  20,    800,  400));
 }
 
 Achievement* AchievementSystem::findById(const std::string& id) {
@@ -87,7 +87,7 @@ void AchievementSystem::unlock(const std::string& id) {
     if (!a || a->unlocked) return;
     a->unlocked     = true;
     a->displayTimer = 4.0f;
-    popupText  = std::string("[CONQUISTA] ") + a->icon + " " + a->title;
+    popupText  = std::string("[ACHIEVEMENT] ") + a->icon + " " + a->title;
     popupTimer = 4.0f;
     popupColor = {255, 200, 0, 255};
     if (playerPtr) {
