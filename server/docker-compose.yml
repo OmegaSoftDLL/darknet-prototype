@@ -1,17 +1,17 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# DARKNET — CYBER STATION (servidor do jogo)
-# Orquestra os containers do backend: gateway, game-server e banco.
+# DARKNET — CYBER STATION (game server)
+# Orchestrates the backend containers: gateway, game-server and database.
 #   docker compose up -d
 #
-# NOTA: não há container Redis. O matchmaking/salas são um Map em memória no
-# game-server (suficiente para o estágio atual). Reintroduza Redis (serviço
-# `cache` + REDIS_URL) apenas quando houver necessidade real: sessões
-# distribuídas ou múltiplas instâncias do game-server atrás de load balancer.
+# NOTE: there is no Redis container. Matchmaking/rooms are kept in an in-memory
+# Map inside the game-server (enough for the current stage). Reintroduce Redis
+# (a `cache` service + REDIS_URL) only when there is a real need: distributed
+# sessions or multiple game-server instances behind a load balancer.
 # ─────────────────────────────────────────────────────────────────────────────
 version: "3.9"
 
 services:
-  # API gateway / reverse proxy (TLS termina aqui em produção)
+  # API gateway / reverse proxy (TLS terminates here in production)
   gateway:
     image: nginx:1.27-alpine
     container_name: cyber-gateway
@@ -23,31 +23,31 @@ services:
       - game-server
     restart: unless-stopped
 
-  # Servidor do jogo: auth, loja, inventário, realtime (WebSocket) e matchmaking
+  # Game server: auth, store, inventory, realtime (WebSocket) and matchmaking
   game-server:
     build: ./game-server
     container_name: cyber-game-server
     environment:
       PORT: "9000"
       DATABASE_URL: "postgres://darknet:darknet@db:5432/darknet"
-      # OBRIGATÓRIO: sem JWT_SECRET o compose ABORTA (aclaração explícita em vez
-      # de subir com segredo conhecido em texto). Gere um com:
+      # REQUIRED: without JWT_SECRET the compose ABORTS (explicit fail-safe
+      # instead of starting with a known hard-coded secret). Generate one with:
       #   openssl rand -hex 48
-      # Nunca use um default fixo — um "dev-secret" conhecido permite forjar
-      # tokens de qualquer jogador. Defina em .env (ou exporte no shell).
-      JWT_SECRET: "${JWT_SECRET:?defina JWT_SECRET no ambiente/.env (ex.: openssl rand -hex 48)}"
-      # URL pública usada nos success/cancel do Stripe Checkout — porta do
-      # gateway (8080), não a interna do app (9000). No ambiente com TLS no
-      # gateway, use https:// (ex.: https://darknet.seudominio.com).
+      # Never use a fixed default — a known "dev-secret" allows forging tokens
+      # for any player. Set it in .env (or export in the shell).
+      JWT_SECRET: "${JWT_SECRET:?define JWT_SECRET in environment/.env (e.g.: openssl rand -hex 48)}"
+      # Public URL used in Stripe Checkout success/cancel — use the gateway port
+      # (8080), not the internal app port (9000). With TLS on the gateway, use
+      # https:// (e.g.: https://darknet.yourdomain.com).
       PUBLIC_URL: "${PUBLIC_URL:-http://localhost:8080}"
-      # Pagamentos: preencha com SUA conta Stripe (NUNCA commitar chaves reais)
+      # Payments: fill with YOUR Stripe account (NEVER commit real keys)
       STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
       STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
     depends_on:
       - db
     restart: unless-stopped
 
-  # Banco de dados: contas, inventário, transações, progresso
+  # Database: accounts, inventory, transactions, progress
   db:
     image: postgres:16-alpine
     container_name: cyber-db
