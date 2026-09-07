@@ -339,6 +339,9 @@ void Game::update(float dt) {
     // Mundo infinito: auto-gera/descarrega cenário em chunks ao redor do player.
     updateSceneryChunks(player.position);
 
+    // E.1: amortiza a geração do cenário fixo em lotes por frame.
+    streamSceneryBuild();
+
     // Eventos de guerra ambiente (Ruínas de LA / Cidade Fantasma): a cada 20-30s
     // um impacto distante cruza o céu — flash no horizonte, estrondo abafado e um
     // micro-tremor. Só visual/audio; nao toca vida/dano, entao o autoteste segue

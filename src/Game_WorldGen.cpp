@@ -85,6 +85,8 @@ static const int* structuresFor(ZoneID z, int& outCount) {
 // a area de cada regiao. Chamado uma vez ao iniciar o mundo aberto.
 void Game::buildOpenWorldScenery() {
     owDecor.scenery.clear();
+    m_sceneryBuildQueue.clear();
+    m_sceneryPostProcessNeeded = false;
     // Reseta o streaming de chunks (senão prédios sólidos invisíveis / cenário
     // fantasma sobrevivem ao Continuar/Novo Jogo dentro do mesmo processo).
     m_sceneryChunks.clear();
@@ -147,7 +149,7 @@ void Game::buildOpenWorldScenery() {
             o.scale    = minScale + rnd() * (maxScale - minScale);
             // tint.r > 128 acende luzes (janelas/postes)
             o.tint     = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
-            owDecor.scenery.push_back(o);
+            m_sceneryBuildQueue.push_back(o);
         }
     };
     std::vector<Vector2> placedB;   // estruturas já colocadas (anti-sobreposição)
@@ -191,7 +193,7 @@ void Game::buildOpenWorldScenery() {
         o.rotation = aligned ? (float)((int)(rnd() * 4.0f) % 4) * 1.5708f
                              : rnd() * 3.14159f;
         o.scale = sc; o.tint = (rnd() > 0.5f) ? Color{200,200,200,255} : Color{80,80,80,255};
-        owDecor.scenery.push_back(o);
+        m_sceneryBuildQueue.push_back(o);
     };
     auto inBnd = [&](Rectangle b, Vector2 p, float m) {
         return p.x >= b.x + m && p.x <= b.x + b.width - m && p.y >= b.y + m && p.y <= b.y + b.height - m;
@@ -369,7 +371,7 @@ void Game::buildOpenWorldScenery() {
             o.rotation = a + 3.14159f * 0.5f + (rnd() - 0.5f) * 0.6f;  // frente p/ fora
             o.scale = 1.0f + rnd() * 0.25f;
             o.tint = { 200, 200, 200, 255 };
-            owDecor.scenery.push_back(o);
+            m_sceneryBuildQueue.push_back(o);
         }
         for (int i = 0; i < 5; ++i) {        // barris em chamas no anel interno
             float a = rnd() * 6.2832f, r = 165.0f + rnd() * 45.0f;
@@ -378,7 +380,7 @@ void Game::buildOpenWorldScenery() {
             SceneryObject o;
             o.type = 22; o.position = p; o.rotation = rnd() * 6.2832f; o.scale = 1.0f;
             o.tint = { 200, 200, 200, 255 };
-            owDecor.scenery.push_back(o);
+            m_sceneryBuildQueue.push_back(o);
         }
         for (int i = 0; i < 20; ++i) {       // escombros e detritos
             float a = rnd() * 6.2832f, r = 40.0f + rnd() * 315.0f;
@@ -390,7 +392,7 @@ void Game::buildOpenWorldScenery() {
             o.type = (rnd() < 0.55f) ? 21 : 12;
             o.position = p; o.rotation = rnd() * 6.2832f; o.scale = 0.8f + rnd() * 1.5f;
             o.tint = { 80, 80, 80, 255 };
-            owDecor.scenery.push_back(o);
+            m_sceneryBuildQueue.push_back(o);
         }
         for (int i = 0; i < 16; ++i) {       // marcas de fogo/estampidos no piso
             float a = rnd() * 6.2832f, r = 110.0f + rnd() * 260.0f;
@@ -399,84 +401,14 @@ void Game::buildOpenWorldScenery() {
             SceneryObject o;
             o.type = 13; o.position = p; o.rotation = rnd() * 6.2832f; o.scale = 0.9f + rnd() * 1.4f;
             o.tint = { 200, 200, 200, 255 };
-            owDecor.scenery.push_back(o);
+            m_sceneryBuildQueue.push_back(o);
         }
     }
 
-    // ── Colisao de cenario: estruturas grandes bloqueiam passagem (nao andar em
-    //    cima de casas/predios/carros/silos/estatuas). Tipos: 0 casa, 1 celeiro,
-    //    6 carro, 7 predio, 8 silo, 9 catacumba, 10 estatua. Arvores/cercas/postes
-    //    ficam atravessaveis para nao criar labirintos que prendem o jogador.
-    tilemap.clearSolidFlags();
-    for (const auto& o : owDecor.scenery) {
-        // Pegada de colisao por tipo (predios/casas grandes bloqueiam mais area).
-        float rad = 0.0f;
-        switch (o.type) {
-            // pegada = fracao do tamanho REALMENTE desenhado (fit * escala do obj)
-            case 0:  rad = FIT_HOUSE    * o.scale * 0.46f; break; // casa
-            case 1:  rad = FIT_BARRACKS * o.scale * 0.46f; break; // celeiro
-            case 7:  rad = FIT_CASTLE   * o.scale * 0.40f; break; // predio/castelo
-            case 8:  rad = FIT_WELL     * o.scale * 0.42f; break; // silo
-            case 9:  rad = 70.0f * o.scale; break;                // catacumba
-            case 6:  rad = vehicleRadius(o.position.x, o.position.y, o.scale); break; // veiculo
-            case 10: rad = 48.0f * o.scale; break;                // estatua
-            // estruturas proprias de bioma (cripta/bunker/espira/monolito/cabana/torre)
-            case 14: rad = 46.0f * o.scale; break;
-            case 15: rad = 58.0f * o.scale; break;
-            case 16: rad = 30.0f * o.scale; break;
-            case 17: rad = 28.0f * o.scale; break;
-            case 18: rad = 46.0f * o.scale; break;
-            case 19: rad = 26.0f * o.scale; break;
-            case 20: rad = buildingRadius(o.position.x, o.position.y, o.scale); break;   // predio moderno
-            case 21: continue;   // entulho: decoracao, NAO bloqueia (virava labirinto)
-            case 22: continue;   // fogueira: nao bloqueia
-            case 28: rad = 40.0f * o.scale; break;               // cratera: borda bloqueia
-            case 29: rad = 60.0f * o.scale; break;               // predio colapsado: escombros bloqueiam
-            case 31: rad = 30.0f * o.scale; break;               // carcaça queimada: casco bloqueia
-            default: continue;                                            // arvores/cercas/postes: atravessavel
-        }
-        tilemap.markSolidAt(o.position, rad);
-    }
-
-    {   // MEDIDA: quantos objetos/estruturas o mundo fixo realmente gerou
-        int st = 0, gr = 0;
-        for (const auto& o : owDecor.scenery) {
-            // estruturas = TUDO que le como construcao/obstaculo, nao so o
-            // catalogo medieval — antes reportava estruturas=0 numa cidade
-            // cheia de predios modernos (20), carros (6) e estruturas de
-            // bioma (14-19), ensinando a ignorar o log.
-            if (o.type==0||o.type==1||o.type==6||o.type==7||o.type==8||
-                o.type==9||o.type==10||(o.type>=14 && o.type<=20)) ++st;
-            if (o.type==11) ++gr;
-        }
-        TraceLog(LOG_INFO, "SCENERY zona=%s total=%d estruturas=%d grama=%d",
-                 getZoneInfo(currentZone).name.c_str(),
-                 (int)owDecor.scenery.size(), st, gr);
-    }
-    owDecorBuilt       = true;
-    placeBaseShops();   // barracas/lojas dos NPCs da zona segura (depois das sólidas: o anel delas não colide)
-    // AREA PROTEGIDA PURA: a base é lugar de NPC e LOJA, não de pular entre
-    // carcaças. O lixo urbano que cai dentro do raio protegido (carros, entulho,
-    // marcas de fogo, fogueiras, panelas de pedra) sai do cenário; grama, árvores
-    // e postes de luz ficam (iluminação/vegetação não são refugo).
-    {
-        const float cleanR = safeZoneRadius;
-        auto isDebris = [](int t) {
-            return t == 6 || t == 12 || t == 13 || t == 21 || t == 22;
-        };
-        owDecor.scenery.erase(
-            std::remove_if(owDecor.scenery.begin(), owDecor.scenery.end(),
-                [&](const SceneryObject& o) {
-                    if (!isDebris(o.type)) return false;
-                    float dx = o.position.x - safeZoneCenter.x;
-                    float dy = o.position.y - safeZoneCenter.y;
-                    return dx * dx + dy * dy <= cleanR * cleanR;
-                }),
-            owDecor.scenery.end());
-    }
-    setupResourceNodes();   // nós de coleta (madeira/pedra/ferro/prata/ouro)
-    setupAnimals();         // vida selvagem (veado/coelho/javali/lobo/passaro)
-    spawnCityFolk();        // civis que perambulam pela cidade (vida ambiente)
+    // ── Pós-processamento pesado (colisão, limpeza da base, lojas, recursos,
+    //    animais, civis) NÃO roda aqui: é executado em lotes por streamSceneryBuild()
+    //    assim que a fila de objetos for totalmente transferida para owDecor.scenery.
+    m_sceneryPostProcessNeeded = true;
 }
 
 // Barracas/lojas da ZONA SEGURA: cada NPC de serviço tem ESTANDE PRÓPRIO,
@@ -879,3 +811,91 @@ void Game::clearBlockingAt(Vector2 pos, float radius) {
         }), m_chunkSolids.end());
 }
 
+
+void Game::streamSceneryBuild() {
+    if (m_sceneryBuildQueue.empty() && !m_sceneryPostProcessNeeded) return;
+
+    // Transfere até SCENERY_BUILD_BUDGET objetos por frame para evitar engasgo.
+    const size_t n = std::min(m_sceneryBuildQueue.size(), (size_t)SCENERY_BUILD_BUDGET);
+    owDecor.scenery.insert(owDecor.scenery.end(),
+                           m_sceneryBuildQueue.begin(),
+                           m_sceneryBuildQueue.begin() + (ptrdiff_t)n);
+    m_sceneryBuildQueue.erase(m_sceneryBuildQueue.begin(),
+                              m_sceneryBuildQueue.begin() + (ptrdiff_t)n);
+
+    if (!m_sceneryBuildQueue.empty() || !m_sceneryPostProcessNeeded) return;
+
+    // Fila esvaziou: roda o pós-processamento pesado UMA vez.
+
+    // ── Colisao de cenario: estruturas grandes bloqueiam passagem (nao andar em
+    //    cima de casas/predios/carros/silos/estatuas). Tipos: 0 casa, 1 celeiro,
+    //    6 carro, 7 predio, 8 silo, 9 catacumba, 10 estatua. Arvores/cercas/postes
+    //    ficam atravessaveis para nao criar labirintos que prendem o jogador.
+    tilemap.clearSolidFlags();
+    for (const auto& o : owDecor.scenery) {
+        // Pegada de colisao por tipo (predios/casas grandes bloqueiam mais area).
+        float rad = 0.0f;
+        switch (o.type) {
+            case 0:  rad = FIT_HOUSE    * o.scale * 0.46f; break; // casa
+            case 1:  rad = FIT_BARRACKS * o.scale * 0.46f; break; // celeiro
+            case 7:  rad = FIT_CASTLE   * o.scale * 0.40f; break; // predio/castelo
+            case 8:  rad = FIT_WELL     * o.scale * 0.42f; break; // silo
+            case 9:  rad = 70.0f * o.scale; break;                // catacumba
+            case 6:  rad = vehicleRadius(o.position.x, o.position.y, o.scale); break; // veiculo
+            case 10: rad = 48.0f * o.scale; break;                // estatua
+            case 14: rad = 46.0f * o.scale; break;
+            case 15: rad = 58.0f * o.scale; break;
+            case 16: rad = 30.0f * o.scale; break;
+            case 17: rad = 28.0f * o.scale; break;
+            case 18: rad = 46.0f * o.scale; break;
+            case 19: rad = 26.0f * o.scale; break;
+            case 20: rad = buildingRadius(o.position.x, o.position.y, o.scale); break;   // predio moderno
+            case 21: continue;   // entulho: decoracao, NAO bloqueia (virava labirinto)
+            case 22: continue;   // fogueira: nao bloqueia
+            case 28: rad = 40.0f * o.scale; break;               // cratera: borda bloqueia
+            case 29: rad = 60.0f * o.scale; break;               // predio colapsado: escombros bloqueiam
+            case 31: rad = 30.0f * o.scale; break;               // carcaça queimada: casco bloqueia
+            default: continue;                                            // arvores/cercas/postes: atravessavel
+        }
+        tilemap.markSolidAt(o.position, rad);
+    }
+
+    {   // MEDIDA: quantos objetos/estruturas o mundo fixo realmente gerou
+        int st = 0, gr = 0;
+        for (const auto& o : owDecor.scenery) {
+            if (o.type==0||o.type==1||o.type==6||o.type==7||o.type==8||
+                o.type==9||o.type==10||(o.type>=14 && o.type<=20)) ++st;
+            if (o.type==11) ++gr;
+        }
+        TraceLog(LOG_INFO, "SCENERY zona=%s total=%d estruturas=%d grama=%d",
+                 getZoneInfo(currentZone).name.c_str(),
+                 (int)owDecor.scenery.size(), st, gr);
+    }
+    owDecorBuilt = true;
+    placeBaseShops();   // barracas/lojas dos NPCs da zona segura (depois das sólidas: o anel delas não colide)
+
+    // AREA PROTEGIDA PURA: a base é lugar de NPC e LOJA, não de pular entre
+    // carcaças. O lixo urbano que cai dentro do raio protegido (carros, entulho,
+    // marcas de fogo, fogueiras, panelas de pedra) sai do cenário; grama, árvores
+    // e postes de luz ficam (iluminação/vegetação não são refugo).
+    {
+        const float cleanR = safeZoneRadius;
+        auto isDebris = [](int t) {
+            return t == 6 || t == 12 || t == 13 || t == 21 || t == 22;
+        };
+        owDecor.scenery.erase(
+            std::remove_if(owDecor.scenery.begin(), owDecor.scenery.end(),
+                [&](const SceneryObject& o) {
+                    if (!isDebris(o.type)) return false;
+                    float dx = o.position.x - safeZoneCenter.x;
+                    float dy = o.position.y - safeZoneCenter.y;
+                    return dx * dx + dy * dy <= cleanR * cleanR;
+                }),
+            owDecor.scenery.end());
+    }
+    setupResourceNodes();   // nós de coleta (madeira/pedra/ferro/prata/ouro)
+    setupAnimals();         // vida selvagem (veado/coelho/javali/lobo/passaro)
+    spawnCityFolk();        // civis que perambulam pela cidade (vida ambiente)
+
+    m_sceneryPostProcessNeeded = false;
+}
