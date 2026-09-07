@@ -457,6 +457,14 @@ private:
     DarkWorld owDecor;
     bool      owDecorBuilt = false;
 
+    // E.1 — geração amortizada do cenário fixo: objetos são enfileirados durante
+    // buildOpenWorldScenery e transferidos para owDecor.scenery em lotes durante
+    // o update, em vez de realocar tudo num único frame.
+    std::vector<SceneryObject> m_sceneryBuildQueue;
+    bool      m_sceneryPostProcessNeeded = false;
+    static constexpr int SCENERY_BUILD_BUDGET = 300; // objetos por frame
+    void      streamSceneryBuild();
+
     // ── FASES (mundo aberto) ─────────────────────────────────────────────────
     // Cada fase e um MUNDO inteiro de um bioma so. Some o numero de abates da
     // fase; ao bater a meta o PORTAL abre e leva ao proximo mundo com tela de
