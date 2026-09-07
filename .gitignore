@@ -26,9 +26,18 @@ screenshot*.png
 darknet_save.txt
 saves/
 
-# Editor
+# Editor / OS
 .vs/
+.vscode/
 *.user
+*.suo
+*.cache
+Thumbs.db
+.DS_Store
+*.tmp
+*.bak
+*.swp
+*~
 
 # Agent/IDE configuration (local-only)
 .agents/
