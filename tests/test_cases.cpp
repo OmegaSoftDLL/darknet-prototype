@@ -10,6 +10,7 @@
 #include "SaveManager.h"
 #include "Player.h"
 #include "Projectile.h"
+#include "Quest.h"
 #include "SkillTree.h"
 #include "Tilemap.h"
 
@@ -550,4 +551,111 @@ TEST_CASE("SkillTree - os 12 perks sao alcancaveis nos tres ramos") {
     // Arvore totalmente saturada: nada mais para comprar.
     for (int i = 0; i < PERK_COUNT; ++i)
         CHECK_FALSE(canBuy(mask, i));
+}
+
+// ── Quest (regras puras de progresso) ────────────────────────────────────────
+
+TEST_CASE("Quest - progresso clampa no alvo e completa") {
+    Quest q("q1", "Titulo", "Desc", "npc", QuestType::Kill, 3);
+    CHECK(q.active);
+    CHECK_FALSE(q.isComplete());
+    q.updateProgress(1);
+    CHECK(q.current == 1);
+    CHECK_FALSE(q.isComplete());
+    q.updateProgress(10);   // estoura o alvo
+    CHECK(q.current == 3);  // clampa no target
+    CHECK(q.isComplete());
+    q.updateProgress(5);    // completa: nao acumula mais
+    CHECK(q.current == 3);
+}
+
+TEST_CASE("Quest - inativa nao acumula e texto de progresso correto") {
+    Quest q("q1", "Titulo", "Desc", "npc", QuestType::Collect, 2);
+    q.active = false;
+    q.updateProgress(1);    // inativa: ignora
+    CHECK(q.current == 0);
+    q.active = true;
+    q.updateProgress(2);
+    CHECK(q.isComplete());
+    CHECK(q.getProgressText() == "2/2");
+}
+
+// ── Economia de itens e tabela de loot ───────────────────────────────────────
+
+TEST_CASE("Item - drops especiais tem raridade e valor consistentes") {
+    Vector2 p = {10.0f, 20.0f};
+
+    Item cred = Item::createCredits(p, 500);
+    CHECK(cred.type == ItemType::Credits);
+    CHECK(cred.value == 500);
+    CHECK(cred.position.x == doctest::Approx(p.x));
+
+    Item tech = Item::createTech(p);
+    CHECK(tech.rarity == ItemRarity::Rare);
+    CHECK(tech.value == 80);
+
+    Item elite = Item::createEliteDrop(p);
+    CHECK(elite.type == ItemType::NanoCore);
+    CHECK(elite.rarity == ItemRarity::Epic);
+    CHECK(elite.value == 200);
+}
+
+TEST_CASE("Item - createRandom respeita a tabela de loot") {
+    SetRandomSeed(42);
+    int common = 0, uncommon = 0;
+    for (int i = 0; i < 600; ++i) {
+        Item it = Item::createRandom({0, 0});
+        CHECK(it.value > 0);
+        bool validType = it.type == ItemType::ScrapMetal || it.type == ItemType::HealthPack ||
+                         it.type == ItemType::WeaponPart || it.type == ItemType::EnergyCore ||
+                         it.type == ItemType::PlasmaCell;
+        CHECK(validType);
+        if (it.rarity == ItemRarity::Common) ++common;
+        else if (it.rarity == ItemRarity::Uncommon) ++uncommon;
+        else CHECK(false);  // raridade fora da tabela de drops basicos
+    }
+    // Tabela: 3/6 common vs 3/6 uncommon — margem larga contra flutiacao
+    CHECK(common >= 200);
+    CHECK(uncommon >= 200);
+}
+
+// ── Matematica de combate ────────────────────────────────────────────────────
+
+TEST_CASE("SkillTree - statsFor aplica os multiplicadores dos perks") {
+    using namespace SkillTree;
+    PerkStats base = statsFor(0);
+    CHECK(base.weaponMult == doctest::Approx(1.0f));
+    CHECK(base.skillMult == doctest::Approx(1.0f));
+    CHECK(base.cdMult == doctest::Approx(1.0f));
+    CHECK(base.evade == doctest::Approx(0.0f));
+    CHECK(base.lifesteal == doctest::Approx(0.0f));
+    CHECK(base.revive == false);
+
+    CHECK(statsFor(bit(0)).weaponMult == doctest::Approx(1.10f));
+
+    // perks 0 + 3 acumulam multiplicativamente: 1.10 * 1.20 = 1.32
+    PerkStats p03 = statsFor(bit(0) | bit(3));
+    CHECK(p03.weaponMult == doctest::Approx(1.32f));
+    CHECK(p03.skillMult == doctest::Approx(1.20f));
+    CHECK(p03.burstProj == 2);
+
+    PerkStats p7 = statsFor(bit(7));   // Fantasma Digital
+    CHECK(p7.evade == doctest::Approx(0.12f));
+    CHECK(p7.overloadBonus == doctest::Approx(3.0f));
+
+    CHECK(statsFor(bit(10)).lifesteal == doctest::Approx(0.15f));  // Hack of Blood
+    CHECK(statsFor(bit(11)).revive == true);                       // Protocolo Imortal
+}
+
+TEST_CASE("Player - dano efetivo combina sobrecarga e multiplicador de arma") {
+    Player p;
+    p.applyClass(CharacterClass::Soldado);
+    p.attackDamage = 100.0f;
+
+    // sem sobrecarga, sem perks: dano plano
+    CHECK(p.getEffectiveDamage() == doctest::Approx(100.0f));
+
+    // perk 0 (+10% de dano de arma)
+    p.perkMask = SkillTree::bit(0);
+    CHECK(p.getEffectiveDamage() == doctest::Approx(110.0f));
 }

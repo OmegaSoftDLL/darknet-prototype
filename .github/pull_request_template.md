@@ -11,7 +11,7 @@ Briefly describe what this PR does and why.
 
 - [ ] Release build passes.
 - [ ] Debug build passes.
-- [ ] `darknet_tests.exe` passes (28 cases / 194 assertions).
+- [ ] `darknet_tests.exe` passes (34 cases / 1430 assertions).
 - [ ] `./validate.sh 120 7` passes.
 - [ ] `./validate.sh 120 20260821` passes.
 

@@ -153,8 +153,37 @@ InfernoZone seeded RNG, level-up bonuses (base stats), skill-tier math.
   93 items, zone advanced, 0 deaths, 0 stuck; damage taken dropped 42→22 (lifesteal live).
 
 ### Still open from Wave 1
-- `git push` pending (now includes the restore — needs a reconciliation commit first).
 - Redo the EN translation properly (file-by-file, compiled per file) if still desired.
+
+---
+
+## 6.1 Wave 2 — Execution Results (2026-09-13)
+
+### Verification: all four "player-facing" P1s from the 09-06 audit are STALE
+Empirically verified in the restored code (cbe96e1 baseline):
+- **Premium cosmetics**: `skinNeon`/`skinDragon`/`petDrone`/`cosmeticTint` ARE rendered
+  in `Player.cpp` (lines ~552-596) and included in the voxel cache signature — already fixed.
+- **Quest completion criteria**: all five `updateProgress` call sites are correctly
+  type-filtered (Kill/KillBoss/Collect/CollectRare/ClosePortal/Zone) — already correct.
+- **Double knockback**: `Enemy::applyKnockback` has a single call site
+  (`Game_Gameplay.cpp` melee) — already correct.
+- **Passive income explosion**: House income scales LINEARLY with level
+  (`genRate = 8/m`, m = 1.0/1.5/2.0) — working as designed.
+- **SHIFT/E overload**: still real (SHIFT = sprint + RTS select at
+  `Game_Gameplay.cpp:1541/1577`; E = equip/dialog/portal) — documented as a known
+  design compromise; full key rebinding is a feature, not a fix.
+
+### What Wave 2 actually delivered: unit tests for pure rules (ROADMAP short-term item)
+6 new test cases (28 → 34 cases, 194 → 1430 assertions):
+- Quest progress clamping / inactive no-op / progress text
+- Item economy: credits/tech/elite drop consistency
+- Loot table: 600-roll distribution stays within the Common/Uncommon table
+- Combat math: `SkillTree::statsFor` multiplier composition (multiplicative stacking),
+  evade/lifesteal/revive perk effects, `Player::getEffectiveDamage` with perk mult
+
+### Validation
+- `darknet_tests`: 34/34 cases, 1430/1430 assertions ✅
+- Game binary unchanged from the Wave-1 validated build (autotest PASSED).
 
 ---
 
