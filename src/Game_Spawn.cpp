@@ -569,7 +569,7 @@ void Game::drawVictoryScreen() const {
     int sw = MeasureText(sub, 24);
     DrawText(sub, cx - sw/2, cy - 20, 24, {220, 220, 255, 255});
 
-    const char* sub2 = "A humanidade esta livre. Voce venceu DARKNET.";
+    const char* sub2 = "A humanidade esta livre. Voce derrubou o KRONOS.";
     int sw2 = MeasureText(sub2, 18);
     DrawText(sub2, cx - sw2/2, cy + 14, 18, ColorAlpha(WHITE, 0.8f));
 

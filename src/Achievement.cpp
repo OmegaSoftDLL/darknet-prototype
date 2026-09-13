@@ -34,7 +34,7 @@ void AchievementSystem::init() {
     achievements.push_back(makeAch("level_5",    "Iniciado",            "Atingir Level 5",          "[L]",  5,     200,  100));
     achievements.push_back(makeAch("level_10",   "Combatente Treinado", "Atingir Level 10",         "[L]",  10,    500,  250));
     achievements.push_back(makeAch("level_20",   "Veterano",            "Atingir Level 20",         "[L]",  20,    1000, 500));
-    achievements.push_back(makeAch("level_30",   "Elite DARKNET",       "Atingir Level 30",         "[L]",  30,    2000, 1000));
+    achievements.push_back(makeAch("level_30",   "Elite KRONOSFALL",  "Atingir Level 30",         "[L]",  30,    2000, 1000));
     achievements.push_back(makeAch("level_50",   "Executor OMEGA",      "Atingir Level 50",         "[L]",  50,    5000, 2500));
 
     // Boss kills

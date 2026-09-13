@@ -5,7 +5,7 @@
 #include <ctime>
 
 int main(int argc, char* argv[]) {
-    printf("DARKNET v1.0\n");
+    printf("KRONOSFALL v1.0 (formerly DARKNET)\n");
     printf("Uso: darknet.exe [--autobot|--autotest] [--test-seconds=N] [--seed=N] [--start-phase=N]\n");
     printf("  --autotest        bot de teste automatico\n");
     printf("  --test-seconds=N  encerra o teste em N segundos e grava o relatorio\n");

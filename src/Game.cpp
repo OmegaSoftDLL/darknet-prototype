@@ -134,7 +134,7 @@ Game::Game(bool headless_, int startPhaseOverride_) {
     // letterbox em presentFrame(), entao nunca corta. F11 alterna tela cheia.
     if (!headless) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "DARKNET - ARPG Futurista | Guerra contra KRONOS");
+    InitWindow(screenWidth, screenHeight, "KRONOSFALL - ARPG | The Darknet is falling");
     SetExitKey(KEY_NULL);   // ESC NAO fecha o jogo — abre o menu de pause
     SetTargetFPS(60);
 

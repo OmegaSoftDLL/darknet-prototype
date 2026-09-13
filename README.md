@@ -1,6 +1,9 @@
-# Darknet Prototype
+# KRONOSFALL
 
-[![CI](https://github.com/OmegaSoftDLL/darknet-prototype/actions/workflows/ci.yml/badge.svg)](https://github.com/OmegaSoftDLL/darknet-prototype/actions/workflows/ci.yml)
+> **The Darknet is falling. Make Kronos fall.**
+> A top-down action RPG in C++17 with raylib 5.5 — formerly developed as *Darknet Prototype*.
+
+[![CI](https://github.com/OmegaSoftDLL/kronosfall/actions/workflows/ci.yml/badge.svg)](https://github.com/OmegaSoftDLL/kronosfall/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 A top-down action RPG prototype built in C++17 with raylib 5.5, featuring the 2.5D isometric renderer, procedural open-world zones, crafting, building, skill trees, NPCs, quests, and multiplayer groundwork.
@@ -134,11 +137,11 @@ characters, or assets. See `LICENSE-CONTENT.md` for the full terms.
 
 ## Trademarks
 
-"Darknet", "Darknet Prototype", "KRONOS", and the character and location names are
+"KRONOSFALL", "Darknet", "Darknet Prototype", "KRONOS", and the character and location names are
 unregistered trademarks of **OmegaSoftDLL**. The MIT/CC licenses above do not grant
 any trademark rights; do not use these names to brand or promote derivative products.
 
 ## Links
 
-- Repository: https://github.com/OmegaSoftDLL/darknet-prototype
-- CI Status: https://github.com/OmegaSoftDLL/darknet-prototype/actions
+- Repository: https://github.com/OmegaSoftDLL/kronosfall
+- CI Status: https://github.com/OmegaSoftDLL/kronosfall/actions

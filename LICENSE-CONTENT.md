@@ -28,7 +28,7 @@ Full legal code: https://creativecommons.org/licenses/by-nc/4.0/legalcode
 ## Explicitly NOT granted
 
 - Using the content (story, characters, names, assets) in a commercial game or product
-- Registering or using the names **"Darknet"**, **"Darknet Prototype"**, **KRONOS**,
+- Registering or using the names **"KRONOSFALL"**, **"Darknet"**, **"Darknet Prototype"**, **KRONOS**,
   or any character/location names as trademarks
 - Selling, sublicensing, or bundling the assets with a paid product
 

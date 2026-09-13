@@ -28,7 +28,7 @@ void TutorialSystem::init() {
     };
 
     add(TutorialStep::Welcome,
-        "BEM-VINDO AO DARKNET",
+        "BEM-VINDO AO KRONOSFALL",
         "O KRONOS tomou o controle. Voce e a resistencia.\nSobreviva, evolua, destrua os portais.",
         "ENTER / E para continuar",
         {0, 220, 255, 255}, 0.0f);
@@ -219,9 +219,9 @@ void TutorialSystem::renderCurrentHint(int screenW, int screenH) const {
         // Texto
         DrawText(h.text.c_str(), px+30, py+62, 14, ColorAlpha(WHITE, alpha));
 
-        // Logotipo DARKNET
-        int lw = MeasureText("DARKNET", 36);
-        DrawText("DARKNET", px+(pw-lw)/2, py+100, 36, ColorAlpha(Color{0,200,255,255}, alpha));
+        // Logotipo KRONOSFALL
+        int lw = MeasureText("KRONOSFALL", 36);
+        DrawText("KRONOSFALL", px+(pw-lw)/2, py+100, 36, ColorAlpha(Color{0,200,255,255}, alpha));
 
         // Key prompt piscando
         bool blink = (int)(GetTime() * 2) % 2 == 0;

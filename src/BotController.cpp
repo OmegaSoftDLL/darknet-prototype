@@ -301,7 +301,7 @@ void BotController::writeReport(const std::string& path) const {
     float avgFPS = (fpsSamples > 0) ? (fpsAccum / fpsSamples) : 0.0f;
 
     f << "========================================================\n";
-    f << "  DARKNET BOT - RELATORIO DE SESSAO\n";
+    f << "  KRONOSFALL BOT - RELATORIO DE SESSAO\n";
     f << "========================================================\n\n";
 
     f << "[DESEMPENHO TECNICO]\n";

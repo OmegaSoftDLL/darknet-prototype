@@ -80,24 +80,24 @@ void Game::drawMainMenu() const {
     float eyeGlow = 0.08f + 0.05f * std::sin(t * 3.5f);
     DrawCircleV({(float)(sx), (float)(sy)}, 120.0f, ColorAlpha({255,40,60,255}, eyeGlow * 0.25f));
 
-    // ── TITULO: DARKNET com extrusao + aura neon ────────────────────────────
+    // ── TITULO: KRONOSFALL com extrusao + aura neon ─────────────────────────
     float titlePulse = 0.86f + 0.14f * std::sin(t * 1.4f);
-    int   titleFont  = 92;
-    int   titleW     = MeasureText("DARKNET", titleFont);
+    int   titleFont  = 84;
+    int   titleW     = MeasureText("KRONOSFALL", titleFont);
     int   titleX     = cx - titleW / 2;
     int   titleY     = cy - 216;
     for (int d = 9; d >= 2; d -= 3)
-        DrawText("DARKNET", titleX + d, titleY + d, titleFont,
+        DrawText("KRONOSFALL", titleX + d, titleY + d, titleFont,
                  ColorAlpha({0,35,80,255}, 0.55f - d * 0.03f));
-    DrawText("DARKNET", titleX + 3, titleY + 3, titleFont,
+    DrawText("KRONOSFALL", titleX + 3, titleY + 3, titleFont,
              ColorAlpha({0,140,255,255}, 0.30f * titlePulse));
-    DrawText("DARKNET", titleX, titleY, titleFont,
+    DrawText("KRONOSFALL", titleX, titleY, titleFont,
              ColorAlpha({185,245,255,255}, titlePulse));
 
-    // Sub-titulo em vermelho neon
-    int subFont = 26;
-    int subW    = MeasureText("GUERRA CONTRA KRONOS", subFont);
-    DrawText("GUERRA CONTRA KRONOS", cx - subW/2, titleY + titleFont + 12, subFont,
+    // Tagline oficial (vermelho neon)
+    int subFont = 20;
+    int subW    = MeasureText("THE DARKNET IS FALLING. MAKE KRONOS FALL.", subFont);
+    DrawText("THE DARKNET IS FALLING. MAKE KRONOS FALL.", cx - subW/2, titleY + titleFont + 16, subFont,
              ColorAlpha({255,70,90,255}, titlePulse));
     {
         int tinyX = cx - MeasureText("CLASSIFIED // OPERACAO NEXUS", 11)/2;
