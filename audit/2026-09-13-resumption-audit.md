@@ -237,6 +237,22 @@ addressed nearly everything). Verified-stale highlights:
 
 ---
 
+## 6.3 Post-audit developments (2026-09-13, same session)
+
+| Commit | Change |
+|---|---|
+| `6aec273` | **Dual license**: code MIT / content (resources/, content/, DARKNET_STORY.md) CC BY-NC 4.0 © OmegaSoftDLL; trademarks "KRONOSFALL"/"Darknet"/"KRONOS" reserved. Public repo stays commercially viable (Mindustry/Shapez model). |
+| `9981c28` | **New Game+**: [N] on victory screen restarts the world keeping the character; NG+ final boss is **Leviathan** (8k-HP multi-phase boss that existed in code but was never spawned — dead content activated). `ngPlus` persisted in save V7 (backward compatible). |
+| `8eb65ff` | **Infrastructure spec** (`server/INFRASTRUCTURE.md`): full handoff doc — topology, TLS/WSS, backups, secrets, hardening, observability, LGPD, ~US$10-45/mo, 9 acceptance criteria. |
+| `fdbd8d6` | **Steam-first decision** (PO): zero own infra for launch; multiplayer post-launch via Steam SDR; Steam Wallet mandatory for gems on Steam (30%); Stripe only for a possible future standalone build. Spec kept as backlog. |
+| `9cbf9d4` | **Rebrand: Darknet Prototype → KRONOSFALL** — tagline "The Darknet is falling. Make Kronos fall." Reason: "Darknet" is an existing Steam game (app 401910). Repo renamed to `OmegaSoftDLL/kronosfall`; in-game title/menu/tutorial/window updated; `DARKNET_SAVE_V` header and `DARKNET_*` env vars preserved for compatibility. |
+
+**Branch protection applied**: `main` requires PR + 1 approval + green CI ("Build + tests + validate (2 seeds)", strict); force push blocked; admin bypass enabled for emergencies.
+
+**Strategic baseline for the next phase**: public repo, dual license, Steam-first, launch is single-player offline. Roadmap: gameplay depth (Act 1) → Act 2 + meta-progression → trailer → Steam page/Next Fest. CI blocked by GitHub account billing lock until 2026-10-05 (account-level, resolved by the owner).
+
+---
+
 ## 7. Definition of Done (unchanged from project convention)
 
 - `./validate.sh` → build Debug+Release, autotest 120s exit 0, `VALIDATION: PASSED`.
