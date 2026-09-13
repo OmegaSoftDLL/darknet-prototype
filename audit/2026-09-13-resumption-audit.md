@@ -187,6 +187,56 @@ Empirically verified in the restored code (cbe96e1 baseline):
 
 ---
 
+## 6.2 Waves 3-4 — Full audit verification (2026-09-13)
+
+Every remaining finding from `audit/2026-09-06-full-audit.md` was re-verified against
+the current tree. **~85% were already fixed** (the Sep-7 pre-translation work had
+addressed nearly everything). Verified-stale highlights:
+
+| Finding | Verdict |
+|---|---|
+| NetClient `enabled` data race | Stale — already `std::atomic<bool>` |
+| WS frame parser arithmetic overflow | Stale — `len > rx.size() - pos` guard present |
+| No Sec-WebSocket-Accept validation | Stale — SHA1+GUID+base64 check present |
+| sendChat manual JSON | Stale — uses `nlohmann::json` |
+| world.vs normal `w=1.0` | Stale — uses `vec4(normal, 0.0)` |
+| EnemyDirector not a moving average | Stale — `*0.6f + dpm*0.4f` |
+| sfxPlayerDeath never played | Stale — wired at Game_Gameplay.cpp:929/939 |
+| Extra zerglings without scaling | Stale — mechanic refactored, scaling uniform |
+| Projectile vs OW boundary | Stale — `isOutsideOpenWorldBounds` + radius overload |
+| isWallAtPosition single point | Stale — radius overload exists |
+| Enemy spawn beyond barrier | Stale — `clampInsideOpenWorldBounds(pos, 120)` |
+| Anomaly portals outside playable disk | Stale — spawnWave takes diskCenter/diskRadius |
+| Player no X/Y sliding | Stale — axis-separated slide implemented |
+| Anomaly enemies spawn in walls | Stale — `isFree` retry loop (8 tries) |
+| Voxel models generated but never rendered | Stale — BuildVoxelModel removed from render flow |
+| StoreClient thread accumulation | Stale — finished threads joined in startThread |
+| Audio dead code after composeTrack | Stale — bodies removed, direct TrackStyle config |
+| CraftingSystem filtered/global index mix | Stale — tryCraft maps via `filtered[selected]` |
+
+### Real fixes applied (Wave 3-4)
+1. **`canAutoSave()`** — blocks auto-save while paused/dead/in-dialogue/phase-fade/
+   choice-screen/final-boss; applied to the 30s periodic save and zone-transition save.
+2. **ShopSystem duplicate cosmetic purchase** — `ownedCosmetics` list blocks re-buy.
+3. **Stripe checkout URL validation** — only `https://checkout.stripe.com/` or
+   `https://buy.stripe.com/` URLs open in the browser (was: any server-returned URL).
+
+### Still open after Waves 1-4 (verified real)
+| Priority | Item | Scope |
+|---|---|---|
+| P0 | `Game` God Object / subsystem refactor | Large, strategic |
+| P0 | `wss://` TLS + server-authoritative progress | Large, launch-blocking |
+| P0 | Hardcoded keys → configurable InputMap | Medium-large feature |
+| P2 | Multi-slot save UI (`renderSaveSlots` never called) | Small feature gap |
+| P1 | `/auth/login` stub (any name → token) | Server, launch-blocking |
+| P2 | nginx HTTPS block commented out | Launch |
+| P1 | Entity frustum culling, particle blend batching, scanlines batching, per-entity render state | Perf (FPS already 58-59/44-52) |
+| P2 | Duplicate vignette; screenshot thread join; fixed 720p internal res; tileZone/biomeAtWorld divergence; A* pathfinding | Polish |
+| P2/P3 | Constants consolidation; strict CMake warnings; accessibility options; JSON save schema | Hygiene |
+| P1 | SHIFT/E overload | Documented design compromise |
+
+---
+
 ## 7. Definition of Done (unchanged from project convention)
 
 - `./validate.sh` → build Debug+Release, autotest 120s exit 0, `VALIDATION: PASSED`.

@@ -217,9 +217,16 @@ void StoreClient::buyGemsAsync(const std::string& packId) {
         HttpResponse r = HttpClient::post(h, p, pre + "/store/buy-gems", body, tok, tls);
         if (r.status == 200) {
             std::string url = jStr(jParse(r.body), "url");
-            if (!url.empty()) {
+            // Seguranca: so abre URLs oficiais do Stripe Checkout (auditoria
+            // 09-06 P2 — antes QUALQUER url devolvida pelo servidor era aberta
+            // via ShellExecute, inclusive esquemas nao-HTTP).
+            bool stripeUrl = url.rfind("https://checkout.stripe.com/", 0) == 0 ||
+                             url.rfind("https://buy.stripe.com/", 0) == 0;
+            if (!url.empty() && stripeUrl) {
                 HttpClient::openBrowser(url);
                 setMsg("Abrindo pagamento seguro (Stripe)...");
+            } else if (!url.empty()) {
+                setMsg("URL de pagamento recusada (dominio invalido)");
             } else {
                 setMsg("Configure STRIPE_SECRET_KEY no servidor p/ pagamento real");
             }
