@@ -615,9 +615,10 @@ void Game::update(float dt) {
             showStoryBanner("O CHEFE APARECEU", "Derrote-o para abrir o portal.", 4.5f);
     }
 
-    // Auto-save
+    // Auto-save (com guarda de contexto: nao salva em combate de chefe,
+    // transicao, dialogo, morte ou escolha pendente)
     saveTimer += dt;
-    if (saveTimer >= 30.0f) { autoSave(); saveTimer = 0.0f; }
+    if (saveTimer >= 30.0f) { if (canAutoSave()) autoSave(); saveTimer = 0.0f; }
 
     // Update enemies and collect shooting requests
     int enemyIdx = 0;

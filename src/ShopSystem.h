@@ -30,6 +30,10 @@ struct ShopSystem {
     bool          hasCosmeticColor = false;
     Color         playerColor      = WHITE;
 
+    // Cosmeticos ja comprados nesta sessao — bloqueia recompra acidental
+    // (auditoria 09-06 P2: tryBuy nao verificava posse).
+    std::vector<Color> ownedCosmetics;
+
     // Mouse (coords ja virtualizadas pelo Game). Usado para hover/botoes no render.
     Vector2 mousePos    = {-1, -1};
     double  lastClickT  = -1.0;

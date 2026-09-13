@@ -146,6 +146,9 @@ private:
 
     // Save
     void autoSave();
+    // Bloqueia auto-save em momentos instaveis (morte, dialogo, transicao de
+    // fase, telas de escolha, chefe final, pause) — auditoria 09-06 P1.
+    bool canAutoSave() const;
 
     static constexpr int screenWidth  = 1280;
     static constexpr int screenHeight = 720;

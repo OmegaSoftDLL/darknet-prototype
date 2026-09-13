@@ -384,5 +384,5 @@ void Game::transitionToZone(ZoneID dest) {
         default: break;
     }
 
-    autoSave();
+    if (canAutoSave()) autoSave();
 }

@@ -1468,6 +1468,16 @@ void Game::autoSave() {
                       (int)difficulty, totalKills, &buildingLines);
 }
 
+bool Game::canAutoSave() const {
+    if (paused) return false;
+    if (player.health <= 0.0f) return false;                    // jogador morto
+    if (dialogOpen) return false;                               // dialogo aberto
+    if (owFadeTimer > 0.0f) return false;                       // transicao de fase
+    if (showLevelUpScreen || showEvolutionScreen) return false; // escolha pendente
+    if (finalBossAlive) return false;                           // combate de chefe final
+    return true;
+}
+
 void Game::showStoryBanner(const std::string& title, const std::string& sub, float dur) {
     storyBannerText  = title;
     storyBannerSub   = sub;

@@ -478,6 +478,18 @@ bool ShopSystem::tryBuy(int& playerCredits, Equipment& outEquip, Item& outItem,
     const ShopItem& si = items[selected];
     if (playerCredits < si.price) return false;
 
+    // Cosmetico ja comprado: bloqueia recompra (avisa em vez de cobrar)
+    if (si.isCosmetic) {
+        for (const Color& c : ownedCosmetics) {
+            if (c.r == si.cosmeticColor.r && c.g == si.cosmeticColor.g &&
+                c.b == si.cosmeticColor.b && c.a == si.cosmeticColor.a) {
+                buyMsg      = "Ja possuido: " + si.name;
+                buyMsgTimer = 2.0f;
+                return false;
+            }
+        }
+    }
+
     playerCredits -= si.price;
 
     gotEquip    = false;
@@ -488,6 +500,7 @@ bool ShopSystem::tryBuy(int& playerCredits, Equipment& outEquip, Item& outItem,
         cosmeticOut  = si.cosmeticColor;
         hasCosmeticColor = true;
         playerColor  = si.cosmeticColor;
+        ownedCosmetics.push_back(si.cosmeticColor);
     } else if (si.isEquipment) {
         gotEquip = true;
         outEquip = si.equip;
