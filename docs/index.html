@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KRONOSFALL — The Darknet is falling. Make Kronos fall.</title>
+<meta name="description" content="KRONOSFALL is a top-down action RPG in C++17/raylib: 2.5D isometric rendering, procedural open-world zones, skill trees, crafting, building and New Game+.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2305070f'/%3E%3Ctext x='16' y='23' font-size='20' font-weight='bold' text-anchor='middle' fill='%2300e6ff'%3EK%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --cyan: #00e6ff;
+    --blue: #0066ff;
+    --red: #ff465a;
+    --amber: #ffd250;
+    --bg: #05070f;
+    --panel: #0a1020;
+    --text: #c8d8ee;
+    --dim: #6f87a8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  /* animated grid backdrop */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      linear-gradient(rgba(0,230,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,230,255,.045) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 75%);
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* HERO */
+  .hero {
+    min-height: 92vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; position: relative;
+    padding: 48px 24px;
+  }
+  .eyebrow {
+    letter-spacing: .45em; font-size: 12px; color: var(--dim);
+    text-transform: uppercase; margin-bottom: 22px;
+  }
+  h1 {
+    font-size: clamp(52px, 11vw, 128px);
+    font-weight: 800; letter-spacing: .04em;
+    color: #e8fbff;
+    text-shadow:
+      0 0 18px rgba(0,230,255,.55),
+      0 0 60px rgba(0,102,255,.35),
+      4px 4px 0 rgba(0,35,80,.9);
+    animation: pulse 3.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { text-shadow: 0 0 18px rgba(0,230,255,.55), 0 0 60px rgba(0,102,255,.35), 4px 4px 0 rgba(0,35,80,.9); }
+    50%     { text-shadow: 0 0 26px rgba(0,230,255,.8),  0 0 90px rgba(0,102,255,.5),  4px 4px 0 rgba(0,35,80,.9); }
+  }
+  .tagline {
+    margin-top: 18px;
+    font-size: clamp(15px, 2.6vw, 22px);
+    color: var(--red);
+    letter-spacing: .12em; text-transform: uppercase;
+    text-shadow: 0 0 14px rgba(255,70,90,.5);
+  }
+  .sub {
+    margin-top: 26px; max-width: 640px; color: var(--dim); font-size: 16px;
+  }
+  .cta-row { margin-top: 40px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    display: inline-block; padding: 14px 30px;
+    border: 1px solid var(--cyan); color: var(--cyan);
+    font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-size: 13px;
+    background: rgba(0,230,255,.06);
+    transition: all .2s ease;
+  }
+  .btn:hover { background: rgba(0,230,255,.16); box-shadow: 0 0 24px rgba(0,230,255,.35); text-decoration: none; }
+  .btn.primary { background: var(--cyan); color: #04222b; }
+  .btn.primary:hover { box-shadow: 0 0 32px rgba(0,230,255,.6); }
+  .badge { margin-top: 34px; }
+
+  /* SECTIONS */
+  section { padding: 84px 0; position: relative; }
+  .kicker { color: var(--cyan); letter-spacing: .35em; font-size: 11px; text-transform: uppercase; }
+  h2 { font-size: clamp(28px, 4.5vw, 42px); color: #e8fbff; margin: 10px 0 34px; font-weight: 700; }
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .card {
+    background: linear-gradient(160deg, var(--panel), #070c18);
+    border: 1px solid rgba(0,230,255,.14);
+    border-radius: 6px; padding: 26px;
+    transition: transform .18s ease, border-color .18s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(0,230,255,.45); }
+  .card h3 { color: #dff6ff; font-size: 17px; margin-bottom: 10px; }
+  .card p { color: var(--dim); font-size: 14px; }
+  .card .ico { font-size: 24px; margin-bottom: 12px; display: block; }
+
+  /* LORE strip */
+  .lore {
+    border-left: 3px solid var(--red);
+    background: rgba(255,70,90,.05);
+    padding: 28px 30px; border-radius: 0 6px 6px 0;
+    color: var(--text); font-style: italic; font-size: 17px;
+  }
+  .lore b { color: var(--red); font-style: normal; }
+
+  /* NG+ ladder */
+  .ladder { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .rung {
+    flex: 1 1 240px; border: 1px solid rgba(255,210,80,.25);
+    border-radius: 6px; padding: 20px 22px; background: rgba(255,210,80,.04);
+  }
+  .rung .ng { color: var(--amber); font-weight: 700; letter-spacing: .2em; font-size: 12px; }
+  .rung .boss { color: #ffe9a8; font-size: 19px; font-weight: 700; margin: 6px 0; }
+  .rung .hp { color: var(--dim); font-size: 13px; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid rgba(0,230,255,.12);
+    padding: 40px 0 60px; color: var(--dim); font-size: 13px; text-align: center;
+  }
+  footer .legal { max-width: 720px; margin: 14px auto 0; font-size: 12px; color: #51637e; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="eyebrow">An isometric action RPG &nbsp;//&nbsp; C++17 + raylib</div>
+  <h1>KRONOSFALL</h1>
+  <div class="tagline">The Darknet is falling. Make Kronos fall.</div>
+  <p class="sub">
+    2047. The superintelligence <b style="color:#ffe9a8">KRONOS</b> decided humanity was the
+    disease — and forty-seven million minds paid the price. You are Vance Rios,
+    rebuilt to do one thing: descend through its domains and end it.
+  </p>
+  <div class="cta-row">
+    <a class="btn primary" href="https://github.com/OmegaSoftDLL/kronosfall">View Source on GitHub</a>
+    <a class="btn" href="https://github.com/OmegaSoftDLL/kronosfall/releases/tag/v0.1.0">Download v0.1.0 (Windows)</a>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">The Game</div>
+    <h2>One run. Eleven domains. Three forms of a god.</h2>
+    <div class="grid">
+      <div class="card"><span class="ico">🗺️</span><h3>Procedural Open World</h3><p>Eleven biomes streamed in chunks — from the ruins of Los Angeles to the Forge of KRONOS — with phases, portals and escalating threat.</p></div>
+      <div class="card"><span class="ico">⚔️</span><h3>Combat with Telegraphs</h3><p>WASD + mouse action combat with six skills, dodge-worthy boss patterns (Hades-style telegraphs), hit-stop, combos and screen shake.</p></div>
+      <div class="card"><span class="ico">🌳</span><h3>Builds &amp; Progression</h3><p>Skill tree with three branches, equipment with upgrades and affixes, crafting, evolution paths and classes.</p></div>
+      <div class="card"><span class="ico">🏰</span><h3>Base Building</h3><p>Turrets, barracks and houses that produce units and income — defend your refuge while you hunt.</p></div>
+      <div class="card"><span class="ico">🎵</span><h3>100% Procedural Audio</h3><p>Every track and SFX is synthesized in code. No audio files — a different engine from anything else on raylib.</p></div>
+      <div class="card"><span class="ico">🤖</span><h3>Validated by a Bot</h3><p>A headless bot plays the game in CI on every commit — 36 unit-test cases and 120-second autotests keep every build playable.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">The Loop</div>
+    <h2>New Game+ — the fall, again, harder</h2>
+    <div class="lore">
+      Victory is not the end. KRONOS rebuilds its world — and each time you return,
+      what waits at the core wears a <b>different face</b>.
+    </div>
+    <div class="ladder" style="margin-top:26px">
+      <div class="rung"><div class="ng">NEW GAME</div><div class="boss">Ω NÚCLEO KRONOS</div><div class="hp">The heart of the AI. Final boss of the first fall.</div></div>
+      <div class="rung"><div class="ng">NEW GAME+</div><div class="boss">LEVIATHAN</div><div class="hp">KRONOS reveals its true form — 8,000 HP, three phases.</div></div>
+      <div class="rung"><div class="ng">NEW GAME++</div><div class="boss">ARCHON DIMENSION ZERO</div><div class="hp">The secret beyond the Core. 12,000 HP. Good luck.</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Open Development</div>
+    <h2>Built in the open</h2>
+    <div class="grid">
+      <div class="card"><h3>Open Source Engine</h3><p>The C++17/raylib codebase is MIT-licensed — fork it, learn from it, build your own ARPG on it.</p></div>
+      <div class="card"><h3>Protected Content</h3><p>The story, characters and assets are CC BY-NC — the world of KRONOSFALL stays the author's.</p></div>
+      <div class="card"><h3>Contributions Welcome</h3><p>CI gates on every PR: dual-config build, 36 test cases and a 120-second bot playthrough. <a href="https://github.com/OmegaSoftDLL/kronosfall/blob/main/CONTRIBUTING.md">Read the guide →</a></p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>KRONOSFALL · <a href="https://github.com/OmegaSoftDLL/kronosfall">GitHub</a> ·
+       <a href="https://github.com/OmegaSoftDLL/kronosfall/releases">Releases</a> ·
+       <a href="https://github.com/OmegaSoftDLL/kronosfall/discussions">Discussions</a></p>
+    <p class="legal">
+      “KRONOSFALL”, “Darknet” and “KRONOS” are unregistered trademarks of OmegaSoftDLL.
+      Source code under the MIT License; creative content under CC BY-NC 4.0.
+      Steam release coming — wishlist page soon.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
