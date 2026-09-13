@@ -115,7 +115,7 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
                        int slot, float playMinutes, int totalKills,
                        int totalDeaths, int bossesKilled, int portalsSealed,
                        int difficultyLevel, int gameTotalKills,
-                       const std::vector<std::string>* buildingLines) {
+                       const std::vector<std::string>* buildingLines, int ngPlus) {
     ensureSavesDir();
     std::string path = slotPath(slot);
 
@@ -169,6 +169,7 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
     out << "portalsSealed " << portalsSealed  << "\n";
     out << "difficultyLevel " << difficultyLevel << "\n";
     out << "playMinutes "   << playMinutes    << "\n";
+    out << "ngPlus "        << ngPlus         << "\n";
 
     // Equipment (V7: ID + upgrade + primary/secondary; V5/V6 liam so o ID)
     auto writeEquip = [&](const char* idKey, const char* upKey, const char* priKey, const char* secKey, const Equipment& eq) {
@@ -230,7 +231,8 @@ void SaveManager::save(const Player& player, const std::vector<Quest>& quests, Z
 
 bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone, int slot,
                        int* gameTotalKillsOut,
-                       std::vector<std::string>* buildingLinesOut) {
+                       std::vector<std::string>* buildingLinesOut,
+                       int* ngPlusOut) {
     std::string path = slotPath(slot);
     FILE* f = fopen(path.c_str(), "r");
 
@@ -309,6 +311,7 @@ bool SaveManager::load(Player& player, std::vector<Quest>& quests, ZoneID& zone,
         else if (strcmp(key,"credits")==0)  { fscanf(f," %d",&player.credits); hasCredits=true; }
         else if (strcmp(key,"totalKills")==0){ fscanf(f," %d",&player.totalKills); }
         else if (strcmp(key,"gameTotalKills")==0){ fscanf(f," %d",&loadedGameTotalKills); }
+        else if (strcmp(key,"ngPlus")==0){ int ng=0; fscanf(f," %d",&ng); if (ngPlusOut) *ngPlusOut = (ng < 0 ? 0 : ng); }
         else if (strcmp(key,"zone")==0)     { fscanf(f," %d",&zoneInt); zone=clampZone(zoneInt); }
         else if (strcmp(key,"evolutionPath")==0){ int ep=0; fscanf(f," %d",&ep); player.evolutionPath=clampEvolutionPath(ep); hasEvolution=true; }
         else if (strcmp(key,"evolutionTier")==0){ fscanf(f," %d",&player.evolutionTier); }

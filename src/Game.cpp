@@ -614,7 +614,7 @@ void Game::run() {
                         characterHovered   = 0;
                         drawMainMenu(); drawCharacterSelectScreen(); presentFrame(); continue;
                     } else {
-                        if (hasSave) SaveManager::load(player, quests, currentZone, 0, &totalKills);
+                        if (hasSave) SaveManager::load(player, quests, currentZone, 0, &totalKills, nullptr, &newGamePlus);
                         if (openWorldMode) {
                             // Reconstroi a fase a partir da zona salva (ver startLoadedGame).
                             owPhase = 0; owPhaseRadius = 3000.0f; owPhaseGoal = 20; owBossPhase = false;
@@ -972,7 +972,7 @@ void Game::startLoadedGame() {
     // Carrega o save e entra direto no jogo — SEM tela de dificuldade.
     // A dificuldade salva e mantida (so muda em Novo Jogo ou pelo menu de pause).
     std::vector<std::string> buildingLines;
-    if (SaveManager::exists()) SaveManager::load(player, quests, currentZone, 0, &totalKills, &buildingLines);
+    if (SaveManager::exists()) SaveManager::load(player, quests, currentZone, 0, &totalKills, &buildingLines, &newGamePlus);
 
     // Limpa estado residual da sessao anterior antes de reconstruir o mundo.
     enemies.clear();
@@ -1465,7 +1465,7 @@ void Game::autoSave() {
     SaveManager::save(player, quests, currentZone, 0,
                       sessionTime / 60.0f, player.totalKills,
                       totalDeaths, totalBossesKilled, totalPortalsClosed,
-                      (int)difficulty, totalKills, &buildingLines);
+                      (int)difficulty, totalKills, &buildingLines, newGamePlus);
 }
 
 bool Game::canAutoSave() const {

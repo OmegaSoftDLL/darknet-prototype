@@ -23,7 +23,12 @@ void Game::update(float dt) {
             botController.addLog(TextFormat("Nivel final %d, kills %d", player.level, totalKills));
             botController.writeReport("bot_report_VITORIA.txt");
         }
-        // Apos 2s, ENTER volta ao menu principal
+        // Apos 2s: N = New Game+ (mantem o personagem, mundo recomeca mais
+        // duro, boss final vira o Leviathan) ou ENTER volta ao menu principal
+        if (victoryTimer > 2.0f && IsKeyPressed(KEY_N)) {
+            startNewGamePlus();
+            return;
+        }
         if (victoryTimer > 2.0f && IsKeyPressed(KEY_ENTER)) {
             inMainMenu = true;
             gameWon = false;

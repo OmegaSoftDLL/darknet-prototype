@@ -233,7 +233,7 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     quests.push_back(qa); quests.push_back(qb);
 
     SaveManager::save(p, quests, ZoneID::Cemetery, slot, 45.5f, 123,
-                      2, 5, 9, 3, 777);
+                      2, 5, 9, 3, 777, nullptr, 2);   // ngPlus = 2 (NG++)
 
     Player loaded;
     std::vector<Quest> loadedQuests;
@@ -241,8 +241,9 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     loadedQuests.push_back(Quest("q_teste_b", "B", "d", "npc", QuestType::KillBoss, 1));
     ZoneID loadedZone = ZoneID::LARuins;
     int loadedGameTotalKills = 0;
+    int loadedNgPlus = -1;
 
-    REQUIRE(SaveManager::load(loaded, loadedQuests, loadedZone, slot, &loadedGameTotalKills));
+    REQUIRE(SaveManager::load(loaded, loadedQuests, loadedZone, slot, &loadedGameTotalKills, nullptr, &loadedNgPlus));
     REQUIRE(SaveManager::hasSave(slot));
 
     SaveSlotInfo info = SaveManager::getSlotInfo(slot);
@@ -260,6 +261,7 @@ TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     CHECK(loaded.totalKills == 123);
     CHECK(static_cast<int>(loadedZone) == static_cast<int>(ZoneID::Cemetery));
     CHECK(loadedGameTotalKills == 777);
+    CHECK(loadedNgPlus == 2);   // NG+ persistido no save V7
 
     // Equipment resolvido por ID estavel + upgrade/primary/secondary
     CHECK(loaded.equippedWeapon.id == EDB::rifleEnergia().id);

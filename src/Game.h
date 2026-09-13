@@ -665,9 +665,13 @@ private:
     // Condicao de vitoria — boss final NUCLEO KRONOS no KronosNexus
     bool          gameWon             = false;
     float         victoryTimer        = 0.0f;
+    // New Game+ — reinicia o mundo mantendo o personagem; 0 = jogo normal.
+    // No NG+ o boss final vira o Leviathan (conteudo morto ativado).
+    int           newGamePlus         = 0;
     bool          finalBossSpawned    = false; // ja foi invocado nesta partida
     bool          finalBossAlive      = false; // esta vivo agora
     void          spawnFinalBoss();
+    void          startNewGamePlus();
     void          drawVictoryScreen() const;
 
     void generateLevelUpChoices();

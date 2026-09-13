@@ -470,7 +470,9 @@ void Game::spawnFinalBoss() {
         pos.y = player.position.y + std::sin(angle) * 520.0f;
     }
     clampInsideOpenWorldBounds(pos, 120.0f);
-    Enemy core(pos, EnemyType::OmegaBoss);
+    // NG+: o Nucleo KRONOS assume sua forma verdadeira — Leviathan, o boss
+    // multi-fase de 8000 HP que existia no codigo mas nunca era spawnado.
+    Enemy core(pos, newGamePlus > 0 ? EnemyType::Leviathan : EnemyType::OmegaBoss);
     core.isFinalBoss = true;
     // Muito mais forte que o OmegaBoss normal — e o clímax do jogo
     float lvlScale = 1.0f + (player.level - 1) * 0.25f;
@@ -491,6 +493,53 @@ void Game::spawnFinalBoss() {
     triggerPlayerSpeech("KRONOS... e aqui que tudo termina. Por todos nos!", 5.0f);
     audio.playBossRoar();
     triggerShake(16.0f, 0.7f);
+}
+
+void Game::startNewGamePlus() {
+    newGamePlus++;
+    gameWon       = false;
+    victoryTimer  = 0.0f;
+    // Permite que o Nucleo KRONOS volte a spawnar — agora como Leviathan
+    finalBossSpawned = false;
+    finalBossAlive   = false;
+
+    // Limpa o mundo, mantem personagem/build/creditos/equipamento
+    enemies.clear(); items.clear(); projectiles.clear(); enemyProjectiles.clear();
+    xpOrbs.clear(); groundEquips.clear(); damageNumbers.clear();
+    dialogOpen = false; nearNpcIndex = -1;
+    bossSpawned = false; spawnTimer = 0.0f;
+
+    // Recomeca na fase 1 (o escalador global por kills/onda ja endurece
+    // naturalmente com o historico acumulado)
+    owPhase = 0;
+    storyChapter = 1;
+    currentZone = ZoneID::LARuins;
+    currentRegion = ZoneID::LARuins;
+    tilemap.currentZone = ZoneID::LARuins;
+    owPortalOpen = false;
+    owBossDown = false;
+    owPhaseKills = 0;
+    owKillsAtStart = enemiesKilled;
+    const PhaseDef& pd0 = phaseDef(0);
+    owPhaseGoal   = pd0.goal;
+    owPhaseRadius = pd0.radius;
+    owBossPhase   = pd0.boss;
+
+    tilemap.generateOpenWorld();
+    tilemap.currentZone = ZoneID::LARuins;
+    setupWorldRegions();
+    buildOpenWorldScenery();
+    setupZoneNPCs(ZoneID::LARuins);
+    audio.setZone(ZoneID::LARuins);
+    spawnInterval = getZoneInfo(ZoneID::LARuins).spawnInterval / getDifficulty().spawnRateMult;
+
+    player.position = safeZoneCenter;
+    player.health   = player.maxHealth;
+
+    showStoryBanner(TextFormat("NEW GAME+ %d", newGamePlus),
+        "O KRONOS reconstruiu o mundo. Mais forte. Mais cruel.", 5.0f);
+    triggerPlayerSpeech("De novo... desta vez eu acabo com isso de vez.", 4.0f);
+    if (canAutoSave()) autoSave();
 }
 
 void Game::drawVictoryScreen() const {
@@ -538,7 +587,7 @@ void Game::drawVictoryScreen() const {
 
     // Prompt para continuar
     if (victoryTimer > 2.0f && ((int)(t * 2) % 2 == 0)) {
-        const char* prompt = "[ENTER] voltar ao menu";
+        const char* prompt = "[N] NEW GAME+    [ENTER] voltar ao menu";
         int pw = MeasureText(prompt, 18);
         DrawText(prompt, cx - pw/2, sy + 90, 18, ColorAlpha({255, 215, 80, 255}, 0.9f));
     }
