@@ -101,6 +101,7 @@ add_executable(darknet_tests
     src/SkillTree.cpp     # Player::refreshSkillVectors/getEffectiveDamage use perks
     src/Projectile.cpp    # projectile tests
     src/Tilemap.cpp       # tilemap tests
+    src/BotController.cpp # telegraph-dodge geometry tests
 )
 target_include_directories(darknet_tests PRIVATE src third_party)
 target_link_libraries(darknet_tests PRIVATE raylib)

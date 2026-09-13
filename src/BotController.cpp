@@ -497,6 +497,28 @@ BotController::BotDecision BotController::update(
         if (playerHP <= 0.0f && autoTest) return dec;
     }
 
+    // ── PRIORIDADE 0: desvio de telegraph (DANGER ZONE Hades-style) ────────────
+    // Game preenche dangerZones com os shapes ativos (espelho exato do render).
+    // Se o jogador estiver DENTRO de uma zona, sair dela passa na frente de
+    // qualquer outro estado da FSM. Antes o bot tankava parado os ataques
+    // pesados de boss — e qualquer aumento de dificuldade quebrava o autotest.
+    if (!dangerZones.empty()) {
+        Vector2 escape = {0, 0};
+        if (findDangerEscape(playerPos, escape)) {
+            dec.shouldMove        = true;
+            dec.moveTarget        = escape;
+            dec.shouldMeleeAttack = false;
+            dec.currentState      = BotState::FleeFromDanger;
+            if (!wasInDanger) {
+                dangersZones++;
+                addLog("Desvio de zona de perigo (telegraph)");
+            }
+            wasInDanger = true;
+            return dec;
+        }
+    }
+    wasInDanger = false;
+
     // ── Stagnation detection (no kills + no zone advance for 2 min) ──────────
     stagnationTimer += dt;
     if (stagnationTimer >= 120.0f) {
@@ -708,21 +730,21 @@ BotController::BotDecision BotController::update(
         // ── Strategic skill usage ─────────────────────────────────────────────
         // (contagem skillsFired/skillUsageCounts fica no Game, apos isReady())
         if (skillTimer <= 0.0f) {
-            // Skill 2 (EMP): use when >=2 enemies within 250px
-            if (skillsReady[1] && countEnemiesInRadius(enemyPositions, playerPos, 250.0f) >= 2) {
+            // Skill 2 (EMP): use when >=2 enemies within skill range (230px)
+            if (skillsReady[1] && countEnemiesInRadius(enemyPositions, playerPos, 230.0f) >= 2) {
                 dec.shouldUseSkill2 = true;
                 skillTimer = 0.5f;
-                addLog(TextFormat("EMP disparado (%d inimigos em 250px)",
-                                  countEnemiesInRadius(enemyPositions, playerPos, 250.0f)));
+                addLog(TextFormat("EMP disparado (%d inimigos em 230px)",
+                                  countEnemiesInRadius(enemyPositions, playerPos, 230.0f)));
             }
-            // Skill 3 (Granada): use when >=2 enemies within 200px
-            else if (skillsReady[2] && countEnemiesInRadius(enemyPositions, playerPos, 200.0f) >= 2) {
+            // Skill 3 (Granada): use when >=2 enemies within 260px
+            else if (skillsReady[2] && countEnemiesInRadius(enemyPositions, playerPos, 260.0f) >= 2) {
                 dec.shouldUseSkill3 = true;
                 skillTimer = 0.5f;
                 addLog("Granada lancada (cluster de inimigos)");
             }
-            // Skill 6 (Rajada): use when enemy within 100px
-            else if (skillsReady[5] && nearestEnemyDist < 100.0f) {
+            // Skill 6 (Rajada): use when enemy within 170px
+            else if (skillsReady[5] && nearestEnemyDist < 170.0f) {
                 dec.shouldUseSkill6 = true;
                 skillTimer = 0.5f;
             }
@@ -915,4 +937,48 @@ BotController::BotDecision BotController::update(
     dec.moveTarget = safeTarget;
 
     return dec;
+}
+
+// ─── Desvio de telegraph (DANGER ZONE) ─────────────────────────────────────────
+// Testa se playerPos esta dentro de alguma zona de perigo ativa e, se sim,
+// calcula um ponto de fuga: radialmente para fora + componente perpendicular
+// ao eixo do ataque (escapa de setores/retangulos pela lateral mais curta).
+bool BotController::findDangerEscape(Vector2 playerPos, Vector2& escapeTarget) const {
+    for (const auto& z : dangerZones) {
+        Vector2 d     = { playerPos.x - z.origin.x, playerPos.y - z.origin.y };
+        float   dist2 = d.x * d.x + d.y * d.y;
+        bool    inside = false;
+        if (z.shape == 0) {                       // circulo
+            inside = dist2 <= z.range * z.range;
+        } else if (z.shape == 1) {                // setor
+            if (dist2 <= z.range * z.range) {
+                float ang  = std::atan2(d.y, d.x);
+                float base = std::atan2(z.dir.y, z.dir.x);
+                float diff = ang - base;
+                while (diff >  PI) diff -= 2.0f * PI;
+                while (diff < -PI) diff += 2.0f * PI;
+                inside = std::fabs(diff) <= z.arc;
+            }
+        } else {                                  // retangulo rotacionado (CENTRADO
+            // na origem — espelha DrawRotatedRectangle: metade pra tras, metade pra frente)
+            float along = d.x * z.dir.x + d.y * z.dir.y;
+            float side  = -d.x * z.dir.y + d.y * z.dir.x;
+            inside = (along >= -z.range * 0.5f && along <= z.range * 0.5f) &&
+                     (std::fabs(side) <= z.width * 0.5f + 30.0f);
+        }
+        if (!inside) continue;
+
+        float   dl     = std::sqrt(dist2);
+        Vector2 radial = (dl > 1.0f) ? Vector2{ d.x / dl, d.y / dl } : Vector2{ 1, 0 };
+        float sideSign = (-radial.x * z.dir.y + radial.y * z.dir.x) >= 0.0f ? 1.0f : -1.0f;
+        Vector2 perp   = { -z.dir.y * sideSign, z.dir.x * sideSign };
+        Vector2 esc    = { radial.x * 0.65f + perp.x * 0.55f,
+                           radial.y * 0.65f + perp.y * 0.55f };
+        float   el     = std::sqrt(esc.x * esc.x + esc.y * esc.y);
+        if (el < 0.001f) esc = radial;
+        else { esc.x /= el; esc.y /= el; }
+        escapeTarget = { playerPos.x + esc.x * 260.0f, playerPos.y + esc.y * 260.0f };
+        return true;
+    }
+    return false;
 }

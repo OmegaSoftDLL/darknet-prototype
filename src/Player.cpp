@@ -6,13 +6,15 @@
 extern bool g_voxelCapture;
 
 Player::Player() {
-    // Habilidades balanceadas: basico rapido/baixo dano, controle medio, burst alto/cd longo
-    skills.emplace_back("Laser",     "Raio de alta energia que perfura",  1.0f, 48.0f,  560.0f, KEY_ONE);
-    skills.emplace_back("EMP",       "Pulso EMP em area - atordoa",       5.0f, 95.0f,  180.0f, KEY_TWO);
-    skills.emplace_back("Granada",   "Granada de plasma com AoE massivo", 7.0f,140.0f,  180.0f, KEY_THREE);
-    skills.emplace_back("Sobrecarga","Dano +50% Vel +30% por 8s",        16.0f, 0.0f,   0.0f,  KEY_FOUR);
-    skills.emplace_back("Barreira",  "Campo de forca: imune 3s",         24.0f, 0.0f,   0.0f,  KEY_FIVE);
-    skills.emplace_back("Rajada",    "Salva: 8 projetos em leque",        9.0f, 42.0f,  440.0f, KEY_SIX);
+    // Habilidades balanceadas (rebalance 2026-09-13): basico rapido/baixo dano,
+    // controle medio com valor real (EMP empurra), burst alto/cd longo. Skills
+    // 3-6 ganharam viabilidade pra abrir builds alem do Laser unico.
+    skills.emplace_back("Laser",     "Raio de alta energia que perfura",  1.0f, 44.0f,  560.0f, KEY_ONE);
+    skills.emplace_back("EMP",       "Pulso EMP: dano em area + empurra", 4.5f, 120.0f, 230.0f, KEY_TWO);
+    skills.emplace_back("Granada",   "Granada de plasma com AoE massivo", 5.5f, 170.0f, 220.0f, KEY_THREE);
+    skills.emplace_back("Sobrecarga","Dano +50% Vel +30% por 8s",        14.0f, 0.0f,   0.0f,  KEY_FOUR);
+    skills.emplace_back("Barreira",  "Campo de forca: imune 4s",         20.0f, 0.0f,   0.0f,  KEY_FIVE);
+    skills.emplace_back("Rajada",    "Salva: 8 projetos em leque",        7.5f, 46.0f,  440.0f, KEY_SIX);
 
     // Guarda o dano/alcance/cooldown base de cada skill para aplicar mods
     // (skillPower da classe + perks) de forma idempotente

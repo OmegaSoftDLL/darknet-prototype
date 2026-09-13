@@ -470,9 +470,11 @@ void Game::spawnFinalBoss() {
         pos.y = player.position.y + std::sin(angle) * 520.0f;
     }
     clampInsideOpenWorldBounds(pos, 120.0f);
-    // NG+: o Nucleo KRONOS assume sua forma verdadeira — Leviathan, o boss
-    // multi-fase de 8000 HP que existia no codigo mas nunca era spawnado.
-    Enemy core(pos, newGamePlus > 0 ? EnemyType::Leviathan : EnemyType::OmegaBoss);
+    // Escalada de boss final por loop: NG = OmegaBoss (Nucleo KRONOS),
+    // NG+ = Leviathan (forma verdadeira), NG++ = ARCHON DIMENSION ZERO
+    // (boss secreto 3-fases da story bible).
+    Enemy core(pos, newGamePlus >= 2 ? EnemyType::Archon :
+                     newGamePlus >= 1 ? EnemyType::Leviathan : EnemyType::OmegaBoss);
     core.isFinalBoss = true;
     // Muito mais forte que o OmegaBoss normal — e o clímax do jogo
     float lvlScale = 1.0f + (player.level - 1) * 0.25f;
@@ -489,7 +491,10 @@ void Game::spawnFinalBoss() {
     enemies.push_back(core);
     finalBossSpawned = true;
     finalBossAlive   = true;
-    showStoryBanner("== NUCLEO KRONOS ==", "O coracao da IA. Destrua-o e liberte a humanidade.", 5.0f);
+    if (newGamePlus >= 2)
+        showStoryBanner("== ARCHON DIMENSION ZERO ==", "A verdade alem do Nucleo. Nem os ceus te preparam.", 5.0f);
+    else
+        showStoryBanner("== NUCLEO KRONOS ==", "O coracao da IA. Destrua-o e liberte a humanidade.", 5.0f);
     triggerPlayerSpeech("KRONOS... e aqui que tudo termina. Por todos nos!", 5.0f);
     audio.playBossRoar();
     triggerShake(16.0f, 0.7f);

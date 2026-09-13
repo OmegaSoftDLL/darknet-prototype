@@ -13,8 +13,10 @@
 #include "Quest.h"
 #include "SkillTree.h"
 #include "Tilemap.h"
+#include "BotController.h"
 
 #include <doctest/doctest.h>
+#include <raymath.h>
 
 // Global definido em Game.cpp no jogo; Enemy.cpp referencia via `extern`.
 // Nos testes nao capturamos voxel, entao fica false.
@@ -660,4 +662,61 @@ TEST_CASE("Player - dano efetivo combina sobrecarga e multiplicador de arma") {
     // perk 0 (+10% de dano de arma)
     p.perkMask = SkillTree::bit(0);
     CHECK(p.getEffectiveDamage() == doctest::Approx(110.0f));
+}
+
+// ── BotController: desvio de telegraph (DANGER ZONE) ─────────────────────────
+
+TEST_CASE("BotController - dodge tem prioridade maxima e move para fora da zona") {
+    BotController bot;
+    bot.active = true;
+    Vector2 playerPos = {100.0f, 100.0f};
+    bool skills[6] = {false, false, false, false, false, false};
+    std::vector<Vector2> none;
+
+    // Circulo de perigo cobrindo o jogador
+    BotController::DangerZone z;
+    z.origin = playerPos;
+    z.shape  = 0;
+    z.range  = 150.0f;
+    bot.dangerZones.push_back(z);
+
+    Vector2 esc = {0, 0};
+    REQUIRE(bot.findDangerEscape(playerPos, esc));
+    CHECK(Vector2Distance(playerPos, esc) > 200.0f);   // ponto de fuga distante
+
+    auto dec = bot.update(0.016f, playerPos, 200.0f, 100.0f, 100.0f,
+                          1, 0, 60.0f, none, none, skills, none, 0);
+    CHECK(dec.shouldMove);
+    CHECK(Vector2Distance(dec.moveTarget, playerPos) > 150.0f);
+
+    // Fora de qualquer zona: nenhuma fuga
+    CHECK_FALSE(bot.findDangerEscape({4000.0f, 4000.0f}, esc));
+}
+
+TEST_CASE("BotController - findDangerEscape respeita shapes de setor e retangulo") {
+    BotController bot;
+    BotController::DangerZone sector;
+    sector.origin = {0, 0};
+    sector.dir    = {1, 0};
+    sector.shape  = 1;
+    sector.range  = 300.0f;
+    sector.arc    = 0.4f;
+    bot.dangerZones.push_back(sector);
+    Vector2 esc = {0, 0};
+    CHECK(bot.findDangerEscape({200.0f, 20.0f}, esc));       // dentro do setor
+    CHECK_FALSE(bot.findDangerEscape({200.0f, 200.0f}, esc)); // fora do arco
+    CHECK_FALSE(bot.findDangerEscape({500.0f, 0.0f}, esc));   // fora do alcance
+
+    BotController bot2;
+    BotController::DangerZone rect;
+    rect.origin = {0, 0};
+    rect.dir    = {1, 0};
+    rect.shape  = 2;
+    rect.range  = 300.0f;
+    rect.width  = 100.0f;
+    bot2.dangerZones.push_back(rect);
+    CHECK(bot2.findDangerEscape({150.0f, 20.0f}, esc));       // dentro do retangulo
+    CHECK_FALSE(bot2.findDangerEscape({150.0f, 200.0f}, esc)); // fora da largura
+    CHECK(bot2.findDangerEscape({-80.0f, 0.0f}, esc));        // atras ate metade (centrado)
+    CHECK_FALSE(bot2.findDangerEscape({-200.0f, 0.0f}, esc)); // atras do limite (range/2)
 }

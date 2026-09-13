@@ -346,6 +346,15 @@ void Enemy::setupByType() {
             shootRate = 1.0f; shootDamage = 60.0f; shootRange = 550.0f;
             shootSpeed = 420.0f; projectileColor = {0, 100, 255, 255};
             break;
+        case EnemyType::Archon:
+            // ARCHON DIMENSION ZERO — boss secreto do NG++ (story bible).
+            // Usa o sistema epico de 3 fases (role 4) com padroes telegrafados.
+            speed = 30.0f; health = maxHealth = 12000.0f;
+            damage = 95.0f; radius = 90.0f; xpReward = 10000;
+            bodyColor = {40, 0, 60, 255}; attackRate = 2.2f;
+            shootRate = 1.2f; shootDamage = 70.0f; shootRange = 600.0f;
+            shootSpeed = 480.0f; projectileColor = {180, 60, 255, 255};
+            break;
     }
     // Ritmo de caminhada normalizado — inimigos andavam rapido demais em relacao
     // ao jogador (que tambem foi desacelerado). Mantem a proporcao entre tipos.
@@ -386,6 +395,7 @@ int Enemy::combatRole() const {
         case EnemyType::InfernoHerald:
         case EnemyType::VolcanicTitan:
         case EnemyType::Leviathan:
+        case EnemyType::Archon:
             return 4;
         default:
             return 0; // perseguidor melee genérico (Scout, Tank, etc.)

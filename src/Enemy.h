@@ -61,7 +61,8 @@ enum class EnemyType {
     VoidStalker,     // teletransporta atrás do player
     DarkMatter,      // split em 3 ao morrer
     ChaosSpawn,      // random: melee/ranged/mage
-    Leviathan        // boss final multi-fase, 8000 HP
+    Leviathan,       // boss final multi-fase do NG+, 8000 HP
+    Archon           // boss secreto do NG++ (ARCHON DIMENSION ZERO), 12000 HP, 3 fases
 };
 
 class Enemy {
@@ -194,6 +195,10 @@ public:
     void  markLootDropped();
     bool  canAttackPlayer(Vector2 playerPos) const;
     float attackIfReady(float dt, Vector2 playerPos);
+    // Classe de comportamento de combate (consulta pura — Game/Bot usam p/ telegraphs).
+    // 0=perseguidor melee  1=atirador kiter  2=flanqueador rápido
+    // 3=brutamonte (investida)  4=boss (aproxima + barragem)
+    int   combatRole() const;
 
     // publico: o Game le a fase do passo pra escolher o QUADRO do modelo 3D e
     // forca fases especificas ao gerar os quadros da caminhada.
@@ -208,10 +213,6 @@ private:
     bool  roarActive      = false;
 
     void  setupByType();
-    // Classe de comportamento de combate p/ os tipos que usam a IA genérica.
-    // 0=perseguidor melee  1=atirador kiter  2=flanqueador rápido
-    // 3=brutamonte (investida)  4=boss (aproxima + barragem)
-    int   combatRole() const;
     // Sistema de padrões de ataque épicos de boss (3 fases) — chamado dos updates de boss.
     void  updateBossPatterns(float dt, Vector2 norm);
     void  checkBossPhases();   // transições de fase com flash/invuln
@@ -264,7 +265,8 @@ public:
                type == EnemyType::OmegaBoss       || type == EnemyType::PoltergeistBoss ||
                type == EnemyType::ZombieLord      || type == EnemyType::VoidColossus    ||
                type == EnemyType::FrostWyrm       || type == EnemyType::InfernoHerald   ||
-               type == EnemyType::VolcanicTitan   || type == EnemyType::Leviathan;
+               type == EnemyType::VolcanicTitan   || type == EnemyType::Leviathan    ||
+               type == EnemyType::Archon;
     }
     bool isSupernatural() const {
         return type == EnemyType::Ghost           || type == EnemyType::GhostElite      ||

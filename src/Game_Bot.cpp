@@ -96,6 +96,38 @@ void Game::updateBotControl(float dt) {
         botController.owPortalPos  = owPortalPos;
         botController.owPortalOpen = owPortalOpen;
 
+        // Zonas de perigo (telegraphs) para o bot desviar — espelha os shapes
+        // do render DANGER ZONE (Enemy_Render.cpp) com os mesmos parametros.
+        botController.dangerZones.clear();
+        for (const auto& e : enemies) {
+            bool telegraphing = (e.telegraphTimer > 0.0f) ||
+                                (e.isBoss() && e.bossAtkTimer > 0.0f && e.bossAtkTimer <= 0.5f);
+            if (!telegraphing) continue;
+            BotController::DangerZone z;
+            z.origin = e.position;
+            z.dir    = e.shootDirection;
+            if (z.dir.x == 0.0f && z.dir.y == 0.0f) z.dir = {1.0f, 0.0f};
+            float dl = std::sqrt(z.dir.x*z.dir.x + z.dir.y*z.dir.y);
+            if (dl > 0.001f) { z.dir.x /= dl; z.dir.y /= dl; }
+            if (e.isBoss()) {
+                switch (e.bossPattern) {
+                    case 1: z.shape = 1; z.range = e.shootRange; z.arc = 0.425f; break;  // LEQUE
+                    case 2: z.shape = 1; z.range = e.shootRange; z.arc = 0.8f;   break;  // VARREDURA
+                    case 3: z.shape = 2; z.range = e.shootRange; z.width = e.radius * 3.5f; break; // METRALHAR
+                    default: z.shape = 0; z.range = e.shootRange * 0.8f; break;             // ANEL
+                }
+            } else if (e.combatRole() == 3) {   // brutamonte: lunge em retangulo
+                z.shape = 2;
+                z.range = e.speed * 3.0f * 0.32f;
+                if (z.range < 150.0f) z.range = 150.0f;
+                z.width = e.radius * 2.8f;
+            } else {                            // atiradores: circulo ao redor
+                z.shape = 0;
+                z.range = e.radius * 1.8f;
+            }
+            botController.dangerZones.push_back(z);
+        }
+
         // Portais de saida da zona — para o bot avancar de fase (AdvancePhase).
         std::vector<Vector2> portalPos;
         portalPos.reserve(tilemap.portals.size());
@@ -175,13 +207,16 @@ void Game::updateBotControl(float dt) {
             botController.skillsFired++;
             botController.skillUsageCounts[0]++;
         }
-        // Skill 2 — EMP
+        // Skill 2 — EMP (agora com empurrao de controle)
         if (dec.shouldUseSkill2 && (int)player.skills.size() > 1 && player.skills[1].isReady()) {
             player.useSkill(1, dec.nearestEnemyPos);
             float empDmg = player.skills[1].damage * (player.isOverloaded() ? 1.5f : 1.0f);
             for (auto& enemy : enemies)
-                if (Vector2Distance(player.position, enemy.position) <= player.skills[1].range)
+                if (Vector2Distance(player.position, enemy.position) <= player.skills[1].range) {
                     enemy.takeDamage(empDmg);
+                    enemy.applyKnockback({enemy.position.x - player.position.x,
+                                          enemy.position.y - player.position.y}, 300.0f);
+                }
             particles.spawnExplosion(player.position, YELLOW, 25);
             audio.playEMP();
             botController.skillsFired++;
@@ -207,10 +242,10 @@ void Game::updateBotControl(float dt) {
             botController.skillsFired++;
             botController.skillUsageCounts[3]++;
         }
-        // Skill 5 — Barreira
+        // Skill 5 — Barreira (imune 4s)
         if (dec.shouldUseSkill5 && (int)player.skills.size() > 4 && player.skills[4].isReady()) {
             player.useSkill(4, dec.nearestEnemyPos);
-            player.shieldTimer = 3.0f;
+            player.shieldTimer = 4.0f;
             particles.spawnLevelUp(player.position);
             botController.skillsFired++;
             botController.skillUsageCounts[4]++;

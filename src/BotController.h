@@ -103,6 +103,22 @@ public:
     // portal abria: recebia so tilemap.portals (sistema antigo, vazio no OW).
     Vector2 owPortalPos  = {0, 0};
     bool    owPortalOpen = false;
+
+    // Zonas de perigo ativas (telegraphs estilo Hades) — preenchidas pelo Game
+    // a cada frame, espelhando os shapes do render. shape: 0=circulo (range=raio),
+    // 1=setor (dir+arc=meia-abertura em rad), 2=retangulo rotacionado
+    // (dir aponta ao longo, width=largura, range=comprimento).
+    struct DangerZone {
+        Vector2 origin = {0, 0};
+        Vector2 dir    = {1, 0};
+        float   range  = 0.0f;
+        float   arc    = 0.0f;
+        float   width  = 0.0f;
+        int     shape  = 0;
+    };
+    std::vector<DangerZone> dangerZones;
+    // Se playerPos estiver dentro de alguma zona, calcula ponto de fuga e true.
+    bool findDangerEscape(Vector2 playerPos, Vector2& escapeTarget) const;
     // Celula alcancavel mais LONGE do bot na ultima BFS. E o unico destino que
     // se pode prometer que produz deslocamento quando ele esta encurralado.
     // janela de medicao do 'preso' (ver updateStuckTracking)
@@ -183,6 +199,7 @@ private:
     // Phase advance
     float     clearTimer    = 0.0f;    // time with no enemies + no items
     bool      wasLowHP      = false;
+    bool      wasInDanger   = false;   // dentro de zona de telegraph (edge p/ telemetria)
     Vector2   fleeTarget    = {0, 0};
     Vector2   lastAdvancePortalPos = {-99999.0f, -99999.0f}; // evita contar o mesmo portal multiplas vezes
 

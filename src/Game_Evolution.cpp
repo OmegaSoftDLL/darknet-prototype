@@ -89,7 +89,7 @@ void Game::playEnemyDeathSound(const Enemy& e) {
     using ET = EnemyType;
     if (e.isFinalBoss || e.type==ET::Boss || e.type==ET::AlienBoss || e.type==ET::OmegaBoss ||
         e.type==ET::VoidColossus || e.type==ET::FrostWyrm || e.type==ET::InfernoHerald ||
-        e.type==ET::VolcanicTitan || e.type==ET::Leviathan || e.type==ET::ZombieLord ||
+        e.type==ET::VolcanicTitan || e.type==ET::Leviathan || e.type==ET::Archon || e.type==ET::ZombieLord ||
         e.type==ET::PoltergeistBoss || e.type==ET::Broodmother) {
         audio.playBossRoar();                       // chefes
     } else if (e.type==ET::Zergling || e.type==ET::Hydra || e.type==ET::CorrupterDrone ||

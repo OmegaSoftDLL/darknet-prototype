@@ -994,6 +994,7 @@ void Game::drawMinimap() const {
                 case EnemyType::InfernoHerald:   return "ARAUTO DO INFERNO";
                 case EnemyType::VolcanicTitan:   return "TITAN VULCANICO";
                 case EnemyType::Leviathan:       return "NUCLEO KRONOS";
+                case EnemyType::Archon:          return "ARCHON DIMENSION ZERO";
                 default:                         return "COMANDANTE";
             }
         };

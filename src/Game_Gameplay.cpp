@@ -1708,7 +1708,7 @@ void Game::handleInput(float dt) {
         if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Laser ativo!", 1.5f);
     }
 
-    // Skill 2 - EMP Area
+    // Skill 2 - EMP Area (com empurrao de controle)
     if (IsKeyPressed(KEY_TWO) && player.skills[1].isReady()) {
         player.useSkill(1, mouseWorld);
         tutorial.onSkillUsed();
@@ -1716,6 +1716,8 @@ void Game::handleInput(float dt) {
         for (auto& enemy : enemies) {
             if (Vector2Distance(player.position, enemy.position) <= player.skills[1].range) {
                 enemy.takeDamage(empDmg);
+                enemy.applyKnockback({enemy.position.x - player.position.x,
+                                      enemy.position.y - player.position.y}, 300.0f);
                 particles.spawnHit(enemy.position, YELLOW, 10);
             }
         }
@@ -1750,11 +1752,11 @@ void Game::handleInput(float dt) {
         if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Sobrecarga ativada!", 2.0f);
     }
 
-    // Skill 5 - Barreira de Escudo
+    // Skill 5 - Barreira de Escudo (imune 4s)
     if (IsKeyPressed(KEY_FIVE) && player.skills[4].isReady()) {
         player.useSkill(4, mouseWorld);
         tutorial.onSkillUsed();
-        player.shieldTimer = 3.0f;
+        player.shieldTimer = 4.0f;
         particles.spawnLevelUp(player.position);
         if (playerSpeechTimer <= 0.3f) triggerPlayerSpeech("Barreira de escudo!", 2.0f);
     }
