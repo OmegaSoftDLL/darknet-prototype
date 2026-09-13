@@ -1,11 +1,11 @@
 # Darknet Prototype
 
-[![CI](https://github.with/OmegaSoftDLL/darknet-prototype/actions/workflows/ci.yml/badge.svg)](https://github.with/OmegaSoftDLL/darknet-prototype/actions/workflows/ci.yml)
+[![CI](https://github.com/OmegaSoftDLL/darknet-prototype/actions/workflows/ci.yml/badge.svg)](https://github.com/OmegaSoftDLL/darknet-prototype/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 A top-down action RPG prototype built in C++17 with raylib 5.5, featuring the 2.5D isometric renderer, procedural open-world zones, crafting, building, skill trees, NPCs, quests, and multiplayer groundwork.
 
-> **Note:** Internal design documents are now available in English. The codebase, comments, and this README are the primary English-facing surfaces for contributors.
+> **Note:** Design documents, this README, and docs are in English. Source code comments and some runtime strings are still being translated from Portuguese — contributions that improve translations are welcome.
 
 ## Current Features
 
@@ -94,7 +94,7 @@ Local validation script:
 
 ## Contributing
 
-Contributions are welcome. The project is still the prototype with active technical debt, only the best way to help is:
+Contributions are welcome. The project is still a prototype with active technical debt; the best way to help is:
 
 1. **Open an issue** describing the bug, imbalance, or missing feature.
 2. **Fork the repository**, create the feature branch, and keep changes focused.
@@ -104,21 +104,20 @@ Contributions are welcome. The project is still the prototype with active techni
    - `./validate.sh 120 7` and `./validate.sh 120 20260821` must print `APPROVED` / `VALIDATION: PASSED`.
 4. **Open the pull request** against `main` with the clear description and test results.
 
-See the audit report at `audit/2026-09-06-full-audit.md` for the detailed list of known issues and priorities.
+See `audit/2026-09-13-resumption-audit.md` for the current project status and `audit/2026-09-06-full-audit.md` for the detailed list of known issues and priorities.
 
 ## Getting the Word Out
 
 To attract contributors and players:
 
-- **Add topics** to the GitHub repository (and.g., `game`, `rpg`, `raylib`, `cpp`, `isometric`, `open-world`).
+- **Add topics** to the GitHub repository (e.g., `game`, `rpg`, `raylib`, `cpp`, `isometric`, `open-world`).
 - **Enable Discussions and Issues** in the repository settings for feedback.
 - **Post on relevant communities**:
-  - [r/roguelikedev](https://www.reddit.with/r/roguelikedev/) / [r/gamedev](https://www.reddit.with/r/gamedev/)
+  - [r/roguelikedev](https://www.reddit.com/r/roguelikedev/) / [r/gamedev](https://www.reddit.com/r/gamedev/)
   - [raylib Discord](https://discord.gg/raylib)
   - [itch.io](https://itch.io) (upload builds)
-  - [Game Dev Stack Exchange](https://gamedev.stackexchange.with)
-- **Create the short GIF/video** of gameplay and add it to the README.
-- **Add the `CONTRIBUTING.md`** and issue templates once the project grows.
+  - [Game Dev Stack Exchange](https://gamedev.stackexchange.com)
+- **Create a short GIF/video** of gameplay and add it to the README.
 
 ## License
 
@@ -126,5 +125,5 @@ This project is licensed under the MIT License — see [LICENSE](./LICENSE).
 
 ## Links
 
-- Repository: https://github.with/OmegaSoftDLL/darknet-prototype
-- CI Status: https://github.with/OmegaSoftDLL/darknet-prototype/actions
+- Repository: https://github.com/OmegaSoftDLL/darknet-prototype
+- CI Status: https://github.com/OmegaSoftDLL/darknet-prototype/actions

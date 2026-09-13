@@ -276,7 +276,7 @@ The game is stable for autonomous execution, but tests do not cover gameplay, sa
 #### P2 — Client opens Stripe URL without validation
 - **File:** `src/StoreClient.cpp:216-224`, `src/HttpClient.cpp:91-93`
 - **Description:** `buyGemsAsync` opens in browser any URL returned by the server via `ShellExecuteA`.
-- **Recommendation:** Validate that URL belongs to `https://checkout.stripe.with/` before opening.
+- **Recommendation:** Validate that URL belongs to `https://checkout.stripe.com/` before opening.
 
 ---
 

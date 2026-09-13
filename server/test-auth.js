@@ -1,5 +1,5 @@
-// Tests automatizados of the auth real (email + password + bcrypt).
-// Inicia the game-server in door isolated, registra, loga and checks failures.
+// Testes automatizados da auth real (email + senha + bcrypt).
+// Sobe o game-server em porta isolada, registra, loga e verifica falhas.
 import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -39,7 +39,7 @@ async function run() {
         const r = await fetch(BASE + "/store");
         if (r.status === 200) return resolve();
       } catch {}
-      if (attempts > 50) return reject(new Error("timeout to the go up server"));
+      if (attempts > 50) return reject(new Error("timeout aguardando o server subir"));
       setTimeout(tryReady, 200);
     };
     tryReady();
@@ -51,8 +51,8 @@ async function run() {
       await fn();
       console.log(`✅ ${name}`);
       passed++;
-    } catch (and) {
-      console.log(`❌ ${name}: ${and.message}`);
+    } catch (err) {
+      console.log(`❌ ${name}: ${err.message}`);
       failed++;
     }
   };
@@ -109,7 +109,7 @@ async function run() {
     if (r.status !== 400) throw new Error(`status ${r.status}`);
   });
 
-  await check("token invalid and rejeitado", async () => {
+  await check("token invalido e rejeitado", async () => {
     const r = await get("/me", "token-invalid");
     if (r.status !== 401) throw new Error(`status ${r.status}`);
   });
@@ -119,4 +119,4 @@ async function run() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-run().catch((and) => { console.error(and); process.exit(1); });
+run().catch((err) => { console.error(err); process.exit(1); });

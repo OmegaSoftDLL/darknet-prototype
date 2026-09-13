@@ -20,7 +20,7 @@ A comprehensive design document covering:
 The narrative bible for the Darknet universe:
 
 - Setting: the dystopian Earth after the KRONOS AI uprising.
-- Main characters: VANCE RIOS, ZARA, KANE, LUNA, DR. CHEN, STEEL, and others.
+- Main characters: VANCE RIOS, DR. CHEN, MARCO VEIL, STEEL, REX, COMMANDER LYRA, and others.
 - Act structure, major plot beats, and faction lore.
 - Side quests, secret endings, and New Game+ content.
 
