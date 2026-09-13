@@ -187,25 +187,39 @@ server/
 - Redis (só quando houver >1 réplica de game-server).
 - Matchmaking ranqueado.
 
-## 18. Caminho alternativo: Steamworks (decisão pendente do PO)
+## 18. Caminho alternativo: Steamworks — **DECISÃO DO PO: STEAM-FIRST**
 
-A Valve NÃO hospeda servidor de jogo, mas oferece **Steam Networking Sockets /
-Steam Datagram Relay (SDR)**: conexão P2P roteada pelos relays da Valve — para
-o co-op de sessões pequenas do Darknet isso ELIMINA o servidor dedicado na build Steam.
+Decisão registrada em 2026-09-13: o projeto segue **100% pela Steam** (build
+standalone/itch.io fica fora de escopo até decisão contrária). Consequências:
 
-| Função | Build Steam | Build standalone/itch.io |
+| Função | Solução | Infra própria? |
 |---|---|---|
-| Multiplayer | Steam lobbies + SDR (P2P com relay) | Servidor Node deste repo (relay WS) |
-| Gems/pagamentos | **Steam Wallet (obrigatório — a Valve proíbe checkout externo)** | Stripe (webhook já implementado) |
-| Auth | SteamID | JWT (após `/auth/login` virar real) |
+| Multiplayer co-op (pós-lançamento) | Steam lobbies + SDR (P2P relay da Valve) | **NÃO** |
+| Auth de jogadores | SteamID | **NÃO** |
+| Gems/monetização | Steam Wallet (30%) — Stripe só se um dia houver build standalone | **NÃO** |
+| Saves | Local + Steam Cloud | **NÃO** |
+| Conquistas/leaderboards | Steamworks API | **NÃO** |
 
-Implicações:
 - A build Steam exige reescrita da camada de rede para a Steamworks API
   (o stub `integration/steam/SteamIntegration.cpp` já existe no repo para isso).
-- **Escopo desta spec se o PO escolher Steam-first**: reduz a DNS+TLS+segredos
-  para a build standalone apenas; a build Steam não usa este servidor.
-- **Decisão alinhada com o roadmap vigente**: o lançamento é single-player offline
-  (nenhum servidor necessário); esta spec serve para o momento em que o co-op entrar.
+- **Esta spec fica mantida apenas como backlog** para um futuro build standalone
+  (domínio + TLS + secrets + backups listados abaixo seguem válidos nesse cenário).
+- **O LANÇAMENTO É SINGLE-PLAYER OFFLINE**: nenhum servidor (Steam ou próprio) é
+  necessário na data do lançamento.
+
+### Resumo do que é necessário comprar/construir NO caminho Steam-first
+
+| Item | Tipo | Custo |
+|---|---|---|
+| Taxa Steam Direct | obrigatório | **US$ 100** (único, reembolsável após US$ 1.000 de receita) |
+| Landing page (GitHub Pages/Netlify) | recomendado | US$ 0 |
+| Domínio (opcional, pra press kit) | opcional | ~US$ 12/ano |
+| Discord (comunidade/suporte) | recomendado | US$ 0 |
+| CI/CD (GitHub Actions, repo público) | já existe | US$ 0 |
+| **Total de infra própria a construir** | | **US$ 100 + US$ 12/ano** |
+
+O trabalho restante é **de desenvolvimento, não de infra**: integrar o Steamworks SDK
+(Cloud, conquistas, e depois SDR pro co-op) e configurar o app no Steamworks Partner.
 
 ---
 
