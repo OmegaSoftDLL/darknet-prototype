@@ -251,6 +251,15 @@ addressed nearly everything). Verified-stale highlights:
 
 **Strategic baseline for the next phase**: public repo, dual license, Steam-first, launch is single-player offline. Roadmap: gameplay depth (Act 1) → Act 2 + meta-progression → trailer → Steam page/Next Fest. CI blocked by GitHub account billing lock until 2026-10-05 (account-level, resolved by the owner).
 
+### Session end addendum (2026-09-13, continued)
+
+| Commit | Change |
+|---|---|
+| `7c0797a` | **Gameplay depth batch**: bot telegraph-dodge (priority-0 escape from DANGER ZONE shapes, unit-tested geometry); skill rebalance for build diversity (EMP now knocks back as described, Grenade/Overload/Barrier/Burst buffed, Laser trimmed); **ARCHON DIMENSION ZERO** — NG++ secret boss (12k HP, epic 3-phase system). Final-boss ladder: NG=OmegaBoss, NG+=Leviathan, NG++=Archon. Tests 36 cases / 1443 assertions; both CI seeds green. |
+| `51eba2f` | **Landing page** (`docs/index.html`) served via GitHub Pages: https://omegasoftdll.github.io/kronosfall/ — KRONOSFALL branding, features, NG+ ladder, licensing. CI badge omitted publicly until billing clears. CNAME ready to add when kronosfall.com is registered. |
+
+**Day totals**: 12 commits — code restored and audited (190 findings verified, ~85% already fixed), 36/36 tests, autotest green on both CI seeds, NG+ boss ladder shipped, brand reborn as KRONOSFALL, Steam-first strategy + infra spec delivered, public landing live.
+
 ---
 
 ## 7. Definition of Done (unchanged from project convention)
