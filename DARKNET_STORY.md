@@ -1,4 +1,10 @@
 # DARKNET — COMPLETE STORY AND NARRATIVE DESIGN
+
+> **© 2026 OmegaSoftDLL. Content licensed under CC BY-NC 4.0 (Attribution-NonCommercial).**
+> See `LICENSE-CONTENT.md` in the repository root. This is creative content — the game
+> source code is MIT-licensed separately. Commercial use of this story, its characters
+> and names requires permission from the owner.
+
 **Version 1.0 | Official Narrative Document**
 
 ---

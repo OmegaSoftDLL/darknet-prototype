@@ -121,7 +121,22 @@ To attract contributors and players:
 
 ## License
 
-This project is licensed under the MIT License — see [LICENSE](./LICENSE).
+This project uses a dual-license model:
+
+- **Source code** (`src/`, `server/`, `tests/`, `integration/`, build scripts, workflows):
+  [MIT License](./LICENSE) — free for commercial and non-commercial use, with attribution.
+- **Creative content** (`resources/` assets, `content/` game data, `DARKNET_STORY.md`):
+  [CC BY-NC 4.0](./LICENSE-CONTENT.md) — share and adapt with attribution;
+  **commercial use requires permission** from OmegaSoftDLL.
+
+This means you can use the engine code in a sold product, but not this game's story,
+characters, or assets. See `LICENSE-CONTENT.md` for the full terms.
+
+## Trademarks
+
+"Darknet", "Darknet Prototype", "KRONOS", and the character and location names are
+unregistered trademarks of **OmegaSoftDLL**. The MIT/CC licenses above do not grant
+any trademark rights; do not use these names to brand or promote derivative products.
 
 ## Links
 
