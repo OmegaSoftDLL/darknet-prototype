@@ -5,10 +5,10 @@
 #include <functional>
 
 enum class PortalState {
-    Opening,  // opening animation (1.5s)
-    Active,   // open — spawns enemies and can be attacked
-    Closing,  // player closed it — collapse animation (2.0s)
-    Closed    // dead
+    Opening,  // animacao de abertura 1.5s
+    Active,   // aberto — spawna inimigos, pode ser atacado
+    Closing,  // player fechou — animacao de colapso 2.0s
+    Closed    // morto
 };
 
 struct AnomalyPortal {
@@ -45,13 +45,13 @@ private:
 
 struct StormSystem {
     bool  active        = false;
-    bool  atmospheric   = false;  // rain/wind environment for dark zones (in the anomaly wave)
+    bool  atmospheric   = false;  // chuva ambiente de zona sombria (sem onda de anomalia)
     float intensity     = 0.0f;
-    float maxIntensity  = 1.0f;   // intensity ceiling (atmospheric uses less)
+    float maxIntensity  = 1.0f;   // teto da intensidade (atmosferica usa menos)
     float lightningTimer = 0.0f;
     float lightningDur  = 0.0f;
     float ambientTimer  = 0.0f;
-    float windPhase     = 0.0f;   // variable wind gusts
+    float windPhase     = 0.0f;   // rajadas de vento variaveis
 
     struct RainDrop {
         Vector2 pos;
@@ -60,8 +60,8 @@ struct StormSystem {
     };
     std::vector<RainDrop> drops;
 
-    void start();              // strong storm (anomaly wave)
-    void startAtmospheric();   // rain/wind environment for dark zones
+    void start();              // tempestade forte (onda de anomalia)
+    void startAtmospheric();   // chuva/vento ambiente de zona sombria
     void stop();
     void update(float dt);
     void render(int screenW, int screenH) const;

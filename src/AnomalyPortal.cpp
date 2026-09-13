@@ -99,11 +99,11 @@ void AnomalyPortal::renderOpeningAnim() const {
 
     // Electric sparks radiating outward
     for (int i = 0; i < 6; i++) {
-        float the = (i / 6.0f) * PI * 2.0f + arcTimer;
+        float a = (i / 6.0f) * PI * 2.0f + arcTimer;
         float len = baseRadius * 0.5f * progress;
-        Vector2 from = {px + cosf(the) * w * 0.4f, py + sinf(the) * h * 0.4f};
-        float in the = the + sinf(arcTimer + i) * 0.6f;
-        Vector2 to   = {from.x + cosf(in the) * len, from.y + sinf(in the) * len};
+        Vector2 from = {px + cosf(a) * w * 0.4f, py + sinf(a) * h * 0.4f};
+        float na = a + sinf(arcTimer + i) * 0.6f;
+        Vector2 to   = {from.x + cosf(na) * len, from.y + sinf(na) * len};
         DrawLineEx(from, to, 1.2f, ColorAlpha(portalColor, 0.8f * progress));
     }
 
@@ -175,7 +175,7 @@ void AnomalyPortal::renderActivePortal() const {
         DrawRectangle(bx, by, bw, 8, {50, 0, 0, 200});
         DrawRectangle(bx, by, (int)(bw * hpPct), 8, portalColor);
         DrawRectangleLinesEx({(float)bx, (float)by, (float)bw, 8.0f}, 1.0f, {200, 200, 200, 140});
-        const char* lbl = "ANOMALY";
+        const char* lbl = "ANOMALIA";
         DrawText(lbl, bx + bw / 2 - MeasureText(lbl, 10) / 2, by - 14, 10,
                  ColorAlpha(portalColor, 0.9f));
     }
@@ -211,9 +211,9 @@ void AnomalyPortal::renderClosingAnim() const {
 
     // Particles exploding outward
     for (int p = 0; p < 10; p++) {
-        float the   = (p / 10.0f) * PI * 2.0f + progress * 5.0f;
+        float a   = (p / 10.0f) * PI * 2.0f + progress * 5.0f;
         float dist = baseRadius * 1.2f * progress;
-        Vector2 pp = {px + cosf(the) * dist, py + sinf(the) * dist};
+        Vector2 pp = {px + cosf(a) * dist, py + sinf(a) * dist};
         DrawCircle((int)pp.x, (int)pp.y, 3.0f * (1.0f - progress),
                    ColorAlpha(portalColor, 1.0f - progress));
     }
@@ -245,7 +245,7 @@ void StormSystem::start() {
     lightningDur   = 0.0f;
     ambientTimer   = 0.0f;
     drops.clear();
-    // Spawn 320 rain drops (strong storm)
+    // Spawn 320 rain drops (tempestade forte)
     drops.resize(320);
     for (auto& d : drops) {
         d.pos   = {(float)GetRandomValue(0, 1280), (float)GetRandomValue(0, 720)};
@@ -255,9 +255,9 @@ void StormSystem::start() {
 }
 
 void StormSystem::startAtmospheric() {
-    // Rain/wind environment for dark zones — smoother than the anomaly storm,
-    // but always visible.
-    if (active && atmospheric) return; // already active
+    // Chuva e vento ambiente para zonas sombrias — mais suave que a tempestade
+    // de anomalia, mas sempre visivel.
+    if (active && atmospheric) return; // ja ativa
     active       = true;
     atmospheric  = true;
     maxIntensity = 0.75f;
@@ -290,11 +290,11 @@ void StormSystem::update(float dt) {
     // Ramp intensity up to maxIntensity over ~3s
     if (intensity < maxIntensity) intensity = std::min(maxIntensity, intensity + dt * 0.35f);
 
-    // Variable wind gusts — the wind changes strength/direction over time
+    // Rajadas de vento variaveis — o vento muda de força/direção ao longo do tempo
     float windGust = sinf(windPhase * 0.5f) * 0.4f + sinf(windPhase * 1.7f) * 0.15f;
-    float windX    = (0.25f + windGust) * 1.0f;  // horizontal wind factor
+    float windX    = (0.25f + windGust) * 1.0f;  // fator horizontal do vento
 
-    // Move raindrops with wind
+    // Move raindrops com vento
     for (auto& d : drops) {
         d.pos.x += d.speed * windX * dt;
         d.pos.y += d.speed * dt;
@@ -303,7 +303,7 @@ void StormSystem::update(float dt) {
         if (d.pos.x < -60.0f)  { d.pos.x += 1360.0f; }
     }
 
-    // Lightning timer — atmospheric has rarer lightnings
+    // Lightning timer — atmosferica tem relampagos mais raros
     lightningTimer += dt;
     float baseStrike = atmospheric ? 7.0f : 4.0f;
     float nextStrike = baseStrike + sinf(ambientTimer * 0.3f) * 2.0f;
@@ -331,7 +331,7 @@ void StormSystem::render(int screenW, int screenH) const {
         DrawRectangle(0, screenH - i, screenW, i, {0, 0, 0, va});
     }
 
-    // Rain — slant follows the wind (gusts)
+    // Rain — inclinacao acompanha o vento (rajadas)
     float windGust = sinf(windPhase * 0.5f) * 0.4f + sinf(windPhase * 1.7f) * 0.15f;
     float slantX   = (0.25f + windGust) * 22.0f;
     for (const auto& d : drops) {
@@ -340,13 +340,13 @@ void StormSystem::render(int screenW, int screenH) const {
         DrawLineEx(from, to, 1.1f, ColorAlpha({190, 210, 255, 255}, d.alpha * intensity));
     }
 
-    // Leaves/dust carried by the wind (reinforces the wind sensation)
+    // Folhas/poeira levadas pelo vento (reforça a sensação de vento)
     for (int i = 0; i < 18; i++) {
         float t  = fmodf(windPhase * 0.4f + i * 0.37f, 1.0f);
         float fx = fmodf(i * 137.0f + windPhase * 80.0f * (0.5f + slantX * 0.02f), (float)screenW);
         float fy = fmodf(i * 91.0f + windPhase * 30.0f, (float)screenH);
-        float the  = (0.3f + 0.2f * sinf(windPhase * 2.0f + i)) * intensity;
-        DrawCircle((int)fx, (int)fy, 1.5f, ColorAlpha({160, 150, 130, 255}, the));
+        float a  = (0.3f + 0.2f * sinf(windPhase * 2.0f + i)) * intensity;
+        DrawCircle((int)fx, (int)fy, 1.5f, ColorAlpha({160, 150, 130, 255}, a));
     }
 
     // Lightning flash
@@ -437,7 +437,7 @@ void AnomalySystem::spawnWave(int zoneW, int zoneH, Vector2 playerPos,
 }
 
 void AnomalySystem::update(float dt, Vector2 playerPos) {
-    // The storm always animates while active (including atmospheric rain without the wave)
+    // A tempestade SEMPRE anima quando ativa (inclusive chuva atmosferica sem onda)
     if (storm.active) storm.update(dt);
 
     if (!waveActive) {
@@ -456,7 +456,7 @@ void AnomalySystem::update(float dt, Vector2 playerPos) {
 
     if (!anyActive) {
         waveActive = false;
-        // Only stop the storm if it is not atmospheric (dark zones keep the rain)
+        // So para a tempestade se NAO for atmosferica (zona sombria mantem a chuva)
         if (!storm.atmospheric) storm.stop();
     }
 }
@@ -483,7 +483,7 @@ void AnomalySystem::renderHUD(int screenW, int screenH) const {
                          1.5f, ColorAlpha({200, 0, 255, 255}, 0.8f));
 
     // Title
-    const char* title = TextFormat("ANOMALIES: %d / %d OPEN", open, total);
+    const char* title = TextFormat("ANOMALIAS: %d / %d ABERTAS", open, total);
     int tw = MeasureText(title, 13);
     Color titleCol = (open > 0) ? Color{255, 60, 60, 255} : Color{0, 220, 80, 255};
     DrawText(title, panelX + panelW / 2 - tw / 2, panelY + 5, 13, titleCol);
@@ -503,7 +503,7 @@ void AnomalySystem::renderHUD(int screenW, int screenH) const {
 
     // All closed reward message
     if (open == 0) {
-        const char* msg = "ALL ANOMALIES CLOSED! +2500 XP";
+        const char* msg = "TODAS ANOMALIAS FECHADAS! +2500 XP";
         int mw = MeasureText(msg, 15);
         DrawRectangle(screenW / 2 - mw / 2 - 12, screenH / 2 - 28, mw + 24, 32,
                       ColorAlpha(BLACK, 0.85f));

@@ -2,7 +2,7 @@
 #include <raylib.h>
 #include <vector>
 
-// ─── InfernoZone: zone vulcanica with lava, geysers and atmosfera of cinzas ─────
+// ─── InfernoZone: zona vulcanica com lava, geysers e atmosfera de cinzas ─────
 
 struct LavaPool {
     Vector2 position;

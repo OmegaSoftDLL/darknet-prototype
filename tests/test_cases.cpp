@@ -1,21 +1,22 @@
-// Pure game rule test cases — in the raylib window.
-// Build with: cmake --build build --config Release --target darknet_tests
-//          ./build/Release/darknet_tests.exe   (or: ctest --test-dir build -C Release)
+// Casos de teste das regras PURAS do jogo — sem janela raylib.
+// Roda em: cmake --build build --config Release --target darknet_tests
+//          ./build/Release/darknet_tests.exe   (ou: ctest --test-dir build -C Release)
 //
-// This TU includes raylib (via game headers) BUT NOT doctest's implementation,
-// only there is in the conflict with <windows.h> (see tests/test_main.cpp).
+// Neste TU entra a raylib (via headers do jogo) MAS NAO a implementacao do
+// doctest — por isso nao ha conflito com <windows.h> (ver tests/test_main.cpp).
 #include "CraftingSystem.h"
 #include "Enemy.h"
 #include "Equipment.h"
 #include "SaveManager.h"
 #include "Player.h"
 #include "Projectile.h"
+#include "SkillTree.h"
 #include "Tilemap.h"
 
 #include <doctest/doctest.h>
 
-// Global defined in Game.cpp; Enemy.cpp references it via `extern`.
-// In tests we do not capture voxels, only it stays false.
+// Global definido em Game.cpp no jogo; Enemy.cpp referencia via `extern`.
+// Nos testes nao capturamos voxel, entao fica false.
 bool g_voxelCapture = false;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -31,47 +32,47 @@ static void appendTo(std::vector<Item>& bag, ItemType t, int n) {
 
 // ── CraftingSystem ───────────────────────────────────────────────────────────
 
-TEST_CASE("CraftingSystem::canCraft - sufficient and insufficient materials") {
+TEST_CASE("CraftingSystem::canCraft - materiais suficientes e insuficientes") {
     CraftingSystem cs;
     cs.buildRecipes();
     REQUIRE(!cs.recipes.empty());
 
-    // "Combat Knife" (Faca of Combat): 3x MetalScrap
+    // "Faca de Combate": 3x MetalScrap
     int idx = -1;
     for (int i = 0; i < (int)cs.recipes.size(); ++i)
-        if (cs.recipes[i].name == "Faca of Combat") { idx = i; break; }
+        if (cs.recipes[i].name == "Faca de Combate") { idx = i; break; }
     REQUIRE(idx >= 0);
 
     std::vector<Item> bag;
-    CHECK_FALSE(cs.canCraft(bag, idx));                    // empty bag
+    CHECK_FALSE(cs.canCraft(bag, idx));                    // bag vazia
     bag = makeBag(ItemType::MetalScrap, 2);
     CHECK_FALSE(cs.canCraft(bag, idx));                    // 2 < 3
     appendTo(bag, ItemType::MetalScrap, 1);
-    CHECK(cs.canCraft(bag, idx));                          // exact: 3
+    CHECK(cs.canCraft(bag, idx));                          // exato: 3
     appendTo(bag, ItemType::MetalScrap, 5);
-    CHECK(cs.canCraft(bag, idx));                          // extras do not hurt
+    CHECK(cs.canCraft(bag, idx));                          // sobra nao atrapalha
 }
 
-TEST_CASE("CraftingSystem::canCraft - multi-ingredient recipe and invalid index") {
+TEST_CASE("CraftingSystem::canCraft - receita multi-ingrediente e indice invalido") {
     CraftingSystem cs;
     cs.buildRecipes();
 
-    // "Acid Launcher" (Lancador Acid): 3x AlienCarapace + 1x PlasmaCore
+    // "Lancador Acido": 3x AlienCarapace + 1x PlasmaCore
     int idx = -1;
     for (int i = 0; i < (int)cs.recipes.size(); ++i)
-        if (cs.recipes[i].name == "Lancador Acid") { idx = i; break; }
+        if (cs.recipes[i].name == "Lancador Acido") { idx = i; break; }
     REQUIRE(idx >= 0);
 
     std::vector<Item> bag = makeBag(ItemType::AlienCarapace, 3);
-    CHECK_FALSE(cs.canCraft(bag, idx));                    // missing PlasmaCore
+    CHECK_FALSE(cs.canCraft(bag, idx));                    // falta PlasmaCore
     appendTo(bag, ItemType::PlasmaCore, 1);
-    CHECK(cs.canCraft(bag, idx));                          // complete
+    CHECK(cs.canCraft(bag, idx));                          // completo
 
-    CHECK_FALSE(cs.canCraft(bag, -1));                     // invalid indices
+    CHECK_FALSE(cs.canCraft(bag, -1));                     // indices invalidos
     CHECK_FALSE(cs.canCraft(bag, (int)cs.recipes.size()));
 }
 
-TEST_CASE("CraftingSystem::countMaterial counts only the requested type") {
+TEST_CASE("CraftingSystem::countMaterial conta so o tipo pedido") {
     std::vector<Item> bag = makeBag(ItemType::MetalScrap, 4);
     appendTo(bag, ItemType::NanoFiber, 2);
 
@@ -80,7 +81,7 @@ TEST_CASE("CraftingSystem::countMaterial counts only the requested type") {
     CHECK(CraftingSystem::countMaterial(bag, ItemType::OmegaEssence) == 0);
 }
 
-TEST_CASE("CraftingSystem::getFilteredIndices filters by category") {
+TEST_CASE("CraftingSystem::getFilteredIndices filtra por categoria") {
     CraftingSystem cs;
     cs.buildRecipes();
 
@@ -95,9 +96,9 @@ TEST_CASE("CraftingSystem::getFilteredIndices filters by category") {
         CHECK(cs.recipes[i].category == CraftCategory::Weapons);
 }
 
-// ── Enemy: type classification (pure, inline in header) ─────────────────────
+// ── Enemy: classificacao de tipo (pura, inline no header) ────────────────────
 
-TEST_CASE("Enemy::isBoss classifies all bosses") {
+TEST_CASE("Enemy::isBoss classifica todos os bosses") {
     CHECK(Enemy({0,0}, EnemyType::Boss).isBoss());
     CHECK(Enemy({0,0}, EnemyType::AlienBoss).isBoss());
     CHECK(Enemy({0,0}, EnemyType::OmegaBoss).isBoss());
@@ -115,7 +116,7 @@ TEST_CASE("Enemy::isBoss classifies all bosses") {
     CHECK_FALSE(Enemy({0,0}, EnemyType::GhostElite).isBoss()); // elite != boss
 }
 
-TEST_CASE("Enemy supernatural vs floating (zombies of the NOT float)") {
+TEST_CASE("Enemy sobrenatural vs flutuante (zumbis NAO flutuam)") {
     Enemy ghost({0,0}, EnemyType::Ghost);
     CHECK(ghost.isSupernatural());
     CHECK(ghost.isFloating());
@@ -126,37 +127,37 @@ TEST_CASE("Enemy supernatural vs floating (zombies of the NOT float)") {
 
     Enemy zombie({0,0}, EnemyType::Zombie);
     CHECK(zombie.isSupernatural());
-    CHECK_FALSE(zombie.isFloating());   // corporeal: walks on floor
+    CHECK_FALSE(zombie.isFloating());   // corporeo: anda no chao
 
     Enemy scout({0,0}, EnemyType::Scout);
     CHECK_FALSE(scout.isSupernatural());
     CHECK_FALSE(scout.isFloating());
 }
 
-TEST_CASE("Enemy::getGlobalScaling - base, bonus and +300% cap") {
+TEST_CASE("Enemy::getGlobalScaling - base, bonus e cap de +300%") {
     CHECK(Enemy::getGlobalScaling(0, 0) == doctest::Approx(1.0));
-    CHECK(Enemy::getGlobalScaling(50, 0) == doctest::Approx(1.05));  // 1 group of 50 kills
+    CHECK(Enemy::getGlobalScaling(50, 0) == doctest::Approx(1.05));  // 1 grupo de 50 kills
     CHECK(Enemy::getGlobalScaling(0, 10) == doctest::Approx(1.8));   // 10 * 0.08
     CHECK(Enemy::getGlobalScaling(100, 5) == doctest::Approx(1.5));  // 0.10 + 0.40
     CHECK(Enemy::getGlobalScaling(100000, 1000) == doctest::Approx(4.0)); // cap 4.0
 }
 
-TEST_CASE("Enemy::takeDamage - death, loot and HP clamp") {
-    Enemy and({0,0}, EnemyType::Scout);
-    CHECK_FALSE(and.isDead());
+TEST_CASE("Enemy::takeDamage - morte, loot e clamp de HP") {
+    Enemy e({0,0}, EnemyType::Scout);
+    CHECK_FALSE(e.isDead());
 
-    and.takeDamage(and.maxHealth + 50.0f);   // overkill
-    CHECK(and.health == doctest::Approx(0.0)); // clamp at 0
-    CHECK(and.isDead());
-    CHECK(and.shouldDropLoot());
+    e.takeDamage(e.maxHealth + 50.0f);   // overkill
+    CHECK(e.health == doctest::Approx(0.0)); // clamp em 0
+    CHECK(e.isDead());
+    CHECK(e.shouldDropLoot());
 
-    and.markLootDropped();
-    CHECK_FALSE(and.shouldDropLoot());     // loot drops only once
+    e.markLootDropped();
+    CHECK_FALSE(e.shouldDropLoot());     // loot so dropa uma vez
 }
 
-// ── Equipment: upgrade math (inline in header) ───────────────────────────────
+// ── Equipment: matematica de upgrade (inline no header) ──────────────────────
 
-TEST_CASE("Equipment - effective stats scale +30% per upgrade level") {
+TEST_CASE("Equipment - stats efetivos escalam +30% por nivel de upgrade") {
     Equipment w = EDB::rifleEnergia();   // primary 35, secondary 40
     CHECK(w.getEffectivePrimary()   == doctest::Approx(35.0));
     CHECK(w.getEffectiveSecondary() == doctest::Approx(40.0));
@@ -168,7 +169,7 @@ TEST_CASE("Equipment - effective stats scale +30% per upgrade level") {
     CHECK(w.getEffectiveSecondary() == doctest::Approx(76.0));
 }
 
-TEST_CASE("Equipment - upgrade cost and canUpgrade") {
+TEST_CASE("Equipment - custo de upgrade e canUpgrade") {
     Equipment w = EDB::pistolaPlas();
     CHECK(w.canUpgrade());
     CHECK(w.upgradeCost() == 100);
@@ -178,16 +179,16 @@ TEST_CASE("Equipment - upgrade cost and canUpgrade") {
     CHECK(w.upgradeCost() == 600);
     w.upgradeLevel = 3;
     CHECK(w.upgradeCost() == 0);
-    CHECK_FALSE(w.canUpgrade());         // maximum reached
+    CHECK_FALSE(w.canUpgrade());         // maximo atingido
 
-    Equipment empty;
-    CHECK(empty.isEmpty());
-    CHECK_FALSE(empty.canUpgrade());     // empty slot does not level up
+    Equipment vazio;
+    CHECK(vazio.isEmpty());
+    CHECK_FALSE(vazio.canUpgrade());     // slot vazio nao upa
 }
 
 // ── SaveManager: roundtrip V5 (slot) ─────────────────────────────────────────
 
-TEST_CASE("SaveManager - save/load roundtrip preserves full state (V7)") {
+TEST_CASE("SaveManager - save/load roundtrip preserva estado completo (V7)") {
     const int slot = 2;
     SaveManager::deleteSave(slot);
 
@@ -202,10 +203,10 @@ TEST_CASE("SaveManager - save/load roundtrip preserves full state (V7)") {
     p.totalKills = 123;
 
     Equipment w = EDB::rifleEnergia(); w.upgradeLevel = 2; w.primary = 50; w.secondary = 70;
-    Equipment the = EDB::armaduraAvan(); the.upgradeLevel = 1; the.primary = 150; the.secondary = 20;
+    Equipment a = EDB::armaduraAvan(); a.upgradeLevel = 1; a.primary = 150; a.secondary = 20;
     Equipment i = EDB::neuralLink();   i.upgradeLevel = 3; i.primary = 55; i.secondary = 1.8f;
     p.equipItem(w);
-    p.equipItem(the);
+    p.equipItem(a);
     p.equipItem(i);
 
     p.equipBag.push_back(EDB::pistolaPlas());
@@ -219,7 +220,7 @@ TEST_CASE("SaveManager - save/load roundtrip preserves full state (V7)") {
     {
         Item leg{}; leg.type = ItemType::PlasmaRifle; leg.rarity = ItemRarity::Legendary;
         leg.value = 5000; leg.bonusDamage = 25; leg.bonusCrit = 0.15f;
-        leg.affixPrefix = "Flamejante"; leg.affixSuffix = "of the Tita"; leg.baseName = "Rifle of Plasma";
+        leg.affixPrefix = "Flamejante"; leg.affixSuffix = "do Tita"; leg.baseName = "Rifle de Plasma";
         p.inventory.push_back(leg);
     }
 
@@ -259,7 +260,7 @@ TEST_CASE("SaveManager - save/load roundtrip preserves full state (V7)") {
     CHECK(static_cast<int>(loadedZone) == static_cast<int>(ZoneID::Cemetery));
     CHECK(loadedGameTotalKills == 777);
 
-    // Equipment resolved by stable ID + upgrade/primary/secondary
+    // Equipment resolvido por ID estavel + upgrade/primary/secondary
     CHECK(loaded.equippedWeapon.id == EDB::rifleEnergia().id);
     CHECK(loaded.equippedWeapon.upgradeLevel == 2);
     CHECK(loaded.equippedWeapon.primary == doctest::Approx(50.0f));
@@ -273,7 +274,7 @@ TEST_CASE("SaveManager - save/load roundtrip preserves full state (V7)") {
     CHECK(loaded.equipBag[0].upgradeLevel == 1);
     CHECK(loaded.equipBag[1].id == EDB::exoesqueleto().id);
 
-    // Inventory (rarity/affixes preserved)
+    // Inventory (raridade/afixos preservados)
     REQUIRE(loaded.inventory.size() == 6);
     const Item& legLoaded = loaded.inventory.back();
     CHECK(legLoaded.type == ItemType::PlasmaRifle);
@@ -282,10 +283,10 @@ TEST_CASE("SaveManager - save/load roundtrip preserves full state (V7)") {
     CHECK(legLoaded.bonusDamage == doctest::Approx(25.0f));
     CHECK(legLoaded.bonusCrit == doctest::Approx(0.15f));
     CHECK(legLoaded.affixPrefix == "Flamejante");
-    CHECK(legLoaded.affixSuffix == "of the Tita");
-    CHECK(legLoaded.baseName == "Rifle of Plasma");
+    CHECK(legLoaded.affixSuffix == "do Tita");
+    CHECK(legLoaded.baseName == "Rifle de Plasma");
 
-    // Quests (matched by id, state restored)
+    // Quests (match por id, estado restaurado)
     REQUIRE(loadedQuests.size() == 2);
     CHECK(loadedQuests[0].current    == 6);
     CHECK_FALSE(loadedQuests[0].completed);
@@ -297,11 +298,11 @@ TEST_CASE("SaveManager - save/load roundtrip preserves full state (V7)") {
     CHECK_FALSE(SaveManager::hasSave(slot));
 }
 
-TEST_CASE("SaveManager - V4 legacy loads equipment by display name") {
+TEST_CASE("SaveManager - V4 legado carrega equipamento por nome de exibicao") {
     const int slot = 1;
     SaveManager::deleteSave(slot);
 
-    // Writes the V4 save by hand: old IDs did not exist, equipment was by name.
+    // Grava um save V4 a mao: IDs antigos nao existiam, equipamento por nome.
     std::string path = std::string("saves/darknet_slot1.txt");
     {
         FILE* f = fopen(path.c_str(), "w");
@@ -329,7 +330,7 @@ TEST_CASE("SaveManager - V4 legacy loads equipment by display name") {
     SaveManager::deleteSave(slot);
 }
 
-TEST_CASE("SaveManager - enum values outside the range are clamped") {
+TEST_CASE("SaveManager - valores de enum fora da faixa sao clampados") {
     const int slot = 2;
     SaveManager::deleteSave(slot);
 
@@ -359,39 +360,39 @@ TEST_CASE("SaveManager - enum values outside the range are clamped") {
     CHECK_FALSE(SaveManager::hasSave(slot));
 }
 
-TEST_CASE("SaveManager - invalid slot does not create the stray file") {
+TEST_CASE("SaveManager - slot invalido nao cria arquivo estranho") {
     SaveManager::deleteSave(-1);
     SaveManager::deleteSave(999);
-    // No file with slot -1 or 999 should exist.
+    // Nao deve existir arquivo com slot -1 ou 999.
     CHECK_FALSE(SaveManager::hasSave(-1));
     CHECK_FALSE(SaveManager::hasSave(999));
 }
 
 // ── Projectile ───────────────────────────────────────────────────────────────
 
-TEST_CASE("Projectile - moves and reaches max range") {
+TEST_CASE("Projectile - move e atinge alcance maximo") {
     Projectile p({0, 0}, {1, 0}, 10.0f, 100.0f, 50.0f, RED, false);
     CHECK(p.active);
     CHECK(p.velocity.x == doctest::Approx(50.0f));
     CHECK(p.velocity.y == doctest::Approx(0.0f));
 
-    p.update(1.0f);          // move 50 units
+    p.update(1.0f);          // move 50 unidades
     CHECK(p.position.x == doctest::Approx(50.0f));
     CHECK_FALSE(p.isOutOfRange());
 
-    p.update(1.0f);          // another 50 = 100 = max range
+    p.update(1.0f);          // mais 50 = 100 = alcance maximo
     CHECK(p.position.x == doctest::Approx(100.0f));
     CHECK(p.isOutOfRange());
 }
 
-TEST_CASE("Projectile - zero direction stays inactive") {
+TEST_CASE("Projectile - direcao zero fica inativo") {
     Projectile p({0, 0}, {0, 0}, 10.0f, 100.0f, 50.0f, RED, false);
     CHECK_FALSE(p.active);
 }
 
-// ── Player: pure stat rules ─────────────────────────────────────────────────
+// ── Player: regras puras de stats ────────────────────────────────────────────
 
-TEST_CASE("Player - applyClass sets distinct base stats") {
+TEST_CASE("Player - applyClass define stats base distintos") {
     Player soldado;
     soldado.applyClass(CharacterClass::Soldado);
     CHECK(soldado.getCharClass() == CharacterClass::Soldado);
@@ -399,16 +400,16 @@ TEST_CASE("Player - applyClass sets distinct base stats") {
 
     Player mago;
     mago.applyClass(CharacterClass::Mago);
-    CHECK(mago.maxHealth < soldadoHP);          // mage has less health
-    CHECK(mago.attackRange > soldado.attackRange); // mage has more range
+    CHECK(mago.maxHealth < soldadoHP);          // mago tem menos vida
+    CHECK(mago.attackRange > soldado.attackRange); // mago tem mais alcance
 }
 
-TEST_CASE("Player - takeDamage respects defense and clamps at zero") {
+TEST_CASE("Player - takeDamage respeita defesa e clampa em zero") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     float hp = p.health;
     p.defense = 10.0f;
-    p.takeDamage(50.0f);   // 10% reduction -> 45 effective damage
+    p.takeDamage(50.0f);   // reducao de 10% -> 45 de dano efetivo
     CHECK(p.health == doctest::Approx(hp - 45.0f));
 
     p.takeDamage(9999.0f); // overkill
@@ -416,7 +417,7 @@ TEST_CASE("Player - takeDamage respects defense and clamps at zero") {
     CHECK(p.health <= 0.0f);
 }
 
-TEST_CASE("Player - heal does not exceed maxHealth") {
+TEST_CASE("Player - heal nao ultrapassa maxHealth") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     p.health = 10.0f;
@@ -424,15 +425,15 @@ TEST_CASE("Player - heal does not exceed maxHealth") {
     CHECK(p.health == doctest::Approx(p.maxHealth));
 }
 
-TEST_CASE("Player - addXP levels up") {
+TEST_CASE("Player - addXP sobe de nivel") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     int startLevel = p.level;
-    p.addXP(150);          // enough to level up at least once
+    p.addXP(150);          // suficiente para subir pelo menos 1 nivel
     CHECK(p.level > startLevel);
 }
 
-TEST_CASE("Player - equipItem applies stats") {
+TEST_CASE("Player - equipItem aplica stats") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     float baseDmg = p.attackDamage;
@@ -441,7 +442,7 @@ TEST_CASE("Player - equipItem applies stats") {
     CHECK(p.attackDamage > baseDmg);
 }
 
-TEST_CASE("Player - usePotion heals and triggers cooldown") {
+TEST_CASE("Player - usePotion cura e ativa cooldown") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     p.health = 10.0f;
@@ -450,20 +451,20 @@ TEST_CASE("Player - usePotion heals and triggers cooldown") {
     CHECK_FALSE(p.potionReady());
 }
 
-TEST_CASE("Player - equipFromBag returns item with invalid slot") {
+TEST_CASE("Player - equipFromBag devolve item com slot invalido") {
     Player p;
     p.applyClass(CharacterClass::Soldado);
     Equipment bug = EDB::pistolaPlas();
-    bug.slot = EquipSlot::None;   // simulate corrupted/invalid item
+    bug.slot = EquipSlot::None;   // simula item corrompido/invalido
     p.equipBag.push_back(bug);
     size_t before = p.equipBag.size();
     p.equipFromBag(0);
-    CHECK(p.equipBag.size() == before);   // item was not lost
+    CHECK(p.equipBag.size() == before);   // nao perdeu o item
 }
 
 // ── Tilemap ──────────────────────────────────────────────────────────────────
 
-TEST_CASE("Tilemap - generate creates correct dimensions and walls") {
+TEST_CASE("Tilemap - generate cria dimensoes corretas e paredes") {
     Tilemap tm;
     tm.generate(ZoneID::LARuins);
     CHECK(tm.width == 40);
@@ -478,28 +479,75 @@ TEST_CASE("Tilemap - generate creates correct dimensions and walls") {
     CHECK(walls > 0);
 }
 
-TEST_CASE("Tilemap - isWallAtPosition inside and outside bounds") {
+TEST_CASE("Tilemap - isWallAtPosition dentro e fora dos limites") {
     Tilemap tm;
     tm.generate(ZoneID::LARuins);
     Vector2 inside = { tm.tileSize * 2.0f, tm.tileSize * 2.0f };
-    // does not ensure it is floor, but must not crash
+    // nao garante que seja floor, mas nao deve crashar
     bool r = tm.isWallAtPosition(inside);
     (void)r;
 
-    // Closed map: outside bounds is considered wall (cannot leave).
+    // Mapa fechado: fora dos limites e considerado parede (nao pode sair).
     Vector2 outside = { -1000.0f, -1000.0f };
     CHECK(tm.isWallAtPosition(outside));
 
-    // Open world: outside bounds is free floor.
+    // Mundo aberto: fora dos limites e chao livre.
     Tilemap ow;
     ow.generateOpenWorld();
     CHECK_FALSE(ow.isWallAtPosition(outside));
 }
 
-TEST_CASE("Tilemap - generateOpenWorld creates 3x3 layout") {
+TEST_CASE("Tilemap - generateOpenWorld cria layout 3x3") {
     Tilemap tm;
     tm.generateOpenWorld();
     CHECK(tm.openWorld);
     CHECK(tm.width == Tilemap::OW_ZONE_W * Tilemap::OW_COLS);
     CHECK(tm.height == Tilemap::OW_ZONE_H * Tilemap::OW_ROWS);
+}
+
+// ── SkillTree ────────────────────────────────────────────────────────────────
+// Guarda de regressao para o P0 "tier 3 inatingivel": a cadeia de requisitos e
+// T1 livre -> T2 precisa 2 gastos no ramo -> T3 precisa 3 gastos no ramo,
+// e cada ramo so tem 2x T1 + 1x T2 antes do seu T3.
+
+TEST_CASE("SkillTree - tier gating: T1 livre, T2 exige 2 gastos, T3 exige 3") {
+    using namespace SkillTree;
+    uint32_t mask = 0;
+    // Perks T1 do ramo Sight compraveis imediatamente; T2/T3 bloqueados.
+    CHECK(canBuy(mask, 0));
+    CHECK(canBuy(mask, 1));
+    CHECK_FALSE(canBuy(mask, 2));
+    CHECK_FALSE(canBuy(mask, 3));
+    // Com apenas 1 gasto no ramo, T2 continua bloqueado.
+    mask |= bit(0);
+    CHECK_FALSE(canBuy(mask, 2));
+    // Com 2 gastos (ambos T1), T2 abre; T3 ainda bloqueado.
+    mask |= bit(1);
+    CHECK(canBuy(mask, 2));
+    CHECK_FALSE(canBuy(mask, 3));
+    // Com o T2 comprado (3 gastos no ramo), T3 abre.
+    mask |= bit(2);
+    CHECK(canBuy(mask, 3));
+    // Perks ja comprados nao podem ser recomprados.
+    CHECK_FALSE(canBuy(mask, 0));
+    CHECK_FALSE(canBuy(mask, 1));
+    CHECK_FALSE(canBuy(mask, 2));
+}
+
+TEST_CASE("SkillTree - os 12 perks sao alcancaveis nos tres ramos") {
+    using namespace SkillTree;
+    uint32_t mask = 0;
+    for (int b = 0; b < 3; ++b) {
+        CHECK(canBuy(mask, b * 4 + 0));
+        mask |= bit(b * 4 + 0);
+        CHECK(canBuy(mask, b * 4 + 1));
+        mask |= bit(b * 4 + 1);
+        CHECK(canBuy(mask, b * 4 + 2));
+        mask |= bit(b * 4 + 2);
+        CHECK(canBuy(mask, b * 4 + 3));
+        mask |= bit(b * 4 + 3);
+    }
+    // Arvore totalmente saturada: nada mais para comprar.
+    for (int i = 0; i < PERK_COUNT; ++i)
+        CHECK_FALSE(canBuy(mask, i));
 }

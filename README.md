@@ -82,7 +82,7 @@ cmake --build . --config Release -j
 Every push and pull request to `main` runs the CI pipeline:
 
 1. Build `darknet` in Release and Debug.
-2. Build and run unit tests (`darknet_tests`, 26 cases / 159 assertions).
+2. Build and run unit tests (`darknet_tests`, 28 cases / 194 assertions).
 3. Run the headless bot autotest for 120 seconds with two fixed seeds.
 
 Local validation script:

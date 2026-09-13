@@ -3,18 +3,27 @@
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+#include <random>
 
 static const float kPI = 3.14159265f;
 
-// the”€the”€the”€ WAV writer the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// RNG proprio para toda aleatoriedade de audio. O audio NAO deve consumir o
+// rand() global: as draws de gameplay (evade, drops) mudariam entre runs com a
+// mesma seed dependendo de quantos sons foram sintetizados/tocados.
+static std::mt19937& audioRng() {
+    static std::mt19937 r(std::random_device{}());
+    return r;
+}
+
+// â”€â”€â”€ WAV writer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 static void writeWavHeader(std::vector<unsigned char>& buf,
                             int sampleRate, int numSamples, int channels = 1) {
     int dataSize = numSamples * channels * 2;
     int fileSize = 44 + dataSize - 8;
-    auto W4 = [&](int the, int v)   { memcpy(buf.data()+the, &v, 4); };
-    auto W2 = [&](int the, short v) { memcpy(buf.data()+the, &v, 2); };
-    auto Ws = [&](int the, const char* s, int n) { memcpy(buf.data()+the, s, n); };
+    auto W4 = [&](int o, int v)   { memcpy(buf.data()+o, &v, 4); };
+    auto W2 = [&](int o, short v) { memcpy(buf.data()+o, &v, 2); };
+    auto Ws = [&](int o, const char* s, int n) { memcpy(buf.data()+o, s, n); };
     Ws(0,"RIFF",4); W4(4,fileSize); Ws(8,"WAVE",4);
     Ws(12,"fmt ",4); W4(16,16); W2(20,1); W2(22,(short)channels);
     W4(24,sampleRate); W4(28,sampleRate*channels*2);
@@ -23,9 +32,9 @@ static void writeWavHeader(std::vector<unsigned char>& buf,
 }
 
 static inline float clamp1(float v) { return v < -1.f ? -1.f : v > 1.f ? 1.f : v; }
-static inline float rnd()  { return (float)(rand()%20001-10000)/10000.0f; }
+static inline float rnd()  { return (float)(audioRng()() % 20001 - 10000) / 10000.0f; }
 
-// the”€the”€the”€ SFX synthesis the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€ SFX synthesis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 std::vector<unsigned char> AudioManager::createWavBuffer(
         float duration, float freq, bool noise, float pitchSweep,
@@ -101,7 +110,7 @@ Sound AudioManager::generateComplex(float dur, int SR,
     return snd;
 }
 
-// the”€the”€the”€ Per-sample SFX helper the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€ Per-sample SFX helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 static Sound sfxSynth(int SR, int N, const std::vector<float>& samples) {
     std::vector<unsigned char> buf(44 + N*2, 0);
@@ -115,43 +124,43 @@ static Sound sfxSynth(int SR, int N, const std::vector<float>& samples) {
     return snd;
 }
 
-// the”€the”€the”€ Zone music synthesis the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€ Zone music synthesis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// LA Ruins: Deep post-apocalyptic dark ambient the€” haunting melody, doom pulse, debris
+// LA Ruins: Deep post-apocalyptic dark ambient â€” haunting melody, doom pulse, debris
 // ═══════════════════════════════════════════════════════════════════════════
-//  DARKNET — MOTOR DE COMPOSICAO (trilha oficial in camadas)
-//  Tema main compartilhado: progressao Am–F–C–G (la menor epic/synthwave)
-//  with um motivo melodico reconhecivel that aparece in all the zones.
+//  DARKNET — MOTOR DE COMPOSICAO (trilha oficial em camadas)
+//  Tema principal compartilhado: progressao Am–F–C–G (la menor epico/synthwave)
+//  com um motivo melodico reconhecivel que aparece em todas as zonas.
 // ═══════════════════════════════════════════════════════════════════════════
 
 static inline float midi2freq(int m) {
     return 440.0f * powf(2.0f, (m - 69) / 12.0f);
 }
 
-// Oscilador by forma of onda (phase in [0,1))
+// Oscilador por forma de onda (fase em [0,1))
 static inline float oscw(int wave, float ph) {
     ph -= floorf(ph);
     switch (wave) {
         case 1:  return 2.0f * ph - 1.0f;                 // serra
         case 2:  return ph < 0.5f ? 1.0f : -1.0f;         // quadrada
-        case 3:  return 4.0f * fabsf(ph - 0.5f) - 1.0f;   // triangle
+        case 3:  return 4.0f * fabsf(ph - 0.5f) - 1.0f;   // triangulo
         default: return sinf(2.0f * kPI * ph);            // seno
     }
 }
 
-// Estilo of cada zone (variacao of the same tema)
+// Estilo de cada zona (variacao do mesmo tema)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CADEIA DE DSP DA TRILHA
-// A sintese previous somava osciladores crus and mandava direct to the WAV with um
-// only tap of eco. Isso soa the chiptune of 1990: without body in the graves, agudo
-// rough and none espaco. Aqui entram the tres coisas that separam "bip of game"
-// of trilha: FILTRO (tira the serrilhado of the dente-of-serra), REVERB (poe the music
-// numa room) and SATURACAO smooth (cola tudo num body only).
+// A sintese anterior somava osciladores crus e mandava direto pro WAV com um
+// unico tap de eco. Isso soa a chiptune de 1990: sem corpo nas graves, agudo
+// aspero e nenhum espaco. Aqui entram as tres coisas que separam "bip de jogo"
+// de trilha: FILTRO (tira o serrilhado do dente-de-serra), REVERB (poe a musica
+// numa sala) e SATURACAO suave (cola tudo num corpo so).
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Filtro passes-low of 2 polos (Butterworth simplificado). O corte varia with the
-// time to dar movement: and the "open and close" that does the trilha respirar.
+// Filtro passa-baixa de 2 polos (Butterworth simplificado). O corte varia com o
+// tempo para dar movimento: e o "abrir e fechar" que faz a trilha respirar.
 static void lowpass2(std::vector<float>& x, int SR, float startHz, float endHz) {
     float z1 = 0.0f, z2 = 0.0f;
     int   N  = (int)x.size();
@@ -172,8 +181,8 @@ static void lowpass2(std::vector<float>& x, int SR, float startHz, float endHz) 
     }
 }
 
-// Reverb of Schroeder: 4 combs in paralelo + 2 allpass in serie. Barato and
-// suficiente to dar size of room/caverna conforme `room`.
+// Reverb de Schroeder: 4 combs em paralelo + 2 allpass em serie. Barato e
+// suficiente para dar tamanho de sala/caverna conforme `room`.
 static void reverbSchroeder(std::vector<float>& x, int SR, float room, float wet) {
     if (wet <= 0.0f) return;
     const int N = (int)x.size();
@@ -194,8 +203,8 @@ static void reverbSchroeder(std::vector<float>& x, int SR, float room, float wet
         }
     }
     const float apMs[2] = { 5.0f, 1.7f };
-    for (int the = 0; the < 2; ++the) {
-        int d = (int)(apMs[the] * 0.001f * SR);
+    for (int a = 0; a < 2; ++a) {
+        int d = (int)(apMs[a] * 0.001f * SR);
         if (d < 1 || d >= N) continue;
         std::vector<float> buf(d, 0.0f);
         int idx = 0;
@@ -212,13 +221,13 @@ static void reverbSchroeder(std::vector<float>& x, int SR, float room, float wet
     for (int i = 0; i < N; ++i) x[i] = x[i] * (1.0f - wet * 0.5f) + out[i] * wet;
 }
 
-// Compressor of pico simple: segura the transientes of the bumbo for the trilha not
-// "bombear" nem estourar when varias camadas caem in the same time.
+// Compressor de pico simples: segura os transientes do bumbo para a trilha nao
+// "bombear" nem estourar quando varias camadas caem no mesmo tempo.
 static void softCompress(std::vector<float>& x, float thresh, float ratio) {
     float env = 0.0f;
     for (size_t i = 0; i < x.size(); ++i) {
-        float the = fabsf(x[i]);
-        env = (the > env) ? (env * 0.30f + the * 0.70f) : (env * 0.9995f);
+        float a = fabsf(x[i]);
+        env = (a > env) ? (env * 0.30f + a * 0.70f) : (env * 0.9995f);
         if (env > thresh) {
             float over = env - thresh;
             float gain = (thresh + over / ratio) / env;
@@ -242,15 +251,15 @@ struct TrackStyle {
     bool  arpOn      = true;
     bool  leadOn     = true;
     float drive      = 0.0f;   // distorcao (inferno)
-    float echo       = 0.25f;  // mix of eco
-    // Novos: and the that tira the sound of "chiptune" and poe numa room.
-    float cutoffHz   = 5200.0f; // corte of the passes-low in the end of the cadeia
-    float room       = 0.45f;   // size of the room of the reverb (0..1)
-    float wet        = 0.26f;   // the of reverb enters in the mistura
-    float subAmp     = 0.16f;   // sub-grave senoidal sob the down
+    float echo       = 0.25f;  // mix de eco
+    // Novos: e o que tira o som de "chiptune" e poe numa sala.
+    float cutoffHz   = 5200.0f; // corte do passa-baixa no fim da cadeia
+    float room       = 0.45f;   // tamanho da sala do reverb (0..1)
+    float wet        = 0.26f;   // quanto de reverb entra na mistura
+    float subAmp     = 0.16f;   // sub-grave senoidal sob o baixo
 };
 
-// Adds uma nota envelopada in the mix (float), with anti-click (attack/release)
+// Adiciona uma nota envelopada no mix (float), com anti-click (ataque/release)
 static void addNote(std::vector<float>& mix, int SR, double startT, double durT,
                     float freq, float amp, int wave) {
     int s0 = (int)(startT * SR);
@@ -268,8 +277,8 @@ static void addNote(std::vector<float>& mix, int SR, double startT, double durT,
         else if (tt > (float)durT - rel) env = ((float)durT - tt) / rel;
         else                          env = 1.0f;
         if (env < 0.0f) env = 0.0f;
-        // UNISSONO: 3 vozes levemente desafinadas. Uma only leaves fina and sintetica;
-        // tres batendo between si produzem the coro that of the peso the trilha.
+        // UNISSONO: 3 vozes levemente desafinadas. Uma so sai fina e sintetica;
+        // tres batendo entre si produzem o coro que da peso a trilha.
         float ph = freq * tt;
         float v  = oscw(wave, ph)
                  + oscw(wave, ph * 1.0035f) * 0.55f
@@ -298,7 +307,7 @@ static void addSnare(std::vector<float>& mix, int SR, double startT, float amp) 
         int idx = s0 + n; if (idx < 0) continue; if (idx >= (int)mix.size()) break;
         float tt = (float)n / SR;
         float env = expf(-tt * 22.0f);
-        float nz  = (float)(rand() % 2000 - 1000) / 1000.0f;
+        float nz  = (float)((int)(audioRng()() % 2000) - 1000) / 1000.0f;
         prev = prev * 0.4f + nz * 0.6f;
         float tone = sinf(2.0f * kPI * 185.0f * tt) * 0.5f;
         mix[idx] += (prev * 0.7f + tone) * env * amp;
@@ -313,13 +322,13 @@ static void addHat(std::vector<float>& mix, int SR, double startT, float amp) {
         int idx = s0 + n; if (idx < 0) continue; if (idx >= (int)mix.size()) break;
         float tt = (float)n / SR;
         float env = expf(-tt * 120.0f);
-        float nz  = (float)(rand() % 2000 - 1000) / 1000.0f;
+        float nz  = (float)((int)(audioRng()() % 2000) - 1000) / 1000.0f;
         prev = nz - prev * 0.2f;          // high-pass cru
         mix[idx] += prev * env * amp;
     }
 }
 
-// Compoe the range completa (all the camadas) usando the tema DARKNET.
+// Compoe a faixa completa (todas as camadas) usando o tema DARKNET.
 static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
     std::vector<float> mix(N, 0.0f);
 
@@ -327,9 +336,9 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
     const float bar  = beat * 4.0f;
     const int   TR   = st.transpose;
 
-    // Progressao of 4 compassos: Am – F – C – G  (raiz of the down, MIDI)
+    // Progressao de 4 compassos: Am – F – C – G  (raiz do baixo, MIDI)
     const int bassRoot[4] = { 45, 41, 48, 43 };            // A2 F2 C3 G2
-    // Triades (notas of acorde) to pad/arpejo
+    // Triades (notas de acorde) para pad/arpejo
     const int chord[4][3] = {
         { 57, 60, 64 },   // Am: A3 C4 E4
         { 53, 57, 60 },   // F : F3 A3 C4
@@ -342,12 +351,12 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
         { 77, 72, 69, 65 },   // F   F5 C5 A4 F4
         { 76, 72, 67, 72 },   // C   E5 C5 G4 C5
         { 74, 71, 67, 71 },   // G   D5 B4 G4 B4
-        { 81, 76, 72, 76 },   // Am  A5 E5 C5 E5  (second frase goes up)
+        { 81, 76, 72, 76 },   // Am  A5 E5 C5 E5  (segunda frase sobe)
         { 77, 74, 72, 69 },   // F   F5 D5 C5 A4
         { 76, 72, 71, 67 },   // C   E5 C5 B4 G4
         { 74, 67, 69,  0 },   // G   D5 G4 A4 (resolve)
     };
-    // Down: 8 colcheias by compasso (offset about the raiz)
+    // Baixo: 8 colcheias por compasso (offset sobre a raiz)
     const int bassPat[8] = { 0, 0, 0, 7, 0, 0, 12, 7 };
 
     double loopBars = 8.0;
@@ -360,13 +369,13 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
             double barT = base + b * bar;
 
             // ── BAIXO (colcheias) ──
-            for (int and = 0; and < 8; ++and) {
-                int note = bassRoot[prog] + bassPat[and] + TR;
-                addNote(mix, SR, barT + and * (beat * 0.5), beat * 0.48,
+            for (int e = 0; e < 8; ++e) {
+                int note = bassRoot[prog] + bassPat[e] + TR;
+                addNote(mix, SR, barT + e * (beat * 0.5), beat * 0.48,
                         midi2freq(note), st.bassAmp, st.bassWave);
             }
 
-            // ── PADS (acorde sustentado by compasso) ──
+            // ── PADS (acorde sustentado por compasso) ──
             for (int c = 0; c < 3; ++c) {
                 addNote(mix, SR, barT, bar * 0.98,
                         midi2freq(chord[prog][c] + TR), st.padAmp, 0);
@@ -378,10 +387,10 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
                 for (int k = 0; k < 16; ++k) {
                     int ti  = seq[k % 4];
                     int oct = (k >= 8) ? 12 : 0;
-                    int note = chord[prog][ti] + 12 + oct + TR;   // oitava above
-                    float the  = st.arpAmp * ((k % 4 == 0) ? 1.0f : 0.7f);
+                    int note = chord[prog][ti] + 12 + oct + TR;   // oitava acima
+                    float a  = st.arpAmp * ((k % 4 == 0) ? 1.0f : 0.7f);
                     addNote(mix, SR, barT + k * (beat * 0.25), beat * 0.22,
-                            midi2freq(note), the, st.arpWave);
+                            midi2freq(note), a, st.arpWave);
                 }
             }
 
@@ -392,7 +401,7 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
                     if (note == 0) continue;
                     addNote(mix, SR, barT + q * beat, beat * 0.92,
                             midi2freq(note + TR), st.leadAmp, st.leadWave);
-                    // glow of oitava sutil
+                    // brilho de oitava sutil
                     addNote(mix, SR, barT + q * beat, beat * 0.5,
                             midi2freq(note + 12 + TR), st.leadAmp * 0.25f, 0);
                 }
@@ -415,12 +424,12 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
         }
     }
 
-    // ── Cadeia final: sub-grave -> compressor -> filtro -> reverb -> saturation ──
-    // A ordem importa: filtrar DEPOIS of comprimir mantem the attack of the bumbo, and the
-    // reverb enters after the filtro to not devolver the agudo that acabou of leave.
+    // ── Cadeia final: sub-grave -> compressor -> filtro -> reverb -> saturacao ──
+    // A ordem importa: filtrar DEPOIS de comprimir mantem o ataque do bumbo, e o
+    // reverb entra depois do filtro para nao devolver o agudo que acabou de sair.
     if (st.subAmp > 0.0f) {
-        // sub senoidal seguindo the bumbo: and the that does the trilha ter fundo in
-        // caixas of sound of verdade, not only in the fone.
+        // sub senoidal seguindo o bumbo: e o que faz a trilha ter fundo em
+        // caixas de som de verdade, nao so no fone.
         double barLen = (60.0 / st.bpm) * 4.0;
         for (double t0 = 0.0; t0 < (double)N / SR; t0 += barLen) {
             addNote(mix, SR, t0,               barLen * 0.45, 55.0f, st.subAmp, 0);
@@ -428,18 +437,18 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
         }
     }
     softCompress(mix, 0.72f, 3.5f);
-    lowpass2(mix, SR, st.cutoffHz * 0.72f, st.cutoffHz);   // opens along of the range
+    lowpass2(mix, SR, st.cutoffHz * 0.72f, st.cutoffHz);   // abre ao longo da faixa
     reverbSchroeder(mix, SR, st.room, st.wet);
 
     std::vector<short> s(N, 0);
     for (int i = 0; i < N; ++i) {
         float v = mix[i];
         if (st.drive > 0.0f) v = tanhf(v * (1.0f + st.drive * 3.0f));
-        else                 v = tanhf(v * 1.05f);   // saturation light = cola
+        else                 v = tanhf(v * 1.05f);   // saturacao leve = cola
         s[i] = (short)(clamp1(v) * 26000.0f);
     }
 
-    // Eco estereo-false to profundidade
+    // Eco estereo-falso para profundidade
     if (st.echo > 0.0f) {
         int e1 = (int)(0.21f * SR);
         int e2 = (int)(0.37f * SR);
@@ -453,52 +462,52 @@ static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
 }
 
 std::vector<short> AudioManager::synthLARuins(int SR, int N) {
-    // Ruins of Avalon — synthwave desolado, batida media
+    // Ruinas de Avalon — synthwave desolado, batida media
     TrackStyle st; st.bpm = 84.0f; st.hardDrums = false;
-    // ACOUSTIC PROFILE — city opened and morta: glow medio, room big
+    // PERFIL ACUSTICO — cidade aberta e morta: brilho medio, sala grande
     st.cutoffHz = 4200.0f; st.room = 0.62f; st.wet = 0.30f; st.subAmp = 0.18f;
     st.bassWave = 1; st.arpWave = 2; st.leadWave = 0; st.echo = 0.28f;
-    // LARuins: city morta to the ar livre — glow medio, room big
+    // LARuins: cidade morta ao ar livre — brilho medio, sala grande
     st.cutoffHz = 4200.0f; st.room = 0.62f; st.wet = 0.30f; st.subAmp = 0.18f;
     return composeTrack(SR, N, st);
 }
 
-// Bunker: Military war march the€” heavy boots, brass fanfare, combat urgency
+// Bunker: Military war march â€” heavy boots, brass fanfare, combat urgency
 std::vector<short> AudioManager::synthBunker(int SR, int N) {
-    // Bunker NEXUS — marcha of combat, bateria pesada
+    // Bunker NEXUS — marcha de combate, bateria pesada
     { TrackStyle st; st.bpm = 124.0f; st.hardDrums = true; st.drive = 0.10f;
-    // ACOUSTIC PROFILE — concreto closed: abafado, grave heavy, little espaco
+    // PERFIL ACUSTICO — concreto fechado: abafado, grave pesado, pouco espaco
     st.cutoffHz = 3000.0f; st.room = 0.30f; st.wet = 0.22f; st.subAmp = 0.24f;
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 1; st.echo = 0.20f;
       return composeTrack(SR, N, st); }
 }
 
-// Kronos Forge: Brutal industrial metal the€” distorted riff, machine percussion, grinding
+// Kronos Forge: Brutal industrial metal â€” distorted riff, machine percussion, grinding
 std::vector<short> AudioManager::synthFactory(int SR, int N) {
     // Kronos Forge — industrial distorcido
     { TrackStyle st; st.bpm = 134.0f; st.hardDrums = true; st.drive = 0.40f;
-    // ACOUSTIC PROFILE — forge industrial: metallic and dry, agudo open
+    // PERFIL ACUSTICO — forja industrial: metalico e seco, agudo aberto
     st.cutoffHz = 6200.0f; st.room = 0.40f; st.wet = 0.20f; st.subAmp = 0.22f;
       st.bassWave = 1; st.arpWave = 1; st.leadWave = 1; st.echo = 0.18f;
       return composeTrack(SR, N, st); }
 }
 
-// Core Facility: Epic boss rush the€” orchestral synth, battle arpeggio, war drums, alarm
+// Core Facility: Epic boss rush â€” orchestral synth, battle arpeggio, war drums, alarm
 std::vector<short> AudioManager::synthCore(int SR, int N) {
-    // Core KRONOS — epic and tenso, tema in destaque
+    // Nucleo KRONOS — epico e tenso, tema em destaque
     { TrackStyle st; st.bpm = 104.0f; st.hardDrums = true;
-    // ACOUSTIC PROFILE — core alienigena: cristalino, cauda longa
+    // PERFIL ACUSTICO — nucleo alienigena: cristalino, cauda longa
     st.cutoffHz = 7000.0f; st.room = 0.75f; st.wet = 0.38f; st.subAmp = 0.20f;
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 1;
       st.leadAmp = 0.18f; st.padAmp = 0.11f; st.echo = 0.35f;
       return composeTrack(SR, N, st); }
 }
 
-// Main menu theme: epic cinematic the€” KRONOS-style sweeping intro
+// Main menu theme: epic cinematic â€” KRONOS-style sweeping intro
 std::vector<short> AudioManager::synthMenu(int SR, int N) {
-    // ★ TEMA PRINCIPAL OFICIAL DO DARKNET ★ — synthwave epic Am–F–C–G
+    // ★ TEMA PRINCIPAL OFICIAL DO DARKNET ★ — synthwave epico Am–F–C–G
     { TrackStyle st; st.bpm = 92.0f; st.hardDrums = false;
-    // ACOUSTIC PROFILE — menu: espacoso and limpo
+    // PERFIL ACUSTICO — menu: espacoso e limpo
     st.cutoffHz = 5200.0f; st.room = 0.68f; st.wet = 0.34f; st.subAmp = 0.16f;
       st.bassWave = 1; st.arpWave = 2; st.leadWave = 0;
       st.leadAmp = 0.19f; st.arpAmp = 0.11f; st.padAmp = 0.10f; st.echo = 0.30f;
@@ -506,63 +515,63 @@ std::vector<short> AudioManager::synthMenu(int SR, int N) {
 }
 
 std::vector<short> AudioManager::synthCemetery(int SR, int N) {
-    // Cemetery — assombrado, slow, without bateria
+    // Cemiterio — assombrado, lento, sem bateria
     { TrackStyle st; st.bpm = 72.0f; st.drums = false; st.arpOn = false;
-    // ACOUSTIC PROFILE — cemetery: dark, fog, reverb longo
+    // PERFIL ACUSTICO — cemiterio: escuro, nevoa, reverb longo
     st.cutoffHz = 2600.0f; st.room = 0.80f; st.wet = 0.42f; st.subAmp = 0.14f;
       st.padAmp = 0.13f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
 }
 
 std::vector<short> AudioManager::synthCursedFarm(int SR, int N) {
-    // Farm Maldita — folk-horror inquieto
+    // Fazenda Maldita — folk-horror inquieto
     { TrackStyle st; st.bpm = 76.0f; st.drums = false; st.arpOn = true;
-    // ACOUSTIC PROFILE — campo open to the anoitecer
+    // PERFIL ACUSTICO — campo aberto ao anoitecer
     st.cutoffHz = 3600.0f; st.room = 0.50f; st.wet = 0.26f; st.subAmp = 0.16f;
       st.arpAmp = 0.05f; st.leadAmp = 0.11f; st.leadWave = 0; st.echo = 0.36f;
       return composeTrack(SR, N, st); }
 }
 
 std::vector<short> AudioManager::synthGhostCity(int SR, int N) {
-    // City Fantasma — eco urbano assombrado
+    // Cidade Fantasma — eco urbano assombrado
     { TrackStyle st; st.bpm = 80.0f; st.drums = false; st.arpOn = true;
-    // ACOUSTIC PROFILE — streets vazias: eco of building
+    // PERFIL ACUSTICO — ruas vazias: eco de predio
     st.cutoffHz = 3200.0f; st.room = 0.72f; st.wet = 0.36f; st.subAmp = 0.16f;
       st.arpAmp = 0.06f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.44f;
       return composeTrack(SR, N, st); }
 }
 
 std::vector<short> AudioManager::synthDarkForest(int SR, int N) {
-    // Forest Negra — tensa, fog sonora
+    // Floresta Negra — tensa, nevoa sonora
     { TrackStyle st; st.bpm = 70.0f; st.drums = false; st.arpOn = false;
-    // ACOUSTIC PROFILE — forest: folhagem come the agudo
+    // PERFIL ACUSTICO — floresta: folhagem come o agudo
     st.cutoffHz = 2800.0f; st.room = 0.66f; st.wet = 0.34f; st.subAmp = 0.15f;
       st.padAmp = 0.13f; st.leadAmp = 0.10f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
 }
 
 std::vector<short> AudioManager::synthCatacombs(int SR, int N) {
-    // Catacumbas — deep, eco of stone
+    // Catacumbas — profundo, eco de pedra
     { TrackStyle st; st.bpm = 66.0f; st.drums = false; st.arpOn = false;
-    // ACOUSTIC PROFILE — caverna of stone: the espaco more longo of the game
+    // PERFIL ACUSTICO — caverna de pedra: o espaco mais longo do jogo
     st.cutoffHz = 2200.0f; st.room = 0.88f; st.wet = 0.46f; st.subAmp = 0.18f;
       st.padAmp = 0.14f; st.leadAmp = 0.10f; st.leadWave = 0; st.echo = 0.46f;
       return composeTrack(SR, N, st); }
 }
 
 std::vector<short> AudioManager::synthManor(int SR, int N) {
-    // Manor of the Sombras — gotico
+    // Mansao das Sombras — gotico
     { TrackStyle st; st.bpm = 74.0f; st.drums = false; st.arpOn = true;
-    // ACOUSTIC PROFILE — salao empty of manor
+    // PERFIL ACUSTICO — salao vazio de mansao
     st.cutoffHz = 3000.0f; st.room = 0.70f; st.wet = 0.36f; st.subAmp = 0.15f;
       st.arpAmp = 0.05f; st.leadAmp = 0.12f; st.leadWave = 0; st.echo = 0.42f;
       return composeTrack(SR, N, st); }
 }
 
 std::vector<short> AudioManager::synthInferno(int SR, int N) {
-    // Zone Inferno — intenso, distorcido, fast
+    // Zona Inferno — intenso, distorcido, rapido
     { TrackStyle st; st.bpm = 150.0f; st.hardDrums = true; st.drive = 0.60f;
-    // ACOUSTIC PROFILE — inferno: sujo, grave enorme, medio aggressive
+    // PERFIL ACUSTICO — inferno: sujo, grave enorme, medio agressivo
     st.cutoffHz = 5600.0f; st.room = 0.44f; st.wet = 0.24f; st.subAmp = 0.28f;
       st.bassWave = 1; st.arpWave = 1; st.leadWave = 1; st.echo = 0.16f;
       return composeTrack(SR, N, st); }
@@ -591,35 +600,35 @@ std::vector<unsigned char> AudioManager::buildMusicForZone(ZoneID zone, float du
     return buf;
 }
 
-// the”€the”€the”€ Init / Shutdown the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€ Init / Shutdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void AudioManager::init() {
     InitAudioDevice();
     const int SR = 44100;
 
-    // the”€the”€the”€ LASER the€” FM synthesis, sharp attack, 2200a†’400Hz sweep the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ LASER â€” FM synthesis, sharp attack, 2200â†’400Hz sweep â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
-        // Blaster sci-fi punchy: SNAP transiente + sweep of pitch + body serra + cauda
+        // Blaster sci-fi punchy: SNAP transiente + sweep de pitch + corpo serra + cauda
         int N = (int)(SR * 0.20f);
         std::vector<float> s(N);
         for (int i = 0; i < N; ++i) {
             float t   = (float)i / SR;
             float pct = (float)i / N;
 
-            // 1) Transiente of attack (click white well short ~3ms) — the "snap"
+            // 1) Transiente de ataque (click branco bem curto ~3ms) — o "snap"
             float clickEnv = std::exp(-220.0f * pct);
             float click    = rnd() * clickEnv * 0.9f;
 
-            // 2) Body: sweep fast of 1900Hz -> 280Hz (the "pew")
+            // 2) Corpo: sweep rapido de 1900Hz -> 280Hz (o "pew")
             float freq = 280.0f + 1620.0f * std::exp(-22.0f * pct);
             float bodyEnv = std::exp(-9.0f * pct);
             float ph   = fmodf(freq * t, 1.0f);
             float saw  = (2.0f * ph - 1.0f);                 // serra = grit
             float v    = saw * 0.34f * bodyEnv;
             v += std::sin(2*kPI * freq * t) * 0.40f * bodyEnv;
-            // 3) Sub to dar peso
+            // 3) Sub para dar peso
             v += std::sin(2*kPI * (freq*0.5f) * t) * 0.18f * bodyEnv;
-            // 4) Glow of high in the start
+            // 4) Brilho de alta no inicio
             v += std::sin(2*kPI * freq * 2.0f * t) * 0.16f * std::exp(-30.0f*pct);
 
             s[i] = clamp1(click + v);
@@ -628,7 +637,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxLaser, 0.80f);
     }
 
-    // the”€the”€the”€ EMP the€” sub-bass boom + electrical crackle spread the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ EMP â€” sub-bass boom + electrical crackle spread â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.60f);
         std::vector<float> s(N);
@@ -649,18 +658,18 @@ void AudioManager::init() {
         SetSoundVolume(sfxEMP, 0.88f);
     }
 
-    // the”€the”€the”€ HIT the€” metallic clank, inharmonic ring, reverb tail the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ HIT â€” metallic clank, inharmonic ring, reverb tail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
-        // Impacto dry and satisfatorio: SNAP of impacto + ring metallic inarmonico
+        // Impacto seco e satisfatorio: SNAP de impacto + ring metalico inarmonico
         int N = (int)(SR * 0.20f);
         std::vector<float> s(N);
         for (int i = 0; i < N; ++i) {
             float t   = (float)i / SR;
             float pct = (float)i / N;
 
-            // Transiente of impacto (punch inicial ~2ms)
+            // Transiente de impacto (punch inicial ~2ms)
             float punch = rnd() * std::exp(-300.0f * pct) * 0.95f;
-            // Thump grave that falls fast (peso of the golpe)
+            // Thump grave que cai rapido (peso do golpe)
             float thumpF = std::max(70.0f, 240.0f - t * 900.0f);
             float thump  = std::sin(2*kPI * thumpF * t) * std::exp(-26.0f * pct) * 0.5f;
 
@@ -679,7 +688,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxHit, 0.72f);
     }
 
-    // the”€the”€the”€ HIT HEAVY the€” bass thud + metallic scrape + reverb the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ HIT HEAVY â€” bass thud + metallic scrape + reverb â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.38f);
         std::vector<float> s(N);
@@ -702,7 +711,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxHitHeavy, 0.82f);
     }
 
-    // the”€the”€the”€ ALIEN HIT the€” wet organic thud the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ ALIEN HIT â€” wet organic thud â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.20f);
         std::vector<float> s(N);
@@ -721,7 +730,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxHitAlien, 0.65f);
     }
 
-    // the”€the”€the”€ EXPLOSION the€” sub punch, mid crunch, hi shrapnel the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ EXPLOSION â€” sub punch, mid crunch, hi shrapnel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.70f);
         std::vector<float> s(N);
@@ -744,7 +753,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxExplosion, 0.82f);
     }
 
-    // the”€the”€the”€ BIG EXPLOSION the€” massive layered shockwave the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ BIG EXPLOSION â€” massive layered shockwave â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 1.1f);
         std::vector<float> s(N);
@@ -768,7 +777,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxExplosionBig, 0.95f);
     }
 
-    // the”€the”€the”€ PICKUP the€” bright ascending chime the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ PICKUP â€” bright ascending chime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.22f);
         std::vector<float> s(N);
@@ -785,7 +794,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxPickup, 0.52f);
     }
 
-    // the”€the”€the”€ PICKUP CREDITS the€” 3-note coin jingle the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ PICKUP CREDITS â€” 3-note coin jingle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.28f);
         std::vector<float> s(N);
@@ -805,7 +814,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxPickupCredits, 0.56f);
     }
 
-    // the”€the”€the”€ LESPEED UP the€” C-E-G-C ascending arpeggio the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ LEVEL UP â€” C-E-G-C ascending arpeggio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 1.3f);
         std::vector<float> s(N);
@@ -826,7 +835,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxLevelUp, 0.85f);
     }
 
-    // the”€the”€the”€ SHIELD the€” electric buzz, reverse-style attack the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ SHIELD â€” electric buzz, reverse-style attack â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.52f);
         std::vector<float> s(N);
@@ -846,7 +855,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxShield, 0.68f);
     }
 
-    // the”€the”€the”€ PORTAL the€” sweep down then up, alien timbre the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ PORTAL â€” sweep down then up, alien timbre â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 1.25f);
         std::vector<float> s(N);
@@ -871,9 +880,9 @@ void AudioManager::init() {
         SetSoundVolume(sfxPortal, 0.87f);
     }
 
-    // the”€the”€the”€ FOOTSTEP the€” heavy boot thud, randomized each play the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ FOOTSTEP â€” heavy boot thud, randomized each play â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
-        int variant = rand() % 3;
+        int variant = (int)(audioRng()() % 3);
         float bf[3] = {85.0f, 105.0f, 68.0f};
         int N = (int)(SR * 0.11f);
         std::vector<float> s(N);
@@ -891,7 +900,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxFootstep, 0.22f);
     }
 
-    // the”€the”€the”€ MELEE SWING the€” air whoosh the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ MELEE SWING â€” air whoosh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.15f);
         std::vector<float> s(N);
@@ -909,14 +918,14 @@ void AudioManager::init() {
         SetSoundVolume(sfxMeleeSwing, 0.58f);
     }
 
-    // the”€the”€the”€ MELEE IMPACT the€” heavy crunch + thud composite the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ MELEE IMPACT â€” heavy crunch + thud composite â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.25f);
         std::vector<float> s(N);
         for (int i = 0; i < N; ++i) {
             float t   = (float)i / SR;
             float pct = (float)i / N;
-            // Crunch heavy with SNAP of impacto and thump grave (soco with peso)
+            // Crunch pesado com SNAP de impacto e thump grave (soco com peso)
             float snap = rnd() * std::exp(-260.0f * pct) * 1.0f;
             float thumpF = std::max(55.0f, 200.0f - t * 700.0f);
             float thump  = std::sin(2*kPI * thumpF * t) * std::exp(-20.0f * pct) * 0.55f;
@@ -932,7 +941,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxMeleeImpact, 0.95f);
     }
 
-    // the”€the”€the”€ ALIEN SCREAM the€” saw wave + noise + fast vibrato, descending the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ ALIEN SCREAM â€” saw wave + noise + fast vibrato, descending â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.65f);
         std::vector<float> s(N);
@@ -953,7 +962,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxAlienScream, 0.82f);
     }
 
-    // the”€the”€the”€ BOSS ROAR the€” chest rumble + sub shockwave, 1.4s the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ BOSS ROAR â€” chest rumble + sub shockwave, 1.4s â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 1.4f);
         std::vector<float> s(N);
@@ -974,7 +983,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxBossRoar, 0.96f);
     }
 
-    // the”€the”€the”€ CHARGE UP the€” ascending 200a†’1800Hz electronic hum the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ CHARGE UP â€” ascending 200â†’1800Hz electronic hum â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.88f);
         std::vector<float> s(N);
@@ -995,7 +1004,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxChargeUp, 0.72f);
     }
 
-    // the”€the”€the”€ BURST the€” 3 rapid shots the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ BURST â€” 3 rapid shots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         int N = (int)(SR * 0.20f);
         std::vector<float> s(N);
@@ -1014,7 +1023,7 @@ void AudioManager::init() {
         SetSoundVolume(sfxBurst, 0.72f);
     }
 
-    // the”€the”€the”€ RICOCHETS the€” 3 variants with pitch drops the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€â”€ RICOCHETS â€” 3 variants with pitch drops â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         float ricos[3]    = {1850.0f, 2250.0f, 1620.0f};
         float ricoDrops[3]= {-900.0f, -1100.0f, -700.0f};
@@ -1035,7 +1044,7 @@ void AudioManager::init() {
         }
     }
 
-    // the”€the”€ Music the€” generate 4 zone tracks (30s loops) the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+    // â”€â”€ Music â€” generate 4 zone tracks (30s loops) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // ── New SFX ──────────────────────────────────────────────────────────────
     {   // PLAYER HURT
         int N = (int)(SR * 0.12f);
@@ -1060,13 +1069,13 @@ void AudioManager::init() {
         }
         sfxPlayerDeath=sfxSynth(SR,N,s); SetSoundVolume(sfxPlayerDeath,0.88f);
     }
-    {   // DEATH CRY -- grito of voz humana angustiada ("aaah" with formantes)
+    {   // DEATH CRY -- grito de voz humana angustiada ("aaah" com formantes)
         int N = (int)(SR * 1.4f);
         std::vector<float> s(N);
         for (int i = 0; i < N; ++i) {
             float pct=(float)i/N; float t=(float)i/SR;
             float vib = 1.0f + 0.06f*std::sin(2*kPI*6.0f*t);       // vibrato
-            float f0  = (320.0f - 120.0f*pct) * vib;               // pitch falls (desespero)
+            float f0  = (320.0f - 120.0f*pct) * vib;               // pitch cai (desespero)
             float ph  = fmodf(f0*t, 1.0f);
             float src = (2.0f*ph - 1.0f);                          // fonte glotal (serra)
             float f1  = std::sin(2*kPI*730.0f*t) * 0.5f;           // formante F1 (vogal "ah")
@@ -1074,7 +1083,7 @@ void AudioManager::init() {
             float voice = src*0.4f + (f1+f2) * (0.4f + 0.3f*src);
             voice += rnd() * 0.10f;                                // respiracao/breathiness
             float env = pct<0.05f ? pct/0.05f : (pct>0.8f ? (1.0f-pct)/0.2f : 1.0f);
-            env *= 0.85f + 0.15f*std::sin(2*kPI*9.0f*t);           // tremor of choro
+            env *= 0.85f + 0.15f*std::sin(2*kPI*9.0f*t);           // tremor de choro
             s[i] = clamp1(voice * env * 0.8f);
         }
         sfxDeathCry=sfxSynth(SR,N,s); SetSoundVolume(sfxDeathCry,0.92f);
@@ -1353,7 +1362,7 @@ void AudioManager::stopMenuMusic() {
     if (menuMusicLoaded) StopMusicStream(menuMusic);
 }
 
-// ── Controles of mute ────────────────────────────────────────────────────────
+// ── Controles de mute ────────────────────────────────────────────────────────
 void AudioManager::setMusicEnabled(bool b) {
     musicEnabled = b;
     float zv = b ? 0.48f : 0.0f;
@@ -1364,7 +1373,7 @@ void AudioManager::setMusicEnabled(bool b) {
 
 void AudioManager::setAllSoundOn(bool b) {
     allSoundOn = b;
-    SetMasterVolume(b ? 1.0f : 0.0f);  // master kill switch of TUDO
+    SetMasterVolume(b ? 1.0f : 0.0f);  // master kill switch de TUDO
 }
 
 void AudioManager::playDeathCry() const {
@@ -1372,15 +1381,15 @@ void AudioManager::playDeathCry() const {
     PlaySound(sfxDeathCry);
 }
 
-// Toca the effect with PITCH random in the range [lo,hi]: hits repetidos deixam of
-// soar identicos (copia local — not altera the sound original of the AudioManager).
+// Toca o efeito com PITCH aleatorio no range [lo,hi]: hits repetidos deixam de
+// soar identicos (copia local — nao altera o sound original do AudioManager).
 static void playPitched(Sound sfx, float lo, float hi) {
     Sound s = sfx;
     SetSoundPitch(s, lo + (hi - lo) * (float)GetRandomValue(0, 1000) * 0.001f);
     PlaySound(s);
 }
 
-// the”€the”€the”€ Play the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€ Play â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void AudioManager::playLaser()         const { PlaySound(sfxLaser); }
 void AudioManager::playEMP()           const { PlaySound(sfxEMP); }
@@ -1401,7 +1410,7 @@ void AudioManager::playAlienScream()   const { PlaySound(sfxAlienScream); }
 void AudioManager::playBossRoar()      const { PlaySound(sfxBossRoar); }
 void AudioManager::playChargeUp()      const { PlaySound(sfxChargeUp); }
 void AudioManager::playBurst()         const { PlaySound(sfxBurst); }
-void AudioManager::playRicochet()      const { PlaySound(sfxRicochets[rand() % 3]); }
+void AudioManager::playRicochet()      const { PlaySound(sfxRicochets[audioRng()() % 3]); }
 
 // ── New contextual play methods ───────────────────────────────────────────────
 
@@ -1505,7 +1514,7 @@ void AudioManager::setupAmbientForZone(int zoneId) {
     lastAmbientZone = zoneId;
     for(int i=0;i<kAmbSlots;++i){
         if(ambients[i].loaded){UnloadSound(ambients[i].snd); ambients[i].loaded=false;}
-        ambients[i].timer=(float)(rand()%4+1);
+        ambients[i].timer=(float)(audioRng()() % 4 + 1);
     }
     switch(zoneId) {
         case 4: case 7:
@@ -1545,7 +1554,7 @@ void AudioManager::updateAmbient(float dt, int zoneId) {
         if(ambients[i].timer <= 0.0f) {
             PlaySound(ambients[i].snd);
             float range = ambients[i].maxWait - ambients[i].minWait;
-            ambients[i].timer = ambients[i].minWait + (float)(rand()%1000)/1000.0f*range;
+            ambients[i].timer = ambients[i].minWait + (float)(audioRng()() % 1000) / 1000.0f * range;
         }
     }
 }

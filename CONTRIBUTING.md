@@ -36,7 +36,7 @@ Before opening a PR, please make sure the following pass:
 
 - **Release build**: `cmake --build build --config Release`
 - **Debug build**: `cmake --build build --config Debug`
-- **Unit tests**: `build/Release/darknet_tests.exe` (26 cases / 159 assertions)
+- **Unit tests**: `build/Release/darknet_tests.exe` (28 cases / 194 assertions)
 - **Autotest seed 7**: `./validate.sh 120 7`
 - **Autotest seed 20260821**: `./validate.sh 120 20260821`
 

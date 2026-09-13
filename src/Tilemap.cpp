@@ -5,7 +5,7 @@
 #include <cmath>
 #include <algorithm>
 
-// the”€the”€ helpers the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 static void fillRect(std::vector<std::vector<Tile>>& tiles,
                      int x, int y, int w, int h,
                      TileType type, int mapW, int mapH, int pz = -1)
@@ -24,7 +24,7 @@ Tilemap::Tilemap() {
     generate(ZoneID::LARuins);
 }
 
-// the”€the”€ setTile / getBounds the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€ setTile / getBounds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 void Tilemap::setTile(int x, int y, TileType type, int portalZone) {
     if (x < 0 || x >= width || y < 0 || y >= height) return;
     tiles[y][x].type       = type;
@@ -37,10 +37,10 @@ Rectangle Tilemap::getBounds(int x, int y) const {
             (float)tileSize,       (float)tileSize};
 }
 
-// the”€the”€ portal placement (shared) the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€ portal placement (shared) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 void Tilemap::placePortals(ZoneID zone) {
     portals.clear();
-    // Next zone the€” lower-right
+    // Next zone â€” lower-right
     int nextIdx = ((int)zone + 1) % 4;
     ZoneID nextZone = (ZoneID)nextIdx;
     int nx = width - 6, ny = height - 6;
@@ -51,7 +51,7 @@ void Tilemap::placePortals(ZoneID zone) {
                         (float)(ny * tileSize + tileSize / 2)},
                        nextZone, getZoneInfo(nextZone).portalColor});
 
-    // Prev zone the€” upper-left
+    // Prev zone â€” upper-left
     int prevIdx = ((int)zone - 1 + 4) % 4;
     ZoneID prevZone = (ZoneID)prevIdx;
     int px = 5, py = 5;
@@ -63,7 +63,7 @@ void Tilemap::placePortals(ZoneID zone) {
                        prevZone, getZoneInfo(prevZone).portalColor});
 }
 
-// the”€the”€ corridor helper (used by Bunker) the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€ corridor helper (used by Bunker) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 void Tilemap::generateCorridor(int x1, int y1, int x2, int y2) {
     int mx = x1 < x2 ? x1 : x2, px = x1 < x2 ? x2 : x1;
     for (int x = mx; x <= px; ++x)
@@ -88,9 +88,9 @@ void Tilemap::generateRooms() {
     generateCorridor(cx, 2, cx, height - 2);
 }
 
-// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ZONE GENERATION
-// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 static void generateLARuins(std::vector<std::vector<Tile>>& tiles, int W, int H) {
     // Fill with walls (buildings)
@@ -457,7 +457,7 @@ static void generateCore(std::vector<std::vector<Tile>>& tiles, int W, int H) {
     }
 }
 
-// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 ZoneID Tilemap::tileZone(int tx, int ty) const {
     if (!openWorld) return currentZone;
     int col = tx / OW_ZONE_W;
@@ -466,12 +466,12 @@ ZoneID Tilemap::tileZone(int tx, int ty) const {
     return owLayout[row][col];
 }
 
-// Biome in the POSICAO of the world, repetindo the 3x3 layout to the infinito (module) — usa
-// EXATAMENTE the same formula of the piso in render3D, entao the scenario generated by here
-// always combina with the floor embaixo dele.
+// Bioma na POSIÇÃO do mundo, repetindo o layout 3x3 ao infinito (módulo) — usa
+// EXATAMENTE a mesma fórmula do piso em render3D, então o cenário gerado por aqui
+// sempre combina com o chão embaixo dele.
 ZoneID Tilemap::biomeAtWorld(float, float) const {
-    // O world integer of the PHASE has um biome only: the scenario generated always combina with
-    // the floor and the player never "atravessa" to other world andando.
+    // O mundo inteiro da FASE tem um bioma so: o cenario gerado sempre combina com
+    // o chao e o jogador nunca "atravessa" para outro mundo andando.
     return currentZone;
 }
 
@@ -495,9 +495,9 @@ void Tilemap::generateOpenWorld() {
     tiles.assign(height, std::vector<Tile>(width));
     portals.clear();
 
-    // OPEN WORLD DE VERDADE: tudo floor livre. Sem labirinto, without corredores.
-    // O visual of cada biome comes of tileZone()/getZoneInfo in the render; here only
-    // definimos the transitabilidade — floor open with obstaculos esparsos.
+    // MUNDO ABERTO DE VERDADE: tudo chao livre. Sem labirinto, sem corredores.
+    // O visual de cada bioma vem de tileZone()/getZoneInfo no render; aqui so
+    // definimos a transitabilidade — chao aberto com obstaculos esparsos.
     for (int y = 0; y < height; ++y)
         for (int x = 0; x < width; ++x) {
             tiles[y][x].type       = TileType::Floor;
@@ -505,8 +505,8 @@ void Tilemap::generateOpenWorld() {
             tiles[y][x].rect       = getBounds(x, y);
         }
 
-    // SEM edge: world open is INFINITO (isWall libera outside of the limites; the floor
-    // and the scenario if auto-geram by position conforme the player explora).
+    // SEM borda: mundo aberto é INFINITO (isWall libera fora dos limites; o chão
+    // e o cenário se auto-geram por posição conforme o jogador explora).
 
     for (int row = 0; row < OW_ROWS; ++row) {
         for (int col = 0; col < OW_COLS; ++col) {
@@ -551,9 +551,9 @@ void Tilemap::generate(ZoneID zone) {
     placePortals(zone);
 }
 
-// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // RENDERING
-// the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 static float mapTime = 0.0f; // global anim timer, advanced in render
 
@@ -561,8 +561,8 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
     mapTime += GetFrameTime() * 1.5f;
     float t = mapTime;
 
-    // FRUSTUM CULLING — draws SO the tiles visiveis (world 120x120 = 14400 tiles).
-    // Evita process the map integer by frame (queda severa of FPS).
+    // FRUSTUM CULLING — desenha SO os tiles visiveis (mundo 120x120 = 14400 tiles).
+    // Evita processar o mapa inteiro por frame (queda severa de FPS).
     if (zoom <= 0.01f) zoom = 1.0f;
     float halfW = (1280.0f * 0.5f) / zoom;
     float halfH = (720.0f  * 0.5f) / zoom;
@@ -570,7 +570,7 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
     int endX   = std::min(width,  (int)((camTarget.x + halfW) / tileSize) + 2);
     int startY = std::max(0,      (int)((camTarget.y - halfH) / tileSize) - 1);
     int endY   = std::min(height, (int)((camTarget.y + halfH) / tileSize) + 2);
-    // Sem camera (default {0,0}) falls for the map all (compatibilidade)
+    // Sem câmera (default {0,0}) cai para o mapa todo (compatibilidade)
     if (camTarget.x == 0 && camTarget.y == 0) { startX=0; startY=0; endX=width; endY=height; }
 
     for (int y = startY; y < endY; ++y) {
@@ -603,7 +603,7 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
                                 DrawLine((int)rx+30, (int)ry+40, (int)rx+50, (int)ry+22, crack);
                             }
                             // Road stripes (yellow center of certain rows)
-                            // Identify horizontal streets: tiles surrounded by floor in the band
+                            // Identify horizontal streets: tiles surrounded by floor in a band
                             if (tiles[y][x].type == TileType::Floor &&
                                 y > 0 && y < height-1 &&
                                 tiles[y-1][x].type == TileType::Wall &&
@@ -799,7 +799,7 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
                     break;
                 }
 
-                // the”€the”€ WALL the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+                // â”€â”€ WALL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 case TileType::Wall: {
                     SpriteBank& sb = SpriteBank::get();
                     int zi = (int)tzone;
@@ -812,7 +812,7 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
 
                     switch (tzone) {
                         case ZoneID::LARuins: {
-                            // Concrete panel with darker inner
+                            // Concrete panel with darker interior
                             DrawRectangle((int)rx+4,(int)ry+4,(int)rw-8,(int)rh-8,
                                           ColorAlpha({60,60,65,255},0.6f));
                             // Window (random)
@@ -1003,7 +1003,7 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
                     break;
                 }
 
-                // the”€the”€ BROKEN FLOOR the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+                // â”€â”€ BROKEN FLOOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 case TileType::BrokenFloor: {
                     Color bf = {(unsigned char)(info.floorColorA.r*5/10),
                                 (unsigned char)(info.floorColorA.g*5/10),
@@ -1016,7 +1016,7 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
                     break;
                 }
 
-                // the”€the”€ PORTAL the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+                // â”€â”€ PORTAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 case TileType::Portal: {
                     float pulse = (float)(0.5 + 0.5 * std::sin(t * 2.0 + x * 0.6 + y * 0.6));
                     ZoneID  dest = (ZoneID)tile.portalZone;
@@ -1175,17 +1175,17 @@ void Tilemap::render(Vector2 camTarget, float zoom) const {
     }
 }
 
-// the”€the”€ isWall / isWallAtPosition / isPortalAtPosition the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€the”€
+// â”€â”€ isWall / isWallAtPosition / isPortalAtPosition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 bool Tilemap::isWall(int x, int y) const {
-    if (x < 0 || x >= width || y < 0 || y >= height) return openWorld ? false : true; // world open = infinito
+    if (x < 0 || x >= width || y < 0 || y >= height) return openWorld ? false : true; // mundo aberto = infinito
     return tiles[y][x].type == TileType::Wall || tiles[y][x].solid;
 }
 
 void Tilemap::markSolidAt(Vector2 worldPos, float radius) {
-    // ANTES: r = (int)(radius/64) TRUNCAVA. Uma house with radius 62 dava r=0, i.and.
-    // UM tile (64u) of collision to um building of ~180u - by isso dava to andar
-    // atravessado in the structures. Agora arredonda to up and testa the distance
-    // real to the CENTRO of the tile (pegada redonda, not quadrada).
+    // ANTES: r = (int)(radius/64) TRUNCAVA. Uma casa com raio 62 dava r=0, ou seja
+    // UM tile (64u) de colisao para um predio de ~180u - por isso dava pra andar
+    // atravessado nas construcoes. Agora arredonda pra cima e testa a distancia
+    // real ao CENTRO do tile (pegada redonda, nao quadrada).
     int tx = (int)(worldPos.x / tileSize);
     int ty = (int)(worldPos.y / tileSize);
     int r  = std::max(1, (int)std::ceil(radius / tileSize));
@@ -1199,8 +1199,8 @@ void Tilemap::markSolidAt(Vector2 worldPos, float radius) {
         }
 }
 
-// Espelho of markSolidAt: DESMARCA solidos of scenario num radius (mantem walls).
-// Usado only as fallback of the guarantee of the portal — see updatePhasePortal.
+// Espelho de markSolidAt: DESMARCA solidos de cenario num raio (mantem paredes).
+// Usado so como fallback da garantia do portal — ver updatePhasePortal.
 void Tilemap::clearSolidAt(Vector2 worldPos, float radius) {
     int tx = (int)(worldPos.x / tileSize);
     int ty = (int)(worldPos.y / tileSize);
@@ -1230,7 +1230,7 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
     rlSetTexture(texture.id);
 
     rlBegin(RL_QUADS);
-        rlColor4ub(color.r, color.g, color.b, color.the);
+        rlColor4ub(color.r, color.g, color.b, color.a);
 
         // Front Face
         rlNormal3f(0.0f, 0.0f, 1.0f);
@@ -1278,39 +1278,39 @@ static void DrawCubeTexture(Texture2D texture, Vector3 position, float width, fl
     rlSetTexture(0);
 }
 
-// ─── Render 2.5D isometric — floor (DrawPlane) + walls (DrawCube) ───────────
-// Mapeamento: X3D = X2D, Z3D = Y2D, height in the eixo Y. Culling in window around
-// of the alvo of the camera (camTarget in coordenadas of world 2D).
-// Color base of floor by biome — of the identidade to the terreno in 3D (instead of gray).
+// ─── Render 2.5D isométrico — chão (DrawPlane) + paredes (DrawCube) ───────────
+// Mapeamento: X3D = X2D, Z3D = Y2D, altura no eixo Y. Culling em janela ao redor
+// do alvo da câmera (camTarget em coordenadas de mundo 2D).
+// Cor base de chão por bioma — dá identidade ao terreno em 3D (em vez de cinza).
 static Color biomeFloorColor(ZoneID z) {
     switch (z) {
         case ZoneID::LARuins:        return { 74, 76, 84, 255};   // concreto
-        case ZoneID::Bunker:         return { 58, 64, 72, 255};   // steel
-        case ZoneID::DarkForest:     return { 30, 46, 34, 255};   // mato dark
+        case ZoneID::Bunker:         return { 58, 64, 72, 255};   // aço
+        case ZoneID::DarkForest:     return { 30, 46, 34, 255};   // mato escuro
         case ZoneID::CursedFarm:     return { 78, 64, 40, 255};   // terra
-        case ZoneID::Cemetery:       return { 50, 54, 64, 255};   // stone fria
-        case ZoneID::GhostCity:      return { 54, 56, 62, 255};   // asphalt
-        case ZoneID::KronosForge:    return { 66, 42, 34, 255};   // vulcanico
-        case ZoneID::AbandonedManor: return { 56, 50, 60, 255};   // wood podre
-        case ZoneID::KronosNexus:    return { 44, 36, 62, 255};   // void purple
+        case ZoneID::Cemetery:       return { 50, 54, 64, 255};   // pedra fria
+        case ZoneID::GhostCity:      return { 54, 56, 62, 255};   // asfalto
+        case ZoneID::KronosForge:    return { 66, 42, 34, 255};   // vulcânico
+        case ZoneID::AbandonedManor: return { 56, 50, 60, 255};   // madeira podre
+        case ZoneID::KronosNexus:    return { 44, 36, 62, 255};   // void roxo
         default:                     return { 52, 56, 66, 255};
     }
 }
 static Color shade(Color c, float f) {
     auto cl = [](float v){ return (unsigned char)(v < 0 ? 0 : (v > 255 ? 255 : v)); };
-    return { cl(c.r * f), cl(c.g * f), cl(c.b * f), c.the };
+    return { cl(c.r * f), cl(c.g * f), cl(c.b * f), c.a };
 }
 
-// Test sphere × frustum in espaco of VIEW (raylib: front = -Z), to tiles in the
-// floor (y=0). A window 53x53 and QUADRADA around of the alvo, mas the cone of 30° of the
-// camera cobre well less that isso — isto corta the quads outside the screen before
-// emitir vertex algum.
+// Teste esfera × frustum em espaco de VIEW (raylib: frente = -Z), para tiles no
+// chao (y=0). A janela 53x53 e QUADRADA ao redor do alvo, mas o cone de 30° da
+// camera cobre bem menos que isso — isto corta os quads fora da tela antes de
+// emitir vertice algum.
 static bool floorTileVisible(const Matrix& view, const Camera3D& cam, float aspect,
                              float wx, float wz, float radius) {
     float vz = view.m2*wx + view.m10*wz + view.m14;
-    float dist = -vz;                                    // >0 = in the front
-    if (dist < -radius) return false;                    // totalmente behind
-    if (dist < 20.0f) return true;                       // colado in the camera: aprova
+    float dist = -vz;                                    // >0 = na frente
+    if (dist < -radius) return false;                    // totalmente atras
+    if (dist < 20.0f) return true;                       // colado na camera: aprova
     float vx = view.m0*wx + view.m8*wz  + view.m12;
     float vy = view.m1*wx + view.m9*wz  + view.m13;
     float tanH = tanf(cam.fovy * 0.5f * (float)DEG2RAD);
@@ -1322,7 +1322,7 @@ static bool floorTileVisible(const Matrix& view, const Camera3D& cam, float aspe
 
 void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) const {
     const float TS = (float)tileSize;
-    const int   R  = 26; // radius of the window visible in tiles
+    const int   R  = 26; // raio da janela visível em tiles
     int ctx = (int)(camTarget.x / TS);
     int cty = (int)(camTarget.y / TS);
     int x0 = openWorld ? ctx - R : std::max(0, ctx - R);
@@ -1334,13 +1334,13 @@ void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) c
     ZoneID z = currentZone;
     Color base = biomeFloorColor(z);
 
-    // Frustum of the camera 3D (matrix of view), calculado 1x by frame.
+    // Frustum da camera 3D (matriz de view), calculado 1x por frame.
     const Matrix floorView = MatrixLookAt(cam3D.position, cam3D.target, cam3D.up);
 
-    // BATCH UNICO of the piso: TODOS the tiles usam the MESMA texture (biome current),
-    // entao um rlBegin/rlEnd only emite the ~2.800 quads of uma vez — before eram
-    // 2.809 rlSetTexture + rlBegin/rlEnd individuais by frame. O rlgl divide the
-    // batch internamente (mantendo state) if the buffer encher, entao and safe.
+    // BATCH UNICO do piso: TODOS os tiles usam a MESMA textura (bioma atual),
+    // entao um rlBegin/rlEnd so emite os ~2.800 quads de uma vez — antes eram
+    // 2.809 rlSetTexture + rlBegin/rlEnd individuais por frame. O rlgl divide o
+    // batch internamente (mantendo estado) se o buffer encher, entao e seguro.
     if (sb.ready) {
         rlSetTexture(sb.tileFloor[(int)z].id);
         rlBegin(RL_QUADS);
@@ -1354,52 +1354,52 @@ void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) c
             float rx = x * TS, ry = y * TS;
             Vector3 floorCtr = { rx + TS * 0.5f, 0.0f, ry + TS * 0.5f };
 
-            // Biome by POSICAO — INFINITO: repete the 3x3 layout of zones pelo world
-            // UM biome by PHASE. Antes the 3x3 layout if repetia to the infinito and the
-            // world trocava of tema debaixo of the feet of the player enquanto ele andava -
-            // not existia sensation of "passei of phase", only um mosaico continuous.
-            // Agora if muda of world pelo PORTAL, not caminhando.
-            // (z/base/SpriteBank foram hoistados to outside the loop: sao invariantes)
+            // Bioma por POSIÇÃO — INFINITO: repete o layout 3x3 de zonas pelo mundo
+            // UM bioma por FASE. Antes o layout 3x3 se repetia ao infinito e o
+            // mundo trocava de tema debaixo dos pes do jogador enquanto ele andava -
+            // nao existia sensacao de "passei de fase", so um mosaico continuo.
+            // Agora se muda de mundo pelo PORTAL, nao caminhando.
+            // (z/base/SpriteBank foram hoistados pra fora do loop: sao invariantes)
 
-            // Variacao deterministica by tile (texture of terreno, without gray smooth)
+            // Variação determinística por tile (textura de terreno, sem cinza liso)
             unsigned int h = (unsigned int)(x * 73856093) ^ (unsigned int)(y * 19349663);
-            // ANTES: glow sorteado POR TILE. Cada square of 64u saia with um tom
-            // own and the floor integer lia as tabuleiro gray quadriculado. A
-            // variacao useful and continuous (mA/mB, in coordenada of WORLD), without edge.
+            // ANTES: brilho sorteado POR TILE. Cada quadrado de 64u saia com um tom
+            // proprio e o chao inteiro lia como tabuleiro cinza quadriculado. A
+            // variacao util e continua (mA/mB, em coordenada de MUNDO), sem aresta.
             float n = 1.0f;
             float fdx = (float)(x - ctx), fdy = (float)(y - cty);
             float fdist = sqrtf(fdx*fdx + fdy*fdy);
-            // Fog of profundidade: only esconde the BORDA of the world infinito. Antes
-            // comecava the 42% of the radius and caia the 0.22 — isso sozinho tirava 78% of the light
-            // of the floor in almost all the screen.
+            // Fog de profundidade: so esconde a BORDA do mundo infinito. Antes
+            // comecava a 42% do raio e caia a 0.22 — isso sozinho tirava 78% da luz
+            // do chao em quase toda a tela.
             float fog = 1.0f - (fdist - R * 0.62f) / (R * 0.38f);
             if (fog < 0.58f) fog = 0.58f; if (fog > 1.0f) fog = 1.0f;
             Color floorColor = shade(base, n);
             if (tt == TileType::BrokenFloor) floorColor = shade(base, 0.55f);
             if (tt == TileType::Portal)      floorColor = Color{0, 150, 200, 255};
             if (sb.ready) {
-                // Frustum culling by tile: outside the cone of the camera, nem calculates color.
+                // Frustum culling por tile: fora do cone da camera, nem calcula cor.
                 if (!floorTileVisible(floorView, cam3D, aspect,
                                       rx + TS * 0.5f, ry + TS * 0.5f, TS * 1.5f)) continue;
-                // Piso: UV by POSICAO DO WORLD → texture continuous/seamless between tiles
-                // (without grade artificial). Texture is tileavel (wrap REPEAT).
-                // `n` = grao by tile; `macro` = manchas largas (~14 tiles) that
-                // quebram the repeticao obvia of the tile of 3x3. Sem the dois the floor
-                // lia as um plano of color solida.
-                // DUAS escalas of mancha (larga ~30 tiles + media ~8) and um light
-                // desvio of matiz. Uma oitava fraca only not quebrava the reading of
-                // "folha of linoleo" that the floor had.
+                // Piso: UV por POSIÇÃO DO MUNDO → textura contínua/seamless entre tiles
+                // (sem grade artificial). Textura é tileável (wrap REPEAT).
+                // `n` = grao por tile; `macro` = manchas largas (~14 tiles) que
+                // quebram a repeticao obvia do tile de 3x3. Sem os dois o chao
+                // lia como um plano de cor solida.
+                // DUAS escalas de mancha (larga ~30 tiles + media ~8) e um leve
+                // desvio de matiz. Uma oitava fraca so nao quebrava a leitura de
+                // "folha de linoleo" que o chao tinha.
                 float mA = 0.5f + 0.5f * sinf(rx * 0.0031f + ry * 0.0024f);          // manchas largas
                 float mB = 0.5f + 0.5f * sinf(rx * 0.0132f - ry * 0.0098f)
                                        * cosf(rx * 0.0087f + ry * 0.0119f);          // manchas medias
-                float macro = 0.88f + 0.16f * mA + 0.09f * mB;                       // 0.88 .. 1.13 (era 0.74..1.20: lia as retalho)
-                // matiz: areas more quentes/frias, otherwise tudo vira the same gray
+                float macro = 0.88f + 0.16f * mA + 0.09f * mB;                       // 0.88 .. 1.13 (era 0.74..1.20: lia como retalho)
+                // matiz: areas mais quentes/frias, senao tudo vira o mesmo cinza
                 float warm = 0.94f + 0.12f * mA;
                 float cool = 0.94f + 0.12f * (1.0f - mB);
-                float g = fog * n * macro * 1.12f;   // clareia: texture + mascara already escurecem very
-                // Dessatura the piso puxando to the gray: the character (that mantem color
-                // cheia) passes the SALTAR of the fundo. E the regra of legibilidade of the games
-                // of arena - fundo dim, ator saturado.
+                float g = fog * n * macro * 1.12f;   // clareia: textura + mascara ja escurecem muito
+                // Dessatura o piso puxando pro cinza: o personagem (que mantem cor
+                // cheia) passa a SALTAR do fundo. E a regra de legibilidade dos jogos
+                // de arena - fundo apagado, ator saturado.
                 float rr2 = 255.0f * g * warm, gg2 = 255.0f * g, bb2 = 255.0f * g * cool;
                 float lum = 0.299f * rr2 + 0.587f * gg2 + 0.114f * bb2;
                 const float DESAT = 0.45f;
@@ -1407,7 +1407,7 @@ void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) c
                              (unsigned char)fminf(255.0f, gg2 + (lum - gg2) * DESAT),
                              (unsigned char)fminf(255.0f, bb2 + (lum - bb2) * DESAT), 255 };
                 if (tt == TileType::BrokenFloor) ft = shade(WHITE, 0.62f * fog * macro);
-                const float SPAN = 192.0f;   // 1 repeticao = 3 tiles
+                const float SPAN = 192.0f;   // 1 repetição = 3 tiles
                 float u0 = rx / SPAN, u1 = (rx + TS) / SPAN;
                 float v0 = ry / SPAN, v1 = (ry + TS) / SPAN;
                 rlColor4ub(ft.r, ft.g, ft.b, 255);
@@ -1416,15 +1416,15 @@ void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) c
                 rlTexCoord2f(u1, v1); rlVertex3f(rx + TS, 0.02f, ry + TS);
                 rlTexCoord2f(u1, v0); rlVertex3f(rx + TS, 0.02f, ry);
             } else {
-                // Fallback to piso solido
+                // Fallback para piso sólido
                 DrawPlane(floorCtr, { TS, TS }, shade(base, 0.45f));
                 Vector3 tileTop = { floorCtr.x, 0.02f, floorCtr.z };
                 DrawPlane(tileTop, { TS - 5.0f, TS - 5.0f }, floorColor);
             }
 
-            // Walls (type Wall ou scenario solido) = cubes with volume texturizados.
-            // Com texture ficam for the SEGUNDO loop, after the rlEnd() of the piso —
-            // not of the to draw cube with um rlBegin of quads open.
+            // Paredes (tipo Wall ou cenário sólido) = cubos com volume texturizados.
+            // Com textura ficam para o SEGUNDO loop, depois do rlEnd() do piso —
+            // nao da pra desenhar cubo com um rlBegin de quads aberto.
             if (!sb.ready && inB && tt == TileType::Wall) {
                 const float WALL_H = openWorld ? TS * 0.8f : TS * 1.6f;
                 Vector3 c = { rx + TS * 0.5f, WALL_H * 0.5f, ry + TS * 0.5f };
@@ -1437,7 +1437,7 @@ void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) c
     if (sb.ready) {
         rlEnd();
         rlSetTexture(rlGetTextureIdDefault());
-        // Second loop: only walls (poucas), cada uma um DrawCubeTexture own.
+        // Segundo loop: so paredes (poucas), cada uma um DrawCubeTexture proprio.
         for (int y = y0; y <= y1; ++y) {
             for (int x = x0; x <= x1; ++x) {
                 if (!(x >= 0 && x < width && y >= 0 && y < height)) continue;
@@ -1455,30 +1455,30 @@ void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) c
             }
         }
     }
-    // P0 fix: religa the texture BRANCA padrao uma vez (rlSetTexture(0) not does isso)
-    // — otherwise the texture of the piso/wall vaza and TINGE all the primitivas 3D seguintes.
+    // P0 fix: religa a textura BRANCA padrão uma vez (rlSetTexture(0) não faz isso)
+    // — senão a textura do piso/parede vaza e TINGE todas as primitivas 3D seguintes.
     rlSetTexture(rlGetTextureIdDefault());
 
-    // ── RUAS (geometria, not tint by tile) ──────────────────────────────────
-    // Tentei first tingir the TILE: with 64u of tile not of the to draw uma
-    // lane of 92u nem uma range central of 10u — saiam blocos amarelos jogados
-    // pelo floor. Agora the via and um quad own, entao the width and the range saem
-    // exatas and the city ganha direction: quarteirao, street, sidewalk.
+    // ── RUAS (geometria, nao tint por tile) ──────────────────────────────────
+    // Tentei primeiro tingir o TILE: com 64u de tile nao da para desenhar uma
+    // pista de 92u nem uma faixa central de 10u — saiam blocos amarelos jogados
+    // pelo chao. Agora a via e um quad proprio, entao a largura e a faixa saem
+    // exatas e a cidade ganha direcao: quarteirao, rua, calcada.
     if (openWorld && (currentZone == ZoneID::LARuins || currentZone == ZoneID::GhostCity)) {
-        const float SP    = 950.0f;   // same passo of the grade of buildings
-        const float HALFW = 105.0f;   // lane of duas hands
-        const float REACH = 1500.0f;  // only the trecho visible
+        const float SP    = 950.0f;   // mesmo passo da grade de predios
+        const float HALFW = 105.0f;   // pista de duas maos
+        const float REACH = 1500.0f;  // so o trecho visivel
         float cx0 = camTarget.x - REACH, cx1 = camTarget.x + REACH;
         float cz0 = camTarget.y - REACH, cz1 = camTarget.y + REACH;
 
-        Color asf  = { 78, 78, 84, 255 };    // asphalt
-        Color curb = { 122, 120, 116, 255 }; // middle-fio
-        Color lane = { 168, 150, 84, 255 };  // range central, already desbotada
-        Color hole = {  52,  50,  48, 255 };  // buraco / remendo in the asphalt
+        Color asf  = { 78, 78, 84, 255 };    // asfalto
+        Color curb = { 122, 120, 116, 255 }; // meio-fio
+        Color lane = { 168, 150, 84, 255 };  // faixa central, ja desbotada
+        Color hole = {  52,  50,  48, 255 };  // buraco / remendo no asfalto
 
         auto quad = [](float ax, float az, float bx, float bz, float y, Color c) {
             rlBegin(RL_QUADS);
-            rlColor4ub(c.r, c.g, c.b, c.the);
+            rlColor4ub(c.r, c.g, c.b, c.a);
             rlNormal3f(0.0f, 1.0f, 0.0f);
             rlVertex3f(ax, y, az); rlVertex3f(ax, y, bz);
             rlVertex3f(bx, y, bz); rlVertex3f(bx, y, az);
@@ -1486,19 +1486,19 @@ void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) c
         };
 
         int k0 = (int)floorf((cx0 - 475.0f) / SP), k1 = (int)ceilf((cx1 - 475.0f) / SP);
-        for (int k = k0; k <= k1; ++k) {            // vias in the eixo X (correm in Z)
+        for (int k = k0; k <= k1; ++k) {            // vias no eixo X (correm em Z)
             float c = 475.0f + k * SP;
             quad(c - HALFW - 7.0f, cz0, c + HALFW + 7.0f, cz1, 0.60f, curb);
             quad(c - HALFW,        cz0, c + HALFW,        cz1, 1.00f, asf);
-            // Range APAGADA: 45% of the tracos sumiram with the time and the that sobraram
-            // sao curtos and sujos. Range perfeita and the that fazia the street parecer new.
+            // Faixa APAGADA: 45% dos tracos sumiram com o tempo e os que sobraram
+            // sao curtos e sujos. Faixa perfeita e o que fazia a rua parecer nova.
             for (float zd = floorf(cz0 / 90.0f) * 90.0f; zd < cz1; zd += 90.0f) {
                 unsigned hz = (unsigned)(zd * 0.37f) * 2654435761u ^ (unsigned)(k * 40503);
                 if ((hz >> 7) % 100 < 45) continue;
                 float len = 26.0f + (float)((hz >> 3) & 15);
                 quad(c - 2.5f, zd, c + 2.5f, zd + len, 1.40f, lane);
             }
-            // buracos and remendos in the asphalt
+            // buracos e remendos no asfalto
             for (float zp = floorf(cz0 / 150.0f) * 150.0f; zp < cz1; zp += 150.0f) {
                 unsigned hp = (unsigned)(zp * 0.11f) * 374761393u ^ (unsigned)(k * 19349663);
                 if ((hp >> 5) % 100 < 55) continue;
@@ -1508,7 +1508,7 @@ void Tilemap::render3D(Vector2 camTarget, const Camera3D& cam3D, float aspect) c
             }
         }
         int m0 = (int)floorf((cz0 - 475.0f) / SP), m1 = (int)ceilf((cz1 - 475.0f) / SP);
-        for (int m = m0; m <= m1; ++m) {            // vias in the eixo Z (correm in X)
+        for (int m = m0; m <= m1; ++m) {            // vias no eixo Z (correm em X)
             float c = 475.0f + m * SP;
             quad(cx0, c - HALFW - 7.0f, cx1, c + HALFW + 7.0f, 0.62f, curb);
             quad(cx0, c - HALFW,        cx1, c + HALFW,        1.02f, asf);

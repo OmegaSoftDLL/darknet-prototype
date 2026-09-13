@@ -1,21 +1,21 @@
 #pragma once
 // ─────────────────────────────────────────────────────────────────────────────
-// EnemyDirector — the IA that EVOLUI during the match.
+// EnemyDirector — a IA que EVOLUI durante a partida.
 //
-// Not and difficulty by relogio nem enemy with more HP: the director OBSERVES how
-// the player luta (distance in that engaja, if stays correndo/kitando, quao fast
-// mata, the apanha) and responde in duas frentes:
+// Nao e dificuldade por relogio nem inimigo com mais HP: o diretor OBSERVA como
+// o jogador luta (distancia em que engaja, se fica correndo/kitando, quao rapido
+// mata, quanto apanha) e responde em duas frentes:
 //
-//   1) COMPOSICAO — muda the peso of cada arquetipo in the spawn. Quem kita of far
-//      passes the receive body-the-body fast; quem briga colado passes the receive
+//   1) COMPOSICAO — muda o peso de cada arquetipo no spawn. Quem kita de longe
+//      passa a receber corpo-a-corpo rapido; quem briga colado passa a receber
 //      atiradores.
-//   2) TACTIC — distribui papeis among the enemies proximos (frontal, flank,
-//      cerco) and devolve um PONTO DE APROXIMACAO by enemy. O Game passes esse
-//      point in the lugar of the position of the player while the enemy is far, entao
-//      the group fence instead of virar uma bola behind of the hero.
+//   2) TATICA — distribui papeis entre os inimigos proximos (frontal, flanco,
+//      cerco) e devolve um PONTO DE APROXIMACAO por inimigo. O Game passa esse
+//      ponto no lugar da posicao do jogador enquanto o inimigo esta longe, entao
+//      o grupo cerca em vez de virar uma bola atras do heroi.
 //
-// O level of adaptacao goes up when the player domina and goes down when ele apanha —
-// the IA "aprende" in the ritmo of the match, without punir quem is perdendo.
+// O nivel de adaptacao sobe quando o jogador domina e desce quando ele apanha —
+// a IA "aprende" no ritmo da partida, sem punir quem esta perdendo.
 // ─────────────────────────────────────────────────────────────────────────────
 #include <raylib.h>
 #include <vector>
@@ -23,30 +23,30 @@
 enum class SquadRole { Frontal, FlankLeft, FlankRight, Encircle };
 
 struct DirectorProfile {
-    float engageDist   = 250.0f;  // distance media in that the player luta
-    float kiteScore    = 0.0f;    // 0 = plant the feet, 1 = vive retreatsndo
-    float killSpeed    = 0.0f;    // kills by minute (media movel)
-    float damageTaken  = 0.0f;    // damage sofrido by minute (media movel)
-    int   adaptLevel   = 0;       // 0..5 — the the IA already if ajustou to the player
+    float engageDist   = 250.0f;  // distancia media em que o jogador luta
+    float kiteScore    = 0.0f;    // 0 = planta os pes, 1 = vive recuando
+    float killSpeed    = 0.0f;    // abates por minuto (media movel)
+    float damageTaken  = 0.0f;    // dano sofrido por minuto (media movel)
+    int   adaptLevel   = 0;       // 0..5 — quanto a IA ja se ajustou ao jogador
 };
 
 class EnemyDirector {
 public:
-    // Chamado 1x by frame with the state of the player and of the enemies vivos.
+    // Chamado 1x por frame com o estado do jogador e dos inimigos vivos.
     void observe(float dt, Vector2 playerPos, float playerHP, float playerMaxHP,
                  int killsTotal, int enemyCount);
 
-    // Peso relativo of um arquetipo in the sorteio of spawn (1.0 = neutral).
-    // `fast`/`ranged`/`tanky` descrevem the arquetipo, not the type concreto: so
-    // the diretor funciona to the 51 enemies without conhecer none deles.
+    // Peso relativo de um arquetipo no sorteio de spawn (1.0 = neutro).
+    // `fast`/`ranged`/`tanky` descrevem o arquetipo, nao o tipo concreto: assim
+    // o diretor funciona para os 51 inimigos sem conhecer nenhum deles.
     float spawnWeight(bool fast, bool ranged, bool tanky) const;
 
-    // Papel tatico by indice of enemy (stable enquanto ele viver).
+    // Papel tatico por indice de inimigo (estavel enquanto ele viver).
     SquadRole roleFor(int enemyIndex) const;
 
-    // Point of aproximacao to um enemy, dado your papel and the position of the alvo.
-    // Near the alvo (< closeRange) devolve the own alvo: mira and attack has that
-    // continue corretos, the desvio and only in the aproximacao.
+    // Ponto de aproximacao para um inimigo, dado seu papel e a posicao do alvo.
+    // Perto do alvo (< closeRange) devolve o proprio alvo: mira e ataque tem que
+    // continuar corretos, o desvio e so na aproximacao.
     Vector2 approachPoint(int enemyIndex, Vector2 enemyPos, Vector2 targetPos,
                           float closeRange = 240.0f) const;
 
@@ -56,7 +56,7 @@ private:
     DirectorProfile prof;
     float   sampleTimer   = 0.0f;
     Vector2 lastPlayerPos = { 0.0f, 0.0f };
-    float   moveAccum     = 0.0f;   // distance percorrida in the window
+    float   moveAccum     = 0.0f;   // distancia percorrida na janela
     int     lastKills     = 0;
     float   lastHP        = -1.0f;
     float   windowTimer   = 0.0f;
